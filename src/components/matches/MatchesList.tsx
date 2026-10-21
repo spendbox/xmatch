@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
-import { Heart, MessageCircle, Shapes } from "lucide-react";
+import { MessageCircle, Shapes } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { ButtonLink } from "@/components/ui/Button";
 import { MaskIcon } from "@/components/ui/MaskIcon";
@@ -42,7 +42,7 @@ export function MatchesList({
         </div>
         {matches.length > 0 && (
           <span className="mb-1 inline-flex h-9 items-center gap-1.5 rounded-full bg-brand-soft px-3.5 text-[14px] font-semibold text-brand">
-            <Heart size={15} fill="currentColor" /> {matches.length}
+            <MessageCircle size={15} /> {matches.length}
           </span>
         )}
       </header>
@@ -170,8 +170,8 @@ function Empty() {
         <span className="absolute top-0 right-2 grid h-20 w-20 rotate-12 animate-float place-items-center rounded-3xl bg-brand text-white shadow-lift [animation-delay:-2s]">
           <MaskIcon className="w-12" eyes="#5b3fd9" />
         </span>
-        <span className="absolute bottom-0 left-1/2 grid h-11 w-11 -translate-x-1/2 animate-pop place-items-center rounded-full bg-chili text-white shadow-lift">
-          <Heart size={20} fill="currentColor" />
+        <span className="absolute bottom-0 left-1/2 grid h-11 w-11 -translate-x-1/2 animate-pop place-items-center rounded-full bg-gold text-ink shadow-lift">
+          <MessageCircle size={20} />
         </span>
       </div>
       <h2 className="mt-6 text-[20px] font-semibold">No matches yet</h2>

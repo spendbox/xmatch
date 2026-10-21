@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Flag, HeartOff, MoreVertical, Phone, Video, X } from "lucide-react";
+import { ArrowLeft, Flag, UserX, MoreVertical, Phone, Video, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { ageFromBirthdate } from "@/lib/constants";
 import type { ChatMessage, Intent, Profile } from "@/lib/types";
@@ -206,7 +206,7 @@ export function MatchChat({
                 }}
                 className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-[15px] hover:bg-cream"
               >
-                <HeartOff size={18} /> Unmatch
+                <UserX size={18} /> Unmatch
               </button>
               <button onClick={() => { setMenu(false); setReporting(true); }} className="flex w-full items-center gap-3 border-t border-line px-4 py-3.5 text-left text-[15px] text-chili hover:bg-chili-soft">
                 <Flag size={18} /> Report & unmatch

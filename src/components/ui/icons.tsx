@@ -1,7 +1,7 @@
 import type { LucideIcon, LucideProps } from "lucide-react";
 import {
   Briefcase, BookOpen, Camera, ChefHat, Church, Clapperboard, Cpu, Disc3, Dumbbell, Feather,
-  Gamepad2, Globe, Heart, Laugh, Leaf, Martini, Mars, Music, Palette, PawPrint, Plane, Shirt,
+  Gamepad2, Globe, Heart, Laugh, Wine, Leaf, Martini, Mars, Music, Palette, PawPrint, Plane, Shirt,
   Smile, Trophy, Tv, UserRound, UsersRound, UtensilsCrossed, Venus, Footprints, Car, TrainFront, Sprout, Flame,
 } from "lucide-react";
 import type { Intent, SeekKey } from "@/lib/types";
@@ -76,7 +76,7 @@ export function InterestIcon({ name, ...props }: { name: string } & LucideProps)
 
 export const INTENT_ICONS: Record<Intent, (p: IconProps) => React.ReactNode> = {
   friends: (p) => <Smile strokeWidth={1.75} {...p} />,
-  dating: (p) => <Heart strokeWidth={1.75} {...p} />,
+  dating: (p) => <Wine strokeWidth={1.75} {...p} />,
   spicy: (p) => <Flame strokeWidth={1.75} {...p} />,
 };
 
