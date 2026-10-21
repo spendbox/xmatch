@@ -57,9 +57,65 @@ export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDat
   const byId = useRef(new Map<number, ChatMessage>());
   byId.current = new Map(messages.map((m) => [m.id, m]));
 
+  const root = useRef<HTMLDivElement>(null);
+  const first = useRef(true);
+
+  // Open at the newest message straight away; glide down for new ones after that
+  const scrollerOf = () => {
+    const el = root.current;
+    return (el?.closest("[data-chat-scroll]") as HTMLElement | null) ?? el?.parentElement ?? null;
+  };
   useEffect(() => {
-    end.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    const sc = scrollerOf();
+    if (!sc) {
+      end.current?.scrollIntoView({ block: "end" });
+      return;
+    }
+    if (!first.current) {
+      sc.scrollTo({ top: sc.scrollHeight, behavior: "smooth" });
+      return;
+    }
+    first.current = false;
+    // On opening, hold the view at the bottom for a moment while dates, photos and cards settle,
+    // unless they start scrolling themselves
+    let raf = 0;
+    let stop = false;
+    const until = performance.now() + 1500;
+    const hold = () => {
+      if (stop) return;
+      sc.scrollTop = sc.scrollHeight;
+      if (performance.now() < until) raf = requestAnimationFrame(hold);
+    };
+    const quit = () => (stop = true);
+    sc.addEventListener("wheel", quit, { passive: true });
+    sc.addEventListener("touchstart", quit, { passive: true });
+    hold();
+    return () => {
+      cancelAnimationFrame(raf);
+      sc.removeEventListener("wheel", quit);
+      sc.removeEventListener("touchstart", quit);
+    };
   }, [messages.length]);
+
+  // Stay at the bottom while photos, voice notes and dates load in (unless they've scrolled up to read)
+  useEffect(() => {
+    const scroller = scrollerOf();
+    if (!scroller) return;
+    let stuck = true;
+    const onScroll = () => {
+      stuck = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 120;
+    };
+    scroller.addEventListener("scroll", onScroll, { passive: true });
+    const ro = new ResizeObserver(() => {
+      if (stuck) scroller.scrollTop = scroller.scrollHeight;
+    });
+    // Watch everything in the chat area, not just the messages (cards above/below can grow too)
+    Array.from(scroller.children).forEach((c) => ro.observe(c));
+    return () => {
+      scroller.removeEventListener("scroll", onScroll);
+      ro.disconnect();
+    };
+  }, []);
 
   const jumpTo = useCallback((id: number) => {
     const el = document.querySelector(`[data-msg="${id}"]`);
@@ -70,7 +126,7 @@ export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDat
   }, []);
 
   return (
-    <div className="flex flex-col gap-1 px-3 py-4 lg:px-8">
+    <div ref={root} className="flex flex-col gap-1 px-3 py-4 lg:px-8">
       {messages.map((m, i) => {
         const prev = messages[i - 1];
         const next = messages[i + 1];

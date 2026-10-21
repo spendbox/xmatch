@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import clsx from "clsx";
 import {
-  AtSign, BellRing, Cake, ChevronRight, Eye, FileText, Heart, ImagePlus, LogOut, PenLine, Shapes, ShieldCheck, SlidersHorizontal, Trash2,
+  AtSign, BellRing, Cake, ChevronRight, Eye, FileText, ImagePlus, MessageCircle, LogOut, PenLine, Shapes, ShieldCheck, SlidersHorizontal, Trash2,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { uploadPhoto, deletePhoto } from "@/lib/photos";
@@ -157,7 +157,7 @@ export function ProfileEditor({
               <p className="mt-1.5 text-[14px] text-white/75">{gender}</p>
               <div className="mt-4 grid grid-cols-3 gap-2">
                 <Stat icon={<Cake size={16} />} value={age != null ? String(age) : "–"} label={age === 1 ? "year" : "years"} />
-                <Stat icon={<Heart size={16} />} value={matchCount.toLocaleString()} label={word(matchCount, "match", "matches")} />
+                <Stat icon={<MessageCircle size={16} />} value={matchCount.toLocaleString()} label={word(matchCount, "match", "matches")} />
                 <Stat icon={<Shapes size={16} />} value={String(interests.length)} label={word(interests.length, "interest")} />
               </div>
             </div>

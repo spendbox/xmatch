@@ -1,4 +1,4 @@
-import { Clock3, EyeOff, HeartHandshake } from "lucide-react";
+import { Clock3, EyeOff, Handshake } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import type { ReactNode } from "react";
@@ -78,7 +78,7 @@ function BrandPanel() {
           {[
             { icon: <Clock3 size={20} />, text: "Five minutes of masked conversation" },
             { icon: <EyeOff size={20} />, text: "No names or photos until you both unmask" },
-            { icon: <HeartHandshake size={20} />, text: "If it's not mutual, the chat disappears" },
+            { icon: <Handshake size={20} />, text: "If it's not mutual, the chat disappears" },
           ].map((f) => (
             <li key={f.text} className="flex items-center gap-3">
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/15">{f.icon}</span>

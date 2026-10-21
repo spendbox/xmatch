@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { ArrowLeft, Eye, Headphones, Heart, LayoutGrid, MessageCircle, MessagesSquare, PartyPopper, Sparkles, Users } from "lucide-react";
+import { ArrowLeft, Eye, Handshake, Headphones, LayoutGrid, MessageCircle, MessagesSquare, PartyPopper, Sparkles, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { plural } from "@/lib/plural";
 import { countdown, eventPhase, eventWhen, settingsOf, themeBg, type DashpadEvent, type EventChatSummary, type WallPerson } from "@/lib/events";
@@ -491,7 +491,7 @@ export function EventSpace({
                 text={`Your first ${plural(s.free_reveals, "reveal")} are free${s.reveal_cost > 0 ? `, then ${plural(s.reveal_cost, "Key")} each` : ""}.`}
               />
               <Li icon={<MessageCircle size={16} />} text={`Say hi to up to ${plural(s.max_chats, "person", "people")} — no reveal needed. Chats last until the end.`} />
-              <Li icon={<Heart size={16} />} text="Afterwards you both choose: keep the chat and it's a match, or let it go." />
+              <Li icon={<Handshake size={16} />} text="Afterwards you both choose: keep the chat and it's a match, or let it go." />
             </ul>
           </div>
         </aside>

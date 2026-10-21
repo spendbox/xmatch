@@ -1,6 +1,6 @@
 "use client";
 
-import { MessageCircleHeart, RotateCcw } from "lucide-react";
+import { MessageCircle, RotateCcw } from "lucide-react";
 import { ButtonLink } from "@/components/ui/Button";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import type { MasqueradeState } from "@/lib/types";
@@ -84,7 +84,7 @@ function Reveal({ state, eventId }: { state: MasqueradeState; eventId?: string |
 
       <div className="mt-auto space-y-3 pt-8 lg:mt-2">
         <ButtonLink href={`/matches/${state.match_id}`} size="lg">
-          <MessageCircleHeart size={20} /> Keep chatting
+          <MessageCircle size={20} /> Keep chatting
         </ButtonLink>
         {eventId ? (
           <ButtonLink href={`/events/${eventId}?next=1`} size="lg" variant="secondary">

@@ -3,7 +3,7 @@
 import { sexLabel } from "@/lib/eventSpace";
 import Link from "next/link";
 import clsx from "clsx";
-import { Check, Clock3, Heart, HeartHandshake, MessageCircle, X } from "lucide-react";
+import { Check, Clock3, Handshake, MessageCircle, X } from "lucide-react";
 import type { EventChatSummary } from "@/lib/events";
 import { Spinner } from "@/components/ui/Button";
 import { BlurPhoto } from "./common";
@@ -113,7 +113,7 @@ export function ChatsPanel({
                       disabled={deciding === c.id}
                       className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-brand text-[14px] font-semibold text-white transition hover:bg-brand-dark active:scale-[0.98] disabled:opacity-50"
                     >
-                      {deciding === c.id ? <Spinner /> : <Heart size={16} />} Keep
+                      {deciding === c.id ? <Spinner /> : <Handshake size={16} />} Keep
                     </button>
                   </div>
                 )}
@@ -130,7 +130,7 @@ function Status({ c, count }: { c: EventChatSummary; count: number }) {
   if (c.status === "matched")
     return (
       <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-mint-soft px-2.5 py-1 text-[12px] font-semibold text-mint">
-        <HeartHandshake size={13} /> Matched
+        <Handshake size={13} /> Matched
       </span>
     );
   if (count > 0)

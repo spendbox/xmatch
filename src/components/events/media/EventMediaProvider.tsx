@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
-import { GripHorizontal, MessageCircleHeart, VideoOff, X } from "lucide-react";
+import { GripHorizontal, MessageCircle, VideoOff, X } from "lucide-react";
 import type HlsType from "hls.js";
 import { createClient } from "@/lib/supabase/client";
 import type { DashpadEvent, EventMedia } from "@/lib/events";
@@ -741,7 +741,7 @@ export function EventMediaProvider({ userId, children }: { userId: string; child
         <div role="status" className="fixed inset-x-3 top-[calc(env(safe-area-inset-top)+0.75rem)] z-[60] mx-auto max-w-sm animate-fade-up">
           <div className="flex items-center gap-3 rounded-2xl border border-line bg-surface p-3 shadow-lift">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand">
-              <MessageCircleHeart size={20} />
+              <MessageCircle size={20} />
             </span>
             <p className="min-w-0 flex-1 text-[14px] leading-snug font-semibold">{toast.text}</p>
             {toast.href && (

@@ -54,7 +54,7 @@ export function LiveEventChats({ compact, divided }: { compact?: boolean; divide
   return (
     <section className={divided ? "mt-2 border-y border-line py-5" : compact ? "mt-5" : "mt-6"}>
       <h2 className="mb-3 flex items-center gap-2 text-[15px] font-semibold">
-        <CalendarDays size={16} className="text-brand" /> At events now
+        <CalendarDays size={16} className="text-brand" /> From Events
       </h2>
       <ul className="space-y-2.5">
         {chats.map((c) => {

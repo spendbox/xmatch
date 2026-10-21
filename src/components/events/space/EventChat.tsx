@@ -1,12 +1,13 @@
 "use client";
 
+import { MaskIcon } from "@/components/ui/MaskIcon";
 import { refreshMenuBadges } from "@/components/app/useMenuBadges";
 import { sexLabel } from "@/lib/eventSpace";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { AlarmClock, ArrowLeft, Check, Clock3, Eye, Heart, HeartHandshake, HeartOff, MoreVertical, X } from "lucide-react";
+import { AlarmClock, ArrowLeft, Check, Clock3, Eye, Handshake, DoorOpen, MoreVertical, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { countdown, eventPhase, settingsOf, type EventChatDetail, type EventChatMessage } from "@/lib/events";
 import { eventError } from "@/lib/eventSpace";
@@ -207,7 +208,7 @@ export function EventChat({ chat, myId, myInterests }: { chat: EventChatDetail; 
               myKeep ? "bg-mint-soft text-mint" : "bg-brand text-white",
             )}
           >
-            {myKeep ? <Check size={15} strokeWidth={3} /> : <Heart size={15} />} {myKeep ? "Kept" : "Keep"}
+            {myKeep ? <Check size={15} strokeWidth={3} /> : <Handshake size={15} />} {myKeep ? "Kept" : "Keep"}
           </button>
         )}
         {open && (
@@ -218,7 +219,7 @@ export function EventChat({ chat, myId, myInterests }: { chat: EventChatDetail; 
             {menu && (
               <div className="absolute top-11 right-0 z-30 w-52 animate-fade-up overflow-hidden rounded-2xl border border-line bg-surface shadow-lift">
                 <button onClick={() => vote(false)} className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-[15px] text-chili hover:bg-chili-soft">
-                  <HeartOff size={18} /> Let go
+                  <DoorOpen size={18} /> Let go
                 </button>
               </div>
             )}
@@ -247,7 +248,7 @@ export function EventChat({ chat, myId, myInterests }: { chat: EventChatDetail; 
             {chat.messages.length === 0 && messages.length === 0 ? `Say hi to ${other.name || "them"}` : `You met at ${e.title}`}
           </p>
           <p className="mx-auto mt-1 max-w-xs text-[13px] leading-snug text-muted">
-            This chat lasts until the event ends. Then you both choose: keep it and it&apos;s a match, or let it go.
+            This chat stays open until the event ends. Afterward, you both decide: keep the connection and match, or let it go.
           </p>
         </div>
         <MessageList messages={messages} myId={myId} nameOf={nameOf} />
@@ -255,14 +256,14 @@ export function EventChat({ chat, myId, myInterests }: { chat: EventChatDetail; 
 
       {gone ? (
         <EndCard
-          icon={<HeartOff size={22} />}
+          icon={<DoorOpen size={22} />}
           title="This chat has ended"
           body={`${other.name || "They"} let this chat go. There are plenty more people to meet.`}
         >
           <ButtonLink href={`/events/${e.id}`} variant="secondary" size="lg">Back to the event</ButtonLink>
         </EndCard>
       ) : status === "matched" ? (
-        <EndCard icon={<HeartHandshake size={22} />} title="It's a match!" body="Your conversation has moved to Chats.">
+        <EndCard icon={<Handshake size={22} />} title="It's a match!" body="Your conversation has moved to Chats.">
           {matchId && <ButtonLink href={`/matches/${matchId}`} size="lg">Open your chat</ButtonLink>}
         </EndCard>
       ) : phase === "ended" ? (
@@ -275,7 +276,7 @@ export function EventChat({ chat, myId, myInterests }: { chat: EventChatDetail; 
             </EndCard>
           ) : (
             <EndCard
-              icon={<Heart size={22} />}
+              icon={<Handshake size={22} />}
               title={`Keep chatting with ${other.name || "them"}?`}
               body={chat.their_keep_set ? `${other.name || "They"} has made their choice. Now it's yours.` : "If you both keep it, it's a match and the chat moves to your Chats."}
             >
@@ -284,7 +285,7 @@ export function EventChat({ chat, myId, myInterests }: { chat: EventChatDetail; 
                   <X size={18} /> Let go
                 </Button>
                 <Button size="lg" onClick={() => vote(true)} loading={voting === "keep"} disabled={!!voting}>
-                  <Heart size={18} /> Keep
+                  <Handshake size={18} /> Keep
                 </Button>
               </div>
             </EndCard>
@@ -295,7 +296,7 @@ export function EventChat({ chat, myId, myInterests }: { chat: EventChatDetail; 
           </EndCard>
         )
       ) : (
-        <Composer onSend={send} disabled={phase !== "live"} placeholder={phase === "live" ? `Message ${other.name || "them"}` : "The event hasn't started"} />
+        <Composer onSend={send} disabled={phase !== "live"} placeholder={phase === "live" ? `Message ${other.name || "them"}` : phase === "upcoming" ? "The event hasn't started yet" : "The event has ended"} />
       )}
 
       {toast && (
@@ -337,18 +338,18 @@ function Celebration({ name, matchId, eventId, onClose }: { name: string; matchI
     <div role="dialog" aria-modal="true" aria-label="It's a match" className="fixed inset-0 z-[70] grid animate-fade-in place-items-center overflow-hidden bg-gradient-to-br from-brand via-[#8f3fd9] to-[#c2306b] p-6 text-white">
       <div aria-hidden className="pointer-events-none absolute inset-0">
         {Array.from({ length: 14 }).map((_, i) => (
-          <Heart
+          <span
             key={i}
-            size={18 + ((i * 7) % 22)}
-            fill="currentColor"
             className="dp-pop-heart absolute bottom-0 text-white/30"
-            style={{ left: `${(i * 37) % 100}%`, animationDelay: `${(i * 0.37) % 2.8}s` }}
-          />
+            style={{ left: `${(i * 37) % 100}%`, animationDelay: `${(i * 0.37) % 2.8}s`, width: 22 + ((i * 7) % 22) }}
+          >
+            <MaskIcon className="w-full" eyes="transparent" />
+          </span>
         ))}
       </div>
       <div className="relative w-full max-w-sm animate-pop text-center">
         <span className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-white/20">
-          <HeartHandshake size={40} />
+          <MaskIcon className="w-11 text-white" eyes="#8f3fd9" />
         </span>
         <h2 className="mt-5 font-display text-[40px] leading-none font-semibold">It&apos;s a match!</h2>
         <p className="mt-3 text-[16px] text-white/85">You and {name} both kept the chat. Your messages are waiting in Chats.</p>
