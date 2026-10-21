@@ -28,9 +28,8 @@ export function useEventChats(eventId: string, enabled: boolean) {
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "event_chats", filter: `event_id=eq.${eventId}` }, soon)
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "event_chats", filter: `event_id=eq.${eventId}` }, soon)
       .on("postgres_changes", { event: "DELETE", schema: "public", table: "event_chats" }, soon)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "event_chat_messages" }, soon)
       .subscribe();
-    const every = setInterval(refresh, 60_000);
+    const every = setInterval(() => document.visibilityState === "visible" && refresh(), 2 * 60_000);
     return () => {
       supabase.removeChannel(ch);
       clearInterval(every);

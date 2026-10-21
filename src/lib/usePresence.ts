@@ -23,7 +23,7 @@ export function lastSeenText(lastSeen?: string | null, now = Date.now()) {
   return "Offline";
 }
 
-/** When each of these people (your matches) was last in the app, refreshed every 30 seconds. */
+/** When each of these people (your matches) was last in the app, refreshed every minute. */
 export function usePresence(ids: string[]) {
   const supabase = useMemo(() => createClient(), []);
   const key = [...new Set(ids)].sort().join(",");
@@ -41,7 +41,7 @@ export function usePresence(ids: string[]) {
       setNow(Date.now());
     };
     load();
-    const t = setInterval(() => document.visibilityState === "visible" && load(), 30_000);
+    const t = setInterval(() => document.visibilityState === "visible" && load(), 60_000);
     const onVisible = () => document.visibilityState === "visible" && load();
     document.addEventListener("visibilitychange", onVisible);
     return () => {

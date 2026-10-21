@@ -328,6 +328,10 @@ export function NightEditor({
             <ToggleRow label="Show the video" hint="Off plays only the sound of YouTube links and videos (good for music videos)" checked={s.show_video} onChange={(v) => setting("show_video", v)} />
             <ToggleRow label="Keep playing under private chats" hint="Music keeps going quietly while people chat one-to-one" checked={s.media_under_chats} onChange={(v) => setting("media_under_chats", v)} />
             <p className="rounded-xl bg-gold-soft px-3.5 py-2.5 text-[12px] text-[#8a5a00]">Only upload music and videos you have the rights to play.</p>
+            <p className="rounded-xl bg-cream px-3.5 py-2.5 text-[12px] text-ink-soft">
+              Data use: every guest downloads uploaded files from your Supabase storage, which counts toward its monthly download allowance
+              (for example, 200 guests × a 40 MB playlist ≈ 8 GB). For big events, a live stream or YouTube link costs you nothing.
+            </p>
           </Section>
 
           {/* Icebreakers (masquerade only) */}

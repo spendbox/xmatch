@@ -529,6 +529,25 @@ export function EventMediaProvider({ userId, children }: { userId: string; child
     const title = active.title;
     let alive = true;
     chatIds.current = new Set();
+    let t: ReturnType<typeof setTimeout> | null = null;
+    const recheck = (p: { new: unknown }) => {
+      const row = p.new as { event_id?: string };
+      if (row.event_id && row.event_id !== eventId) return;
+      if (t) clearTimeout(t);
+      t = setTimeout(async () => {
+        const { data } = await supabase.rpc("my_live_event_chats");
+        if (!alive || !Array.isArray(data)) return;
+        const open = pathRef.current.match(CHAT_PATH);
+        setUnread((u) => {
+          const next = { ...u };
+          for (const c of data as { id: string; event_id: string; unread: boolean }[]) {
+            if (c.event_id !== eventId) continue;
+            next[c.id] = c.unread && !(open && open[2] === c.id) ? Math.max(1, u[c.id] ?? 0) : 0;
+          }
+          return next;
+        });
+      }, 500);
+    };
     supabase.rpc("my_event_chats", { p_event: eventId }).then(({ data }) => {
       if (alive) for (const c of (data ?? []) as { id: string }[]) chatIds.current.add(c.id);
     });
@@ -542,16 +561,13 @@ export function EventMediaProvider({ userId, children }: { userId: string; child
           setUnread((u) => ({ ...u, [c.id]: Math.max(1, u[c.id] ?? 0) }));
         }
       })
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "event_chat_messages" }, (p) => {
-        const m = p.new as { chat_id: string; sender_id: string };
-        if (m.sender_id === userId || !chatIds.current.has(m.chat_id)) return;
-        const open = pathRef.current.match(CHAT_PATH);
-        if (open && open[2] === m.chat_id) return;
-        setUnread((u) => ({ ...u, [m.chat_id]: (u[m.chat_id] ?? 0) + 1 }));
-      })
+      // A new message bumps its chat; watch only your own chats, then ask which ones are unread
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "event_chats", filter: `user_a=eq.${userId}` }, recheck)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "event_chats", filter: `user_b=eq.${userId}` }, recheck)
       .subscribe();
     return () => {
       alive = false;
+      if (t) clearTimeout(t);
       supabase.removeChannel(ch);
     };
   }, [active, supabase, userId]);

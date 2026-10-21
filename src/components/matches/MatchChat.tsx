@@ -46,6 +46,7 @@ export function MatchChat({
   const shell = useKeyboardSafe<HTMLDivElement>();
   const { seen, now } = usePresence([other.id]);
   const theyreOnline = isOnline(seen[other.id], now);
+  const activeNow = () => !!seen[other.id] && Date.now() - new Date(seen[other.id]).getTime() < 45_000;
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [messages, setMessages] = useState(initialMessages);
@@ -110,7 +111,8 @@ export function MatchChat({
         .select(COLUMNS)
         .single();
       if (error || !data) throw error;
-      notify({ kind: "message", matchId });
+      // Skip the push if they were using Dashpad seconds ago (they'll see it live)
+      if (!activeNow()) notify({ kind: "message", matchId });
       setMessages((l) => {
         const without = l.filter((m) => m.id !== temp.id);
         return without.some((m) => m.id === data.id) ? without : [...without, data as ChatMessage];
@@ -281,7 +283,7 @@ export function MatchChat({
         toName={other.display_name ?? "them"}
         onSend={async (g) => {
           const { error } = await supabase.rpc("send_gift", { p_gift: g.id, p_match: matchId });
-          if (!error) notify({ kind: "message", matchId });
+          if (!error && !activeNow()) notify({ kind: "message", matchId });
           if (error) return keysError(error.message);
           refreshWallet();
           return null;

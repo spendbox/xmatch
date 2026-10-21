@@ -23,7 +23,7 @@ type LiveChat = {
 };
 
 /** Chats you have going at an event right now, with a way back in. Shown at the top of Chats. */
-export function LiveEventChats({ compact, divided }: { compact?: boolean; divided?: boolean }) {
+export function LiveEventChats({ compact, divided, userId }: { compact?: boolean; divided?: boolean; userId: string }) {
   const supabase = useMemo(() => createClient(), []);
   const [chats, setChats] = useState<LiveChat[]>([]);
 
@@ -36,8 +36,9 @@ export function LiveEventChats({ compact, divided }: { compact?: boolean; divide
     load();
     const ch = supabase
       .channel(`live-event-chats-${Math.random().toString(36).slice(2)}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "event_chat_messages" }, () => load())
-      .on("postgres_changes", { event: "*", schema: "public", table: "event_chats" }, () => load())
+      // Your own event chats only; each new message bumps the chat row
+      .on("postgres_changes", { event: "*", schema: "public", table: "event_chats", filter: `user_a=eq.${userId}` }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "event_chats", filter: `user_b=eq.${userId}` }, () => load())
       .subscribe();
     const onFocus = () => document.visibilityState === "visible" && load();
     window.addEventListener("focus", onFocus);
@@ -47,7 +48,7 @@ export function LiveEventChats({ compact, divided }: { compact?: boolean; divide
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onFocus);
     };
-  }, [supabase, load]);
+  }, [supabase, load, userId]);
 
   if (!chats.length) return null;
   const now = Date.now();

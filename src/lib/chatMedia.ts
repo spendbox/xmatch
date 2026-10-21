@@ -63,20 +63,48 @@ export async function uploadChatMedia(
   if (blob.size > MAX_MEDIA_BYTES) throw new Error("That file is too big. The limit is 50 MB.");
   const mime = (blob.type || (kind === "audio" ? "audio/webm" : "application/octet-stream")).split(";")[0];
   const path = `${matchId}/${crypto.randomUUID()}.${extFor(mime)}`;
-  const { error } = await supabase.storage.from(BUCKET).upload(path, blob, { contentType: mime, cacheControl: "3600" });
+  // Files never change once sent, so phones can keep them (saves downloading them again)
+  const { error } = await supabase.storage.from(BUCKET).upload(path, blob, { contentType: mime, cacheControl: "31536000" });
   if (error) throw error;
   return { path, meta: { ...meta, mime } };
 }
 
-// Short-lived private links, cached so we don't ask twice
+// Private links last a week and are remembered on the phone. Reusing the same link means the
+// browser can show the photo/video from its cache instead of downloading it again every visit.
+const LINK_SECONDS = 7 * 24 * 3600;
 const cache = new Map<string, { url: string; expires: number }>();
+const STORE = "dp-media-links";
+
+function loadStore(): Record<string, { url: string; expires: number }> {
+  try {
+    return JSON.parse(localStorage.getItem(STORE) ?? "{}");
+  } catch {
+    return {};
+  }
+}
+function saveStore(path: string, entry: { url: string; expires: number }) {
+  try {
+    const all = loadStore();
+    const now = Date.now();
+    for (const k of Object.keys(all)) if (all[k].expires < now) delete all[k];
+    all[path] = entry;
+    const keys = Object.keys(all);
+    if (keys.length > 400) for (const k of keys.slice(0, keys.length - 400)) delete all[k];
+    localStorage.setItem(STORE, JSON.stringify(all));
+  } catch {}
+}
 
 export async function signedUrl(supabase: SupabaseClient, path: string) {
-  const hit = cache.get(path);
-  if (hit && hit.expires > Date.now()) return hit.url;
-  const { data } = await supabase.storage.from(BUCKET).createSignedUrl(path, 3600);
+  const hit = cache.get(path) ?? loadStore()[path];
+  if (hit && hit.expires > Date.now()) {
+    cache.set(path, hit);
+    return hit.url;
+  }
+  const { data } = await supabase.storage.from(BUCKET).createSignedUrl(path, LINK_SECONDS);
   if (!data?.signedUrl) return null;
-  cache.set(path, { url: data.signedUrl, expires: Date.now() + 55 * 60_000 });
+  const entry = { url: data.signedUrl, expires: Date.now() + (LINK_SECONDS - 3600) * 1000 };
+  cache.set(path, entry);
+  saveStore(path, entry);
   return data.signedUrl;
 }
 

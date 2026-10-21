@@ -123,7 +123,7 @@ export function EventSpace({
   useEffect(() => {
     if (!inside) return;
     loadWall();
-    const t = setInterval(() => document.visibilityState === "visible" && loadWall(), 45_000);
+    const t = setInterval(() => document.visibilityState === "visible" && loadWall(), 90_000);
     return () => clearInterval(t);
   }, [inside, loadWall]);
 

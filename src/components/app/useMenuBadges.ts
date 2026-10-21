@@ -45,15 +45,18 @@ export function useMenuBadges(userId: string): MenuBadges {
   useEffect(() => {
     const ch = supabase
       .channel(`badges-${userId}-${Math.random().toString(36).slice(2, 8)}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, soon)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "matches" }, soon)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "event_chat_messages" }, soon)
+      // Only rows that are yours: a new message bumps its chat's last_message_at, so watching
+      // your own chats is enough (watching every message on Dashpad costs a lot as we grow)
+      .on("postgres_changes", { event: "*", schema: "public", table: "matches", filter: `user_a=eq.${userId}` }, soon)
+      .on("postgres_changes", { event: "*", schema: "public", table: "matches", filter: `user_b=eq.${userId}` }, soon)
+      .on("postgres_changes", { event: "*", schema: "public", table: "event_chats", filter: `user_a=eq.${userId}` }, soon)
+      .on("postgres_changes", { event: "*", schema: "public", table: "event_chats", filter: `user_b=eq.${userId}` }, soon)
       .subscribe();
     const onFocus = () => document.visibilityState === "visible" && soon();
     window.addEventListener("dp:badges", soon);
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onFocus);
-    const every = setInterval(soon, 60_000);
+    const every = setInterval(() => document.visibilityState === "visible" && soon(), 5 * 60_000);
     return () => {
       supabase.removeChannel(ch);
       window.removeEventListener("dp:badges", soon);

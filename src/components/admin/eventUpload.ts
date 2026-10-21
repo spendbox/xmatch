@@ -9,7 +9,7 @@ export async function uploadEventFile(eventId: string | null, file: File, want: 
   if ("error" in ticket) throw new Error(ticket.error);
   const { error } = await createClient()
     .storage.from("event-media")
-    .uploadToSignedUrl(ticket.path, ticket.token, file, { contentType: ticket.contentType, upsert: false });
+    .uploadToSignedUrl(ticket.path, ticket.token, file, { contentType: ticket.contentType, upsert: false, cacheControl: "31536000" });
   if (error) {
     const msg = String(error.message || "");
     if (/size|large|exceed/i.test(msg)) throw new Error("That file is too big. The limit is 50 MB.");
