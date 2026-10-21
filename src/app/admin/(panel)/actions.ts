@@ -31,26 +31,46 @@ export async function addIcebreakers(spice: number, text: string): Promise<{ add
   return { added: (data ?? []) as Icebreaker[], skipped: lines.length - fresh.length };
 }
 
-/** Adds a mixed list of questions (each with its own spice level). */
+/** Every general question's text, read 1,000 at a time (the database sends at most 1,000 per request). */
+async function allQuestionBodies(db: ReturnType<typeof createAdminClient>) {
+  const out: string[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data } = await db.from("icebreakers").select("body").is("event_id", null).order("id").range(from, from + 999);
+    if (!data?.length) break;
+    out.push(...data.map((r) => r.body as string));
+    if (data.length < 1000) break;
+  }
+  return out;
+}
+
+/** Adds a mixed list of questions (each with its own spice level). Up to 5,000 at once. */
 export async function addIcebreakersBulk(items: { spice: number; body: string }[]): Promise<{ added: Icebreaker[]; skipped: number; error?: string }> {
   await requireAdmin();
   const clean_ = items
     .map((i) => ({ spice: i.spice, body: clean(i.body) }))
     .filter((i) => [0, 1, 2, 3].includes(i.spice) && i.body.length >= 5 && i.body.length <= 300)
-    .slice(0, 2000);
+    .slice(0, 5000);
   if (!clean_.length) return { added: [], skipped: 0, error: "No questions found. Put one question per line." };
   const db = createAdminClient();
-  const taken = new Set<string>();
-  for (let i = 0; i < clean_.length; i += 200) {
-    const { data } = await db.from("icebreakers").select("body").is("event_id", null).in("body", clean_.slice(i, i + 200).map((x) => x.body));
-    (data ?? []).forEach((r) => taken.add((r.body as string).toLowerCase()));
-  }
-  const fresh = clean_.filter((x) => !taken.has(x.body.toLowerCase()));
+  const taken = new Set((await allQuestionBodies(db)).map((b) => b.toLowerCase()));
+  const fresh = clean_.filter((x) => {
+    const k = x.body.toLowerCase();
+    if (taken.has(k)) return false;
+    taken.add(k);
+    return true;
+  });
   if (!fresh.length) return { added: [], skipped: clean_.length };
-  const { data, error } = await db.from("icebreakers").insert(fresh).select("id, spice, body, active, created_at");
-  if (error) return { added: [], skipped: 0, error: "Couldn't save. Please try again." };
+  const added: Icebreaker[] = [];
+  for (let i = 0; i < fresh.length; i += 500) {
+    const { data, error } = await db.from("icebreakers").insert(fresh.slice(i, i + 500)).select("id, spice, body, active, created_at");
+    if (error) {
+      revalidatePath("/admin/icebreakers");
+      return { added, skipped: clean_.length - fresh.length, error: added.length ? `Saved ${added.length}, then something went wrong. Try adding the rest again.` : "Couldn't save. Please try again." };
+    }
+    added.push(...((data ?? []) as Icebreaker[]));
+  }
   revalidatePath("/admin/icebreakers");
-  return { added: (data ?? []) as Icebreaker[], skipped: clean_.length - fresh.length };
+  return { added, skipped: clean_.length - fresh.length };
 }
 
 export async function updateIcebreaker(id: number, patch: { body?: string; spice?: number; active?: boolean }) {
@@ -77,7 +97,7 @@ export async function deleteIcebreaker(id: number) {
 /** Hide, show or delete many questions at once. */
 export async function bulkIcebreakers(ids: number[], op: "hide" | "show" | "delete") {
   await requireAdmin();
-  const clean = Array.from(new Set(ids.filter((n) => Number.isInteger(n)))).slice(0, 5000);
+  const clean = Array.from(new Set(ids.filter((n) => Number.isInteger(n)))).slice(0, 10000);
   if (!clean.length) return { error: "Nothing selected." };
   const db = createAdminClient();
   for (let i = 0; i < clean.length; i += 300) {

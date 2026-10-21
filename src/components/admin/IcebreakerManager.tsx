@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import clsx from "clsx";
 import { Check, Eye, EyeOff, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { addIcebreakersBulk, bulkIcebreakers, deleteIcebreaker, updateIcebreaker, type Icebreaker } from "@/app/admin/(panel)/actions";
@@ -24,6 +24,9 @@ export function IcebreakerManager({ initial }: { initial: Icebreaker[] }) {
   const [addText, setAddText] = useState("");
   const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  // Thousands of rows are slow to draw, so show them a page at a time
+  const [visible, setVisible] = useState(200);
+  useEffect(() => setVisible(200), [level, query, showOff]);
   const [bulkPending, startBulk] = useTransition();
   const [bulkNote, setBulkNote] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -195,7 +198,7 @@ export function IcebreakerManager({ initial }: { initial: Icebreaker[] }) {
                 checked={shown.length > 0 && shown.every((i) => selected.has(i.id))}
                 onChange={(e) => setSelected(e.target.checked ? new Set([...selected, ...shown.map((i) => i.id)]) : new Set())}
               />
-              {selected.size ? `${selected.size} selected` : `Select all ${shown.length} shown`}
+              {selected.size ? `${selected.size} selected` : `Select all ${shown.length.toLocaleString()}`}
             </label>
             {selected.size > 0 && (
               <div className="ml-auto flex flex-wrap items-center gap-1.5">
@@ -214,7 +217,7 @@ export function IcebreakerManager({ initial }: { initial: Icebreaker[] }) {
           </div>
           {bulkNote && <p className="mb-2 rounded-xl bg-mint-soft px-3 py-2 text-[13px] font-medium text-mint">{bulkNote}</p>}
           <ul className="space-y-2">
-            {shown.map((i) => (
+            {shown.slice(0, visible).map((i) => (
               <Row
                 key={i.id}
                 item={i}
@@ -226,6 +229,14 @@ export function IcebreakerManager({ initial }: { initial: Icebreaker[] }) {
             ))}
             {!shown.length && <li className="rounded-2xl bg-surface p-6 text-center text-[14px] text-muted">No questions match.</li>}
           </ul>
+          {shown.length > visible && (
+            <button
+              onClick={() => setVisible((v) => v + 300)}
+              className="mt-3 h-11 w-full rounded-2xl border border-line-strong bg-surface text-[14px] font-semibold hover:bg-cream"
+            >
+              Show more ({(shown.length - visible).toLocaleString()} left)
+            </button>
+          )}
         </section>
       </div>
     </>

@@ -6,6 +6,8 @@ const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
 
 const nextConfig: NextConfig = {
   devIndicators: false,
+  // Big icebreaker imports (thousands of questions) go through a server action
+  experimental: { serverActions: { bodySizeLimit: "4mb" } },
   images: {
     remotePatterns: [{ protocol: "https", hostname: supabaseHost }],
   },
