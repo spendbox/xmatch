@@ -23,7 +23,7 @@ const sections: LegalSection[] = [
       <>
         <p><strong>Information you give us</strong></p>
         <ul>
-          <li><strong>Account:</strong> your email address and password (stored only in scrambled, hashed form). A phone number only if you choose to add one.</li>
+          <li><strong>Account:</strong> your email address and password (stored only in scrambled, hashed form).</li>
           <li><strong>Profile:</strong> first name, date of birth, gender, bio, interests and photos.</li>
           <li><strong>Preferences:</strong> what you&apos;re here for, who you&apos;d like to meet, age range, distance and question spice level.</li>
           <li><strong>Messages:</strong> what you send in masked chats and to your matches.</li>
@@ -46,7 +46,7 @@ const sections: LegalSection[] = [
       <>
         <p><strong>While you&apos;re masked:</strong> a random alias, your age, gender, interests, approximate distance and the spice level you picked.</p>
         <p><strong>After you both unmask:</strong> your first name, age, photos, bio and interests.</p>
-        <p>Other members <strong>never</strong> see your email, phone number, date of birth or exact location.</p>
+        <p>Other members <strong>never</strong> see your email, date of birth or exact location.</p>
       </>
     ),
   },
@@ -171,7 +171,7 @@ export default function PrivacyPage() {
       other={{ href: "/terms", label: "Terms of Service" }}
       summary={[
         "While masked, people only see an alias, age, gender, interests and a rough distance.",
-        "Your email, phone, birthday and exact location are never shown to other members.",
+        "Your email, birthday and exact location are never shown to other members.",
         "Masked chats are deleted unless you both unmask.",
         "Location is optional and rounded to about 1 km.",
         "We don't sell your data. You can delete your account any time.",

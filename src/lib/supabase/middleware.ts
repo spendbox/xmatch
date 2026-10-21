@@ -24,9 +24,9 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Checks the login token locally when possible (fast), refreshing it if needed
+  const { data } = await supabase.auth.getClaims();
+  const user = data?.claims?.sub ? { id: data.claims.sub } : null;
 
   const path = request.nextUrl.pathname;
   const redirectTo = (to: string) => {

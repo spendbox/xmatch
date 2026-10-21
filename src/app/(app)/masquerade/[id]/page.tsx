@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { getAuth, getMyProfile } from "@/lib/auth";
 import type { ChatMessage, MasqueradeState } from "@/lib/types";
 import { MasqueradeRoom } from "@/components/masquerade/MasqueradeRoom";
 
@@ -7,8 +7,7 @@ export const metadata = { title: "Masked chat" };
 
 export default async function RoomPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { supabase, user } = await getAuth();
   if (!user) redirect("/login");
 
   const { data: state } = await supabase.rpc("get_masquerade", { p_session: id });

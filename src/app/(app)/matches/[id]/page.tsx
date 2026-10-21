@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { getAuth, getMyProfile } from "@/lib/auth";
 import type { ChatMessage, Profile } from "@/lib/types";
 import { MatchChat } from "@/components/matches/MatchChat";
 
@@ -7,8 +7,7 @@ export const metadata = { title: "Chat" };
 
 export default async function MatchChatPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { supabase, user } = await getAuth();
   if (!user) redirect("/login");
 
   const { data: match } = await supabase.from("matches").select("*").eq("id", id).maybeSingle();

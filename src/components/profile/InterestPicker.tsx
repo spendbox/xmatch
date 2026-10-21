@@ -13,26 +13,38 @@ export function InterestPicker({ value, onChange }: { value: string[]; onChange:
     if (value.includes(tag)) onChange(value.filter((t) => t !== tag));
     else if (value.length < MAX_INTERESTS) onChange([...value, tag]);
   }
+  const full = value.length >= MAX_INTERESTS;
   return (
-    <div className="flex flex-wrap gap-2">
-      {INTEREST_OPTIONS.map((tag) => {
-        const on = value.includes(tag);
-        return (
-          <button
-            key={tag}
-            type="button"
-            onClick={() => toggle(tag)}
-            aria-pressed={on}
-            className={clsx(
-              "inline-flex h-10 items-center gap-2 rounded-full border pr-4 pl-3 text-[14px] font-medium transition active:scale-95",
-              on ? "animate-pop border-brand bg-brand text-white" : "border-line-strong bg-surface text-ink-soft hover:border-ink/20",
-            )}
-          >
-            <InterestIcon name={tag} size={17} />
-            {tag}
-          </button>
-        );
-      })}
+    <div>
+      <div className="flex flex-wrap gap-2">
+        {INTEREST_OPTIONS.map((tag) => {
+          const on = value.includes(tag);
+          const locked = full && !on;
+          return (
+            <button
+              key={tag}
+              type="button"
+              onClick={() => toggle(tag)}
+              aria-pressed={on}
+              disabled={locked}
+              className={clsx(
+                "inline-flex h-10 items-center gap-2 rounded-full border pr-4 pl-3 text-[14px] font-medium transition duration-300 active:scale-95",
+                on && "animate-pop border-brand bg-brand text-white",
+                !on && !locked && "border-line-strong bg-surface text-ink-soft hover:border-ink/20",
+                locked && "cursor-not-allowed border-line bg-surface text-ink-soft opacity-40 blur-[1.5px]",
+              )}
+            >
+              <InterestIcon name={tag} size={17} />
+              {tag}
+            </button>
+          );
+        })}
+      </div>
+      {full && (
+        <p className="mt-3 animate-fade-in text-[13px] font-medium text-brand">
+          That&apos;s {MAX_INTERESTS} — the max. Tap one you picked to swap it out.
+        </p>
+      )}
     </div>
   );
 }

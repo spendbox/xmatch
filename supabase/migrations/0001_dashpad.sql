@@ -640,30 +640,9 @@ language sql stable security definer set search_path = public as $$
   ) t
 $$;
 
--- Add, change or remove your phone number (always in +countrycode format)
-create or replace function public.set_my_phone(p_phone text) returns text
-language plpgsql security definer set search_path = public as $$
-declare
-  uid uuid := auth.uid();
-begin
-  if uid is null then raise exception 'Please log in'; end if;
-  p_phone := nullif(trim(p_phone), '');
-  if p_phone is not null and p_phone !~ '^\+[1-9][0-9]{6,14}$' then
-    raise exception 'Please enter a valid phone number';
-  end if;
-  if p_phone is not null and exists (select 1 from accounts_private where phone = p_phone and user_id <> uid) then
-    raise exception 'That phone number is already linked to another account';
-  end if;
-  update accounts_private set phone = p_phone where user_id = uid;
-  return p_phone;
-end $$;
-
--- Lets the server find which email belongs to a phone number (used for phone log-in).
-create or replace function public.email_for_phone(p_phone text) returns text
-language sql stable security definer set search_path = public as $$
-  select email from accounts_private where phone = p_phone limit 1
-$$;
-revoke execute on function public.email_for_phone(text) from public, anon, authenticated;
+-- Phone log-in was removed (email only)
+drop function if exists public.set_my_phone(text);
+drop function if exists public.email_for_phone(text);
 
 create or replace function public.bump_match_activity() returns trigger
 language plpgsql security definer set search_path = public as $$

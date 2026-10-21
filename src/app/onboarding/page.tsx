@@ -1,14 +1,13 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { getAuth, getMyProfile } from "@/lib/auth";
 import { Onboarding } from "./Onboarding";
 import type { Profile } from "@/lib/types";
 
 export const metadata = { title: "Set up your profile" };
 
 export default async function OnboardingPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { user } = await getAuth();
   if (!user) redirect("/login");
-  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+  const profile = await getMyProfile();
   return <Onboarding profile={profile as Profile} />;
 }

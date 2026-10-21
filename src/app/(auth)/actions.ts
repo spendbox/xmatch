@@ -1,8 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { createAdminClient, createClient } from "@/lib/supabase/server";
-import { normalizePhone } from "@/lib/phone";
+import { createClient } from "@/lib/supabase/server";
 
 export type AuthState = { error?: string; values?: Record<string, string> } | undefined;
 
@@ -41,28 +40,16 @@ export async function signUp(_: AuthState, form: FormData): Promise<AuthState> {
 }
 
 export async function logIn(_: AuthState, form: FormData): Promise<AuthState> {
-  const method = form.get("method") === "phone" ? "phone" : "email";
+  const email = String(form.get("email") ?? "").trim().toLowerCase();
   const password = String(form.get("password") ?? "");
-  let email = String(form.get("email") ?? "").trim().toLowerCase();
-  const phoneRaw = String(form.get("phone") ?? "");
-  const values = { method, email };
+  const values = { email };
 
+  if (!EMAIL_RE.test(email)) return { error: "Please enter a valid email address.", values };
   if (!password) return { error: "Please enter your password.", values };
-
-  if (method === "phone") {
-    const phone = normalizePhone(phoneRaw);
-    if (!phone) return { error: "Please enter a valid phone number.", values };
-    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return { error: "Phone log-in isn't set up yet. Use your email.", values };
-    const { data } = await createAdminClient().rpc("email_for_phone", { p_phone: phone });
-    if (!data) return { error: "Wrong phone number or password.", values };
-    email = data as string;
-  } else if (!EMAIL_RE.test(email)) {
-    return { error: "Please enter a valid email address.", values };
-  }
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) return { error: method === "phone" ? "Wrong phone number or password." : "Wrong email or password.", values };
+  if (error) return { error: "Wrong email or password.", values };
   redirect("/masquerade");
 }
 

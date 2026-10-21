@@ -9,7 +9,6 @@ export default function SignupPage() {
     <AuthShell
       title="Join the masquerade"
       subtitle="Just an email and a password. No codes, no hassle."
-      badge={<span className="rounded-full bg-mint-soft px-3 py-1.5 text-[13px] font-semibold text-mint">Free · 18+</span>}
       footer={
         <>
           Already have an account?{" "}

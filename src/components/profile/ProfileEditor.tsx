@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import clsx from "clsx";
 import {
-  AtSign, BellRing, Check, ChevronRight, Eye, Gift, Heart, ImagePlus, LogOut, PenLine, Phone, Shapes, ShieldCheck, Trash2,
+  AtSign, BellRing, Check, ChevronRight, Eye, Gift, Heart, ImagePlus, LogOut, PenLine, Shapes, ShieldCheck, Trash2,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { uploadPhoto, deletePhoto } from "@/lib/photos";
@@ -14,8 +14,6 @@ import { Button, ButtonLink, SubmitButton, tapFeedback } from "@/components/ui/B
 import { Input, Label, Textarea } from "@/components/ui/Field";
 import { Toggle } from "@/components/ui/Toggle";
 import { Sheet } from "@/components/ui/Sheet";
-import { PhoneInput, type PhoneValue } from "@/components/ui/PhoneInput";
-import { formatPhone } from "@/lib/phone";
 import { deleteAccount } from "@/app/(app)/profile/actions";
 import Link from "next/link";
 import { MaskIcon } from "@/components/ui/MaskIcon";
@@ -43,12 +41,10 @@ function strength(p: { name: string; bio: string; interests: string[]; photos: s
 export function ProfileEditor({
   profile,
   email,
-  phone,
   matchCount = 0,
 }: {
   profile: Profile;
   email: string;
-  phone: string;
   matchCount?: number;
 }) {
   const supabase = useMemo(() => createClient(), []);
@@ -62,28 +58,7 @@ export function ProfileEditor({
   const [justSaved, setJustSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState(false);
-  const [myPhone, setMyPhone] = useState(phone || null);
-  const [phoneSheet, setPhoneSheet] = useState(false);
-  const [phoneDraft, setPhoneDraft] = useState<PhoneValue | null>(null);
-  const [phoneSaving, setPhoneSaving] = useState(false);
-  const [phoneError, setPhoneError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
-
-  async function savePhoneValue(value: string | null) {
-    setPhoneSaving(true);
-    setPhoneError(null);
-    const { data, error: err } = await supabase.rpc("set_my_phone", { p_phone: value });
-    setPhoneSaving(false);
-    if (err)
-      return setPhoneError(
-        err.message.includes("already") ? "That number is already linked to another account." : "Couldn't save that number. Please check it and try again.",
-      );
-    setMyPhone((data as string | null) ?? null);
-    setPhoneSheet(false);
-  }
-  function savePhone() {
-    if (phoneDraft?.e164) savePhoneValue(phoneDraft.e164);
-  }
 
   const age = ageFromBirthdate(profile.birthdate);
   const gender = GENDERS.find((g) => g.value === profile.gender)?.label;
@@ -256,22 +231,6 @@ export function ProfileEditor({
       <section className="mt-3 overflow-hidden rounded-3xl border border-line bg-surface shadow-card">
         <p className="px-4 pt-4 pb-1 text-[12px] font-semibold tracking-wide text-muted uppercase">Account</p>
         <Row icon={<AtSign size={18} strokeWidth={1.75} />} label="Email" value={email} />
-        <Row
-          icon={<Phone size={18} strokeWidth={1.75} />}
-          label="Phone"
-          value={myPhone ? formatPhone(myPhone) : "Not added"}
-          action={
-            <button
-              onClick={() => {
-                tapFeedback();
-                setPhoneSheet(true);
-              }}
-              className="h-9 rounded-full bg-brand-soft px-3.5 text-[13px] font-semibold text-brand active:scale-95"
-            >
-              {myPhone ? "Change" : "Add"}
-            </button>
-          }
-        />
         <Row icon={<ShieldCheck size={18} strokeWidth={1.75} />} label="Privacy" value="Exact location never shown" />
         <form action={logOut} className="border-t border-line p-2">
           <SubmitButton variant="ghost" className="h-12 w-full rounded-2xl text-chili! hover:bg-chili-soft" loadingText="Logging out…">
@@ -293,29 +252,6 @@ export function ProfileEditor({
       <p className="mt-4 text-center text-[12px] text-muted">
         <Link href="/terms" className="hover:text-brand">Terms</Link> · <Link href="/privacy" className="hover:text-brand">Privacy</Link> · dashpad.site
       </p>
-
-      <Sheet
-        open={phoneSheet}
-        onClose={() => setPhoneSheet(false)}
-        title={myPhone ? "Change phone number" : "Add your phone number"}
-        subtitle="Optional. Lets you log in with your phone. Never shown to other members."
-        icon={<Phone size={22} strokeWidth={1.75} />}
-        footer={
-          <div className="space-y-2">
-            <Button size="lg" onClick={savePhone} disabled={!phoneDraft?.e164} loading={phoneSaving} loadingText="Saving…">
-              Save number
-            </Button>
-            {myPhone && (
-              <Button size="lg" variant="ghost" className="text-chili!" onClick={() => savePhoneValue(null)} disabled={phoneSaving}>
-                Remove number
-              </Button>
-            )}
-          </div>
-        }
-      >
-        <PhoneInput onChange={setPhoneDraft} autoFocus />
-        {phoneError && <p className="mt-3 rounded-xl bg-chili-soft px-4 py-3 text-[14px] font-medium text-chili">{phoneError}</p>}
-      </Sheet>
 
       <Sheet
         open={deleting}

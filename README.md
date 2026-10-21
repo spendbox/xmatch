@@ -7,7 +7,7 @@ Live at **dashpad.site** · Built with Next.js (hosted on Vercel) and Supabase (
 ## What's in it
 
 - Sign up with **email + password** (no codes), agree to Terms & Privacy, confirm 18+
-- Log in with email, or with phone if you've added one (country picker with flags, auto-formatting)
+- Log in with email and password
 - Forgot password (email link), delete account, unmatch
 - Terms of Service (`/terms`) and Privacy Policy (`/privacy`)
 - Profile setup: name, birthday (18+), gender, bio, interests, up to 6 photos
@@ -34,7 +34,7 @@ Live at **dashpad.site** · Built with Next.js (hosted on Vercel) and Supabase (
    |---|---|
    | `NEXT_PUBLIC_SUPABASE_URL` | Project URL from Supabase |
    | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `anon` public key |
-   | `SUPABASE_SERVICE_ROLE_KEY` | `service_role` secret key (keep private; used for phone log-in and account deletion) |
+   | `SUPABASE_SERVICE_ROLE_KEY` | `service_role` secret key (keep private; used for account deletion) |
    | `NEXT_PUBLIC_SITE_URL` | `https://dashpad.site` |
 3. Click **Deploy**.
 4. In the project, go to **Settings → Domains**, add `dashpad.site`, and follow the DNS instructions shown there at your domain registrar.

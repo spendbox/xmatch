@@ -104,7 +104,7 @@ export function PreviewScreen({ screen }: { screen: string }) {
           <Button size="lg" loading loadingText="Logging you in…">Log in</Button>
           <Button variant="gold" size="lg" loading loadingText="Masking up…">Put on your mask</Button>
           <Button variant="secondary" size="lg" loading loadingText="Saving…">Save</Button>
-          <div className="pt-4"><InterestPicker value={["Music", "Travel", "Food", "Art"]} onChange={() => {}} /></div>
+          <div className="pt-4"><InterestPicker value={["Music", "Travel", "Food", "Art", "Books", "Movies", "Dancing", "Comedy"]} onChange={() => {}} /></div>
         </div>
       );
     case "waiting":
@@ -164,7 +164,7 @@ export function PreviewScreen({ screen }: { screen: string }) {
     case "profile":
       return (
         <div className="pb-24">
-          <ProfileEditor profile={me} email="tolu@example.com" phone="+2348012345678" matchCount={3} />
+          <ProfileEditor profile={me} email="tolu@example.com" matchCount={3} />
           <BottomNav />
         </div>
       );
