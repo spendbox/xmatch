@@ -21,7 +21,9 @@ export function PasswordField({
   autoComplete,
   placeholder,
   meter,
+  autoFocus,
 }: {
+  autoFocus?: boolean;
   id?: string;
   autoComplete: string;
   placeholder: string;
@@ -37,6 +39,7 @@ export function PasswordField({
         name="password"
         type={show ? "text" : "password"}
         autoComplete={autoComplete}
+        autoFocus={autoFocus}
         placeholder={placeholder}
         minLength={meter ? 8 : undefined}
         required

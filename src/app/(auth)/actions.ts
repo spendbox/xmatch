@@ -50,6 +50,15 @@ async function signUpInner(_: AuthState, form: FormData): Promise<AuthState> {
   redirect("/onboarding");
 }
 
+/** Step one of signing in: is there already an account for this email? */
+export async function checkEmail(raw: string): Promise<{ exists?: boolean; error?: string }> {
+  const email = String(raw ?? "").trim().toLowerCase();
+  if (!EMAIL_RE.test(email)) return { error: "Please enter a valid email address." };
+  const { data, error } = await createAdminClient().from("accounts_private").select("user_id").eq("email", email).limit(1);
+  if (error) return { error: "Something went wrong. Please try again." };
+  return { exists: (data?.length ?? 0) > 0 };
+}
+
 export async function logIn(_: AuthState, form: FormData): Promise<AuthState> {
   const email = String(form.get("email") ?? "").trim().toLowerCase();
   const password = String(form.get("password") ?? "");

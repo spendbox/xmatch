@@ -4,8 +4,8 @@ import { ForgotForm } from "./ForgotForm";
 
 export const metadata = { title: "Reset password" };
 
-export default async function ForgotPage({ searchParams }: { searchParams: Promise<{ expired?: string }> }) {
-  const { expired } = await searchParams;
+export default async function ForgotPage({ searchParams }: { searchParams: Promise<{ expired?: string; email?: string }> }) {
+  const { expired, email } = await searchParams;
   return (
     <AuthShell
       title="Forgot your password?"
@@ -16,7 +16,7 @@ export default async function ForgotPage({ searchParams }: { searchParams: Promi
         </Link>
       }
     >
-      <ForgotForm />
+      <ForgotForm initialEmail={email} />
     </AuthShell>
   );
 }

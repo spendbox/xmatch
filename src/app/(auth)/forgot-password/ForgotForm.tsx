@@ -6,7 +6,7 @@ import { requestPasswordReset } from "../actions";
 import { Button } from "@/components/ui/Button";
 import { FormError, IconInput, Label } from "@/components/ui/Field";
 
-export function ForgotForm() {
+export function ForgotForm({ initialEmail }: { initialEmail?: string }) {
   const [state, action, pending] = useActionState(requestPasswordReset, undefined);
   if (state?.sent) {
     return (
@@ -26,7 +26,7 @@ export function ForgotForm() {
       <div>
         <Label htmlFor="email">Email</Label>
         <IconInput id="email" name="email" type="email" autoComplete="email" inputMode="email" placeholder="you@example.com"
-          defaultValue={state?.email} required icon={<Mail size={19} strokeWidth={1.75} />} />
+          defaultValue={state?.email ?? initialEmail} required icon={<Mail size={19} strokeWidth={1.75} />} />
       </div>
       <FormError message={state?.error} />
       <Button type="submit" size="lg" loading={pending} loadingText="Sending link…">

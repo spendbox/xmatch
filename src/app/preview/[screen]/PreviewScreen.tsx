@@ -5,6 +5,8 @@ import { WalletScreen } from "@/components/keys/WalletScreen";
 import { GiftSheet } from "@/components/keys/GiftSheet";
 import { EventsScreen } from "@/components/events/EventsScreen";
 import { EventMediaProvider } from "@/components/events/media/EventMediaProvider";
+import { AuthShell } from "@/app/(auth)/AuthShell";
+import { AuthFlow } from "@/app/(auth)/AuthFlow";
 import { EventSpace } from "@/components/events/space/EventSpace";
 import { EventLobby } from "@/components/events/EventLobby";
 import { AdminShell } from "@/components/admin/AdminShell";
@@ -269,6 +271,13 @@ function ScreenBody({ screen }: { screen: string }) {
             ...(screen === "event-spotlight-live" ? { starts_at: iso(1200), ends_at: new Date(now + 2400_000).toISOString() } : {}),
           })}
         />
+      );
+    case "auth-login":
+    case "auth-signup":
+      return (
+        <AuthShell title="Welcome to Dashpad" subtitle="Log in or create an account. Just your email to start.">
+          <AuthFlow demo={{ step: screen === "auth-login" ? "login" : "signup", email: "tolu@example.com" }} />
+        </AuthShell>
       );
     case "admin-night-spotlight":
       return <AdminShell><NightEditor night={{ ...adminNights[0], kind: "spotlight", settings: { free_reveals: 10, reveal_cost: 1, max_chats: 5 } }} /></AdminShell>;

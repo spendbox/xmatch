@@ -1,24 +1,12 @@
-import Link from "next/link";
 import { AuthShell } from "../AuthShell";
-import { SignupForm } from "./SignupForm";
+import { AuthFlow } from "../AuthFlow";
 
-export const metadata = { title: "Create account" };
+export const metadata = { title: "Join Dashpad" };
 
-export default function SignupPage() {
+export default function Page() {
   return (
-    <AuthShell
-      title="Join the masquerade"
-      subtitle="Just an email and a password. No codes, no hassle."
-      footer={
-        <>
-          Already have an account?{" "}
-          <Link href="/login" className="font-semibold text-brand">
-            Log in
-          </Link>
-        </>
-      }
-    >
-      <SignupForm />
+    <AuthShell title="Welcome to Dashpad" subtitle="Log in or create an account. Just your email to start.">
+      <AuthFlow />
     </AuthShell>
   );
 }
