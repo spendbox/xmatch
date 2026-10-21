@@ -2,8 +2,8 @@
 
 import { useMemo, useState, useTransition } from "react";
 import clsx from "clsx";
-import { Check, Pencil, Plus, Search, Trash2, X } from "lucide-react";
-import { addIcebreakersBulk, deleteIcebreaker, updateIcebreaker, type Icebreaker } from "@/app/admin/(panel)/actions";
+import { Check, Eye, EyeOff, Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { addIcebreakersBulk, bulkIcebreakers, deleteIcebreaker, updateIcebreaker, type Icebreaker } from "@/app/admin/(panel)/actions";
 import { parseIcebreakers } from "@/lib/icebreakerImport";
 import { Upload } from "lucide-react";
 import { SPICE_LEVELS } from "@/lib/constants";
@@ -23,6 +23,9 @@ export function IcebreakerManager({ initial }: { initial: Icebreaker[] }) {
   const [addLevel, setAddLevel] = useState(1);
   const [addText, setAddText] = useState("");
   const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [bulkPending, startBulk] = useTransition();
+  const [bulkNote, setBulkNote] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
   const counts = useMemo(() => [0, 1, 2, 3].map((l) => items.filter((i) => i.spice === l && i.active).length), [items]);
@@ -53,6 +56,32 @@ export function IcebreakerManager({ initial }: { initial: Icebreaker[] }) {
     if (file.size > 2_000_000) return setNote({ ok: false, text: "That file is too big (2 MB max)." });
     const text = await file.text();
     setAddText((t) => (t.trim() ? t.trimEnd() + "\n" : "") + text);
+  }
+
+  function toggleSelect(id: number, on: boolean) {
+    setSelected((cur) => {
+      const next = new Set(cur);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
+  function runBulk(op: "hide" | "show" | "delete") {
+    const ids = Array.from(selected);
+    if (!ids.length) return;
+    if (op === "delete" && !confirm(`Delete ${ids.length === 1 ? "this question" : `these ${ids.length} questions`}? This can't be undone.`)) return;
+    setBulkNote(null);
+    startBulk(async () => {
+      const res = await bulkIcebreakers(ids, op);
+      if ("error" in res && res.error) return setBulkNote(res.error);
+      const set = new Set(ids);
+      setItems((list) =>
+        op === "delete" ? list.filter((x) => !set.has(x.id)) : list.map((x) => (set.has(x.id) ? { ...x, active: op === "show" } : x)),
+      );
+      setSelected(new Set());
+      setBulkNote(`${ids.length === 1 ? "1 question" : `${ids.length} questions`} ${op === "delete" ? "deleted" : op === "hide" ? "hidden" : "shown"}.`);
+    });
   }
 
   function patch(id: number, p: Partial<Icebreaker>) {
@@ -153,14 +182,47 @@ export function IcebreakerManager({ initial }: { initial: Icebreaker[] }) {
               ))}
             </div>
             <label className="flex items-center gap-2 text-[13px] text-muted">
-              <input type="checkbox" checked={showOff} onChange={(e) => setShowOff(e.target.checked)} className="accent-brand" /> Show switched-off
+              <input type="checkbox" checked={showOff} onChange={(e) => setShowOff(e.target.checked)} className="accent-brand" /> Show hidden
             </label>
           </div>
 
-          <p className="mb-2 text-[13px] text-muted">{shown.length} shown</p>
+          {/* Select + bulk actions */}
+          <div className="sticky top-2 z-10 mb-2 flex flex-wrap items-center gap-2 rounded-2xl border border-line bg-surface px-3 py-2 shadow-card">
+            <label className="flex items-center gap-2 text-[13px] font-semibold">
+              <input
+                type="checkbox"
+                className="h-4 w-4 accent-brand"
+                checked={shown.length > 0 && shown.every((i) => selected.has(i.id))}
+                onChange={(e) => setSelected(e.target.checked ? new Set([...selected, ...shown.map((i) => i.id)]) : new Set())}
+              />
+              {selected.size ? `${selected.size} selected` : `Select all ${shown.length} shown`}
+            </label>
+            {selected.size > 0 && (
+              <div className="ml-auto flex flex-wrap items-center gap-1.5">
+                <Button variant="secondary" className="h-9 px-3 text-[13px]" disabled={bulkPending} onClick={() => runBulk("hide")}>
+                  <EyeOff size={15} /> Hide
+                </Button>
+                <Button variant="secondary" className="h-9 px-3 text-[13px]" disabled={bulkPending} onClick={() => runBulk("show")}>
+                  <Eye size={15} /> Show
+                </Button>
+                <Button variant="danger" className="h-9 px-3 text-[13px]" loading={bulkPending} loadingText="Working…" onClick={() => runBulk("delete")}>
+                  <Trash2 size={15} /> Delete
+                </Button>
+                <button onClick={() => setSelected(new Set())} className="h-9 rounded-xl px-2 text-[13px] font-medium text-muted hover:text-ink">Clear</button>
+              </div>
+            )}
+          </div>
+          {bulkNote && <p className="mb-2 rounded-xl bg-mint-soft px-3 py-2 text-[13px] font-medium text-mint">{bulkNote}</p>}
           <ul className="space-y-2">
             {shown.map((i) => (
-              <Row key={i.id} item={i} onChange={(p) => patch(i.id, p)} onDeleted={() => setItems((l) => l.filter((x) => x.id !== i.id))} />
+              <Row
+                key={i.id}
+                item={i}
+                selected={selected.has(i.id)}
+                onSelect={(on) => toggleSelect(i.id, on)}
+                onChange={(p) => patch(i.id, p)}
+                onDeleted={() => setItems((l) => l.filter((x) => x.id !== i.id))}
+              />
             ))}
             {!shown.length && <li className="rounded-2xl bg-surface p-6 text-center text-[14px] text-muted">No questions match.</li>}
           </ul>
@@ -170,7 +232,15 @@ export function IcebreakerManager({ initial }: { initial: Icebreaker[] }) {
   );
 }
 
-function Row({ item, onChange, onDeleted }: { item: Icebreaker; onChange: (p: Partial<Icebreaker>) => void; onDeleted: () => void }) {
+function Row({
+  item, selected, onSelect, onChange, onDeleted,
+}: {
+  item: Icebreaker;
+  selected: boolean;
+  onSelect: (on: boolean) => void;
+  onChange: (p: Partial<Icebreaker>) => void;
+  onDeleted: () => void;
+}) {
   const [editing, setEditing] = useState(false);
   const [body, setBody] = useState(item.body);
   const [spice, setSpice] = useState(item.spice);
@@ -202,7 +272,13 @@ function Row({ item, onChange, onDeleted }: { item: Icebreaker; onChange: (p: Pa
   }
 
   return (
-    <li className={clsx("rounded-2xl border bg-surface p-3.5 transition", item.active ? "border-line" : "border-dashed border-line-strong opacity-60")}>
+    <li
+      className={clsx(
+        "rounded-2xl border bg-surface p-3.5 transition",
+        selected ? "border-brand ring-2 ring-brand/20" : item.active ? "border-line" : "border-dashed border-line-strong",
+        !item.active && !selected && "opacity-60",
+      )}
+    >
       {editing ? (
         <div className="space-y-2">
           <Textarea rows={2} value={body} onChange={(e) => setBody(e.target.value)} className="text-[15px]" autoFocus />
@@ -219,6 +295,13 @@ function Row({ item, onChange, onDeleted }: { item: Icebreaker; onChange: (p: Pa
         </div>
       ) : (
         <div className="flex items-start gap-3">
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={(e) => onSelect(e.target.checked)}
+            className="mt-2 h-4 w-4 shrink-0 accent-brand"
+            aria-label="Select question"
+          />
           <span className={clsx("mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg", TONES[item.spice])} title={SPICE_LEVELS[item.spice].label}>
             <SpiceIcon level={item.spice} size={16} />
           </span>

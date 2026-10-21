@@ -3,7 +3,7 @@ import { MatchesList } from "@/components/matches/MatchesList";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { ButtonLink } from "@/components/ui/Button";
 
-export const metadata = { title: "Matches" };
+export const metadata = { title: "Chats" };
 
 export default async function MatchesPage() {
   const { user } = await getAuth();

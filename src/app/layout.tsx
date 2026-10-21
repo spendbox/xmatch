@@ -31,7 +31,15 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* Remember a folded side menu without a flash on load */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: "try{if(localStorage.getItem('dp-sidebar')==='collapsed')document.documentElement.dataset.sidebar='collapsed'}catch(e){}",
+          }}
+        />
+      </head>
       <body className="min-h-dvh">
         <NavProgress />
         {children}

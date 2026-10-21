@@ -119,7 +119,7 @@ export function PreviewScreen({ screen }: { screen: string }) {
   return (
     <>
       <Sidebar user={{ id: "me", name: "Tolu", photo: me.photos[0] }} />
-      <div className="lg:pl-[260px]">{inner}</div>
+      <div className="lg:pl-[var(--sidebar-w)] lg:transition-[padding] lg:duration-300">{inner}</div>
     </>
   );
 }

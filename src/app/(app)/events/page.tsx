@@ -2,7 +2,7 @@ import { getAuth } from "@/lib/auth";
 import type { DashpadEvent } from "@/lib/events";
 import { EventsScreen } from "@/components/events/EventsScreen";
 
-export const metadata = { title: "Masquerade Nights" };
+export const metadata = { title: "Events" };
 
 export default async function EventsPage() {
   const { supabase } = await getAuth();

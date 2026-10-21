@@ -83,7 +83,7 @@ export function NightsList({ nights }: { nights: AdminNight[] }) {
   return (
     <>
       <AdminTitle
-        title="Masquerade Nights"
+        title="Events"
         subtitle="Themed hours where everyone masks up at once. Rounds of 5-minute masked chats, a new person each round."
         action={
           <Link href="/admin/nights/new" className="inline-flex h-11 items-center gap-1.5 rounded-full bg-brand px-5 text-[14px] font-semibold text-white">

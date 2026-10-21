@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Desktop side menu folded down to icons (set on <html> before the page paints) */
+@custom-variant collapsed (:root[data-sidebar="collapsed"] &);
+
 @theme {
   --font-sans: "Plus Jakarta Sans Variable", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Fraunces Variable", ui-serif, Georgia, serif;
@@ -143,3 +146,6 @@ input[type="number"]::-webkit-outer-spin-button {
 .glow {
   background: radial-gradient(closest-side, currentColor, transparent);
 }
+
+:root { --sidebar-w: 260px; }
+:root[data-sidebar="collapsed"] { --sidebar-w: 84px; }

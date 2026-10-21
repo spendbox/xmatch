@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
-import { CalendarHeart, Heart, UserRound } from "lucide-react";
+import { CalendarHeart, MessageCircle, UserRound } from "lucide-react";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 
 const tabs = [
   { href: "/home", label: "Home", icon: (on: boolean) => <MaskIcon className="w-6" eyes={on ? "#efebfd" : "#ffffff"} /> },
-  { href: "/events", label: "Nights", icon: () => <CalendarHeart size={22} /> },
-  { href: "/matches", label: "Matches", icon: () => <Heart size={22} /> },
+  { href: "/events", label: "Events", icon: () => <CalendarHeart size={22} /> },
+  { href: "/matches", label: "Chats", icon: () => <MessageCircle size={22} /> },
   { href: "/profile", label: "Profile", icon: () => <UserRound size={22} /> },
 ];
 

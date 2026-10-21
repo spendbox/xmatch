@@ -16,7 +16,7 @@ export function AppChrome({ user, children }: { user: ChromeUser; children: Reac
   return (
     <CallProvider userId={user.id}>
       <Sidebar user={user} />
-      <div className={(fullScreen ? "" : "pb-24 ") + "lg:pb-0 lg:pl-[260px]"}>{children}</div>
+      <div className={(fullScreen ? "" : "pb-24 ") + "lg:pb-0 lg:pl-[var(--sidebar-w)] lg:transition-[padding] lg:duration-300"}>{children}</div>
       {!fullScreen && <BottomNav />}
       {!path.startsWith("/masquerade/") && <InviteListener userId={user.id} />}
     </CallProvider>

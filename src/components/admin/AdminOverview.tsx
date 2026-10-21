@@ -49,7 +49,7 @@ export function AdminOverview({ overview: o, nights }: { overview: Overview; nig
       </div>
 
       <div className="mt-10 mb-4 flex items-center justify-between">
-        <h2 className="text-[18px] font-semibold">Upcoming Masquerade Nights</h2>
+        <h2 className="text-[18px] font-semibold">Upcoming events</h2>
         <Link href="/admin/nights/new" className="inline-flex h-10 items-center gap-1.5 rounded-full bg-brand px-4 text-[14px] font-semibold text-white">
           <Plus size={16} /> New night
         </Link>

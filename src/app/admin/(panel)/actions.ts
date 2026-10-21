@@ -72,7 +72,24 @@ export async function deleteIcebreaker(id: number) {
   return error ? { error: "Couldn't delete." } : { ok: true };
 }
 
-// ---------------- Masquerade Nights ----------------
+/** Hide, show or delete many questions at once. */
+export async function bulkIcebreakers(ids: number[], op: "hide" | "show" | "delete") {
+  await requireAdmin();
+  const clean = Array.from(new Set(ids.filter((n) => Number.isInteger(n)))).slice(0, 5000);
+  if (!clean.length) return { error: "Nothing selected." };
+  const db = createAdminClient();
+  for (let i = 0; i < clean.length; i += 300) {
+    const chunk = clean.slice(i, i + 300);
+    const { error } =
+      op === "delete"
+        ? await db.from("icebreakers").delete().in("id", chunk)
+        : await db.from("icebreakers").update({ active: op === "show" }).in("id", chunk);
+    if (error) return { error: "Couldn't update all of them. Please try again.", done: i };
+  }
+  return { ok: true, count: clean.length };
+}
+
+// ---------------- Events ----------------
 
 export type NightInput = {
   id?: string;

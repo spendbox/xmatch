@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
-import { CalendarHeart, Heart, LogOut, UserRound } from "lucide-react";
-import { Logo } from "@/components/ui/Logo";
+import { CalendarHeart, LogOut, MessageCircle, PanelLeftClose, PanelLeftOpen, UserRound } from "lucide-react";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { Avatar } from "@/components/ui/Avatar";
 import { KeyCoin } from "@/components/keys/KeyIcon";
@@ -16,8 +15,8 @@ export type ChromeUser = { id: string; name: string; photo?: string | null };
 
 const items = [
   { href: "/home", label: "Home", icon: (on: boolean) => <MaskIcon className="w-[22px]" eyes={on ? "#5b3fd9" : "#faf7f2"} /> },
-  { href: "/events", label: "Masquerade Nights", icon: () => <CalendarHeart size={21} /> },
-  { href: "/matches", label: "Matches", icon: () => <Heart size={21} /> },
+  { href: "/events", label: "Events", icon: () => <CalendarHeart size={21} /> },
+  { href: "/matches", label: "Chats", icon: () => <MessageCircle size={21} /> },
   { href: "/wallet", label: "Keys", icon: () => <KeyCoin size={22} /> },
   { href: "/profile", label: "Profile", icon: () => <UserRound size={21} /> },
 ];
@@ -26,14 +25,41 @@ export function isActive(path: string, href: string) {
   return path === href || path.startsWith(href + "/") || (href === "/home" && path.startsWith("/masquerade"));
 }
 
-/** Left-hand navigation on computers and tablets in landscape. */
+function toggleCollapsed() {
+  const root = document.documentElement;
+  const next = root.dataset.sidebar === "collapsed" ? "" : "collapsed";
+  if (next) root.dataset.sidebar = next;
+  else delete root.dataset.sidebar;
+  try {
+    localStorage.setItem("dp-sidebar", next || "open");
+  } catch {}
+}
+
+/** Left-hand navigation on computers. Can be folded down to icons. */
 export function Sidebar({ user }: { user: ChromeUser }) {
   const path = usePathname();
   const { wallet } = useWallet(user.id);
+  const hideWhenFolded = "collapsed:hidden";
+
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 hidden w-[260px] flex-col border-r border-line bg-surface px-4 py-6 lg:flex">
-      <div className="px-2">
-        <Logo href="/home" />
+    <aside className="fixed inset-y-0 left-0 z-30 hidden w-[var(--sidebar-w)] flex-col overflow-hidden border-r border-line bg-surface px-4 py-6 transition-[width] duration-300 lg:flex collapsed:px-3">
+      <div className="flex items-center justify-between gap-2 px-2 collapsed:flex-col collapsed:px-0">
+        <Link href="/home" className="inline-flex items-center gap-2" aria-label="Dashpad home">
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-brand text-white">
+            <MaskIcon className="w-5" eyes="#5b3fd9" />
+          </span>
+          <span className={clsx("font-display text-xl font-semibold tracking-tight text-ink", hideWhenFolded)}>Dashpad</span>
+        </Link>
+        <button
+          type="button"
+          onClick={toggleCollapsed}
+          className="grid h-9 w-9 place-items-center rounded-xl text-muted transition hover:bg-cream hover:text-ink collapsed:mt-3"
+          aria-label="Fold or unfold the menu"
+          title="Fold or unfold the menu"
+        >
+          <PanelLeftClose size={19} className={hideWhenFolded} />
+          <PanelLeftOpen size={19} className="hidden collapsed:block" />
+        </button>
       </div>
 
       <nav className="mt-8 space-y-1" aria-label="Main">
@@ -43,15 +69,18 @@ export function Sidebar({ user }: { user: ChromeUser }) {
             <Link
               key={it.href}
               href={it.href}
+              title={it.label}
               className={clsx(
-                "group flex h-12 items-center gap-3 rounded-2xl px-3 text-[15px] font-semibold transition",
+                "group flex h-12 items-center gap-3 rounded-2xl px-3 text-[15px] font-semibold whitespace-nowrap transition collapsed:justify-center collapsed:px-0",
                 on ? "bg-brand text-white shadow-[0_8px_20px_-10px_rgb(91_63_217/0.7)]" : "text-ink-soft hover:bg-cream hover:text-ink",
               )}
             >
-              <span className="grid w-7 place-items-center">{it.icon(on)}</span>
-              {it.label}
+              <span className="relative grid w-7 shrink-0 place-items-center">
+                {it.icon(on)}
+              </span>
+              <span className={hideWhenFolded}>{it.label}</span>
               {it.href === "/wallet" && wallet && (
-                <span className={clsx("ml-auto rounded-full px-2 py-0.5 text-[12px] font-bold", on ? "bg-white/20" : "bg-gold-soft text-[#8a5a00]")}>
+                <span className={clsx("ml-auto rounded-full px-2 py-0.5 text-[12px] font-bold", hideWhenFolded, on ? "bg-white/20" : "bg-gold-soft text-[#8a5a00]")}>
                   {wallet.balance}
                 </span>
               )}
@@ -62,7 +91,10 @@ export function Sidebar({ user }: { user: ChromeUser }) {
 
       <Link
         href="/home"
-        className="relative mt-6 overflow-hidden rounded-3xl bg-gradient-to-br from-brand via-[#6d4ff0] to-[#8f6bff] p-4 text-white transition hover:brightness-105"
+        className={clsx(
+          "relative mt-6 overflow-hidden rounded-3xl bg-gradient-to-br from-brand via-[#6d4ff0] to-[#8f6bff] p-4 text-white transition hover:brightness-105",
+          hideWhenFolded,
+        )}
       >
         <span aria-hidden className="absolute -top-8 -right-8 h-24 w-24 rounded-full bg-white/10" />
         <MaskIcon className="relative w-9 animate-float text-white" eyes="#6d4ff0" />
@@ -72,9 +104,11 @@ export function Sidebar({ user }: { user: ChromeUser }) {
         </p>
       </Link>
 
-      <div className="mt-auto flex items-center gap-3 rounded-2xl p-2">
-        <Avatar src={user.photo} name={user.name} size={40} />
-        <div className="min-w-0 flex-1">
+      <div className="mt-auto flex items-center gap-3 rounded-2xl p-2 collapsed:flex-col collapsed:p-0">
+        <Link href="/profile" title="View profile" className="shrink-0">
+          <Avatar src={user.photo} name={user.name} size={40} />
+        </Link>
+        <div className={clsx("min-w-0 flex-1", hideWhenFolded)}>
           <p className="truncate text-[14px] font-semibold">{user.name}</p>
           <Link href="/profile" className="text-[12px] text-muted hover:text-brand">
             View profile

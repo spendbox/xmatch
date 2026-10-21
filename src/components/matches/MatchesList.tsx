@@ -36,7 +36,7 @@ export function MatchesList({
     <main className={side ? "px-4 pt-7 pb-6" : "mx-auto max-w-md px-5 pt-6 lg:max-w-3xl lg:px-10 lg:pt-10"}>
       <header className="flex items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-[34px] leading-tight font-semibold tracking-tight">Matches</h1>
+          <h1 className="font-display text-[34px] leading-tight font-semibold tracking-tight">Chats</h1>
           <p className="mt-1 text-[15px] text-muted">People you unmasked with.</p>
         </div>
         {matches.length > 0 && (
@@ -47,7 +47,7 @@ export function MatchesList({
       </header>
 
       {matches.length === 0 ? (
-        side ? <p className="mt-6 rounded-2xl bg-surface p-4 text-[14px] text-muted">Your matches will appear here.</p> : <Empty />
+        side ? <p className="mt-6 rounded-2xl bg-surface p-4 text-[14px] text-muted">Your chats will appear here.</p> : <Empty />
       ) : (
         <>
           {fresh.length > 0 && (

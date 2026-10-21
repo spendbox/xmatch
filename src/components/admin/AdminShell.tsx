@@ -9,7 +9,7 @@ import { adminLogout } from "@/app/admin/actions";
 
 const NAV = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
-  { href: "/admin/nights", label: "Masquerade Nights", icon: CalendarHeart },
+  { href: "/admin/nights", label: "Events", icon: CalendarHeart },
   { href: "/admin/icebreakers", label: "Icebreakers", icon: MessageCircleQuestion },
 ];
 
