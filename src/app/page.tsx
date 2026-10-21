@@ -71,7 +71,7 @@ export default function Landing() {
           </nav>
           <div className="flex items-center gap-2">
             <ButtonLink href="/login" className="h-10 rounded-full px-5 text-[14px]">
-              Log in or join
+              Log in
             </ButtonLink>
           </div>
         </header>
