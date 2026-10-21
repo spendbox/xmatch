@@ -1,0 +1,83 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fraunces Variable", ui-serif, Georgia, serif;
+
+  --color-cream: #faf7f2;
+  --color-surface: #ffffff;
+  --color-ink: #1c1828;
+  --color-ink-soft: #3a3448;
+  --color-muted: #6e687c;
+  --color-line: #ebe5dc;
+  --color-line-strong: #ddd5c9;
+
+  --color-brand: #5b3fd9;
+  --color-brand-dark: #4730b3;
+  --color-brand-soft: #efebfd;
+  --color-brand-ink: #2b1d73;
+
+  --color-gold: #f2b33d;
+  --color-gold-soft: #fdf3dc;
+  --color-chili: #e5484d;
+  --color-chili-soft: #fdecec;
+  --color-mint: #1f9d6b;
+  --color-mint-soft: #e5f6ee;
+
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+  --radius-3xl: 1.75rem;
+
+  --shadow-card: 0 1px 2px rgb(28 24 40 / 0.04), 0 4px 16px rgb(28 24 40 / 0.05);
+  --shadow-lift: 0 8px 30px rgb(28 24 40 / 0.12);
+
+  --animate-float: float 4s ease-in-out infinite;
+  --animate-pulse-ring: pulse-ring 2.2s ease-out infinite;
+  --animate-fade-up: fade-up 0.35s ease-out both;
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+  @keyframes pulse-ring {
+    0% { transform: scale(0.85); opacity: 0.55; }
+    100% { transform: scale(1.6); opacity: 0; }
+  }
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+  background: var(--color-cream);
+}
+
+body {
+  background: var(--color-cream);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Comfortable spacing above the phone's home bar */
+.pb-safe {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+@layer base {
+  input, select, textarea, button {
+    font: inherit;
+  }
+}
+
+/* Hide number input spinners */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
