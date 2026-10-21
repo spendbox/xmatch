@@ -16,7 +16,7 @@ export function Equalizer({ playing, className }: { playing: boolean; className?
   );
 }
 
-function Bar({ floating, handle, onCollapse }: { floating?: boolean; handle?: React.ReactNode; onCollapse?: () => void }) {
+function Bar({ floating, handle, onCollapse, noStop }: { floating?: boolean; handle?: React.ReactNode; onCollapse?: () => void; noStop?: boolean }) {
   const m = useEventMedia();
   if (!m.active || !m.hasMedia) return null;
   const Icon = m.isLive ? Radio : m.isVideo ? Video : Music2;
@@ -70,9 +70,11 @@ function Bar({ floating, handle, onCollapse }: { floating?: boolean; handle?: Re
           <Minimize2 size={17} />
         </button>
       )}
-      <button onClick={m.stop} className="grid h-10 w-10 place-items-center rounded-full text-muted hover:bg-ink/5" aria-label="Stop the music">
-        <X size={19} />
-      </button>
+      {!noStop && (
+        <button onClick={m.stop} className="grid h-10 w-10 place-items-center rounded-full text-muted hover:bg-ink/5" aria-label="Stop the music">
+          <X size={19} />
+        </button>
+      )}
     </div>
   );
 }
@@ -90,29 +92,29 @@ export function MiniPlayer({ className }: { className?: string }) {
   );
 }
 
-/** Shown over other pages while an event is playing. Drag it anywhere, or shrink it to a small bubble. */
+/**
+ * Shown over other pages while an event is playing: a small bubble you can drag anywhere.
+ * Tap it to open the player; the shrink button puts it back.
+ */
 export function FloatingMiniPlayer() {
   const m = useEventMedia();
   const [pos, setPos] = useState({ x: 0, y: 0 });
-  const [small, setSmall] = useState(false);
+  const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   const drag = useRef<{ x: number; y: number; ox: number; oy: number; moved: boolean } | null>(null);
+  const justDragged = useRef(false);
+  const bubbleAt = useRef({ x: 0, y: 0 });
 
   // Remember where they put it
   useEffect(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem("dp-mini-player") ?? "null");
+      const saved = JSON.parse(localStorage.getItem("dp-mini-bubble") ?? "null");
       if (saved) {
-        setPos({ x: saved.x ?? 0, y: saved.y ?? 0 });
-        setSmall(!!saved.small);
+        bubbleAt.current = { x: saved.x ?? 0, y: saved.y ?? 0 };
+        setPos(bubbleAt.current);
       }
     } catch {}
   }, []);
-  const save = (p: { x: number; y: number }, sm: boolean) => {
-    try {
-      localStorage.setItem("dp-mini-player", JSON.stringify({ ...p, small: sm }));
-    } catch {}
-  };
 
   // Keep it on screen
   const clamp = (x: number, y: number) => {
@@ -121,38 +123,45 @@ export function FloatingMiniPlayer() {
     const r = el.getBoundingClientRect();
     const baseLeft = r.left - pos.x;
     const baseTop = r.top - pos.y;
-    const minX = 8 - baseLeft;
-    const maxX = window.innerWidth - 8 - r.width - baseLeft;
-    const minY = 8 - baseTop;
-    const maxY = window.innerHeight - 8 - r.height - baseTop;
-    return { x: Math.min(maxX, Math.max(minX, x)), y: Math.min(maxY, Math.max(minY, y)) };
+    return {
+      x: Math.min(window.innerWidth - 8 - r.width - baseLeft, Math.max(8 - baseLeft, x)),
+      y: Math.min(window.innerHeight - 8 - r.height - baseTop, Math.max(8 - baseTop, y)),
+    };
   };
 
-  const down = (e: React.PointerEvent) => {
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  const onDown = (e: React.PointerEvent) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
     drag.current = { x: e.clientX, y: e.clientY, ox: pos.x, oy: pos.y, moved: false };
   };
-  const move = (e: React.PointerEvent) => {
+  const onMove = (e: React.PointerEvent) => {
     const d = drag.current;
     if (!d) return;
     const dx = e.clientX - d.x;
     const dy = e.clientY - d.y;
-    if (Math.abs(dx) + Math.abs(dy) > 6) d.moved = true;
-    if (d.moved) setPos(clamp(d.ox + dx, d.oy + dy));
+    if (!d.moved && Math.abs(dx) + Math.abs(dy) < 6) return;
+    d.moved = true;
+    setPos(clamp(d.ox + dx, d.oy + dy));
   };
-  const up = () => {
+  const onUp = () => {
     const d = drag.current;
     drag.current = null;
-    if (d?.moved) save(pos, small);
-    return !!d?.moved;
+    if (!d?.moved) return;
+    justDragged.current = true;
+    setTimeout(() => (justDragged.current = false), 250);
+    if (open) return;
+    bubbleAt.current = pos;
+    try {
+      localStorage.setItem("dp-mini-bubble", JSON.stringify(pos));
+    } catch {}
   };
 
   const handle = (
     <span
-      onPointerDown={down}
-      onPointerMove={move}
-      onPointerUp={up}
-      className="-ml-1 grid h-10 w-6 shrink-0 cursor-grab touch-none place-items-center text-muted active:cursor-grabbing"
+      onPointerDown={onDown}
+      onPointerMove={onMove}
+      onPointerUp={onUp}
+      onPointerCancel={onUp}
+      className="-ml-1 grid h-10 w-7 shrink-0 cursor-grab touch-none place-items-center rounded-lg text-muted hover:bg-ink/5 active:cursor-grabbing"
       aria-label="Drag to move the player"
       title="Drag to move"
     >
@@ -161,43 +170,50 @@ export function FloatingMiniPlayer() {
   );
 
   return (
+    // The position lives on this outer box; animations stay on the inside so they can't undo a drag
     <div
       ref={box}
-      style={{ transform: `translate(${pos.x}px, ${pos.y}px)` }}
+      style={{ transform: `translate3d(${pos.x}px, ${pos.y}px, 0)` }}
       className={
-        small
-          ? "fixed right-4 bottom-[calc(5.25rem+env(safe-area-inset-bottom))] z-30 lg:right-6 lg:bottom-6"
-          : "fixed inset-x-3 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-30 mx-auto max-w-md animate-fade-up lg:inset-x-auto lg:right-6 lg:bottom-6 lg:w-[400px]"
+        open
+          ? "fixed inset-x-3 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-30 mx-auto max-w-md lg:inset-x-auto lg:right-6 lg:bottom-6 lg:w-[380px]"
+          : "fixed right-4 bottom-[calc(5.25rem+env(safe-area-inset-bottom))] z-30 lg:right-6 lg:bottom-6"
       }
     >
-      {small ? (
-        <button
-          onPointerDown={down}
-          onPointerMove={move}
-          onPointerUp={() => {
-            if (!up()) {
-              setSmall(false);
+      <div className="animate-fade-up">
+        {open ? (
+          <Bar
+            floating
+            noStop
+            handle={handle}
+            onCollapse={() => {
+              setOpen(false);
+              setPos(bubbleAt.current);
+            }}
+          />
+        ) : (
+          <button
+            onPointerDown={onDown}
+            onPointerMove={onMove}
+            onPointerUp={onUp}
+            onPointerCancel={onUp}
+            onClick={() => {
+              if (justDragged.current) return;
               setPos({ x: 0, y: 0 });
-              save({ x: 0, y: 0 }, false);
-            }
-          }}
-          className="relative grid h-14 w-14 touch-none place-items-center rounded-full bg-gradient-to-br from-brand to-[#c2306b] text-white shadow-lift ring-4 ring-surface"
-          aria-label="Open the music player (drag to move)"
-        >
-          {m.playing && !m.needsTap ? <Equalizer playing className="scale-125 text-white" /> : <Music2 size={22} />}
-          {m.soundOff && <span className="absolute -top-0.5 -right-0.5 grid h-5 w-5 place-items-center rounded-full bg-surface text-brand"><VolumeX size={12} /></span>}
-        </button>
-      ) : (
-        <Bar
-          floating
-          handle={handle}
-          onCollapse={() => {
-            setSmall(true);
-            setPos({ x: 0, y: 0 });
-            save({ x: 0, y: 0 }, true);
-          }}
-        />
-      )}
+              setOpen(true);
+            }}
+            className="relative grid h-14 w-14 cursor-grab touch-none place-items-center rounded-full bg-gradient-to-br from-brand to-[#c2306b] text-white shadow-lift ring-4 ring-surface active:cursor-grabbing"
+            aria-label="Open the music player (drag to move)"
+          >
+            {m.playing && !m.needsTap ? <Equalizer playing className="scale-125 text-white" /> : <Music2 size={22} />}
+            {m.soundOff && (
+              <span className="absolute -top-0.5 -right-0.5 grid h-5 w-5 place-items-center rounded-full bg-surface text-brand">
+                <VolumeX size={12} />
+              </span>
+            )}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
