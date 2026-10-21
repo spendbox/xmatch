@@ -59,9 +59,10 @@ export async function endAdminSession() {
 }
 
 export async function isAdmin() {
+  // Read the cookie first so pages using this are always checked per request
+  const raw = (await cookies()).get(COOKIE)?.value;
   const key = secret();
   if (!key) return false;
-  const raw = (await cookies()).get(COOKIE)?.value;
   if (!raw) return false;
   const [expires, sig] = raw.split(".");
   if (!expires || !sig || Number(expires) < Date.now()) return false;

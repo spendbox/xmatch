@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { createAdminClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/admin";
 import { AdminOverview, type Overview } from "@/components/admin/AdminOverview";

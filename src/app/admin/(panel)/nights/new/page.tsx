@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { requireAdmin } from "@/lib/admin";
 import { NightEditor } from "@/components/admin/NightEditor";
 

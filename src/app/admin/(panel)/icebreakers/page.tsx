@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { requireAdmin } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/server";
 import { IcebreakerManager } from "@/components/admin/IcebreakerManager";
