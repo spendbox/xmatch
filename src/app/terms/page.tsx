@@ -166,7 +166,8 @@ const sections: LegalSection[] = [
           <li>sending gifts in a chat;</li>
           <li>adding 2 minutes to a masked chat (for both people);</li>
           <li>extra masquerades after your free ones (5 Keys each);</li>
-          <li>entry to some Masquerade Nights (refunded if you cancel before it starts, or if we cancel it).</li>
+          <li>entry to some events (refunded if you cancel before it starts, or if we cancel it);</li>
+          <li>revealing featured photos at some events, after your free reveals.</li>
         </ul>
         <p>
           You can buy Keys in packs. Prices are shown in naira before you pay, and payments are processed securely by{" "}
@@ -267,7 +268,7 @@ export default function TermsPage() {
       other={{ href: "/privacy", label: "Privacy Policy" }}
       summary={[
         "You must be 18 or older, and honest about who you are.",
-        "5 free masquerades a day. Keys pay for gifts, +2 minutes and extra masquerades. Keys have no cash value.",
+        "5 free masquerades a day. Keys pay for gifts, +2 minutes, extra masquerades, event entry and photo reveals. Keys have no cash value.",
         "Masked chats are deleted unless you both choose to unmask.",
         "Be respectful. Harassment, scams, unwanted sexual content and impersonation get you banned.",
         "You own your photos and messages. We only use them to run Dashpad.",

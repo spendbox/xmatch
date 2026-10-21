@@ -47,6 +47,7 @@ const sections: LegalSection[] = [
       <>
         <p><strong>While you&apos;re masked:</strong> a random alias, your age, gender, interests, approximate distance and the spice level you picked.</p>
         <p><strong>After you both unmask:</strong> your first name, age, photos, bio and interests.</p>
+        <p><strong>At Spotlight events and parties you join:</strong> other guests see your first name, age, interests and the one photo you choose to feature, blurred until they tap to reveal it. Room chat messages are seen by everyone at the event.</p>
         <p>Other members <strong>never</strong> see your email, date of birth or exact location.</p>
       </>
     ),
