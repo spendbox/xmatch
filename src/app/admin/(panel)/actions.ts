@@ -29,6 +29,28 @@ export async function addIcebreakers(spice: number, text: string): Promise<{ add
   return { added: (data ?? []) as Icebreaker[], skipped: lines.length - fresh.length };
 }
 
+/** Adds a mixed list of questions (each with its own spice level). */
+export async function addIcebreakersBulk(items: { spice: number; body: string }[]): Promise<{ added: Icebreaker[]; skipped: number; error?: string }> {
+  await requireAdmin();
+  const clean_ = items
+    .map((i) => ({ spice: i.spice, body: clean(i.body) }))
+    .filter((i) => [0, 1, 2, 3].includes(i.spice) && i.body.length >= 5 && i.body.length <= 300)
+    .slice(0, 2000);
+  if (!clean_.length) return { added: [], skipped: 0, error: "No questions found. Put one question per line." };
+  const db = createAdminClient();
+  const taken = new Set<string>();
+  for (let i = 0; i < clean_.length; i += 200) {
+    const { data } = await db.from("icebreakers").select("body").is("event_id", null).in("body", clean_.slice(i, i + 200).map((x) => x.body));
+    (data ?? []).forEach((r) => taken.add((r.body as string).toLowerCase()));
+  }
+  const fresh = clean_.filter((x) => !taken.has(x.body.toLowerCase()));
+  if (!fresh.length) return { added: [], skipped: clean_.length };
+  const { data, error } = await db.from("icebreakers").insert(fresh).select("id, spice, body, active, created_at");
+  if (error) return { added: [], skipped: 0, error: "Couldn't save. Please try again." };
+  revalidatePath("/admin/icebreakers");
+  return { added: (data ?? []) as Icebreaker[], skipped: clean_.length - fresh.length };
+}
+
 export async function updateIcebreaker(id: number, patch: { body?: string; spice?: number; active?: boolean }) {
   await requireAdmin();
   const row: Record<string, unknown> = {};

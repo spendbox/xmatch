@@ -1,5 +1,6 @@
 "use client";
 
+import { plural, word } from "@/lib/plural";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -61,7 +62,7 @@ export function EventLobby({
   }
 
   async function unRsvp() {
-    if (!confirm("Not going any more?" + (e.entry_keys ? ` Your ${e.entry_keys} Keys will be returned.` : ""))) return;
+    if (!confirm("Not going any more?" + (e.entry_keys ? ` Your ${plural(e.entry_keys, "Key")} will be returned.` : ""))) return;
     setBusy("cancel");
     const { data, error: err } = await supabase.rpc("cancel_rsvp", { p_event: e.id });
     setBusy(null);
@@ -163,7 +164,7 @@ export function EventLobby({
           <span className="rounded-full bg-white/15 px-3 py-1.5">Ages {e.age_min}–{e.age_max}</span>
           <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1.5"><Users size={13} /> {e.going_count} going</span>
           <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1.5">
-            {e.entry_keys > 0 ? <><KeyCoin size={14} /> {e.entry_keys} Keys</> : "Free entry"}
+            {e.entry_keys > 0 ? <><KeyCoin size={14} /> {plural(e.entry_keys, "Key")}</> : "Free entry"}
           </span>
         </div>
       </section>
@@ -264,11 +265,11 @@ export function EventLobby({
             <div className="grid grid-cols-2 gap-3 text-center">
               <div className="rounded-3xl bg-surface p-4 shadow-card">
                 <p className="font-display text-[28px] font-semibold text-brand">{e.my_rounds}</p>
-                <p className="text-[12px] text-muted">rounds tonight</p>
+                <p className="text-[12px] text-muted">{word(e.my_rounds, "round")} tonight</p>
               </div>
               <div className="rounded-3xl bg-surface p-4 shadow-card">
                 <p className="font-display text-[28px] font-semibold text-[#c2306b]">{e.my_unmasks}</p>
-                <p className="text-[12px] text-muted">mutual unmasks</p>
+                <p className="text-[12px] text-muted">mutual {word(e.my_unmasks, "unmask")}</p>
               </div>
             </div>
           )}
@@ -300,13 +301,13 @@ function RsvpButton({ e, busy, canAfford, onRsvp, label }: { e: DashpadEvent; bu
         <ButtonLink href="/wallet" variant="gold" size="lg">
           <KeyCoin size={22} /> Get Keys to join · {e.entry_keys}
         </ButtonLink>
-        <p className="mt-2 text-[13px] text-muted">Entry is {e.entry_keys} Keys.</p>
+        <p className="mt-2 text-[13px] text-muted">Entry is {plural(e.entry_keys, "Key")}.</p>
       </div>
     );
   }
   return (
     <Button size="lg" className="mt-5" onClick={onRsvp} loading={busy} loadingText="Saving your spot…">
-      {label ?? "I'm going"} {e.entry_keys > 0 ? `· ${e.entry_keys} Keys` : "· Free"}
+      {label ?? "I'm going"} {e.entry_keys > 0 ? `· ${plural(e.entry_keys, "Key")}` : "· Free"}
     </Button>
   );
 }

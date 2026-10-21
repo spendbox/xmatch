@@ -40,7 +40,7 @@ export function LiveDemo() {
   return (
     <div className="relative mx-auto w-full max-w-[340px] lg:max-w-[400px]">
       <div aria-hidden className="absolute -inset-4 rounded-[44px] bg-gradient-to-br from-brand/25 via-[#ff8fb8]/20 to-gold/30 blur-2xl" />
-      <div className="relative overflow-hidden rounded-[32px] border border-white/70 bg-surface/90 shadow-[0_30px_60px_-20px_rgb(28_24_40/0.35)] backdrop-blur">
+      <div className="relative overflow-hidden rounded-[32px] border border-white/70 bg-surface shadow-[0_30px_60px_-20px_rgb(28_24_40/0.35)]">
         {/* Header */}
         <div className="flex items-center gap-3 border-b border-line px-4 py-3">
           <span
@@ -103,7 +103,7 @@ export function LiveDemo() {
 
           {/* Decision + match overlays */}
           {(deciding || matched) && (
-            <div className="absolute inset-0 grid animate-fade-in place-items-center bg-surface/80 backdrop-blur-[2px]">
+            <div className="absolute inset-0 grid animate-fade-in place-items-center bg-surface/80">
               {matched ? (
                 <div className="animate-pop text-center">
                   <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-chili-soft text-chili">

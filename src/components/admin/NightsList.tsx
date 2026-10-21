@@ -1,5 +1,6 @@
 "use client";
 
+import { plural, word } from "@/lib/plural";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -55,8 +56,8 @@ export function NightCard({ night: n }: { night: AdminNight }) {
       </div>
       <div className="grid grid-cols-3 divide-x divide-line text-center">
         <Mini icon={<Users size={14} />} value={n.going_count} label="going" />
-        <Mini icon={<MaskIcon className="w-4" eyes="#fff" />} value={n.rounds} label="rounds" />
-        <Mini icon={<KeyRound size={14} />} value={n.keys_collected} label="Keys" />
+        <Mini icon={<MaskIcon className="w-4" eyes="#fff" />} value={n.rounds} label={word(n.rounds, "round")} />
+        <Mini icon={<KeyRound size={14} />} value={n.keys_collected} label={word(n.keys_collected, "Key")} />
       </div>
     </Link>
   );

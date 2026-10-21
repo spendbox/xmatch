@@ -23,8 +23,8 @@ export function AuthShell({
 
       <div className="relative">
         <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-[520px] overflow-hidden lg:hidden">
-          <div className="absolute -top-28 -left-20 h-72 w-72 animate-blob rounded-full bg-brand/25 blur-3xl" />
-          <div className="absolute top-10 -right-24 h-72 w-72 animate-blob rounded-full bg-[#ff8fb8]/25 blur-3xl [animation-delay:-6s]" />
+          <div className="absolute -top-28 -left-20 h-72 w-72 animate-blob rounded-full text-brand/25 glow" />
+          <div className="absolute top-10 -right-24 h-72 w-72 animate-blob rounded-full text-[#ff8fb8]/25 glow [animation-delay:-6s]" />
         </div>
 
         <div className="relative mx-auto flex min-h-dvh max-w-md flex-col px-5 pb-safe lg:justify-center lg:py-12">
@@ -43,7 +43,7 @@ export function AuthShell({
             <p className="mt-2 text-[16px] leading-relaxed text-muted">{subtitle}</p>
           </div>
 
-          <div className="mt-7 animate-fade-up rounded-[30px] border border-white/80 bg-surface/90 p-5 shadow-[0_20px_50px_-24px_rgb(28_24_40/0.3)] backdrop-blur [animation-delay:80ms] lg:p-7">
+          <div className="mt-7 animate-fade-up rounded-[30px] border border-white/80 bg-surface p-5 shadow-[0_20px_50px_-24px_rgb(28_24_40/0.3)] [animation-delay:80ms] lg:p-7">
             {children}
           </div>
 
@@ -57,8 +57,8 @@ export function AuthShell({
 function BrandPanel() {
   return (
     <aside className="relative hidden overflow-hidden bg-gradient-to-br from-brand via-[#6d4ff0] to-[#a35bd8] p-12 text-white lg:flex lg:flex-col">
-      <div aria-hidden className="absolute -top-24 -right-24 h-96 w-96 animate-blob rounded-full bg-white/10 blur-2xl" />
-      <div aria-hidden className="absolute -bottom-32 -left-20 h-96 w-96 animate-blob rounded-full bg-gold/30 blur-3xl [animation-delay:-6s]" />
+      <div aria-hidden className="absolute -top-24 -right-24 h-96 w-96 animate-blob rounded-full text-white/10 glow" />
+      <div aria-hidden className="absolute -bottom-32 -left-20 h-96 w-96 animate-blob rounded-full text-gold/30 glow [animation-delay:-6s]" />
 
       <div className="relative">
         <span className="inline-flex items-center gap-2 rounded-2xl bg-white/15 px-3 py-2 backdrop-blur">

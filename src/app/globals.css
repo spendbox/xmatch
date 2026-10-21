@@ -137,3 +137,9 @@ input[type="number"]::-webkit-outer-spin-button {
 .legal ul { list-style: disc; padding-left: 1.25rem; display: grid; gap: 0.4rem; }
 .legal strong { color: var(--color-ink); font-weight: 600; }
 .legal a { color: var(--color-brand); font-weight: 600; }
+
+/* Soft colour glow. A radial gradient instead of a CSS blur filter, so phones
+   don't have to re-blur it on every animation frame. Colour comes from text-*. */
+.glow {
+  background: radial-gradient(closest-side, currentColor, transparent);
+}

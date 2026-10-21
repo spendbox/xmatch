@@ -54,9 +54,9 @@ export default function Landing() {
     <main className="relative overflow-x-clip">
       {/* Soft moving colour in the background */}
       <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-[900px] overflow-hidden">
-        <div className="absolute -top-24 -left-24 h-80 w-80 animate-blob rounded-full bg-brand/25 blur-3xl" />
-        <div className="absolute top-40 -right-28 h-80 w-80 animate-blob rounded-full bg-[#ff8fb8]/25 blur-3xl [animation-delay:-5s]" />
-        <div className="absolute top-[520px] left-10 h-72 w-72 animate-blob rounded-full bg-gold/25 blur-3xl [animation-delay:-9s]" />
+        <div className="absolute -top-24 -left-24 h-80 w-80 animate-blob rounded-full text-brand/25 glow" />
+        <div className="absolute top-40 -right-28 h-80 w-80 animate-blob rounded-full text-[#ff8fb8]/25 glow [animation-delay:-5s]" />
+        <div className="absolute top-[520px] left-10 h-72 w-72 animate-blob rounded-full text-gold/25 glow [animation-delay:-9s]" />
       </div>
 
       <div className="relative mx-auto max-w-md px-5 pb-safe md:max-w-3xl lg:max-w-6xl lg:px-10">
@@ -80,7 +80,7 @@ export default function Landing() {
         <div className="lg:grid lg:grid-cols-2 lg:items-center lg:gap-16 lg:pt-10 lg:pb-8">
         {/* Hero */}
         <section className="pt-4 text-center lg:pt-0 lg:text-left">
-          <span className="inline-flex animate-fade-up items-center gap-2 rounded-full border border-brand/15 bg-surface/80 px-3.5 py-1.5 text-[13px] font-semibold text-brand shadow-card backdrop-blur">
+          <span className="inline-flex animate-fade-up items-center gap-2 rounded-full border border-brand/15 bg-surface px-3.5 py-1.5 text-[13px] font-semibold text-brand shadow-card">
             <span className="relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-mint opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-mint" />
@@ -222,8 +222,8 @@ export default function Landing() {
         {/* Final call to action */}
         <Reveal className="mt-14">
           <section className="relative overflow-hidden rounded-[32px] bg-ink px-6 py-10 text-center text-white lg:rounded-[40px] lg:py-20">
-            <div aria-hidden className="absolute -top-16 -left-10 h-48 w-48 animate-blob rounded-full bg-brand/60 blur-3xl" />
-            <div aria-hidden className="absolute -right-10 -bottom-16 h-48 w-48 animate-blob rounded-full bg-[#c2306b]/50 blur-3xl [animation-delay:-6s]" />
+            <div aria-hidden className="absolute -top-16 -left-10 h-48 w-48 animate-blob rounded-full text-brand/60 glow" />
+            <div aria-hidden className="absolute -right-10 -bottom-16 h-48 w-48 animate-blob rounded-full text-[#c2306b]/50 glow [animation-delay:-6s]" />
             <div className="relative">
               <span className="mx-auto grid h-16 w-16 animate-float place-items-center rounded-2xl bg-white/10 backdrop-blur">
                 <MaskIcon className="w-11 text-white" eyes="#1c1828" />

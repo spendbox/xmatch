@@ -23,7 +23,7 @@ export function Toggle({
       onClick={() => onChange(!checked)}
       className={clsx(
         "relative h-8 w-14 shrink-0 rounded-full transition disabled:opacity-50",
-        checked ? "bg-brand" : "bg-line-strong",
+        checked ? "bg-brand" : "bg-[#cfe2fb]",
       )}
     >
       <span

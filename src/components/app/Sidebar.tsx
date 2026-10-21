@@ -31,7 +31,7 @@ export function Sidebar({ user }: { user: ChromeUser }) {
   const path = usePathname();
   const { wallet } = useWallet(user.id);
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 hidden w-[260px] flex-col border-r border-line bg-surface/80 px-4 py-6 backdrop-blur-xl lg:flex">
+    <aside className="fixed inset-y-0 left-0 z-30 hidden w-[260px] flex-col border-r border-line bg-surface px-4 py-6 lg:flex">
       <div className="px-2">
         <Logo href="/home" />
       </div>

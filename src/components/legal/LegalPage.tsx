@@ -20,8 +20,8 @@ export function LegalPage({
   return (
     <main className="relative min-h-dvh overflow-x-clip">
       <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-96 overflow-hidden">
-        <div className="absolute -top-28 -left-20 h-72 w-72 rounded-full bg-brand/15 blur-3xl" />
-        <div className="absolute -top-10 -right-24 h-72 w-72 rounded-full bg-[#ff8fb8]/15 blur-3xl" />
+        <div className="absolute -top-28 -left-20 h-72 w-72 rounded-full text-brand/15 glow" />
+        <div className="absolute -top-10 -right-24 h-72 w-72 rounded-full text-[#ff8fb8]/15 glow" />
       </div>
       <div className="relative mx-auto max-w-2xl px-5 pb-16">
         <header className="flex items-center justify-between py-5">

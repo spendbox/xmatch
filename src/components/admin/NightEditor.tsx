@@ -1,5 +1,6 @@
 "use client";
 
+import { plural, word } from "@/lib/plural";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -115,7 +116,7 @@ export function NightEditor({ night, questions = [] }: { night?: AdminNight; que
           <h1 className="font-display text-[32px] leading-tight font-semibold">{night ? "Edit night" : "New Masquerade Night"}</h1>
           {night && (
             <p className="mt-1 text-[14px] text-muted">
-              Status: <span className="font-semibold text-ink capitalize">{phase}</span> · {night.going_count} going · {night.rounds} rounds · {night.unmasks} unmasks
+              Status: <span className="font-semibold text-ink capitalize">{phase}</span> · {night.going_count} going · {plural(night.rounds, "round")} · {plural(night.unmasks, "unmask")}
             </p>
           )}
         </div>
@@ -236,7 +237,7 @@ export function NightEditor({ night, questions = [] }: { night?: AdminNight; que
                 <span className="inline-flex items-center gap-1 rounded-full bg-cream px-2.5 py-1">{INTENT_ICONS[f.intent as "dating"]({ size: 13 })} {intentLabel(f.intent as "dating")}</span>
                 <span className="rounded-full bg-cream px-2.5 py-1">Ages {f.ageMin}–{f.ageMax}</span>
                 <span className="inline-flex items-center gap-1 rounded-full bg-gold-soft px-2.5 py-1 text-[#8a5a00]">
-                  {f.entryKeys > 0 ? <><KeyCoin size={13} /> {f.entryKeys} Keys</> : "Free"}
+                  {f.entryKeys > 0 ? <><KeyCoin size={13} /> {plural(f.entryKeys, "Key")}</> : "Free"}
                 </span>
               </div>
               <div className="h-12 rounded-2xl bg-brand text-center text-[15px] leading-[48px] font-semibold text-white">I&apos;m going</div>
@@ -249,10 +250,32 @@ export function NightEditor({ night, questions = [] }: { night?: AdminNight; que
 }
 
 function NumberField({ label, value, onChange, min, max, hint }: { label: string; value: number; onChange: (v: number) => void; min: number; max: number; hint?: string }) {
+  // Kept as text so typing replaces the 0 instead of giving "021"
+  const [text, setText] = useState(String(value));
+  useEffect(() => {
+    if (Number(text || 0) !== value) setText(String(value));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
   return (
     <div>
       <Label>{label}</Label>
-      <Input type="number" inputMode="numeric" min={min} max={max} value={value} onChange={(e) => onChange(Number(e.target.value))} />
+      <Input
+        type="text"
+        inputMode="numeric"
+        pattern="[0-9]*"
+        value={text}
+        onFocus={(e) => e.currentTarget.select()}
+        onChange={(e) => {
+          const digits = e.target.value.replace(/\D/g, "").replace(/^0+(?=\d)/, "").slice(0, 6);
+          setText(digits);
+          onChange(digits === "" ? 0 : Number(digits));
+        }}
+        onBlur={() => {
+          const n = Math.min(max, Math.max(min, Number(text || 0)));
+          setText(String(n));
+          onChange(n);
+        }}
+      />
       {hint && <p className="mt-1 text-[11px] text-muted">{hint}</p>}
     </div>
   );

@@ -161,7 +161,7 @@ export function MasqueradeRoom({
     <div className="flex h-dvh">
     <div className="mx-auto flex h-dvh w-full max-w-md flex-col bg-cream lg:max-w-none lg:flex-1">
       {/* Header */}
-      <header className="z-10 border-b border-line bg-surface/95 backdrop-blur">
+      <header className="z-10 border-b border-line bg-surface">
         <div className="flex items-center gap-3 px-4 py-3">
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-ink text-white">
             <MaskIcon className="w-7" eyes="#1c1828" />

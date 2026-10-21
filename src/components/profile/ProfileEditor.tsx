@@ -3,14 +3,15 @@
 import { useMemo, useState } from "react";
 import clsx from "clsx";
 import {
-  AtSign, BellRing, Check, ChevronRight, Eye, Gift, Heart, ImagePlus, LogOut, PenLine, Shapes, ShieldCheck, Trash2,
+  AtSign, BellRing, ChevronRight, Eye, FileText, Heart, ImagePlus, LogOut, PenLine, Shapes, ShieldCheck, SlidersHorizontal, Trash2,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { uploadPhoto, deletePhoto } from "@/lib/photos";
 import { ageFromBirthdate, GENDERS } from "@/lib/constants";
+import { plural, word } from "@/lib/plural";
 import type { Profile } from "@/lib/types";
 import { logOut } from "@/app/(auth)/actions";
-import { Button, ButtonLink, SubmitButton, tapFeedback } from "@/components/ui/Button";
+import { Button, SubmitButton, tapFeedback } from "@/components/ui/Button";
 import { Input, Label, Textarea } from "@/components/ui/Field";
 import { Toggle } from "@/components/ui/Toggle";
 import { Sheet } from "@/components/ui/Sheet";
@@ -18,9 +19,12 @@ import { deleteAccount } from "@/app/(app)/profile/actions";
 import Link from "next/link";
 import { KeyCoin } from "@/components/keys/KeyIcon";
 import { MaskIcon } from "@/components/ui/MaskIcon";
+import { InterestIcon } from "@/components/ui/icons";
 import { ProfileSheet } from "@/components/matches/ProfileSheet";
-import { PhotoGrid } from "./PhotoGrid";
+import { PhotoGrid, MAX_PHOTOS } from "./PhotoGrid";
 import { InterestPicker, MAX_INTERESTS } from "./InterestPicker";
+
+type Panel = null | "photos" | "about" | "interests" | "account" | "delete";
 
 /** How complete the profile looks, from 0 to 100. */
 function strength(p: { name: string; bio: string; interests: string[]; photos: string[] }) {
@@ -28,7 +32,7 @@ function strength(p: { name: string; bio: string; interests: string[]; photos: s
   let score = 0;
   if (p.name.trim()) score += 10;
   score += Math.min(p.photos.length, 3) * 15;
-  if (p.photos.length < 3) tips.push(`Add ${3 - p.photos.length} more photo${p.photos.length === 2 ? "" : "s"}`);
+  if (p.photos.length < 3) tips.push(`Add ${plural(3 - p.photos.length, "more photo", "more photos")}`);
   if (p.bio.trim().length >= 60) score += 25;
   else if (p.bio.trim().length >= 10) {
     score += 12;
@@ -54,37 +58,60 @@ export function ProfileEditor({
   const [interests, setInterests] = useState(profile.interests);
   const [photos, setPhotos] = useState(profile.photos);
   const [open, setOpen] = useState(profile.open_to_masquerade);
-  const [saved, setSaved] = useState({ name: profile.display_name ?? "", bio: profile.bio, interests: profile.interests });
-  const [saving, setSaving] = useState(false);
-  const [justSaved, setJustSaved] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [panel, setPanel] = useState<Panel>(null);
   const [preview, setPreview] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+
+  // Drafts used inside the edit pop-ups, so cancelling leaves the profile untouched.
+  const [draftName, setDraftName] = useState(name);
+  const [draftBio, setDraftBio] = useState(bio);
+  const [draftInterests, setDraftInterests] = useState(interests);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const age = ageFromBirthdate(profile.birthdate);
   const gender = GENDERS.find((g) => g.value === profile.gender)?.label;
   const { score, tip } = strength({ name, bio, interests, photos });
-  const dirty = name !== saved.name || bio !== saved.bio || interests.join() !== saved.interests.join();
 
-  async function savePhotos(next: string[]) {
-    setPhotos(next);
-    await supabase.from("profiles").update({ photos: next }).eq("id", profile.id);
+  function openPanel(p: Panel) {
+    tapFeedback();
+    setError(null);
+    if (p === "about") {
+      setDraftName(name);
+      setDraftBio(bio);
+    }
+    if (p === "interests") setDraftInterests(interests);
+    setPanel(p);
+  }
+  const close = () => setPanel(null);
+
+  async function update(fields: Record<string, unknown>) {
+    setSaving(true);
+    const { error: err } = await supabase.from("profiles").update(fields).eq("id", profile.id);
+    setSaving(false);
+    if (err) {
+      setError("Couldn't save. Please try again.");
+      return false;
+    }
+    return true;
   }
 
-  async function save() {
+  async function saveAbout() {
     setError(null);
-    if (!name.trim()) return setError("Please add your name.");
-    if (interests.length < 3) return setError("Pick at least 3 interests.");
-    setSaving(true);
-    const { error: err } = await supabase
-      .from("profiles")
-      .update({ display_name: name.trim(), bio: bio.trim(), interests })
-      .eq("id", profile.id);
-    setSaving(false);
-    if (err) return setError("Couldn't save. Please try again.");
-    setSaved({ name, bio, interests });
-    setJustSaved(true);
-    setTimeout(() => setJustSaved(false), 2200);
+    if (!draftName.trim()) return setError("Please add your name.");
+    if (await update({ display_name: draftName.trim(), bio: draftBio.trim() })) {
+      setName(draftName.trim());
+      setBio(draftBio.trim());
+      close();
+    }
+  }
+
+  async function saveInterests() {
+    setError(null);
+    if (draftInterests.length < 3) return setError("Pick at least 3 interests.");
+    if (await update({ interests: draftInterests })) {
+      setInterests(draftInterests);
+      close();
+    }
   }
 
   async function toggleOpen(v: boolean) {
@@ -111,115 +138,189 @@ export function ProfileEditor({
       </header>
 
       <div className="lg:mt-6 lg:grid lg:grid-cols-12 lg:items-start lg:gap-8">
-        <div className="lg:col-span-5">
-      {/* Hero */}
-      <section className="relative mt-5 animate-fade-up overflow-hidden rounded-[30px] bg-ink shadow-lift">
-        {photos[0] ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={photos[0]} alt="" className="absolute inset-0 h-full w-full object-cover" />
-        ) : null}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/10" />
-        <div className="relative flex min-h-[300px] flex-col justify-end p-5 text-white">
-          <span className="absolute top-4 left-4 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-[12px] font-semibold backdrop-blur">
-            <MaskIcon className="w-4 text-white" eyes="transparent" /> Hidden until you both unmask
-          </span>
-          <h2 className="font-display text-[34px] leading-none font-semibold">
-            {name || "Your name"}
-            <span className="font-normal text-white/80">, {age}</span>
-          </h2>
-          <p className="mt-1.5 text-[14px] text-white/75">{gender}</p>
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            <Stat icon={<Heart size={16} />} value={String(matchCount)} label={matchCount === 1 ? "match" : "matches"} />
-            <Stat icon={<Shapes size={16} />} value={String(interests.length)} label="interests" />
-          </div>
-        </div>
-      </section>
+        {/* Left: who you are */}
+        <div className="lg:sticky lg:top-8 lg:col-span-5">
+          <section className="relative mt-5 overflow-hidden rounded-[30px] bg-ink shadow-lift lg:mt-0">
+            {photos[0] ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={photos[0]} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            ) : null}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/10" />
+            <div className="relative flex min-h-[300px] flex-col justify-end p-5 text-white">
+              <span className="absolute top-4 left-4 inline-flex items-center gap-1.5 rounded-full bg-black/35 px-3 py-1.5 text-[12px] font-semibold">
+                <MaskIcon className="w-4 text-white" eyes="transparent" /> Hidden until you both unmask
+              </span>
+              <h2 className="font-display text-[34px] leading-none font-semibold">
+                {name || "Your name"}
+                <span className="font-normal text-white/80">, {age}</span>
+              </h2>
+              <p className="mt-1.5 text-[14px] text-white/75">{gender}</p>
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <Stat icon={<Heart size={16} />} value={matchCount.toLocaleString()} label={word(matchCount, "match", "matches")} />
+                <Stat icon={<Shapes size={16} />} value={String(interests.length)} label={word(interests.length, "interest")} />
+              </div>
+            </div>
+          </section>
 
-      {/* Profile strength */}
-      <section className="mt-3 flex items-center gap-4 rounded-3xl border border-line bg-surface p-4 shadow-card">
-        <div className="relative grid h-14 w-14 shrink-0 place-items-center">
-          <svg viewBox="0 0 52 52" className="absolute inset-0 -rotate-90">
-            <circle cx="26" cy="26" r="22" fill="none" stroke="var(--color-line)" strokeWidth="5" />
-            <circle
-              cx="26" cy="26" r="22" fill="none" strokeWidth="5" strokeLinecap="round"
-              stroke={score >= 100 ? "var(--color-mint)" : "var(--color-brand)"}
-              strokeDasharray={ring} strokeDashoffset={ring * (1 - score / 100)}
-              className="transition-[stroke-dashoffset] duration-700"
+          <section className="mt-3 flex items-center gap-4 rounded-3xl border border-line bg-surface p-4 shadow-card">
+            <div className="relative grid h-14 w-14 shrink-0 place-items-center">
+              <svg viewBox="0 0 52 52" className="absolute inset-0 -rotate-90">
+                <circle cx="26" cy="26" r="22" fill="none" stroke="var(--color-line)" strokeWidth="5" />
+                <circle
+                  cx="26" cy="26" r="22" fill="none" strokeWidth="5" strokeLinecap="round"
+                  stroke={score >= 100 ? "var(--color-mint)" : "var(--color-brand)"}
+                  strokeDasharray={ring} strokeDashoffset={ring * (1 - score / 100)}
+                  className="transition-[stroke-dashoffset] duration-700"
+                />
+              </svg>
+              <span className="text-[13px] font-bold">{score}%</span>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[15px] font-semibold">{score >= 100 ? "Your profile is looking great" : "Profile strength"}</p>
+              <p className="mt-0.5 text-[13px] text-muted">
+                {score >= 100 ? "You're all set for your next reveal." : `${tip} to stand out when you unmask.`}
+              </p>
+            </div>
+          </section>
+        </div>
+
+        {/* Right: management cards */}
+        <div className="lg:col-span-7">
+          <SectionTitle className="lg:mt-0">Your profile</SectionTitle>
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+            <Tile
+              icon={<ImagePlus size={20} strokeWidth={1.75} />}
+              tone="bg-[#fde8f1] text-[#c2306b]"
+              title="Photos"
+              detail={`${photos.length} of ${MAX_PHOTOS}`}
+              onClick={() => openPanel("photos")}
+            >
+              <div className="mt-3 flex -space-x-2">
+                {photos.slice(0, 4).map((p) => (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img key={p} src={p} alt="" className="h-8 w-8 rounded-full border-2 border-surface object-cover" />
+                ))}
+              </div>
+            </Tile>
+            <Tile
+              icon={<PenLine size={20} strokeWidth={1.75} />}
+              tone="bg-brand-soft text-brand"
+              title="Name & bio"
+              detail={bio.trim() ? bio : "Add a bio"}
+              onClick={() => openPanel("about")}
             />
-          </svg>
-          <span className="text-[13px] font-bold">{score}%</span>
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-[15px] font-semibold">{score >= 100 ? "Your profile is looking great" : "Profile strength"}</p>
-          <p className="mt-0.5 text-[13px] text-muted">
-            {score >= 100 ? "You're all set for your next reveal." : `${tip} to stand out when you unmask.`}
-          </p>
-        </div>
-      </section>
-
-      {/* Masquerade */}
-      <section className="mt-3 rounded-3xl border border-line bg-surface p-4 shadow-card">
-        <div className="flex items-center gap-3.5">
-          <span className={clsx("grid h-11 w-11 shrink-0 place-items-center rounded-[14px] transition", open ? "bg-brand text-white" : "bg-cream text-ink-soft")}>
-            <BellRing size={20} strokeWidth={1.75} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-[15px] font-semibold">Open to Masquerade</p>
-            <p className="mt-0.5 text-[13px] leading-snug text-muted">Pop-ups when someone masked is looking for you.</p>
+            <Tile
+              icon={<Shapes size={20} strokeWidth={1.75} />}
+              tone="bg-gold-soft text-[#a26b00]"
+              title="Interests"
+              detail={`${interests.length} of ${MAX_INTERESTS}`}
+              onClick={() => openPanel("interests")}
+              className="col-span-2 lg:col-span-1"
+            >
+              <div className="mt-3 flex gap-1.5 text-ink-soft">
+                {interests.slice(0, 5).map((t) => (
+                  <span key={t} className="grid h-8 w-8 place-items-center rounded-full bg-cream" title={t}>
+                    <InterestIcon name={t} size={15} />
+                  </span>
+                ))}
+              </div>
+            </Tile>
           </div>
-          <Toggle checked={open} onChange={toggleOpen} label="Open to Masquerade" />
+
+          <SectionTitle>Masquerade</SectionTitle>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-3xl border border-line bg-surface p-4 shadow-card">
+              <div className="flex items-start justify-between gap-3">
+                <span className={clsx("grid h-11 w-11 shrink-0 place-items-center rounded-[14px] transition", open ? "bg-brand text-white" : "bg-[#e6f0fd] text-[#2f6fd1]")}>
+                  <BellRing size={20} strokeWidth={1.75} />
+                </span>
+                <Toggle checked={open} onChange={toggleOpen} label="Open to Masquerade" />
+              </div>
+              <p className="mt-3 text-[15px] font-semibold">Open to Masquerade</p>
+              <p className="mt-0.5 text-[13px] leading-snug text-muted">
+                {open ? "On · you get pop-ups when someone is looking" : "Off · no pop-up invites"}
+              </p>
+            </div>
+            <Link
+              href="/home"
+              onClick={() => tapFeedback()}
+              className="flex flex-col rounded-3xl border border-line bg-surface p-4 shadow-card transition active:scale-[0.97]"
+            >
+              <span className="grid h-11 w-11 place-items-center rounded-[14px] bg-[#e3f6ee] text-[#16865a]">
+                <SlidersHorizontal size={20} strokeWidth={1.75} />
+              </span>
+              <p className="mt-3 flex items-center justify-between text-[15px] font-semibold">
+                Who you meet <ChevronRight size={18} className="text-muted" />
+              </p>
+              <p className="mt-0.5 text-[13px] leading-snug text-muted">Intent, spice, distance and who</p>
+            </Link>
+          </div>
+
+          <Link
+            href="/wallet"
+            className="relative mt-3 flex items-center gap-4 overflow-hidden rounded-3xl bg-gradient-to-br from-[#ffcf5c] via-gold to-[#e8962a] p-5 text-ink transition active:scale-[0.98]"
+          >
+            <div aria-hidden className="absolute -top-10 -right-6 h-32 w-32 rounded-full bg-white/25" />
+            <KeyCoin size={48} className="relative" />
+            <div className="relative flex-1">
+              <p className="font-semibold">Keys</p>
+              <p className="text-[13px] text-ink/70">Gifts, +2 minutes and extra masquerades</p>
+            </div>
+            <span className="relative inline-flex items-center gap-1 rounded-full bg-white/40 px-3 py-1.5 text-[13px] font-bold">
+              Get Keys <ChevronRight size={15} />
+            </span>
+          </Link>
+
+          <SectionTitle>Account</SectionTitle>
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <Tile
+              icon={<AtSign size={20} strokeWidth={1.75} />}
+              tone="bg-[#e6f0fd] text-[#2f6fd1]"
+              title="Account"
+              detail={email}
+              onClick={() => openPanel("account")}
+            />
+            <Tile
+              icon={<ShieldCheck size={20} strokeWidth={1.75} />}
+              tone="bg-[#e3f6ee] text-[#16865a]"
+              title="Privacy"
+              detail="Exact location never shown"
+              href="/privacy"
+            />
+            <Tile
+              icon={<FileText size={20} strokeWidth={1.75} />}
+              tone="bg-cream text-ink-soft"
+              title="Terms"
+              detail="The rules of Dashpad"
+              href="/terms"
+            />
+            <Tile
+              icon={<Trash2 size={20} strokeWidth={1.75} />}
+              tone="bg-chili-soft text-chili"
+              title="Delete account"
+              detail="Remove everything"
+              onClick={() => openPanel("delete")}
+            />
+          </div>
+
+          <form action={logOut} className="mt-3">
+            <SubmitButton variant="ghost" className="h-14 w-full rounded-3xl border border-line bg-surface text-chili! shadow-card hover:bg-chili-soft" loadingText="Logging out…">
+              <LogOut size={18} /> Log out
+            </SubmitButton>
+          </form>
+          <p className="mt-4 text-center text-[12px] text-muted">dashpad.site</p>
         </div>
-        <ButtonLink href="/home" variant="ghost" className="mt-3 w-full rounded-2xl bg-cream px-4 text-[14px]">
-          Change who you meet <ChevronRight size={18} />
-        </ButtonLink>
-      </section>
+      </div>
 
-      {/* Keys */}
-      <Link
-        href="/wallet"
-        className="relative mt-3 flex items-center gap-4 overflow-hidden rounded-3xl bg-gradient-to-br from-[#ffcf5c] via-gold to-[#e8962a] p-5 text-ink transition active:scale-[0.98]"
-      >
-        <div aria-hidden className="absolute -top-10 -right-6 h-32 w-32 rounded-full bg-white/25" />
-        <KeyCoin size={48} className="relative animate-float" />
-        <div className="relative flex-1">
-          <p className="font-semibold">Keys</p>
-          <p className="text-[13px] text-ink/70">Gifts, +2 minutes and extra masquerades</p>
-        </div>
-        <span className="relative inline-flex items-center gap-1 rounded-full bg-white/40 px-3 py-1.5 text-[13px] font-bold">
-          Get Keys <ChevronRight size={15} />
-        </span>
-      </Link>
-
-      {/* Account */}
-      <section className="mt-3 overflow-hidden rounded-3xl border border-line bg-surface shadow-card">
-        <p className="px-4 pt-4 pb-1 text-[12px] font-semibold tracking-wide text-muted uppercase">Account</p>
-        <Row icon={<AtSign size={18} strokeWidth={1.75} />} label="Email" value={email} />
-        <Row icon={<ShieldCheck size={18} strokeWidth={1.75} />} label="Privacy" value="Exact location never shown" />
-        <form action={logOut} className="border-t border-line p-2">
-          <SubmitButton variant="ghost" className="h-12 w-full rounded-2xl text-chili! hover:bg-chili-soft" loadingText="Logging out…">
-            <LogOut size={18} /> Log out
-          </SubmitButton>
-        </form>
-      </section>
-
-      <button
-        onClick={() => {
-          tapFeedback();
-          setDeleting(true);
-        }}
-        className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl py-3 text-[14px] font-medium text-muted transition hover:text-chili"
-      >
-        <Trash2 size={16} /> Delete account
-      </button>
-
-      <p className="mt-4 text-center text-[12px] text-muted">
-        <Link href="/terms" className="hover:text-brand">Terms</Link> · <Link href="/privacy" className="hover:text-brand">Privacy</Link> · dashpad.site
-      </p>
-
-        </div>
-        <div className="lg:col-span-7 lg:[&>section:first-child]:mt-0">
       {/* Photos */}
-      <Card icon={<ImagePlus size={20} strokeWidth={1.75} />} tone="bg-[#fde8f1] text-[#c2306b]" title="Photos" subtitle={`${photos.length} of 6 · first one is your main photo`}>
+      <Sheet
+        open={panel === "photos"}
+        onClose={close}
+        title="Photos"
+        subtitle={`${photos.length} of ${MAX_PHOTOS} · the first one is your main photo. Changes save straight away.`}
+        icon={<ImagePlus size={22} strokeWidth={1.75} />}
+        footer={<Button size="lg" onClick={close}>Done</Button>}
+      >
         <PhotoGrid
           photos={photos}
           onAdd={async (f) => {
@@ -232,44 +333,92 @@ export function ProfileEditor({
           }}
           onRemove={(url) => {
             if (photos.length <= 1) return setError("Keep at least one photo.");
-            savePhotos(photos.filter((p) => p !== url));
+            setError(null);
+            const next = photos.filter((p) => p !== url);
+            setPhotos(next);
+            supabase.from("profiles").update({ photos: next }).eq("id", profile.id).then(() => {});
             deletePhoto(supabase, url);
           }}
         />
-      </Card>
+        {error && <p className="mt-3 text-[14px] font-medium text-chili">{error}</p>}
+      </Sheet>
 
-      {/* About */}
-      <Card icon={<PenLine size={20} strokeWidth={1.75} />} tone="bg-brand-soft text-brand" title="About you" subtitle="Revealed when you both unmask">
+      {/* Name & bio */}
+      <Sheet
+        open={panel === "about"}
+        onClose={close}
+        title="Name & bio"
+        subtitle="Revealed when you both unmask"
+        icon={<PenLine size={22} strokeWidth={1.75} />}
+        footer={
+          <>
+            {error && <p className="mb-3 text-[14px] font-medium text-chili">{error}</p>}
+            <Button size="lg" onClick={saveAbout} loading={saving} loadingText="Saving…">Save</Button>
+          </>
+        }
+      >
         <div className="space-y-5">
           <div>
             <Label htmlFor="name">First name</Label>
-            <Input id="name" value={name} maxLength={40} onChange={(e) => setName(e.target.value)} />
+            <Input id="name" value={draftName} maxLength={40} onChange={(e) => setDraftName(e.target.value)} />
           </div>
           <div>
             <Label htmlFor="bio">Bio</Label>
-            <Textarea id="bio" rows={4} maxLength={500} value={bio} onChange={(e) => setBio(e.target.value)}
-              placeholder="What makes you laugh? What are you into lately?" />
-            <p className="mt-1 text-right text-xs text-muted">{bio.length}/500</p>
+            <Textarea id="bio" rows={5} maxLength={500} value={draftBio} onChange={(e) => setDraftBio(e.target.value)}
+              placeholder="What makes you laugh? What are you up to lately?" />
+            <p className="mt-1 text-right text-xs text-muted">{draftBio.length}/500</p>
           </div>
         </div>
-      </Card>
+      </Sheet>
 
       {/* Interests */}
-      <Card icon={<Shapes size={20} strokeWidth={1.75} />} tone="bg-gold-soft text-[#a26b00]" title="Interests" subtitle={`${interests.length} of ${MAX_INTERESTS} · shown while masked, shared ones help you match`}>
-        <InterestPicker value={interests} onChange={setInterests} />
-      </Card>
-
-        </div>
-      </div>
-
       <Sheet
-        open={deleting}
-        onClose={() => setDeleting(false)}
+        open={panel === "interests"}
+        onClose={close}
+        title="Interests"
+        subtitle={`${draftInterests.length} of ${MAX_INTERESTS} · shown while masked, shared ones help you match`}
+        icon={<Shapes size={22} strokeWidth={1.75} />}
+        footer={
+          <>
+            {error && <p className="mb-3 text-[14px] font-medium text-chili">{error}</p>}
+            <Button size="lg" onClick={saveInterests} loading={saving} loadingText="Saving…">Save</Button>
+          </>
+        }
+      >
+        <InterestPicker value={draftInterests} onChange={setDraftInterests} />
+      </Sheet>
+
+      {/* Account */}
+      <Sheet
+        open={panel === "account"}
+        onClose={close}
+        title="Account"
+        icon={<AtSign size={22} strokeWidth={1.75} />}
+        footer={
+          <form action={logOut}>
+            <SubmitButton size="lg" variant="secondary" className="text-chili!" loadingText="Logging out…">
+              <LogOut size={18} /> Log out
+            </SubmitButton>
+          </form>
+        }
+      >
+        <div className="divide-y divide-line rounded-2xl border border-line">
+          <Row label="Email" value={email} />
+          <Row label="Password" value="Forgot it? Use “Forgot password” on the login page" />
+          <Row label="Born" value={`${age} years old`} />
+        </div>
+      </Sheet>
+
+      {/* Delete */}
+      <Sheet
+        open={panel === "delete"}
+        onClose={close}
         title="Delete your account?"
-        subtitle="This permanently removes your profile, photos, matches and messages. It can't be undone."
+        subtitle="This permanently removes your profile, photos, matches, messages and Keys. It can't be undone."
         icon={<Trash2 size={22} strokeWidth={1.75} className="text-chili" />}
         footer={
           <div className="space-y-2">
+            {error && <p className="text-[14px] font-medium text-chili">{error}</p>}
             <form
               action={async () => {
                 const res = await deleteAccount();
@@ -280,7 +429,7 @@ export function ProfileEditor({
                 Yes, delete my account
               </SubmitButton>
             </form>
-            <Button size="lg" variant="secondary" onClick={() => setDeleting(false)}>
+            <Button size="lg" variant="secondary" onClick={close}>
               Keep my account
             </Button>
           </div>
@@ -288,26 +437,6 @@ export function ProfileEditor({
       >
         <p className="text-[14px] text-muted">If you just need a break, you can simply log out and come back any time.</p>
       </Sheet>
-
-      {/* Floating save bar */}
-      {(dirty || justSaved || error) && (
-        <div className="fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-30 px-4 lg:bottom-6 lg:left-[260px]">
-          <div className="mx-auto flex max-w-md animate-fade-up items-center gap-3 rounded-2xl border border-line bg-surface/95 p-2.5 pl-4 shadow-lift backdrop-blur">
-            <p className={clsx("min-w-0 flex-1 truncate text-[14px] font-medium", error ? "text-chili" : "text-ink-soft")}>
-              {error ?? (justSaved && !dirty ? "All changes saved" : "You have unsaved changes")}
-            </p>
-            {dirty ? (
-              <Button onClick={save} loading={saving} loadingText="Saving…" className="h-10 rounded-xl px-4">
-                Save
-              </Button>
-            ) : (
-              <span className="grid h-10 w-10 animate-pop place-items-center rounded-xl bg-mint text-white">
-                <Check size={18} strokeWidth={3} />
-              </span>
-            )}
-          </div>
-        </div>
-      )}
 
       {preview && (
         <ProfileSheet
@@ -320,9 +449,13 @@ export function ProfileEditor({
   );
 }
 
+function SectionTitle({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <h2 className={clsx("mt-6 mb-3 px-1 text-[13px] font-semibold tracking-wide text-muted uppercase", className)}>{children}</h2>;
+}
+
 function Stat({ icon, value, label }: { icon: React.ReactNode; value: string; label: string }) {
   return (
-    <div className="flex items-center gap-2 rounded-2xl bg-white/12 px-3 py-2.5 backdrop-blur">
+    <div className="flex items-center gap-2 rounded-2xl bg-black/30 px-3 py-2.5">
       <span className="text-white/80">{icon}</span>
       <span className="text-[16px] font-semibold">{value}</span>
       <span className="text-[13px] text-white/70">{label}</span>
@@ -330,32 +463,46 @@ function Stat({ icon, value, label }: { icon: React.ReactNode; value: string; la
   );
 }
 
-function Card({
-  icon, tone, title, subtitle, children,
-}: { icon: React.ReactNode; tone: string; title: string; subtitle?: string; children: React.ReactNode }) {
-  return (
-    <section className="mt-3 rounded-3xl border border-line bg-surface p-4 shadow-card">
-      <div className="mb-4 flex items-center gap-3">
-        <span className={"grid h-10 w-10 shrink-0 place-items-center rounded-[13px] " + tone}>{icon}</span>
-        <div className="min-w-0">
-          <h2 className="text-[16px] font-semibold">{title}</h2>
-          {subtitle && <p className="text-[12px] text-muted">{subtitle}</p>}
-        </div>
+/** A tappable settings card: icon, title, one-line summary. Opens a pop-up or a page. */
+function Tile({
+  icon, tone, title, detail, onClick, href, className, children,
+}: {
+  icon: React.ReactNode;
+  tone: string;
+  title: string;
+  detail: string;
+  onClick?: () => void;
+  href?: string;
+  className?: string;
+  children?: React.ReactNode;
+}) {
+  const inner = (
+    <>
+      <div className="flex items-start justify-between">
+        <span className={"grid h-11 w-11 shrink-0 place-items-center rounded-[14px] " + tone}>{icon}</span>
+        <ChevronRight size={18} className="text-muted" />
       </div>
+      <p className="mt-3 text-[15px] font-semibold">{title}</p>
+      <p className="mt-0.5 truncate text-[13px] text-muted">{detail}</p>
       {children}
-    </section>
+    </>
+  );
+  const cls = clsx(
+    "flex min-w-0 flex-col rounded-3xl border border-line bg-surface p-4 text-left shadow-card transition hover:border-line-strong active:scale-[0.97]",
+    className,
+  );
+  return href ? (
+    <Link href={href} className={cls}>{inner}</Link>
+  ) : (
+    <button type="button" onClick={onClick} className={cls}>{inner}</button>
   );
 }
 
-function Row({ icon, label, value, action }: { icon: React.ReactNode; label: string; value: string; action?: React.ReactNode }) {
+function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center gap-3 px-4 py-3">
-      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-cream text-ink-soft">{icon}</span>
-      <div className="min-w-0 flex-1">
-        <p className="text-[12px] text-muted">{label}</p>
-        <p className="truncate text-[15px] font-medium">{value}</p>
-      </div>
-      {action}
+    <div className="px-4 py-3">
+      <p className="text-[12px] text-muted">{label}</p>
+      <p className="text-[15px] font-medium break-words">{value}</p>
     </div>
   );
 }

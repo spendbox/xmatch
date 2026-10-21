@@ -16,7 +16,7 @@ const tabs = [
 export function BottomNav() {
   const path = usePathname();
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden">
       <ul className="mx-auto grid h-16 max-w-md grid-cols-4">
         {tabs.map((t) => {
           const on = path === t.href || path.startsWith(t.href + "/") || (t.href === "/home" && path.startsWith("/masquerade"));

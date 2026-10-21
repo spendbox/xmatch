@@ -1,5 +1,6 @@
 "use client";
 
+import { plural, word } from "@/lib/plural";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -152,7 +153,7 @@ export function HomeScreen({
         <Link
           href="/wallet"
           className="inline-flex h-11 items-center gap-2 rounded-full border border-gold/40 bg-gold-soft pr-4 pl-1.5 text-[15px] font-bold text-[#8a5a00] transition active:scale-95"
-          aria-label={`${balance} Keys. Get more`}
+          aria-label={`${plural(balance, "Key")}. Get more`}
         >
           <KeyCoin size={30} /> {balance}
         </Link>
@@ -162,7 +163,7 @@ export function HomeScreen({
       {/* Masquerade card */}
       <section className="relative mt-5 lg:sticky lg:top-8 lg:col-span-7 lg:mt-0 lg:p-8 overflow-hidden rounded-[30px] bg-gradient-to-br from-brand via-[#6d4ff0] to-[#8f6bff] p-5 text-white shadow-[0_18px_40px_-18px_rgb(91_63_217/0.8)]">
         <div aria-hidden className="absolute -top-12 -right-10 h-44 w-44 rounded-full bg-white/10" />
-        <div aria-hidden className="absolute -bottom-16 -left-12 h-40 w-40 rounded-full bg-gold/20 blur-2xl" />
+        <div aria-hidden className="absolute -bottom-16 -left-12 h-40 w-40 rounded-full text-gold/20 glow" />
 
         <div className="relative flex items-start justify-between gap-3">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-[12px] font-semibold">
@@ -288,9 +289,9 @@ export function HomeScreen({
       {/* Your week */}
       <h2 className="mt-7 mb-3 text-[15px] font-semibold">Your week</h2>
       <div className="grid grid-cols-3 gap-2.5 text-center">
-        <Stat value={stats?.week_chats ?? 0} label="masked chats" />
-        <Stat value={stats?.week_unmasks ?? 0} label="unmasks" />
-        <Stat value={stats?.gifts_received ?? 0} label="gifts received" />
+        <Stat value={stats?.week_chats ?? 0} label={`masked ${word(stats?.week_chats ?? 0, "chat")}`} />
+        <Stat value={stats?.week_unmasks ?? 0} label={word(stats?.week_unmasks ?? 0, "unmask")} />
+        <Stat value={stats?.gifts_received ?? 0} label={`${word(stats?.gifts_received ?? 0, "gift")} received`} />
       </div>
 
       {/* Recent matches */}

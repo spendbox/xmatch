@@ -3,7 +3,9 @@
 import { useMemo, useState, useTransition } from "react";
 import clsx from "clsx";
 import { Check, Pencil, Plus, Search, Trash2, X } from "lucide-react";
-import { addIcebreakers, deleteIcebreaker, updateIcebreaker, type Icebreaker } from "@/app/admin/(panel)/actions";
+import { addIcebreakersBulk, deleteIcebreaker, updateIcebreaker, type Icebreaker } from "@/app/admin/(panel)/actions";
+import { parseIcebreakers } from "@/lib/icebreakerImport";
+import { Upload } from "lucide-react";
 import { SPICE_LEVELS } from "@/lib/constants";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Field";
@@ -30,20 +32,27 @@ export function IcebreakerManager({ initial }: { initial: Icebreaker[] }) {
       (i) => (level === "all" || i.spice === level) && (showOff || i.active) && (!q || i.body.toLowerCase().includes(q)),
     );
   }, [items, level, query, showOff]);
-  const lines = addText.split("\n").filter((l) => l.trim().length >= 5).length;
+  const parsed = useMemo(() => parseIcebreakers(addText, addLevel), [addText, addLevel]);
+  const perLevel = [0, 1, 2, 3].map((l) => parsed.filter((p) => p.spice === l).length);
+  const lines = parsed.length;
 
   function add() {
     setNote(null);
     start(async () => {
-      const res = await addIcebreakers(addLevel, addText);
+      const res = await addIcebreakersBulk(parsed);
       if (res.error) return setNote({ ok: false, text: res.error });
       setItems((list) => [...res.added, ...list]);
       setAddText("");
-      setNote({
-        ok: true,
-        text: `Added ${res.added.length} question${res.added.length === 1 ? "" : "s"} to ${SPICE_LEVELS[addLevel].label}${res.skipped ? ` · ${res.skipped} already existed` : ""}.`,
-      });
+      const n = res.added.length;
+      setNote({ ok: true, text: `Added ${n} question${n === 1 ? "" : "s"}${res.skipped ? ` · ${res.skipped} already existed` : ""}.` });
     });
+  }
+
+  async function loadFile(file: File | undefined) {
+    if (!file) return;
+    if (file.size > 2_000_000) return setNote({ ok: false, text: "That file is too big (2 MB max)." });
+    const text = await file.text();
+    setAddText((t) => (t.trim() ? t.trimEnd() + "\n" : "") + text);
   }
 
   function patch(id: number, p: Partial<Icebreaker>) {
@@ -79,8 +88,10 @@ export function IcebreakerManager({ initial }: { initial: Icebreaker[] }) {
       <div className="mt-6 grid gap-6 lg:grid-cols-12">
         {/* Add in bulk */}
         <section className="h-fit rounded-3xl border border-line bg-surface p-5 shadow-card lg:sticky lg:top-8 lg:col-span-4">
-          <h2 className="flex items-center gap-2 text-[16px] font-semibold"><Plus size={18} /> Add questions</h2>
-          <p className="mt-1 text-[13px] text-muted">Paste as many as you like — one question per line. Duplicates are skipped.</p>
+          <h2 className="flex items-center gap-2 text-[16px] font-semibold"><Plus size={18} /> Bulk add questions</h2>
+          <p className="mt-1 text-[13px] leading-relaxed text-muted">
+            One question per line, as many as you like. Pick a level below, or set it per line like <b className="text-ink-soft">Naughty: …</b> or with a heading line such as <b className="text-ink-soft">Spicy</b>. Duplicates are skipped.
+          </p>
           <div className="mt-4 grid grid-cols-2 gap-2">
             {SPICE_LEVELS.map((s) => (
               <button
@@ -101,8 +112,22 @@ export function IcebreakerManager({ initial }: { initial: Icebreaker[] }) {
             className="mt-3 text-[15px]"
             value={addText}
             onChange={(e) => setAddText(e.target.value)}
-            placeholder={"What's your favourite way to spend a rainy day?\nWhat's a song that always gets you dancing?\n…"}
+            placeholder={"What's your favourite way to spend a rainy day?\nWhat's a song that always gets you dancing?\n\nSpicy\nWhere's the best place for a first kiss?\nNaughty: What's your secret flirting weapon?"}
           />
+          <label className="mt-2 flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-line-strong text-[13px] font-semibold text-ink-soft hover:border-brand hover:text-brand">
+            <Upload size={16} /> Upload a .txt or .csv file
+            <input type="file" accept=".txt,.csv,text/plain,text/csv" className="hidden" onChange={(e) => { loadFile(e.target.files?.[0]); e.target.value = ""; }} />
+          </label>
+          {lines > 0 && (
+            <div className="mt-3 grid grid-cols-4 gap-1.5 text-center">
+              {SPICE_LEVELS.map((sl) => (
+                <div key={sl.value} className={clsx("rounded-xl py-2", perLevel[sl.value] ? TONES[sl.value] : "bg-cream text-muted")}>
+                  <p className="text-[16px] leading-none font-bold">{perLevel[sl.value]}</p>
+                  <p className="mt-1 text-[10px] font-semibold">{sl.short}</p>
+                </div>
+              ))}
+            </div>
+          )}
           {note && <p className={clsx("mt-3 rounded-xl px-3 py-2 text-[13px] font-medium", note.ok ? "bg-mint-soft text-mint" : "bg-chili-soft text-chili")}>{note.text}</p>}
           <Button size="lg" className="mt-3" onClick={add} disabled={!lines} loading={pending} loadingText="Adding…">
             Add {lines || ""} question{lines === 1 ? "" : "s"}

@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "@fontsource-variable/plus-jakarta-sans";
 import "@fontsource-variable/fraunces";
-import "@fontsource-variable/fraunces/wght-italic.css";
 import "./globals.css";
 import { NavProgress } from "@/components/ui/NavProgress";
 

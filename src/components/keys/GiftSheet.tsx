@@ -1,5 +1,6 @@
 "use client";
 
+import { plural, word } from "@/lib/plural";
 import { useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -51,7 +52,7 @@ export function GiftSheet({
             </Link>
           ) : (
             <Button size="lg" onClick={send} loading={sending} loadingText="Sending…">
-              Send {picked.name} · {picked.price} Keys
+              Send {picked.name} · {plural(picked.price, "Key")}
             </Button>
           )}
         </div>

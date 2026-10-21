@@ -150,7 +150,7 @@ export function MatchChat({
 
   return (
     <div className="mx-auto flex h-dvh max-w-md flex-col bg-cream lg:max-w-none">
-      <header className="flex items-center gap-2 border-b border-line bg-surface/90 px-2 py-2.5 backdrop-blur-xl lg:px-5 lg:py-3.5">
+      <header className="flex items-center gap-2 border-b border-line bg-surface px-2 py-2.5 lg:px-5 lg:py-3.5">
         <Link href="/matches" className="grid h-10 w-10 place-items-center rounded-full hover:bg-ink/5 lg:hidden" aria-label="Back to matches">
           <ArrowLeft size={22} />
         </Link>

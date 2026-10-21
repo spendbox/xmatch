@@ -5,6 +5,21 @@ export async function middleware(request: NextRequest) {
   return updateSession(request);
 }
 
+// Only run the login check on pages that need it (app pages, login pages and
+// the landing page). Everything else — API routes, legal pages, admin, images —
+// skips it, which saves a round trip on every request.
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.svg|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
+  matcher: [
+    "/",
+    "/login",
+    "/signup",
+    "/forgot-password",
+    "/home/:path*",
+    "/events/:path*",
+    "/masquerade/:path*",
+    "/matches/:path*",
+    "/profile/:path*",
+    "/onboarding/:path*",
+    "/wallet/:path*",
+  ],
 };

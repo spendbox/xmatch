@@ -97,11 +97,11 @@ export function Onboarding({ profile, demoStep, demoDone }: { profile: Profile; 
   return (
     <main className="relative min-h-dvh overflow-x-clip lg:flex lg:items-center lg:justify-center lg:py-12">
       <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-80 overflow-hidden lg:inset-0 lg:h-auto">
-        <div className="absolute -top-24 -left-16 h-64 w-64 animate-blob rounded-full bg-brand/20 blur-3xl" />
-        <div className="absolute -top-10 -right-20 h-64 w-64 animate-blob rounded-full bg-[#ff8fb8]/20 blur-3xl [animation-delay:-6s]" />
+        <div className="absolute -top-24 -left-16 h-64 w-64 animate-blob rounded-full text-brand/20 glow" />
+        <div className="absolute -top-10 -right-20 h-64 w-64 animate-blob rounded-full text-[#ff8fb8]/20 glow [animation-delay:-6s]" />
       </div>
 
-      <div className="relative mx-auto flex min-h-dvh max-w-md flex-col px-5 lg:min-h-0 lg:w-full lg:max-w-xl lg:rounded-[36px] lg:border lg:border-white/80 lg:bg-surface/90 lg:px-10 lg:pt-4 lg:pb-8 lg:shadow-lift lg:backdrop-blur">
+      <div className="relative mx-auto flex min-h-dvh max-w-md flex-col px-5 lg:min-h-0 lg:w-full lg:max-w-xl lg:rounded-[36px] lg:border lg:border-white/80 lg:bg-surface lg:px-10 lg:pt-4 lg:pb-8 lg:shadow-lift">
         <header className="flex h-16 items-center justify-between">
           {step > 0 ? (
             <button onClick={() => { setError(null); setStep(step - 1); }} className="-ml-2 grid h-10 w-10 place-items-center rounded-full hover:bg-ink/5" aria-label="Back">
@@ -289,8 +289,8 @@ function AllSet({ name }: { name: string }) {
   return (
     <main className="relative grid min-h-dvh place-items-center overflow-hidden px-6">
       <div aria-hidden className="absolute inset-0">
-        <div className="absolute top-10 -left-20 h-80 w-80 animate-blob rounded-full bg-brand/25 blur-3xl" />
-        <div className="absolute -right-20 bottom-10 h-80 w-80 animate-blob rounded-full bg-gold/30 blur-3xl [animation-delay:-5s]" />
+        <div className="absolute top-10 -left-20 h-80 w-80 animate-blob rounded-full text-brand/25 glow" />
+        <div className="absolute -right-20 bottom-10 h-80 w-80 animate-blob rounded-full text-gold/30 glow [animation-delay:-5s]" />
       </div>
       <div className="relative max-w-sm animate-pop text-center">
         <div className="relative mx-auto grid h-32 w-32 place-items-center">
