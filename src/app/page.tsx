@@ -79,14 +79,7 @@ export default function Landing() {
         <div className="lg:grid lg:grid-cols-2 lg:items-center lg:gap-16 lg:pt-10 lg:pb-8">
         {/* Hero */}
         <section className="pt-4 text-center lg:pt-0 lg:text-left">
-          <span className="inline-flex animate-fade-up items-center gap-2 rounded-full border border-brand/15 bg-surface px-3.5 py-1.5 text-[13px] font-semibold text-brand shadow-card">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-mint opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-mint" />
-            </span>
-            Masked chats happening now
-          </span>
-          <h1 className="mt-5 animate-fade-up font-display text-[44px] leading-[1.02] font-semibold tracking-tight [animation-delay:80ms] md:text-[56px] lg:text-[68px]">
+          <h1 className="mt-4 animate-fade-up font-display text-[44px] leading-[1.02] font-semibold tracking-tight [animation-delay:80ms] md:text-[56px] lg:text-[68px]">
             Match on{" "}
             <span className="relative inline-block">
               <em className="bg-gradient-to-r from-brand via-[#c2306b] to-[#e8962a] bg-clip-text pr-1 text-transparent">Vibes</em>
