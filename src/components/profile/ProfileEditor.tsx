@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import clsx from "clsx";
 import {
-  AtSign, BellRing, Cake, ChevronRight, Eye, FileText, ImagePlus, MessageCircle, LogOut, PenLine, Shapes, ShieldCheck, SlidersHorizontal, Trash2,
+  AtSign, BellOff, BellRing, Cake, ChevronRight, Eye, FileText, ImagePlus, MessageCircle, LogOut, PenLine, Shapes, ShieldCheck, SlidersHorizontal, Trash2,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { uploadPhoto, deletePhoto } from "@/lib/photos";
@@ -21,10 +21,11 @@ import { KeyCoin } from "@/components/keys/KeyIcon";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { InterestIcon } from "@/components/ui/icons";
 import { ProfileSheet } from "@/components/matches/ProfileSheet";
+import { NotificationsPanel, pushStateText, usePushState } from "@/components/app/Notifications";
 import { PhotoGrid, MAX_PHOTOS } from "./PhotoGrid";
 import { InterestPicker, MAX_INTERESTS } from "./InterestPicker";
 
-type Panel = null | "photos" | "about" | "interests" | "account" | "delete" | "logout";
+type Panel = null | "photos" | "about" | "interests" | "account" | "delete" | "logout" | "notifications";
 
 /** How complete the profile looks, from 0 to 100. */
 function strength(p: { name: string; bio: string; interests: string[]; photos: string[] }) {
@@ -53,6 +54,7 @@ export function ProfileEditor({
   matchCount?: number;
 }) {
   const supabase = useMemo(() => createClient(), []);
+  const push = usePushState();
   const [name, setName] = useState(profile.display_name ?? "");
   const [bio, setBio] = useState(profile.bio);
   const [interests, setInterests] = useState(profile.interests);
@@ -272,6 +274,23 @@ export function ProfileEditor({
             </span>
           </Link>
 
+          <button
+            type="button"
+            onClick={() => openPanel("notifications")}
+            className="mt-3 flex w-full items-center gap-3.5 rounded-3xl border border-line bg-surface p-4 text-left shadow-card transition hover:border-line-strong active:scale-[0.98]"
+          >
+            <span className={clsx("grid h-11 w-11 shrink-0 place-items-center rounded-[14px]", push.state === "on" ? "bg-mint-soft text-mint" : "bg-brand-soft text-brand")}>
+              {push.state === "on" ? <BellRing size={20} strokeWidth={1.75} /> : <BellOff size={20} strokeWidth={1.75} />}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[15px] font-semibold">Notifications</span>
+              <span className={clsx("block truncate text-[13px]", push.state === "on" ? "font-medium text-mint" : "text-muted")}>
+                {push.state ? pushStateText[push.state] : "Checking…"}
+              </span>
+            </span>
+            <ChevronRight size={18} className="shrink-0 text-muted" />
+          </button>
+
           <SectionTitle>Account</SectionTitle>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <Tile
@@ -416,6 +435,17 @@ export function ProfileEditor({
           <Row label="Password" value="Forgot it? Use “Forgot password” on the login page" />
           <Row label="Age" value={age != null ? `${age} years old` : "Not set"} />
         </div>
+      </Sheet>
+
+      {/* Notifications */}
+      <Sheet
+        open={panel === "notifications"}
+        onClose={close}
+        title="Notifications"
+        subtitle="Get a heads-up on your phone or computer, even when Dashpad is closed."
+        icon={<BellRing size={22} strokeWidth={1.75} />}
+      >
+        <NotificationsPanel push={push} />
       </Sheet>
 
       {/* Log out */}

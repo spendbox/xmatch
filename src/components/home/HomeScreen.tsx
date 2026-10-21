@@ -20,6 +20,7 @@ import { GiftArt } from "@/components/keys/GiftArt";
 import { useWallet } from "@/components/keys/useWallet";
 import { Waiting } from "@/components/masquerade/Waiting";
 import { MeetSheet } from "./MeetSheet";
+import { NotificationsPrompt } from "@/components/app/Notifications";
 import { EventCard } from "@/components/events/EventCard";
 import type { DashpadEvent } from "@/lib/events";
 import { prefsFromProfile, type SetupPrefs } from "./prefs";
@@ -253,6 +254,8 @@ export function HomeScreen({
           <EventCard event={nextEvent} compact />
         </div>
       )}
+
+      <NotificationsPrompt className="mt-7 lg:mt-0 lg:mb-7" />
 
       {/* Keys: one card. Shows your balance and what Keys do; one button to get or use them. */}
       <section className="mt-7 overflow-hidden rounded-3xl border border-line bg-surface shadow-card lg:mt-0">

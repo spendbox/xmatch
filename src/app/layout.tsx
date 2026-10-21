@@ -17,6 +17,7 @@ export const metadata: Metadata = {
     type: "website",
   },
   appleWebApp: { capable: true, title: "Dashpad", statusBarStyle: "default" },
+  icons: { apple: "/apple-touch-icon.png" },
 };
 
 export const viewport: Viewport = {

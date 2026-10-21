@@ -1,3 +1,4 @@
+import { pushToUsers } from "@/lib/push";
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/server";
 import { eventEmail, sendEmailBatch } from "@/lib/email";
@@ -51,6 +52,14 @@ export async function emailAttendees(
     kind: kindLabel(e.kind),
     link: `${site}/events/${e.id}`,
   });
+  // Push notification too, for everyone who turned them on
+  const { data: going } = await createAdminClient().from("event_attendees").select("user_id").eq("event_id", e.id).limit(cap);
+  await pushToUsers(((going ?? []) as { user_id: string }[]).map((r) => r.user_id), {
+    title: copy.heading || e.title,
+    body: copy.message.length > 160 ? copy.message.slice(0, 157) + "…" : copy.message,
+    url: `/events/${e.id}`,
+    tag: `event-${e.id}`,
+  }).catch(() => {});
   const to = (await attendeeEmails(e.id)).slice(0, cap);
   if (!to.length) return { sent: 0, failed: 0 };
   return sendEmailBatch({ to, subject: copy.subject, html, text });

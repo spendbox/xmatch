@@ -122,13 +122,13 @@ export function EmailAttendeesCard({ eventId, going }: { eventId: string; going:
     <div className="rounded-3xl border border-line bg-surface p-5 shadow-card lg:p-6">
       <div className="mb-1 flex items-center gap-2.5">
         <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand-soft text-brand"><Mail size={17} /></span>
-        <h2 className="text-[17px] font-semibold">Email attendees now</h2>
+        <h2 className="text-[17px] font-semibold">Notify attendees now</h2>
       </div>
-      <p className="mb-3 text-[13px] text-muted">Sends one email to everyone going ({going}). Leave it empty to send &ldquo;We&apos;re live — come in!&rdquo;</p>
+      <p className="mb-3 text-[13px] text-muted">Sends an email and a phone notification (to those who turned them on) to everyone going ({going}). Leave it empty to send &ldquo;We&apos;re live — come in!&rdquo;</p>
       <Textarea rows={2} maxLength={500} value={message} onChange={(e) => setMessage(e.target.value)} placeholder="We're live — come in!" />
       <div className="mt-3 flex flex-wrap items-center gap-3">
         <Button onClick={send} loading={pending} loadingText="Sending…" disabled={!going}>
-          <Send size={16} /> Send email
+          <Send size={16} /> Send
         </Button>
         {result && <span className="inline-flex items-center gap-1 text-[13px] font-semibold text-mint"><Check size={15} /> {result}</span>}
         {!going && <span className="text-[13px] text-muted">Nobody is going yet.</span>}

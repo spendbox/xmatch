@@ -1,5 +1,6 @@
 "use client";
 
+import { notify } from "@/lib/pushClient";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -99,6 +100,7 @@ export function EventSpace({
     if (err) return setError(eventError(err.message));
     const r = data as { status: string; match_id?: string };
     if (r.status === "matched" && r.match_id) {
+      notify({ kind: "event_match", chatId: c.id });
       setMatchIds((m) => ({ ...m, [c.id]: r.match_id! }));
       setChats((l) => l?.map((x) => (x.id === c.id ? { ...x, status: "matched", my_keep: true } : x)) ?? l);
     } else if (r.status === "closed") {

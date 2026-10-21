@@ -1,5 +1,6 @@
 "use client";
 
+import { notify } from "@/lib/pushClient";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
@@ -288,6 +289,7 @@ export function CallProvider({ userId, children }: { userId: string; children: R
         alert("Couldn't start the call. Please try again.");
         return;
       }
+      notify({ kind: "call", callId: id as string });
       const c: ActiveCall = { id: id as string, matchId, kind, role: "caller", peer, status: "outgoing" };
       callRef.current = c;
       setCall(c);

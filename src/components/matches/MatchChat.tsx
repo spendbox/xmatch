@@ -1,5 +1,6 @@
 "use client";
 
+import { notify } from "@/lib/pushClient";
 import clsx from "clsx";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -109,6 +110,7 @@ export function MatchChat({
         .select(COLUMNS)
         .single();
       if (error || !data) throw error;
+      notify({ kind: "message", matchId });
       setMessages((l) => {
         const without = l.filter((m) => m.id !== temp.id);
         return without.some((m) => m.id === data.id) ? without : [...without, data as ChatMessage];
@@ -279,6 +281,7 @@ export function MatchChat({
         toName={other.display_name ?? "them"}
         onSend={async (g) => {
           const { error } = await supabase.rpc("send_gift", { p_gift: g.id, p_match: matchId });
+          if (!error) notify({ kind: "message", matchId });
           if (error) return keysError(error.message);
           refreshWallet();
           return null;

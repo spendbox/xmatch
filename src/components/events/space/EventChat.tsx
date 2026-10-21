@@ -1,5 +1,6 @@
 "use client";
 
+import { notify } from "@/lib/pushClient";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { refreshMenuBadges } from "@/components/app/useMenuBadges";
 import { sexLabel } from "@/lib/eventSpace";
@@ -127,6 +128,7 @@ export function EventChat({ chat, myId, myInterests }: { chat: EventChatDetail; 
       setToast(eventError(error?.message ?? "Message not sent. Check your connection."));
       return;
     }
+    notify({ kind: "event_message", chatId: chat.id });
     const saved = toMsg(data as EventChatMessage);
     setMessages((l) => {
       const without = l.filter((m) => m.id !== temp.id);
@@ -142,7 +144,10 @@ export function EventChat({ chat, myId, myInterests }: { chat: EventChatDetail; 
     setVoting(null);
     if (error) return setToast(eventError(error.message));
     const r = data as { status: string; match_id?: string };
-    if (r.status === "matched") return matched(r.match_id ?? null);
+    if (r.status === "matched") {
+      notify({ kind: "event_match", chatId: chat.id });
+      return matched(r.match_id ?? null);
+    }
     if (r.status === "closed") {
       router.replace(`/events/${e.id}`);
       router.refresh();

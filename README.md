@@ -133,3 +133,14 @@ Calls connect the two phones directly. That works on most Wi-Fi, but many mobile
 
 - Create the mailbox **support@dashpad.site** — the Terms, Privacy Policy and app point people there.
 - Have a lawyer review `/terms` and `/privacy` for your country, and fill in the operator's legal name and governing law (section 15 of the Terms).
+
+## Push notifications
+
+Members turn them on in **Profile → Notifications** (or from the prompt on Home). They get notified about new messages and gifts, calls, people saying hi at events, matches from events, and event announcements. Nobody is notified while they're actively using Dashpad.
+
+Set these in Vercel → Settings → Environment Variables, then redeploy:
+
+- `NEXT_PUBLIC_VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY`: a matching pair. Generate with `npx web-push generate-vapid-keys`. Keep the private one secret. Don't change them later, or everyone has to turn notifications on again.
+- `VAPID_SUBJECT`: `mailto:` plus an email push services can contact, e.g. `mailto:support@dashpad.site`.
+
+On iPhone, notifications only work after the member adds Dashpad to their home screen (Safari → Share → Add to Home Screen), on iOS 16.4 or later.
