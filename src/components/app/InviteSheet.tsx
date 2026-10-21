@@ -5,6 +5,7 @@ import { MaskIcon } from "@/components/ui/MaskIcon";
 import { Button } from "@/components/ui/Button";
 import { Chilis } from "@/components/ui/Spice";
 import { intentLabel, spiceLabel } from "@/lib/constants";
+import { MapPin } from "lucide-react";
 import type { Invite } from "./InviteListener";
 
 export function InviteSheet({
@@ -42,6 +43,11 @@ export function InviteSheet({
           <div>
             <p className="text-sm font-semibold text-brand">Masquerade invite</p>
             <h2 className="text-xl font-semibold leading-snug">Someone masked wants to chat</h2>
+            {invite.distance_km !== null && invite.distance_km !== undefined && (
+              <p className="mt-0.5 inline-flex items-center gap-1 text-[14px] text-muted">
+                <MapPin size={14} /> {invite.distance_km <= 1 ? "Under 1 km" : `${invite.distance_km} km`} away
+              </p>
+            )}
           </div>
         </div>
 

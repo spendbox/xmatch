@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, MapPin } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { INTENTS, SEEKING, SPICE_LEVELS } from "@/lib/constants";
+import { DISTANCES, getLocation, INTENTS, SEEKING, SPICE_LEVELS } from "@/lib/constants";
 import type { Intent, Profile, Seeking } from "@/lib/types";
 import { Choice } from "@/components/ui/Choice";
 import { Toggle } from "@/components/ui/Toggle";
@@ -22,6 +22,7 @@ export type SetupPrefs = {
   ageMin: number;
   ageMax: number;
   spice: number;
+  maxKm: number; // 0 = anywhere
 };
 
 export function MasqueradeSetup({ profile, demoWaiting }: { profile: Profile; demoWaiting?: boolean }) {
@@ -31,6 +32,7 @@ export function MasqueradeSetup({ profile, demoWaiting }: { profile: Profile; de
     ageMin: profile.pref_age_min,
     ageMax: profile.pref_age_max,
     spice: profile.pref_spice,
+    maxKm: profile.pref_max_km ?? 50,
   });
   const [open, setOpen] = useState(profile.open_to_masquerade);
   const [waiting, setWaiting] = useState(!!demoWaiting);
@@ -51,6 +53,7 @@ export function MasqueradeSetup({ profile, demoWaiting }: { profile: Profile; de
         pref_age_min: prefs.ageMin,
         pref_age_max: prefs.ageMax,
         pref_spice: prefs.spice,
+        pref_max_km: prefs.maxKm || null,
       })
       .eq("id", profile.id);
     if (err) setOpen(!v);
@@ -59,6 +62,11 @@ export function MasqueradeSetup({ profile, demoWaiting }: { profile: Profile; de
   async function start() {
     setError(null);
     setStarting(true);
+    const loc = await getLocation();
+    if (!loc && prefs.maxKm > 0) {
+      setStarting(false);
+      return setError("Allow location so we can find people near you, or choose Anywhere.");
+    }
     const supabase = createClient();
     const { data, error: err } = await supabase.rpc("start_masquerade", {
       p_intent: prefs.intent,
@@ -66,6 +74,9 @@ export function MasqueradeSetup({ profile, demoWaiting }: { profile: Profile; de
       p_age_min: prefs.ageMin,
       p_age_max: prefs.ageMax,
       p_spice: prefs.spice,
+      p_max_km: prefs.maxKm || null,
+      p_lat: loc?.lat ?? null,
+      p_lng: loc?.lng ?? null,
     });
     setStarting(false);
     if (err) return setError(err.message || "Couldn't start. Please try again.");
@@ -116,6 +127,17 @@ export function MasqueradeSetup({ profile, demoWaiting }: { profile: Profile; de
               onChange={(v) => setPrefs((p) => ({ ...p, ageMax: v, ageMin: Math.min(v, p.ageMin) }))}
             />
           </div>
+        </Section>
+
+        <Section title="Distance" note="Closest people are matched first. Your exact location is never shown.">
+          <Choice
+            name="Distance"
+            columns={4}
+            size="sm"
+            value={prefs.maxKm}
+            onChange={(v) => set("maxKm", v)}
+            options={DISTANCES.map((d) => ({ value: d.value, label: d.label, icon: d.value ? <MapPin size={16} /> : "🌍" }))}
+          />
         </Section>
 
         <Section

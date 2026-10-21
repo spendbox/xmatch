@@ -12,7 +12,7 @@ const steps = [
   {
     icon: Clock,
     title: "Five minutes",
-    body: "Icebreakers set the mood, from mild to extra spicy. You both pick, the questions meet in the middle.",
+    body: "Icebreakers set the mood, from mild to naughty. You both pick, the questions meet in the middle.",
   },
   {
     icon: HeartHandshake,

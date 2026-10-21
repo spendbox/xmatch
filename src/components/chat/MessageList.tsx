@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import clsx from "clsx";
-import { Sparkles } from "lucide-react";
+import { MessageCircleQuestion } from "lucide-react";
 import type { ChatMessage } from "@/lib/types";
 
 export function MessageList({ messages, myId, footer }: { messages: ChatMessage[]; myId: string; footer?: React.ReactNode }) {
@@ -19,7 +19,7 @@ export function MessageList({ messages, myId, footer }: { messages: ChatMessage[
             <div key={m.id} className="my-2 flex justify-center animate-fade-up">
               <div className="max-w-[88%] rounded-2xl border border-gold/40 bg-gold-soft px-4 py-3 text-center">
                 <p className="mb-1 inline-flex items-center gap-1 text-[11px] font-bold tracking-wide text-[#9a6a0c] uppercase">
-                  <Sparkles size={12} /> Icebreaker
+                  <MessageCircleQuestion size={13} /> Icebreaker
                 </p>
                 <p className="text-[15px] font-medium leading-snug text-ink">{m.body.replace(/^💬 /, "")}</p>
               </div>

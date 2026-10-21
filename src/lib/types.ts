@@ -1,4 +1,4 @@
-export type Gender = "woman" | "man" | "nonbinary";
+export type Gender = "woman" | "man" | "other";
 export type Intent = "friends" | "dating" | "spicy";
 export type Seeking = "women" | "men" | "anyone";
 
@@ -16,6 +16,7 @@ export type Profile = {
   pref_age_min: number;
   pref_age_max: number;
   pref_spice: number;
+  pref_max_km: number | null;
 };
 
 export type MasqueradeState = {
@@ -35,6 +36,7 @@ export type MasqueradeState = {
     age: number;
     gender: Gender;
     interests: string[];
+    distance_km: number | null;
     has_voted: boolean;
     profile: { id: string; display_name: string; bio: string; photos: string[] } | null;
   };

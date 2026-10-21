@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Flag, LogOut, MoreVertical, Sparkles, X } from "lucide-react";
+import { Flag, LogOut, MoreVertical, Dices, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { GENDERS, intentLabel, MASQUERADE_MINUTES, spiceLabel } from "@/lib/constants";
+import { distanceLabel, GENDERS, intentLabel, MASQUERADE_MINUTES, spiceLabel } from "@/lib/constants";
 import type { ChatMessage, MasqueradeState } from "@/lib/types";
 import { MessageList } from "@/components/chat/MessageList";
 import { Composer } from "@/components/chat/Composer";
@@ -141,7 +141,7 @@ export function MasqueradeRoom({
           <div className="min-w-0 flex-1">
             <p className="truncate text-[16px] font-semibold">{them.alias}</p>
             <p className="truncate text-[13px] text-muted">
-              {them.age} · {gender} · {intentLabel(state.intent)}
+              {[them.age, gender, distanceLabel(them.distance_km) ?? intentLabel(state.intent)].join(" · ")}
             </p>
           </div>
           <TimerRing remaining={remaining} total={TOTAL} />
@@ -197,7 +197,7 @@ export function MasqueradeRoom({
               aria-label="New icebreaker question"
               title="New icebreaker"
             >
-              <Sparkles size={20} />
+              <Dices size={20} />
             </button>
           }
         />

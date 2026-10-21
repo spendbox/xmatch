@@ -83,6 +83,7 @@ export function Waiting({ prefs, userId, onCancel }: { prefs: SetupPrefs; userId
         <Pill>
           {prefs.ageMin}–{prefs.ageMax}
         </Pill>
+        <Pill>{prefs.maxKm ? `Within ${prefs.maxKm} km` : "Anywhere"}</Pill>
         <Pill>
           <Chilis level={prefs.spice} /> {spiceLabel(prefs.spice)}
         </Pill>

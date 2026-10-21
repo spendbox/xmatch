@@ -31,6 +31,7 @@ const me: Profile = {
   pref_age_min: 21,
   pref_age_max: 31,
   pref_spice: 1,
+  pref_max_km: 50,
 };
 
 const ada: Profile = {
@@ -58,7 +59,7 @@ const session = (over: Partial<MasqueradeState> = {}): MasqueradeState => ({
   server_now: new Date(now).toISOString(),
   match_id: "m1",
   me: { id: "me", alias: "Golden Fox", spice: 1, vote: null },
-  them: { alias: "Velvet Owl", spice: 3, age: 26, gender: "woman", interests: ["Books", "Travel", "Dancing", "Food"], has_voted: false, profile: null },
+  them: { alias: "Velvet Owl", spice: 3, age: 26, gender: "woman", interests: ["Books", "Travel", "Dancing", "Food"], distance_km: 4, has_voted: false, profile: null },
   ...over,
 });
 
@@ -105,7 +106,7 @@ export function PreviewScreen({ screen }: { screen: string }) {
         <div className="pb-24">
           <MasqueradeSetup profile={me} />
           <InviteSheet
-            invite={{ id: "i", intent: "dating", spice: 2, from_age: 27, expires_at: new Date(now + 38_000).toISOString() }}
+            invite={{ id: "i", intent: "dating", spice: 2, from_age: 27, distance_km: 3, expires_at: new Date(now + 38_000).toISOString() }}
             onAccept={() => {}}
             onDecline={() => {}}
             onExpire={() => {}}

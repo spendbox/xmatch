@@ -7,8 +7,16 @@ create extension if not exists pgcrypto;
 -- Types
 -- ---------------------------------------------------------------------------
 do $$ begin
-  create type public.gender as enum ('woman', 'man', 'nonbinary');
+  create type public.gender as enum ('woman', 'man', 'other');
 exception when duplicate_object then null; end $$;
+
+-- Older setups used 'nonbinary'; it is now called 'other'
+do $$ begin
+  if exists (select 1 from pg_enum e join pg_type t on t.oid = e.enumtypid
+             where t.typname = 'gender' and e.enumlabel = 'nonbinary') then
+    alter type public.gender rename value 'nonbinary' to 'other';
+  end if;
+end $$;
 
 do $$ begin
   create type public.intent as enum ('friends', 'dating', 'spicy');
@@ -106,6 +114,16 @@ create table if not exists public.masquerade_invites (
 );
 create index if not exists masquerade_invites_to on public.masquerade_invites (to_user, status);
 
+-- Location (rounded to about 1 km, never shown exactly)
+alter table public.accounts_private add column if not exists lat double precision;
+alter table public.accounts_private add column if not exists lng double precision;
+alter table public.accounts_private add column if not exists location_at timestamptz;
+alter table public.profiles add column if not exists pref_max_km int; -- empty = anywhere
+alter table public.masquerade_queue add column if not exists lat double precision;
+alter table public.masquerade_queue add column if not exists lng double precision;
+alter table public.masquerade_queue add column if not exists max_km int;
+alter table public.masquerade_invites add column if not exists distance_km int;
+
 create table if not exists public.icebreakers (
   id serial primary key,
   spice smallint not null check (spice between 0 and 3),
@@ -155,6 +173,21 @@ create or replace function public.gender_fits(s public.seeking, g public.gender)
 language sql immutable as $$
   select s = 'anyone' or (s = 'women' and g = 'woman') or (s = 'men' and g = 'man')
 $$;
+
+-- Distance in km between two points (null if either is unknown)
+create or replace function public.distance_km(lat1 double precision, lng1 double precision,
+                                              lat2 double precision, lng2 double precision)
+returns double precision language sql immutable as $$
+  select case when lat1 is null or lat2 is null then null else
+    6371 * 2 * asin(sqrt(
+      power(sin(radians(lat2 - lat1) / 2), 2) +
+      cos(radians(lat1)) * cos(radians(lat2)) * power(sin(radians(lng2 - lng1) / 2), 2)
+    )) end
+$$;
+
+-- Is this distance OK for someone with this limit? (no limit = anywhere)
+create or replace function public.within_km(d double precision, max_km int) returns boolean
+language sql immutable as $$ select max_km is null or (d is not null and d <= max_km) $$;
 
 create or replace function public.is_blocked(a uuid, b uuid) returns boolean
 language sql stable security definer set search_path = public as $$
@@ -246,9 +279,12 @@ begin
     and public.gender_fits(q.seeking, me_p.gender)
     and public.age_years(p.birthdate) between me_q.age_min and me_q.age_max
     and public.age_years(me_p.birthdate) between q.age_min and q.age_max
+    and public.within_km(public.distance_km(me_q.lat, me_q.lng, q.lat, q.lng), me_q.max_km)
+    and public.within_km(public.distance_km(me_q.lat, me_q.lng, q.lat, q.lng), q.max_km)
     and not public.is_blocked(uid, q.user_id)
     and not public.already_matched(uid, q.user_id)
-  order by q.created_at
+  -- Closest people first, then whoever has waited longest
+  order by public.distance_km(me_q.lat, me_q.lng, q.lat, q.lng) nulls last, q.created_at
   limit 1;
 
   if not found then return null; end if;
@@ -261,8 +297,10 @@ end $$;
 -- ---------------------------------------------------------------------------
 
 -- "Put on your mask": join the waiting list and try to match right away.
+drop function if exists public.start_masquerade(public.intent, public.seeking, int, int, smallint);
 create or replace function public.start_masquerade(
-  p_intent public.intent, p_seeking public.seeking, p_age_min int, p_age_max int, p_spice smallint
+  p_intent public.intent, p_seeking public.seeking, p_age_min int, p_age_max int, p_spice smallint,
+  p_max_km int default null, p_lat double precision default null, p_lng double precision default null
 ) returns uuid
 language plpgsql security definer set search_path = public as $$
 declare
@@ -280,27 +318,42 @@ begin
   p_age_min := greatest(18, least(p_age_min, 99));
   p_age_max := greatest(p_age_min, least(p_age_max, 99));
   my_age := public.age_years(me.birthdate);
+  if p_max_km is not null and p_max_km < 1 then p_max_km := null; end if;
+  -- Keep location approximate (about 1 km)
+  p_lat := round(p_lat::numeric, 2)::double precision;
+  p_lng := round(p_lng::numeric, 2)::double precision;
+  if p_lat is null then
+    select lat, lng into p_lat, p_lng from accounts_private where user_id = uid;
+  end if;
+  if p_max_km is not null and p_lat is null then
+    raise exception 'Turn on location to match by distance, or choose Anywhere';
+  end if;
 
   update profiles set pref_intent = p_intent, pref_seeking = p_seeking, pref_age_min = p_age_min,
-    pref_age_max = p_age_max, pref_spice = p_spice, last_seen_at = now()
+    pref_age_max = p_age_max, pref_spice = p_spice, pref_max_km = p_max_km, last_seen_at = now()
   where id = uid;
+  update accounts_private set lat = p_lat, lng = p_lng,
+    location_at = case when p_lat is not null then now() else location_at end
+  where user_id = uid;
 
   sid := public.my_active_session(uid);
   if sid is not null then return sid; end if;
 
-  insert into masquerade_queue (user_id, intent, seeking, age_min, age_max, spice)
-  values (uid, p_intent, p_seeking, p_age_min, p_age_max, p_spice)
+  insert into masquerade_queue (user_id, intent, seeking, age_min, age_max, spice, lat, lng, max_km)
+  values (uid, p_intent, p_seeking, p_age_min, p_age_max, p_spice, p_lat, p_lng, p_max_km)
   on conflict (user_id) do update set intent = excluded.intent, seeking = excluded.seeking,
     age_min = excluded.age_min, age_max = excluded.age_max, spice = excluded.spice,
+    lat = excluded.lat, lng = excluded.lng, max_km = excluded.max_km,
     created_at = now(), last_ping_at = now();
 
   sid := public.try_masquerade_match(uid);
   if sid is not null then return sid; end if;
 
   -- Nobody waiting yet: send a pop-up to people who are online and open to Masquerade.
-  insert into masquerade_invites (from_user, to_user, intent, spice, from_age)
-  select uid, p.id, p_intent, p_spice, my_age
+  insert into masquerade_invites (from_user, to_user, intent, spice, from_age, distance_km)
+  select uid, p.id, p_intent, p_spice, my_age, ceil(public.distance_km(p_lat, p_lng, a.lat, a.lng))::int
   from profiles p
+  left join accounts_private a on a.user_id = p.id
   where p.open_to_masquerade
     and p.id <> uid
     and p.last_seen_at > now() - interval '2 minutes'
@@ -313,9 +366,12 @@ begin
     and not exists (select 1 from masquerade_queue q where q.user_id = p.id)
     and public.my_active_session(p.id) is null
     and not exists (select 1 from masquerade_invites i where i.to_user = p.id and i.status = 'pending' and i.expires_at > now())
+    and public.within_km(public.distance_km(p_lat, p_lng, a.lat, a.lng), p_max_km)
+    and public.within_km(public.distance_km(p_lat, p_lng, a.lat, a.lng), p.pref_max_km)
     and not public.is_blocked(uid, p.id)
     and not public.already_matched(uid, p.id)
-  order by random()
+  -- Invite the closest people first
+  order by public.distance_km(p_lat, p_lng, a.lat, a.lng) nulls last, random()
   limit 3;
 
   return null;
@@ -450,6 +506,8 @@ declare
   s masquerade_sessions;
   other uuid;
   op profiles;
+  my_loc accounts_private;
+  their_loc accounts_private;
   i_am_a boolean;
 begin
   select * into s from masquerade_sessions where id = p_session and (user_a = uid or user_b = uid);
@@ -462,6 +520,8 @@ begin
   i_am_a := s.user_a = uid;
   other := case when i_am_a then s.user_b else s.user_a end;
   select * into op from profiles where id = other;
+  select * into my_loc from accounts_private where user_id = uid;
+  select * into their_loc from accounts_private where user_id = other;
 
   return json_build_object(
     'id', s.id,
@@ -485,6 +545,7 @@ begin
       'age', public.age_years(op.birthdate),
       'gender', op.gender,
       'interests', op.interests,
+      'distance_km', ceil(public.distance_km(my_loc.lat, my_loc.lng, their_loc.lat, their_loc.lng))::int,
       'has_voted', (case when i_am_a then s.unmask_b else s.unmask_a end) is not null,
       -- Only revealed after you both unmask
       'profile', case when s.status = 'matched' then json_build_object(
@@ -687,7 +748,7 @@ create policy "delete own photos" on storage.objects for delete to authenticated
   using (bucket_id = 'photos' and (storage.foldername(name))[1] = auth.uid()::text);
 
 -- ---------------------------------------------------------------------------
--- Icebreaker questions (0 = Mild, 1 = A little spicy, 2 = Spicy, 3 = Extra spicy)
+-- Icebreaker questions (0 = Mild, 1 = A little spicy, 2 = Spicy, 3 = Naughty)
 -- ---------------------------------------------------------------------------
 insert into public.icebreakers (spice, body)
 select * from (values

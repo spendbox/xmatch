@@ -11,6 +11,7 @@ export type Invite = {
   intent: Intent;
   spice: number;
   from_age: number;
+  distance_km: number | null;
   expires_at: string;
 };
 
@@ -25,7 +26,7 @@ export function InviteListener({ userId }: { userId: string }) {
     const supabase = createClient();
     supabase
       .from("masquerade_invites")
-      .select("id, intent, spice, from_age, expires_at")
+      .select("id, intent, spice, from_age, distance_km, expires_at")
       .eq("to_user", userId)
       .eq("status", "pending")
       .gt("expires_at", new Date().toISOString())
