@@ -624,6 +624,7 @@ language sql stable security definer set search_path = public as $$
   select coalesce(json_agg(row_to_json(t) order by t.last_message_at desc), '[]'::json) from (
     select m.id, m.created_at, m.last_message_at, m.intent,
       p.id as other_id, p.display_name, p.photos, public.age_years(p.birthdate) as age,
+      public.shared_count(p.interests, (select interests from profiles where id = auth.uid())) as shared,
       (select body from messages x where x.match_id = m.id order by x.id desc limit 1) as last_message,
       (select sender_id from messages x where x.match_id = m.id order by x.id desc limit 1) as last_sender
     from matches m

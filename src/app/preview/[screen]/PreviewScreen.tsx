@@ -5,6 +5,7 @@ import { MasqueradeRoom } from "@/components/masquerade/MasqueradeRoom";
 import { Outcome } from "@/components/masquerade/Outcome";
 import { MatchesList } from "@/components/matches/MatchesList";
 import { MatchChat } from "@/components/matches/MatchChat";
+import { ProfileSheet } from "@/components/matches/ProfileSheet";
 import { ProfileEditor } from "@/components/profile/ProfileEditor";
 import { BottomNav } from "@/components/app/BottomNav";
 import { InviteSheet } from "@/components/app/InviteSheet";
@@ -135,20 +136,29 @@ export function PreviewScreen({ screen }: { screen: string }) {
           <MatchesList
             myId="me"
             matches={[
-              { id: "m1", created_at: iso(3000), last_message_at: iso(200), intent: "dating", other_id: "ada", display_name: "Ada", photos: ada.photos, age: 26, last_message: "When the conversation just flows…", last_sender: "ada" },
-              { id: "m2", created_at: iso(90000), last_message_at: iso(7200), intent: "friends", other_id: "x", display_name: "Kemi", photos: [photo("#1f9d6b", "#f2b33d", "K")], age: 24, last_message: "Haha see you Saturday!", last_sender: "me" },
-              { id: "m3", created_at: iso(200000), last_message_at: iso(190000), intent: "dating", other_id: "y", display_name: "Zara", photos: [photo("#5b3fd9", "#e5484d", "Z")], age: 29, last_message: null, last_sender: null },
+              { id: "m1", created_at: iso(3000), last_message_at: iso(200), intent: "dating", other_id: "ada", display_name: "Ada", photos: ada.photos, age: 26, last_message: "When the conversation just flows…", last_sender: "ada", shared: 2 },
+              { id: "m2", created_at: iso(90000), last_message_at: iso(7200), intent: "friends", other_id: "x", display_name: "Kemi", photos: [photo("#1f9d6b", "#f2b33d", "K")], age: 24, last_message: "Haha see you Saturday!", last_sender: "me", shared: 3 },
+              { id: "m3", created_at: iso(20000), last_message_at: iso(19000), intent: "spicy", other_id: "y", display_name: "Zara", photos: [photo("#5b3fd9", "#e5484d", "Z")], age: 29, last_message: null, last_sender: null },
             ]}
           />
           <BottomNav />
         </div>
       );
     case "match-chat":
-      return <MatchChat matchId="m1" myId="me" other={ada} initialMessages={msgs.map((m) => (m.kind === "icebreaker" ? { ...m, body: "💬 " + m.body } : m))} />;
+      return <MatchChat matchId="m1" myId="me" other={ada} shared={["Travel", "Food"]} matchedAt={iso(3000)} intent="dating" initialMessages={msgs.map((m) => (m.kind === "icebreaker" ? { ...m, body: "💬 " + m.body } : m))} />;
+    case "matches-empty":
+      return (
+        <div className="pb-24">
+          <MatchesList myId="me" matches={[]} />
+          <BottomNav />
+        </div>
+      );
+    case "profile-preview":
+      return <ProfileSheet profile={ada} shared={["Travel", "Food"]} onClose={() => {}} />;
     case "profile":
       return (
         <div className="pb-24">
-          <ProfileEditor profile={me} email="tolu@example.com" phone="+2348012345678" />
+          <ProfileEditor profile={me} email="tolu@example.com" phone="+2348012345678" matchCount={3} />
           <BottomNav />
         </div>
       );

@@ -62,4 +62,5 @@ export type MatchSummary = {
   age: number;
   last_message: string | null;
   last_sender: string | null;
+  shared?: number;
 };

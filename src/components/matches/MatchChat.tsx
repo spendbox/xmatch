@@ -6,8 +6,11 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Flag, Gift, MoreVertical, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { ageFromBirthdate } from "@/lib/constants";
-import type { ChatMessage, Profile } from "@/lib/types";
+import type { ChatMessage, Intent, Profile } from "@/lib/types";
+import { INTENT_ICONS, InterestIcon } from "@/components/ui/icons";
+import { intentLabel } from "@/lib/constants";
 import { Avatar } from "@/components/ui/Avatar";
+import { MaskIcon } from "@/components/ui/MaskIcon";
 import { MessageList } from "@/components/chat/MessageList";
 import { Composer } from "@/components/chat/Composer";
 import { ReportSheet } from "@/components/masquerade/ReportSheet";
@@ -18,11 +21,17 @@ export function MatchChat({
   myId,
   other,
   initialMessages,
+  shared = [],
+  matchedAt,
+  intent = "dating",
 }: {
   matchId: string;
   myId: string;
   other: Profile;
   initialMessages: ChatMessage[];
+  shared?: string[];
+  matchedAt?: string;
+  intent?: Intent;
 }) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
@@ -79,18 +88,20 @@ export function MatchChat({
 
   return (
     <div className="mx-auto flex h-dvh max-w-md flex-col bg-cream">
-      <header className="flex items-center gap-2 border-b border-line bg-surface/95 px-2 py-2.5 backdrop-blur">
+      <header className="flex items-center gap-2 border-b border-line bg-surface/90 px-2 py-2.5 backdrop-blur-xl">
         <Link href="/matches" className="grid h-10 w-10 place-items-center rounded-full hover:bg-ink/5" aria-label="Back to matches">
           <ArrowLeft size={22} />
         </Link>
         <button onClick={() => setShowProfile(true)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
-          <Avatar src={other.photos?.[0]} name={other.display_name} size={42} />
+          <span className="inline-flex shrink-0 rounded-full bg-gradient-to-br from-brand to-[#c2306b] p-[2px]">
+            <Avatar src={other.photos?.[0]} name={other.display_name} size={40} className="ring-2 ring-surface" />
+          </span>
           <div className="min-w-0">
             <p className="truncate text-[16px] font-semibold">
               {other.display_name}
               {age ? `, ${age}` : ""}
             </p>
-            <p className="text-[12px] text-muted">View profile</p>
+            <p className="text-[12px] font-medium text-brand">Tap to view profile</p>
           </div>
         </button>
         <div className="relative">
@@ -108,9 +119,31 @@ export function MatchChat({
       </header>
 
       <div className="flex-1 overflow-y-auto">
-        {messages.length === 0 && (
-          <p className="px-8 pt-10 text-center text-[15px] text-muted">You unmasked each other. Say hi to {other.display_name}!</p>
-        )}
+        <div className="mx-4 mt-4 animate-fade-up rounded-3xl border border-line bg-surface p-5 text-center shadow-card">
+          <div className="flex justify-center -space-x-3">
+            <span className="grid h-14 w-14 place-items-center rounded-full bg-ink text-white ring-4 ring-surface">
+              <MaskIcon className="w-8" eyes="#1c1828" />
+            </span>
+            <span className="rounded-full ring-4 ring-surface">
+              <Avatar src={other.photos?.[0]} name={other.display_name} size={56} />
+            </span>
+          </div>
+          <p className="mt-3 text-[16px] font-semibold">You unmasked each other</p>
+          <p className="mt-0.5 inline-flex items-center gap-1.5 text-[13px] text-muted">
+            {INTENT_ICONS[intent]({ size: 14 })} {intentLabel(intent)}
+            {matchedAt && <> · {new Date(matchedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</>}
+          </p>
+          {shared.length > 0 && (
+            <div className="mt-3 flex flex-wrap justify-center gap-1.5">
+              {shared.map((t) => (
+                <span key={t} className="inline-flex items-center gap-1 rounded-full bg-brand-soft px-2.5 py-1 text-[12px] font-semibold text-brand-ink">
+                  <InterestIcon name={t} size={13} /> {t}
+                </span>
+              ))}
+            </div>
+          )}
+          {messages.length === 0 && <p className="mt-3 text-[14px] text-muted">Say hi to {other.display_name} 👋</p>}
+        </div>
         <MessageList messages={messages} myId={myId} />
       </div>
 
@@ -134,7 +167,7 @@ export function MatchChat({
           {toast}
         </div>
       )}
-      {showProfile && <ProfileSheet profile={other} onClose={() => setShowProfile(false)} />}
+      {showProfile && <ProfileSheet profile={other} shared={shared} onClose={() => setShowProfile(false)} />}
       {reporting && <ReportSheet onClose={() => setReporting(false)} onReport={report} />}
     </div>
   );

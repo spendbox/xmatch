@@ -15,11 +15,13 @@ export default async function MatchChatPage({ params }: { params: Promise<{ id: 
   if (!match) notFound();
   const otherId = match.user_a === user.id ? match.user_b : match.user_a;
 
-  const [{ data: other }, { data: messages }] = await Promise.all([
+  const [{ data: other }, { data: messages }, { data: me }] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", otherId).single(),
     supabase.from("messages").select("id, sender_id, body, created_at").eq("match_id", id).order("id").limit(500),
+    supabase.from("profiles").select("interests").eq("id", user.id).single(),
   ]);
+  const shared = ((other?.interests ?? []) as string[]).filter((t) => ((me?.interests ?? []) as string[]).includes(t));
   if (!other) notFound();
 
-  return <MatchChat matchId={id} myId={user.id} other={other as Profile} initialMessages={(messages ?? []) as ChatMessage[]} />;
+  return <MatchChat matchId={id} myId={user.id} other={other as Profile} initialMessages={(messages ?? []) as ChatMessage[]} shared={shared} matchedAt={match.created_at} intent={match.intent} />;
 }
