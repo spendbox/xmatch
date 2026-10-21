@@ -51,7 +51,7 @@ export function AdminOverview({ overview: o, nights }: { overview: Overview; nig
       <div className="mt-10 mb-4 flex items-center justify-between">
         <h2 className="text-[18px] font-semibold">Upcoming events</h2>
         <Link href="/admin/nights/new" className="inline-flex h-10 items-center gap-1.5 rounded-full bg-brand px-4 text-[14px] font-semibold text-white">
-          <Plus size={16} /> New night
+          <Plus size={16} /> New event
         </Link>
       </div>
       {upcoming.length ? (
@@ -63,7 +63,7 @@ export function AdminOverview({ overview: o, nights }: { overview: Overview; nig
       ) : (
         <div className="flex flex-col items-center rounded-3xl border border-dashed border-line-strong bg-surface p-10 text-center">
           <CalendarDays size={30} className="text-brand" />
-          <p className="mt-3 font-semibold">No nights scheduled</p>
+          <p className="mt-3 font-semibold">No events scheduled</p>
           <p className="text-[14px] text-muted">Create one to bring everyone online at the same time.</p>
         </div>
       )}

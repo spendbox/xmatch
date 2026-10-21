@@ -91,6 +91,18 @@ Dashpad sends its own password reset emails through [Resend](https://resend.com)
 
 Reset links last 1 hour, work once, and each account can request at most 3 per hour.
 
+## Event reminder emails
+
+Dashpad emails everyone going to an event the day before and on the day (each reminder goes out once). It uses Resend, so set that up first (above).
+
+1. Add to Vercel → Environment Variables, then redeploy:
+   | Name | Value |
+   |---|---|
+   | `CRON_SECRET` | any long random text (keep private). Vercel uses it to call the reminder job. |
+2. That's it. `vercel.json` tells Vercel to run the job every morning at 8:00 UTC (9:00 in Lagos). You can see it under **Settings → Cron Jobs** in Vercel.
+
+You can turn reminders off for one event in its settings. On an event's admin page, **Email attendees now** sends everyone going a message straight away (handy when you go live).
+
 ## Payments (Paystack)
 
 1. Log in to [dashboard.paystack.com](https://dashboard.paystack.com) → **Settings → API Keys & Webhooks**.
