@@ -14,7 +14,7 @@ export function EventsScreen({ events }: { events: DashpadEvent[] }) {
   return (
     <main className="mx-auto max-w-md px-5 pt-6 lg:max-w-6xl lg:px-10 lg:pt-10">
       <h1 className="font-display text-[34px] leading-tight font-semibold tracking-tight lg:text-[40px]">Events</h1>
-      <p className="mt-1 text-[15px] text-muted">Themed hours where everyone masks up at once.</p>
+      <p className="mt-1 text-[15px] text-muted">Themed nights to meet people — masked rounds, photo walls and listening parties.</p>
 
       <div className="mt-5 grid grid-cols-3 gap-2 text-center text-[12px] font-medium text-ink-soft lg:max-w-xl">
         <Step icon={<Users size={16} />} text="Say you're going" />

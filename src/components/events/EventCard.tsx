@@ -3,12 +3,13 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
-import { CalendarDays, Check, Users } from "lucide-react";
+import { Check, Users } from "lucide-react";
 import { countdown, eventPhase, eventWhen, themeBg, type DashpadEvent } from "@/lib/events";
 import { intentLabel } from "@/lib/constants";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { INTENT_ICONS } from "@/components/ui/icons";
 import { KeyCoin } from "@/components/keys/KeyIcon";
+import { CoverImage, KindChip } from "./kind";
 
 export function useNow(every = 1000) {
   const [now, setNow] = useState<number | null>(null);
@@ -29,16 +30,17 @@ export function EventCard({ event: e, compact }: { event: DashpadEvent; compact?
       href={`/events/${e.id}`}
       className={clsx("group block overflow-hidden rounded-[28px] bg-surface shadow-card transition hover:-translate-y-0.5 hover:shadow-lift active:scale-[0.99]", phase === "ended" && "opacity-75")}
     >
-      <div className={clsx("relative bg-gradient-to-br text-white", themeBg(e.theme), compact ? "p-5" : "p-6")}>
-        <span aria-hidden className="absolute -top-10 -right-10 h-36 w-36 rounded-full bg-white/10" />
-        <div className="relative flex items-center justify-between">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-bold tracking-wide uppercase">
-            <CalendarDays size={13} /> Masquerade Night
-          </span>
+      <div className={clsx("relative flex flex-col overflow-hidden bg-gradient-to-br text-white", themeBg(e.theme), compact ? "p-5" : "p-6", e.cover_url && (compact ? "min-h-[180px]" : "min-h-[210px]"))}>
+        <CoverImage src={e.cover_url} />
+        {!e.cover_url && <span aria-hidden className="absolute -top-10 -right-10 h-36 w-36 rounded-full bg-white/10" />}
+        <div className="relative flex items-center justify-between gap-2">
+          <KindChip kind={e.kind} />
           <PhaseBadge phase={phase} startsIn={startsIn} />
         </div>
-        <MaskIcon className={clsx("absolute right-5 bottom-4 text-white/20", compact ? "w-16" : "w-20")} eyes="transparent" />
-        <p className={clsx("relative mt-4 font-display leading-tight font-semibold", compact ? "text-[22px]" : "text-[26px]")}>{e.title}</p>
+        {!e.cover_url && (e.kind ?? "masquerade") === "masquerade" && (
+          <MaskIcon className={clsx("absolute right-5 bottom-4 text-white/20", compact ? "w-16" : "w-20")} eyes="transparent" />
+        )}
+        <p className={clsx("relative mt-auto pt-4 font-display leading-tight font-semibold", compact ? "text-[22px]" : "text-[26px]")}>{e.title}</p>
         <p className="relative mt-1 text-[14px] text-white/85">{now ? eventWhen(e.starts_at, e.ends_at) : " "}</p>
       </div>
       <div className="flex flex-wrap items-center gap-2 p-4 text-[12px] font-semibold">

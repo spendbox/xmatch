@@ -4,6 +4,8 @@ import { HomeScreen } from "@/components/home/HomeScreen";
 import { WalletScreen } from "@/components/keys/WalletScreen";
 import { GiftSheet } from "@/components/keys/GiftSheet";
 import { EventsScreen } from "@/components/events/EventsScreen";
+import { EventMediaProvider } from "@/components/events/media/EventMediaProvider";
+import { EventSpace } from "@/components/events/space/EventSpace";
 import { EventLobby } from "@/components/events/EventLobby";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { AdminOverview } from "@/components/admin/AdminOverview";
@@ -94,7 +96,7 @@ const recent = [
   { id: "m3", created_at: iso(3000), last_message_at: iso(200), intent: "spicy" as const, other_id: "z", display_name: "Zara", photos: [photo("#5b3fd9", "#e5484d", "Z")], age: 29, last_message: null, last_sender: null },
 ];
 
-const APP_SCREENS = ["events", "event-upcoming", "event-live", "event-waiting", "event-ended", "home", "matches", "wallet", "profile", "rich-chat", "extend", "chat", "desktop-matches", "gifts"];
+const APP_SCREENS = ["event-spotlight", "event-spotlight-live", "events", "event-upcoming", "event-live", "event-waiting", "event-ended", "home", "matches", "wallet", "profile", "rich-chat", "extend", "chat", "desktop-matches", "gifts"];
 
 function ev(over: Partial<DashpadEvent> = {}): DashpadEvent {
   return {
@@ -118,10 +120,10 @@ export function PreviewScreen({ screen }: { screen: string }) {
   const inner = <ScreenBody screen={screen} />;
   if (!APP_SCREENS.includes(screen)) return inner;
   return (
-    <>
+    <EventMediaProvider userId="me">
       <Sidebar user={{ id: "me", name: "Tolu", photo: me.photos[0] }} />
       <div className="lg:pl-[var(--sidebar-w)] lg:transition-[padding] lg:duration-300">{inner}</div>
-    </>
+    </EventMediaProvider>
   );
 }
 
@@ -254,6 +256,22 @@ function ScreenBody({ screen }: { screen: string }) {
       return <EventLobby userId="me" demo="waiting" event={ev({ starts_at: iso(1200), ends_at: new Date(now + 2400_000).toISOString(), i_am_going: true, my_rounds: 3, my_unmasks: 1 })} />;
     case "event-ended":
       return <EventLobby userId="me" event={ev({ starts_at: iso(7200), ends_at: iso(3600), i_am_going: true, my_rounds: 9, my_unmasks: 2 })} />;
+    case "event-spotlight":
+    case "event-spotlight-live":
+      return (
+        <EventSpace
+          userId="me"
+          myPhotos={me.photos}
+          myInterests={me.interests}
+          event={ev({
+            id: "s1", title: "Afrobeats Spotlight", kind: "spotlight", theme: "rose", entry_keys: 0, i_am_going: true, going_count: 186,
+            my_photo: me.photos[0],
+            ...(screen === "event-spotlight-live" ? { starts_at: iso(1200), ends_at: new Date(now + 2400_000).toISOString() } : {}),
+          })}
+        />
+      );
+    case "admin-night-spotlight":
+      return <AdminShell><NightEditor night={{ ...adminNights[0], kind: "spotlight", settings: { free_reveals: 10, reveal_cost: 1, max_chats: 5 } }} /></AdminShell>;
     case "admin":
       return <AdminShell><AdminOverview overview={{ users: 2841, new_users_7d: 312, online_now: 214, masquerades_today: 1290, unmasks_today: 388, matches_total: 6120, revenue_30d_kobo: 184500000, keys_sold_30d: 112400, gifts_7d: 2290, reports_7d: 4, icebreakers: 112 }} nights={adminNights} /></AdminShell>;
     case "admin-nights":
