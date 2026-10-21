@@ -5,24 +5,37 @@ type IceServer = { urls: string | string[]; username?: string; credential?: stri
 
 /**
  * Servers that help two phones find each other for a call.
- * STUN works for most home Wi-Fi. A TURN relay is needed on many mobile
- * networks — set one up with Metered (METERED_DOMAIN + METERED_API_KEY)
- * or any TURN service (TURN_URLS, TURN_USERNAME, TURN_CREDENTIAL).
+ * STUN works on most Wi-Fi. A TURN relay is needed on many mobile networks:
+ * we use Cloudflare's (CLOUDFLARE_TURN_KEY_ID + CLOUDFLARE_TURN_API_TOKEN).
+ * Any other TURN service also works via TURN_URLS, TURN_USERNAME, TURN_CREDENTIAL.
  */
 export async function GET() {
   const { user } = await getAuth();
   if (!user) return NextResponse.json({ error: "Please log in" }, { status: 401 });
 
-  const servers: IceServer[] = [
-    { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] },
-    { urls: "stun:stun.cloudflare.com:3478" },
-  ];
+  const servers: IceServer[] = [{ urls: ["stun:stun.cloudflare.com:3478", "stun:stun.l.google.com:19302"] }];
 
-  const { METERED_DOMAIN, METERED_API_KEY, TURN_URLS, TURN_USERNAME, TURN_CREDENTIAL } = process.env;
-  if (METERED_DOMAIN && METERED_API_KEY) {
+  const { CLOUDFLARE_TURN_KEY_ID, CLOUDFLARE_TURN_API_TOKEN, TURN_URLS, TURN_USERNAME, TURN_CREDENTIAL } = process.env;
+  if (CLOUDFLARE_TURN_KEY_ID && CLOUDFLARE_TURN_API_TOKEN) {
     try {
-      const res = await fetch(`https://${METERED_DOMAIN}/api/v1/turn/credentials?apiKey=${METERED_API_KEY}`, { cache: "no-store" });
-      if (res.ok) servers.push(...((await res.json()) as IceServer[]));
+      const res = await fetch(
+        `https://rtc.live.cloudflare.com/v1/turn/keys/${CLOUDFLARE_TURN_KEY_ID}/credentials/generate-ice-servers`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${CLOUDFLARE_TURN_API_TOKEN}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ ttl: 4 * 60 * 60 }), // valid for 4 hours, longer than any call
+          cache: "no-store",
+        },
+      );
+      if (res.ok) {
+        const data = (await res.json()) as { iceServers: IceServer | IceServer[] };
+        const list = Array.isArray(data.iceServers) ? data.iceServers : [data.iceServers];
+        for (const s of list) {
+          // Browsers can't use port 53, so drop those addresses
+          const urls = (Array.isArray(s.urls) ? s.urls : [s.urls]).filter((u) => !/:53(\?|$)/.test(u));
+          if (urls.length) servers.push({ ...s, urls });
+        }
+      }
     } catch {
       /* fall back to STUN only */
     }

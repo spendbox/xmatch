@@ -54,14 +54,15 @@ Database rules live in `supabase/migrations/0001_dashpad.sql`. Matching, timers,
 
 ## Calls (voice & video)
 
-Calls connect the two phones directly. That works on most Wi-Fi, but many mobile networks need a **relay (TURN) server**. Free and easy option:
+Calls connect the two phones directly. That works on most Wi-Fi, but many mobile networks need a **relay (TURN) server**. Dashpad uses **Cloudflare's** (first 1,000 GB a month free, then $0.05/GB):
 
-1. Sign up at [metered.ca](https://www.metered.ca/stun-turn) (free tier available) and create a TURN app.
-2. Add these in Vercel → Settings → Environment Variables, then redeploy:
+1. In the Cloudflare dashboard go to **Realtime → TURN Server** and create a TURN key.
+2. Copy the **Turn Token ID** and **API Token** it shows you.
+3. Add them in Vercel → Settings → Environment Variables, then redeploy:
    | Name | Value |
    |---|---|
-   | `METERED_DOMAIN` | e.g. `dashpad.metered.live` |
-   | `METERED_API_KEY` | your Metered API key |
+   | `CLOUDFLARE_TURN_KEY_ID` | the Turn Token ID |
+   | `CLOUDFLARE_TURN_API_TOKEN` | the API Token (keep private) |
 
 (Any other TURN provider works too: set `TURN_URLS`, `TURN_USERNAME`, `TURN_CREDENTIAL` instead.)
 
