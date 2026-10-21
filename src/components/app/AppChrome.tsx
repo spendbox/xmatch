@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { BottomNav } from "./BottomNav";
 import { InviteListener } from "./InviteListener";
 import { useHeartbeat } from "./useHeartbeat";
+import { CallProvider } from "@/components/calls/CallProvider";
 
 export function AppChrome({ userId, children }: { userId: string; children: React.ReactNode }) {
   const path = usePathname();
@@ -12,10 +13,10 @@ export function AppChrome({ userId, children }: { userId: string; children: Reac
   useHeartbeat();
 
   return (
-    <>
+    <CallProvider userId={userId}>
       <div className={fullScreen ? "" : "pb-24"}>{children}</div>
       {!fullScreen && <BottomNav />}
       {!path.startsWith("/masquerade/") && <InviteListener userId={userId} />}
-    </>
+    </CallProvider>
   );
 }

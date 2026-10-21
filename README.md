@@ -15,7 +15,8 @@ Live at **dashpad.site** · Built with Next.js (hosted on Vercel) and Supabase (
 - 5-minute masked chat with a live timer and icebreaker questions. You only see the other person's alias, age, gender and interests.
 - When time is up, each person chooses **Unmask** or **Stay masked**. Both unmask → it's a match and the chat is kept. Otherwise → the chat is deleted.
 - **Open to Masquerade** switch: if you're online, you get a pop-up when someone masked is looking for someone like you.
-- Matches list and ongoing chat, report & unmatch, leave any time
+- Matches list and chat: replies (swipe or press and hold), photos & videos, voice notes, delete for everyone, voice & video calls
+- Report & unmatch, leave any time
 - Gifts button is in place, marked "coming soon"
 
 ## Setting it up (one time)
@@ -50,6 +51,19 @@ npm run dev                  # http://localhost:3000
 `/preview/<screen>` shows each screen with sample data during development (`masquerade`, `waiting`, `chat`, `decide`, `matched`, `ended`, `invite`, `matches`, `match-chat`, `profile`, `onboarding`). It is switched off on the live site.
 
 Database rules live in `supabase/migrations/0001_dashpad.sql`. Matching, timers, unmask decisions and chat deletion all run inside the database, so nobody can cheat them from the browser.
+
+## Calls (voice & video)
+
+Calls connect the two phones directly. That works on most Wi-Fi, but many mobile networks need a **relay (TURN) server**. Free and easy option:
+
+1. Sign up at [metered.ca](https://www.metered.ca/stun-turn) (free tier available) and create a TURN app.
+2. Add these in Vercel → Settings → Environment Variables, then redeploy:
+   | Name | Value |
+   |---|---|
+   | `METERED_DOMAIN` | e.g. `dashpad.metered.live` |
+   | `METERED_API_KEY` | your Metered API key |
+
+(Any other TURN provider works too: set `TURN_URLS`, `TURN_USERNAME`, `TURN_CREDENTIAL` instead.)
 
 ## Before launch
 

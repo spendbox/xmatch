@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Flag, Gift, HeartOff, MoreVertical, X } from "lucide-react";
+import { ArrowLeft, Flag, HeartOff, MoreVertical, Phone, Video, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { ageFromBirthdate } from "@/lib/constants";
 import type { ChatMessage, Intent, Profile } from "@/lib/types";
@@ -14,6 +14,9 @@ import { MaskIcon } from "@/components/ui/MaskIcon";
 import { MessageList } from "@/components/chat/MessageList";
 import { Composer } from "@/components/chat/Composer";
 import { ReportSheet } from "@/components/masquerade/ReportSheet";
+import { readMediaInfo, removeChatMedia, uploadChatMedia } from "@/lib/chatMedia";
+import { useCall } from "@/components/calls/CallProvider";
+import type { MediaKind } from "@/components/chat/Composer";
 import { ProfileSheet } from "./ProfileSheet";
 
 export function MatchChat({
@@ -40,7 +43,10 @@ export function MatchChat({
   const [showProfile, setShowProfile] = useState(false);
   const [reporting, setReporting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
   const age = ageFromBirthdate(other.birthdate);
+  const { startCall, call } = useCall();
+  const nameOf = (id: string | null) => (id === myId ? "You" : other.display_name ?? "Them");
 
   useEffect(() => {
     const channel = supabase
@@ -51,6 +57,14 @@ export function MatchChat({
         (p) => {
           const m = p.new as ChatMessage;
           setMessages((l) => (l.some((x) => x.id === m.id) ? l : [...l, m]));
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "messages", filter: `match_id=eq.${matchId}` },
+        (p) => {
+          const m = p.new as ChatMessage;
+          setMessages((l) => l.map((x) => (x.id === m.id ? { ...x, ...m } : x)));
         },
       )
       .subscribe();
@@ -65,19 +79,63 @@ export function MatchChat({
     return () => clearTimeout(t);
   }, [toast]);
 
-  async function send(text: string) {
-    const temp: ChatMessage = { id: -Date.now(), sender_id: myId, body: text, created_at: new Date().toISOString() };
+  const COLUMNS = "id, sender_id, kind, body, created_at, media_path, media_meta, reply_to, deleted_at";
+
+  /** Shows the message straight away, then swaps in the saved one. */
+  async function deliver(temp: ChatMessage, save: () => Promise<Record<string, unknown>>) {
     setMessages((l) => [...l, temp]);
-    const { data } = await supabase
-      .from("messages")
-      .insert({ match_id: matchId, sender_id: myId, body: text })
-      .select("id, sender_id, body, created_at")
-      .single();
-    setMessages((l) => {
-      const without = l.filter((m) => m.id !== temp.id);
-      if (!data) return without;
-      return without.some((m) => m.id === data.id) ? without : [...without, data as ChatMessage];
+    setReplyTo(null);
+    try {
+      const row = await save();
+      const { data, error } = await supabase
+        .from("messages")
+        .insert({ match_id: matchId, sender_id: myId, reply_to: temp.reply_to ?? null, ...row })
+        .select(COLUMNS)
+        .single();
+      if (error || !data) throw error;
+      setMessages((l) => {
+        const without = l.filter((m) => m.id !== temp.id);
+        return without.some((m) => m.id === data.id) ? without : [...without, data as ChatMessage];
+      });
+    } catch (e) {
+      setMessages((l) => l.map((m) => (m.id === temp.id ? { ...m, pending: false, failed: true } : m)));
+      setToast(e instanceof Error && e.message.includes("too big") ? e.message : "Message not sent. Check your connection.");
+    }
+  }
+
+  function draft(kind: ChatMessage["kind"], body = "", extra: Partial<ChatMessage> = {}): ChatMessage {
+    return { id: -Date.now(), sender_id: myId, kind, body, created_at: new Date().toISOString(), reply_to: replyTo?.id ?? null, pending: true, ...extra };
+  }
+
+  async function send(text: string) {
+    await deliver(draft("text", text), async () => ({ kind: "text", body: text }));
+  }
+
+  async function sendMedia(file: File, kind: MediaKind, caption: string) {
+    const localUrl = URL.createObjectURL(file);
+    const info = kind === "video" ? await readMediaInfo(localUrl, "video") : {};
+    await deliver(draft(kind, caption, { local_url: localUrl, media_meta: info }), async () => {
+      const up = await uploadChatMedia(supabase, matchId, file, kind);
+      return { kind, body: caption, media_path: up.path, media_meta: { ...info, ...up.meta } };
     });
+  }
+
+  async function sendVoice(blob: Blob, seconds: number) {
+    const localUrl = URL.createObjectURL(blob);
+    await deliver(draft("audio", "", { local_url: localUrl, media_meta: { duration: seconds } }), async () => {
+      const up = await uploadChatMedia(supabase, matchId, blob, "audio");
+      return { kind: "audio", media_path: up.path, media_meta: { ...up.meta, duration: seconds } };
+    });
+  }
+
+  async function remove(m: ChatMessage) {
+    setMessages((l) => l.map((x) => (x.id === m.id ? { ...x, deleted_at: new Date().toISOString(), body: "", media_path: null } : x)));
+    const { data: path } = await supabase.rpc("delete_message", { p_message: m.id });
+    await removeChatMedia(supabase, (path as string | null) ?? m.media_path);
+  }
+
+  function callThem(kind: "audio" | "video") {
+    startCall(matchId, kind, { name: other.display_name ?? "Your match", photo: other.photos?.[0] });
   }
 
   async function report(reason: string) {
@@ -101,8 +159,24 @@ export function MatchChat({
               {other.display_name}
               {age ? `, ${age}` : ""}
             </p>
-            <p className="text-[12px] font-medium text-brand">Tap to view profile</p>
+            <p className="text-[12px] font-medium text-brand">View profile</p>
           </div>
+        </button>
+        <button
+          onClick={() => callThem("audio")}
+          disabled={!!call}
+          className="grid h-10 w-10 place-items-center rounded-full text-brand hover:bg-brand-soft disabled:opacity-40"
+          aria-label={`Voice call ${other.display_name}`}
+        >
+          <Phone size={20} />
+        </button>
+        <button
+          onClick={() => callThem("video")}
+          disabled={!!call}
+          className="grid h-10 w-10 place-items-center rounded-full text-brand hover:bg-brand-soft disabled:opacity-40"
+          aria-label={`Video call ${other.display_name}`}
+        >
+          <Video size={21} />
         </button>
         <div className="relative">
           <button onClick={() => setMenu((m) => !m)} className="grid h-10 w-10 place-items-center rounded-full text-muted hover:bg-ink/5" aria-label="More options">
@@ -156,22 +230,18 @@ export function MatchChat({
           )}
           {messages.length === 0 && <p className="mt-3 text-[14px] text-muted">Say hi to {other.display_name} 👋</p>}
         </div>
-        <MessageList messages={messages} myId={myId} />
+        <MessageList messages={messages} myId={myId} nameOf={nameOf} onReply={setReplyTo} onDelete={remove} showDates />
       </div>
 
       <Composer
         onSend={send}
+        onSendMedia={sendMedia}
+        onSendVoice={sendVoice}
+        replyTo={replyTo}
+        replyName={replyTo ? nameOf(replyTo.sender_id) : undefined}
+        onCancelReply={() => setReplyTo(null)}
+        onGift={() => setToast("Gifts are coming soon 🎁")}
         placeholder={`Message ${other.display_name}`}
-        leading={
-          <button
-            type="button"
-            onClick={() => setToast("Gifts are coming soon 🎁")}
-            className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-chili-soft text-chili"
-            aria-label="Send a gift"
-          >
-            <Gift size={20} />
-          </button>
-        }
       />
 
       {toast && (

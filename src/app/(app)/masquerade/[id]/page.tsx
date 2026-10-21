@@ -15,7 +15,7 @@ export default async function RoomPage({ params }: { params: Promise<{ id: strin
 
   const { data: messages } = await supabase
     .from("masquerade_messages")
-    .select("id, sender_id, kind, body, created_at")
+    .select("id, sender_id, kind, body, created_at, reply_to")
     .eq("session_id", id)
     .order("id");
 

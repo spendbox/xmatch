@@ -16,7 +16,7 @@ export default async function MatchChatPage({ params }: { params: Promise<{ id: 
 
   const [{ data: other }, { data: messages }, { data: me }] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", otherId).single(),
-    supabase.from("messages").select("id, sender_id, body, created_at").eq("match_id", id).order("id").limit(500),
+    supabase.from("messages").select("id, sender_id, kind, body, created_at, media_path, media_meta, reply_to, deleted_at").eq("match_id", id).order("id").limit(500),
     supabase.from("profiles").select("interests").eq("id", user.id).single(),
   ]);
   const shared = ((other?.interests ?? []) as string[]).filter((t) => ((me?.interests ?? []) as string[]).includes(t));

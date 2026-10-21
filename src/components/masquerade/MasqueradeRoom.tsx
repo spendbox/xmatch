@@ -34,6 +34,7 @@ export function MasqueradeRoom({
   const [menu, setMenu] = useState(false);
   const [reporting, setReporting] = useState(false);
   const [voting, setVoting] = useState(false);
+  const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
   // Keep our clock in step with the server's so both timers match
   const offset = useRef(new Date(initial.server_now).getTime() - Date.now());
   const remainingNow = useCallback(
@@ -86,12 +87,14 @@ export function MasqueradeRoom({
   }, [refresh, timeUp, state.status, demo]);
 
   async function send(text: string) {
-    const temp: ChatMessage = { id: -Date.now(), sender_id: state.me.id, kind: "text", body: text, created_at: new Date().toISOString() };
+    const reply = replyTo?.id && replyTo.id > 0 ? replyTo.id : null;
+    const temp: ChatMessage = { id: -Date.now(), sender_id: state.me.id, kind: "text", body: text, created_at: new Date().toISOString(), reply_to: reply, pending: true };
     setMessages((l) => [...l, temp]);
+    setReplyTo(null);
     const { data, error } = await supabase
       .from("masquerade_messages")
-      .insert({ session_id: state.id, sender_id: state.me.id, body: text })
-      .select("id, sender_id, kind, body, created_at")
+      .insert({ session_id: state.id, sender_id: state.me.id, body: text, reply_to: reply })
+      .select("id, sender_id, kind, body, created_at, reply_to")
       .single();
     setMessages((l) => {
       const without = l.filter((m) => m.id !== temp.id);
@@ -191,12 +194,20 @@ export function MasqueradeRoom({
             </span>
           )}
         </p>
-        <MessageList messages={messages} myId={state.me.id} />
+        <MessageList
+          messages={messages}
+          myId={state.me.id}
+          nameOf={(id) => (id === state.me.id ? "You" : state.them.alias)}
+          onReply={setReplyTo}
+        />
       </div>
 
       {chatting ? (
         <Composer
           onSend={send}
+          replyTo={replyTo}
+          replyName={replyTo ? (replyTo.sender_id === state.me.id ? "yourself" : replyTo.sender_id ? state.them.alias : "the icebreaker") : undefined}
+          onCancelReply={() => setReplyTo(null)}
           leading={
             <button
               type="button"

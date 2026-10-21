@@ -806,3 +806,157 @@ where not exists (select 1 from public.icebreakers);
 
 revoke execute on function public.is_blocked(uuid, uuid) from public, anon, authenticated;
 revoke execute on function public.already_matched(uuid, uuid) from public, anon, authenticated;
+
+-- ===========================================================================
+-- Rich chat: replies, photos, videos, voice notes, and calls
+-- ===========================================================================
+
+-- Match chat messages can now be text, photo, video, voice note or a call record
+alter table public.messages add column if not exists kind text not null default 'text';
+alter table public.messages add column if not exists media_path text;
+alter table public.messages add column if not exists media_meta jsonb;
+alter table public.messages add column if not exists reply_to bigint references public.messages (id) on delete set null;
+alter table public.messages add column if not exists deleted_at timestamptz;
+alter table public.messages alter column body set default '';
+alter table public.messages drop constraint if exists messages_body_check;
+alter table public.messages drop constraint if exists messages_content_check;
+alter table public.messages add constraint messages_content_check check (
+  char_length(body) <= 2000 and (
+    (kind = 'text' and (char_length(body) >= 1 or deleted_at is not null))
+    or (kind in ('image', 'video', 'audio') and (media_path is not null or deleted_at is not null))
+    or kind = 'call'
+  )
+);
+alter table public.messages drop constraint if exists messages_kind_check;
+alter table public.messages add constraint messages_kind_check check (kind in ('text', 'image', 'video', 'audio', 'call'));
+
+-- Replies in the masked chat too
+alter table public.masquerade_messages add column if not exists reply_to bigint references public.masquerade_messages (id) on delete set null;
+
+-- Senders can only send media into their own match's folder (checked again by storage rules)
+drop policy if exists "send match messages" on public.messages;
+create policy "send match messages" on public.messages for insert
+  with check (
+    sender_id = auth.uid()
+    and kind in ('text', 'image', 'video', 'audio')
+    and deleted_at is null
+    and (media_path is null or split_part(media_path, '/', 1) = match_id::text)
+    and exists (select 1 from public.matches m where m.id = match_id and (m.user_a = auth.uid() or m.user_b = auth.uid()))
+  );
+
+-- Delete your own message for everyone (it shows as "Message deleted")
+create or replace function public.delete_message(p_message bigint) returns text
+language plpgsql security definer set search_path = public as $$
+declare
+  path text;
+begin
+  update messages set deleted_at = now(), body = '', media_meta = null
+  where id = p_message and sender_id = auth.uid() and deleted_at is null and kind <> 'call'
+  returning media_path into path;
+  update messages set media_path = null where id = p_message and sender_id = auth.uid();
+  return path; -- the app removes the file
+end $$;
+
+-- Private storage for chat photos, videos and voice notes. Files are only
+-- readable by the two people in the match, through short-lived links.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('chat-media', 'chat-media', false, 52428800,
+  array['image/jpeg','image/png','image/webp','image/gif','video/mp4','video/webm','video/quicktime',
+        'audio/webm','audio/ogg','audio/mp4','audio/mpeg','audio/aac','audio/x-m4a','audio/wav'])
+on conflict (id) do update set public = false, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
+
+create or replace function public.in_match(p_match text) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from matches
+    where id::text = p_match and (user_a = auth.uid() or user_b = auth.uid())
+  )
+$$;
+
+drop policy if exists "match members read chat media" on storage.objects;
+create policy "match members read chat media" on storage.objects for select to authenticated
+  using (bucket_id = 'chat-media' and public.in_match((storage.foldername(name))[1]));
+drop policy if exists "match members upload chat media" on storage.objects;
+create policy "match members upload chat media" on storage.objects for insert to authenticated
+  with check (bucket_id = 'chat-media' and public.in_match((storage.foldername(name))[1]));
+drop policy if exists "uploader deletes chat media" on storage.objects;
+create policy "uploader deletes chat media" on storage.objects for delete to authenticated
+  using (bucket_id = 'chat-media' and owner = auth.uid());
+
+-- ---------------------------------------------------------------------------
+-- Voice and video calls (between matches only)
+-- ---------------------------------------------------------------------------
+create table if not exists public.calls (
+  id uuid primary key default gen_random_uuid(),
+  match_id uuid not null references public.matches on delete cascade,
+  caller_id uuid not null references public.profiles on delete cascade,
+  callee_id uuid not null references public.profiles on delete cascade,
+  kind text not null check (kind in ('audio', 'video')),
+  status text not null default 'ringing' check (status in ('ringing', 'accepted', 'declined', 'missed', 'ended', 'cancelled')),
+  created_at timestamptz not null default now(),
+  answered_at timestamptz,
+  ended_at timestamptz
+);
+create index if not exists calls_callee on public.calls (callee_id, status);
+alter table public.calls enable row level security;
+drop policy if exists "call members read" on public.calls;
+create policy "call members read" on public.calls for select
+  using (caller_id = auth.uid() or callee_id = auth.uid());
+
+-- Start ringing your match. Returns the call id.
+create or replace function public.start_call(p_match uuid, p_kind text) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  m matches;
+  cid uuid;
+begin
+  if p_kind not in ('audio', 'video') then raise exception 'Invalid call type'; end if;
+  select * into m from matches where id = p_match and (user_a = uid or user_b = uid);
+  if not found then raise exception 'You can only call your matches'; end if;
+  -- Tidy up calls that were left ringing
+  update calls set status = 'missed', ended_at = now()
+  where match_id = p_match and status = 'ringing' and created_at < now() - interval '60 seconds';
+  insert into calls (match_id, caller_id, callee_id, kind)
+  values (p_match, uid, case when m.user_a = uid then m.user_b else m.user_a end, p_kind)
+  returning id into cid;
+  return cid;
+end $$;
+
+-- Move a call along: accept, decline, cancel (caller gives up), end, or missed.
+create or replace function public.update_call(p_call uuid, p_status text) returns text
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  c calls;
+  secs int;
+begin
+  select * into c from calls where id = p_call and (caller_id = uid or callee_id = uid) for update;
+  if not found then raise exception 'Call not found'; end if;
+  if c.status not in ('ringing', 'accepted') then return c.status; end if;
+
+  if p_status = 'accepted' and c.status = 'ringing' and uid = c.callee_id then
+    update calls set status = 'accepted', answered_at = now() where id = c.id;
+    return 'accepted';
+  end if;
+
+  if p_status in ('declined', 'cancelled', 'missed') and c.status = 'ringing' then
+    update calls set status = p_status, ended_at = now() where id = c.id;
+  elsif p_status = 'ended' then
+    update calls set status = case when c.status = 'ringing' then 'cancelled' else 'ended' end, ended_at = now()
+    where id = c.id;
+  else
+    return c.status;
+  end if;
+
+  -- Leave a record in the chat
+  select * into c from calls where id = p_call;
+  secs := case when c.answered_at is not null then extract(epoch from (c.ended_at - c.answered_at))::int else 0 end;
+  insert into messages (match_id, sender_id, kind, body, media_meta)
+  values (c.match_id, c.caller_id, 'call', c.status, jsonb_build_object('call', c.kind, 'seconds', secs));
+  return c.status;
+end $$;
+
+do $$ begin
+  alter publication supabase_realtime add table public.calls;
+exception when duplicate_object then null; end $$;

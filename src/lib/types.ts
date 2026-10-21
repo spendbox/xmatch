@@ -43,12 +43,31 @@ export type MasqueradeState = {
   };
 };
 
+export type MessageKind = "text" | "icebreaker" | "image" | "video" | "audio" | "call";
+
+export type MediaMeta = {
+  width?: number;
+  height?: number;
+  duration?: number; // seconds
+  mime?: string;
+  call?: "audio" | "video";
+  seconds?: number;
+};
+
 export type ChatMessage = {
   id: number;
   sender_id: string | null;
-  kind?: "text" | "icebreaker";
+  kind?: MessageKind;
   body: string;
   created_at: string;
+  media_path?: string | null;
+  media_meta?: MediaMeta | null;
+  reply_to?: number | null;
+  deleted_at?: string | null;
+  /** Only on the sender's screen while a file is still uploading */
+  local_url?: string;
+  pending?: boolean;
+  failed?: boolean;
 };
 
 export type MatchSummary = {
