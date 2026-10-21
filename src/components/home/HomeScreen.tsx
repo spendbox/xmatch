@@ -162,7 +162,7 @@ export function HomeScreen({
 
       <div className="lg:mt-8 lg:grid lg:grid-cols-12 lg:items-start lg:gap-8">
       {/* Masquerade card */}
-      <section className="relative mt-5 lg:sticky lg:top-8 lg:col-span-7 lg:mt-0 lg:p-8 overflow-hidden rounded-[30px] bg-gradient-to-br from-brand via-[#6d4ff0] to-[#8f6bff] p-5 text-white shadow-[0_18px_40px_-18px_rgb(91_63_217/0.8)]">
+      <section className="relative mt-5 lg:sticky lg:top-8 lg:col-span-7 lg:mt-0 lg:p-8 overflow-hidden rounded-[28px] bg-gradient-to-br from-brand via-[#6d4ff0] to-[#8f6bff] p-4 text-white shadow-[0_18px_40px_-18px_rgb(91_63_217/0.8)]">
         <div aria-hidden className="absolute -top-12 -right-10 h-44 w-44 rounded-full bg-white/10" />
         <div aria-hidden className="absolute -bottom-16 -left-12 h-40 w-40 rounded-full text-gold/20 glow" />
 
@@ -174,45 +174,37 @@ export function HomeScreen({
             </span>
             {online > 0 ? `${online} ready to mask up near you` : "Be the first to mask up"}
           </span>
-          <span className="grid h-12 w-12 shrink-0 animate-float place-items-center rounded-2xl bg-white/15 lg:h-20 lg:w-20 lg:rounded-3xl">
-            <MaskIcon className="w-8 text-white lg:w-12" eyes="#6d4ff0" />
+          <span className="grid h-10 w-10 shrink-0 animate-float place-items-center rounded-xl bg-white/15 lg:h-20 lg:w-20 lg:rounded-3xl">
+            <MaskIcon className="w-7 text-white lg:w-12" eyes="#6d4ff0" />
           </span>
         </div>
-        <h1 className="relative mt-1 font-display text-[28px] leading-tight font-semibold lg:mt-4 lg:text-[44px]">Ready to mask up?</h1>
+        <h1 className="relative -mt-1 font-display text-[24px] leading-tight font-semibold lg:mt-4 lg:text-[44px]">Ready to mask up?</h1>
         <p className="relative mt-1 hidden text-[15px] text-white/80 lg:block">Five minutes with someone new, both masked. Unmask only if you both say yes.</p>
 
-        {/* Summary of choices */}
+        {/* Summary of choices: one tap opens the settings */}
         <button
           type="button"
           onClick={() => {
             tapFeedback();
             setMeetOpen(true);
           }}
-          className="relative mt-4 grid w-full grid-cols-2 gap-2 text-left text-[13px]"
+          className="relative mt-3 flex w-full flex-wrap items-center gap-1.5 text-left text-[12px] lg:mt-5 lg:gap-2 lg:text-[13px]"
           aria-label="Change who you meet"
         >
-          <Chip icon={INTENT_ICONS[prefs.intent]({ size: 15 })} text={intent.label} />
-          <Chip icon={<Users size={15} />} text={`${seekingLabel(prefs.seeking)} · ${prefs.ageMin}–${prefs.ageMax}`} />
-          <Chip icon={<MapPin size={15} />} text={distance.value ? `Within ${distance.label}` : "Anywhere"} />
-          <Chip icon={<SpiceIcon level={prefs.spice} size={15} />} text={SPICE_LEVELS[prefs.spice].label} />
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            tapFeedback();
-            setMeetOpen(true);
-          }}
-          className="relative mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl py-2 text-[13px] font-semibold text-white/90 transition hover:bg-white/10"
-        >
-          <SlidersHorizontal size={15} /> Change who you meet
+          <Chip icon={INTENT_ICONS[prefs.intent]({ size: 13 })} text={intent.label} />
+          <Chip icon={<Users size={13} />} text={`${seekingLabel(prefs.seeking)} · ${prefs.ageMin}–${prefs.ageMax}`} />
+          <Chip icon={<MapPin size={13} />} text={distance.value ? distance.label : "Anywhere"} />
+          <Chip icon={<SpiceIcon level={prefs.spice} size={13} />} text={SPICE_LEVELS[prefs.spice].label} />
+          <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1.5 font-semibold text-brand">
+            <SlidersHorizontal size={13} /> Edit
+          </span>
         </button>
 
-        <div className="relative mt-1 flex items-center gap-3 rounded-2xl bg-white/12 p-3">
-          <BellRing size={19} className="shrink-0" />
-          <p className="flex-1 text-[13px] leading-snug">
+        <div className="relative mt-3 flex items-center gap-2.5 rounded-2xl bg-white/12 px-3 py-2">
+          <BellRing size={16} className="shrink-0" />
+          <p className="min-w-0 flex-1 text-[13px] leading-tight">
             <span className="font-semibold">Open to Masquerade</span>
-            <br />
-            <span className="text-white/75">Pop-ups when someone&apos;s looking for you</span>
+            <span className="hidden text-white/75 sm:inline"> · pop-ups when someone&apos;s looking</span>
           </p>
           <Toggle checked={open} onChange={toggleOpen} label="Open to Masquerade" />
         </div>
@@ -221,14 +213,14 @@ export function HomeScreen({
         <Button
           variant="gold"
           size="lg"
-          className="relative mt-4"
+          className="relative mt-3"
           onClick={start}
           loading={!!starting}
           loadingText={starting === "location" ? "Finding your location…" : starting === "pass" ? "Using Keys…" : "Masking up…"}
         >
           <MaskLineIcon size={22} strokeWidth={2} /> Put on your mask
         </Button>
-        <p className="relative mt-2.5 text-center text-[12px] text-white/80">
+        <p className="relative mt-2 text-center text-[12px] text-white/80">
           {freeLeft > 0 ? (
             <>
               {freeLeft} of {FREE_MASQUERADES_PER_DAY} free masquerades left today
@@ -257,7 +249,8 @@ export function HomeScreen({
 
       <NotificationsPrompt className="mt-7 lg:mt-0 lg:mb-7" />
 
-      {/* Keys: one card. Shows your balance and what Keys do; one button to get or use them. */}
+      {/* Keys: only for people who have Keys. Shows the balance and what Keys do. */}
+      {hasKeys && (
       <section className="mt-7 overflow-hidden rounded-3xl border border-line bg-surface shadow-card lg:mt-0">
         <div className="flex items-center gap-3.5 bg-gradient-to-br from-[#fff3d6] to-[#ffe2a8] px-4 py-4">
           <KeyCoin size={40} className="shrink-0" />
@@ -310,14 +303,17 @@ export function HomeScreen({
           </Link>
         </div>
       </section>
+      )}
 
-      {/* Your week */}
-      <h2 className="mt-7 mb-3 text-[15px] font-semibold">Your week</h2>
-      <div className="grid grid-cols-3 gap-2.5 text-center">
-        <Stat value={stats?.week_chats ?? 0} label={`masked ${word(stats?.week_chats ?? 0, "chat")}`} />
-        <Stat value={stats?.week_unmasks ?? 0} label={word(stats?.week_unmasks ?? 0, "unmask")} />
-        <Stat value={stats?.gifts_received ?? 0} label={`${word(stats?.gifts_received ?? 0, "gift")} received`} />
-      </div>
+      {/* Your week: one slim strip */}
+      <section className="mt-6 rounded-2xl bg-surface px-2 py-2.5 shadow-card lg:mt-7">
+        <p className="px-2 pb-1 text-[11px] font-semibold tracking-wide text-muted uppercase">Your week</p>
+        <div className="grid grid-cols-3 divide-x divide-line text-center">
+          <Stat value={stats?.week_chats ?? 0} label={`masked ${word(stats?.week_chats ?? 0, "chat")}`} />
+          <Stat value={stats?.week_unmasks ?? 0} label={word(stats?.week_unmasks ?? 0, "unmask")} />
+          <Stat value={stats?.gifts_received ?? 0} label={word(stats?.gifts_received ?? 0, "gift")} />
+        </div>
+      </section>
 
       {/* Recent matches */}
       {matches.length > 0 && (
@@ -383,7 +379,7 @@ export function HomeScreen({
 
 function Chip({ icon, text }: { icon: React.ReactNode; text: string }) {
   return (
-    <span className="flex min-w-0 items-center gap-2 rounded-xl bg-white/12 px-3 py-2.5 font-medium backdrop-blur">
+    <span className="inline-flex max-w-full min-w-0 items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1.5 font-medium">
       <span className="shrink-0">{icon}</span>
       <span className="truncate">{text}</span>
     </span>
@@ -392,9 +388,9 @@ function Chip({ icon, text }: { icon: React.ReactNode; text: string }) {
 
 function Stat({ value, label }: { value: number; label: string }) {
   return (
-    <div className={clsx("rounded-3xl bg-surface p-3.5 shadow-card")}>
-      <p className="font-display text-[26px] font-semibold text-brand">{value}</p>
-      <p className="text-[12px] leading-tight text-muted">{label}</p>
+    <div className="px-1">
+      <p className="font-display text-[20px] leading-tight font-semibold text-brand">{value}</p>
+      <p className="truncate text-[11px] leading-tight text-muted">{label}</p>
     </div>
   );
 }
