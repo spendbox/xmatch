@@ -10,6 +10,7 @@ import { MaskIcon } from "@/components/ui/MaskIcon";
 import { INTENT_ICONS } from "@/components/ui/icons";
 import { intentLabel } from "@/lib/constants";
 import { LiveEventChats } from "./LiveEventChats";
+import { isOnline, usePresence } from "@/lib/usePresence";
 import type { Intent, MatchSummary } from "@/lib/types";
 
 const INTENT_TONE: Record<Intent, string> = {
@@ -30,6 +31,8 @@ export function MatchesList({
 }) {
   const path = usePathname();
   const side = variant === "sidebar";
+  const { seen, now } = usePresence(matches.map((m) => m.other_id));
+  const online = (id: string) => isOnline(seen[id], now);
   const fresh = matches.filter((m) => !m.last_message || Date.now() - new Date(m.created_at).getTime() < 48 * 3600_000);
   const yourTurn = matches.filter((m) => m.last_message && m.last_sender !== myId).length;
 
@@ -76,6 +79,10 @@ export function MatchesList({
                       <img src={m.photos[0]} alt={m.display_name} className="absolute inset-0 h-full w-full object-cover" />
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/5 to-transparent" />
+                    <span
+                      className={clsx("absolute top-3 right-3 h-3 w-3 rounded-full ring-2 ring-white/80", online(m.other_id) ? "bg-mint" : "bg-[#b9b3c4]")}
+                      aria-label={online(m.other_id) ? "Online" : "Offline"}
+                    />
                     <span className={clsx("absolute top-2.5 left-2.5 grid h-7 w-7 place-items-center rounded-full shadow", INTENT_TONE[m.intent])}>
                       {INTENT_ICONS[m.intent]({ size: 14, strokeWidth: 2.25 })}
                     </span>
@@ -117,6 +124,11 @@ export function MatchesList({
                     >
                       <span className="relative shrink-0">
                         <Avatar src={m.photos?.[0]} name={m.display_name} size={56} />
+                        <span
+                          className={clsx("absolute top-0.5 right-0.5 h-3.5 w-3.5 rounded-full ring-2 ring-surface", online(m.other_id) ? "bg-mint" : "bg-[#b9b3c4]")}
+                          aria-label={online(m.other_id) ? "Online" : "Offline"}
+                          title={online(m.other_id) ? "Online" : "Offline"}
+                        />
                         <span
                           className={clsx("absolute -right-0.5 -bottom-0.5 grid h-6 w-6 place-items-center rounded-full ring-2 ring-surface", INTENT_TONE[m.intent])}
                           title={intentLabel(m.intent)}

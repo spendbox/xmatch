@@ -1,5 +1,6 @@
 "use client";
 
+import clsx from "clsx";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -21,6 +22,7 @@ import { GiftSheet, keysError } from "@/components/keys/GiftSheet";
 import { useWallet } from "@/components/keys/useWallet";
 import { ProfileSheet } from "./ProfileSheet";
 import { useKeyboardSafe } from "@/lib/useKeyboardSafe";
+import { isOnline, lastSeenText, usePresence } from "@/lib/usePresence";
 import { refreshMenuBadges } from "@/components/app/useMenuBadges";
 
 export function MatchChat({
@@ -41,6 +43,8 @@ export function MatchChat({
   intent?: Intent;
 }) {
   const shell = useKeyboardSafe<HTMLDivElement>();
+  const { seen, now } = usePresence([other.id]);
+  const theyreOnline = isOnline(seen[other.id], now);
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [messages, setMessages] = useState(initialMessages);
@@ -163,15 +167,19 @@ export function MatchChat({
           <ArrowLeft size={22} />
         </Link>
         <button onClick={() => setShowProfile(true)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
-          <span className="inline-flex shrink-0 rounded-full bg-gradient-to-br from-brand to-[#c2306b] p-[2px]">
+          <span className="relative inline-flex shrink-0 rounded-full bg-gradient-to-br from-brand to-[#c2306b] p-[2px]">
             <Avatar src={other.photos?.[0]} name={other.display_name} size={40} className="ring-2 ring-surface" />
+            <span
+              className={clsx("absolute -right-0.5 -bottom-0.5 h-3.5 w-3.5 rounded-full ring-2 ring-surface", theyreOnline ? "bg-mint" : "bg-[#b9b3c4]")}
+              aria-hidden
+            />
           </span>
           <div className="min-w-0">
             <p className="truncate text-[16px] font-semibold">
               {other.display_name}
               {age ? `, ${age}` : ""}
             </p>
-            <p className="text-[12px] font-medium text-brand">View profile</p>
+            <p className={clsx("truncate text-[12px] font-medium", theyreOnline ? "text-mint" : "text-muted")}>{lastSeenText(seen[other.id], now)}</p>
           </div>
         </button>
         <button
