@@ -1674,6 +1674,7 @@ declare
 begin
   select * into e from masquerade_events where id = p_event;
   if not found or e.status <> 'published' then raise exception 'This night is not available'; end if;
+  if e.kind is distinct from 'masquerade' then raise exception 'This event has no masked rounds'; end if;
   if now() < e.starts_at then raise exception 'This night has not started yet'; end if;
   if now() >= e.ends_at - interval '1 minute' then raise exception 'This night has ended'; end if;
   if not exists (select 1 from event_attendees where event_id = p_event and user_id = uid) then
@@ -1859,3 +1860,442 @@ create table if not exists public.password_resets (
 create index if not exists password_resets_user on public.password_resets (user_id, created_at desc);
 -- Locked: no policies, so only the server (service role) can read or write it
 alter table public.password_resets enable row level security;
+
+-- ===========================================================================
+-- Kinds of events: Masquerade Night (we pair you), Spotlight Night and
+-- Listening Party (you pick who to talk to from a wall of featured photos).
+-- Room chat, hype, music and video, photo reveals, chats until the end.
+-- ===========================================================================
+alter table public.masquerade_events add column if not exists kind text not null default 'masquerade';
+do $$ begin
+  alter table public.masquerade_events add constraint masquerade_events_kind_ok check (kind in ('masquerade', 'spotlight', 'party'));
+exception when duplicate_object then null; end $$;
+alter table public.masquerade_events add column if not exists cover_url text;
+alter table public.masquerade_events add column if not exists stream_url text;
+-- room_chat, slow_mode (seconds), hype, max_chats, free_reveals, reveal_cost, media_under_chats, reminders
+alter table public.masquerade_events add column if not exists settings jsonb not null default '{}'::jsonb;
+
+-- One setting with a fallback
+create or replace function public.event_int(e public.masquerade_events, k text, d int) returns int
+language sql immutable as $$ select coalesce((e.settings ->> k)::int, d) $$;
+create or replace function public.event_bool(e public.masquerade_events, k text, d boolean) returns boolean
+language sql immutable as $$ select coalesce((e.settings ->> k)::boolean, d) $$;
+
+-- Featured photo for "you choose" events, plus a tiny blurred copy shown until revealed
+alter table public.event_attendees add column if not exists featured_photo text;
+alter table public.event_attendees add column if not exists featured_blur text;
+
+-- Music and video for an event, played in order from the start time
+create table if not exists public.event_media (
+  id bigint generated always as identity primary key,
+  event_id uuid not null references public.masquerade_events on delete cascade,
+  kind text not null check (kind in ('audio', 'video')),
+  title text not null default '' check (char_length(title) <= 120),
+  url text not null,
+  duration_sec int not null default 0 check (duration_sec >= 0),
+  position int not null default 0,
+  created_at timestamptz not null default now()
+);
+create index if not exists event_media_event on public.event_media (event_id, position);
+alter table public.event_media enable row level security;
+drop policy if exists "see event media" on public.event_media;
+create policy "see event media" on public.event_media for select using (
+  exists (select 1 from public.masquerade_events e where e.id = event_id and e.status = 'published'));
+
+-- The room: everyone at the event, plus hype and announcements from Dashpad
+create table if not exists public.event_room_messages (
+  id bigint generated always as identity primary key,
+  event_id uuid not null references public.masquerade_events on delete cascade,
+  user_id uuid references public.profiles on delete cascade,
+  kind text not null default 'text' check (kind in ('text', 'hype', 'announce', 'moment')),
+  body text not null check (char_length(body) between 1 and 300),
+  created_at timestamptz not null default now()
+);
+create index if not exists event_room_messages_event on public.event_room_messages (event_id, id desc);
+alter table public.event_room_messages enable row level security;
+drop policy if exists "attendees read the room" on public.event_room_messages;
+create policy "attendees read the room" on public.event_room_messages for select using (
+  exists (select 1 from public.event_attendees a where a.event_id = event_room_messages.event_id and a.user_id = auth.uid()));
+
+-- Who has revealed whose photo (free ones first, then Keys)
+create table if not exists public.event_reveals (
+  event_id uuid not null references public.masquerade_events on delete cascade,
+  viewer uuid not null references public.profiles on delete cascade,
+  target uuid not null references public.profiles on delete cascade,
+  paid int not null default 0,
+  created_at timestamptz not null default now(),
+  primary key (event_id, viewer, target)
+);
+alter table public.event_reveals enable row level security;
+drop policy if exists "see own reveals" on public.event_reveals;
+create policy "see own reveals" on public.event_reveals for select using (viewer = auth.uid());
+
+-- Private chats started from the wall. They last until the event ends;
+-- then both choose to keep (it becomes a match) or let go (it’s deleted).
+create table if not exists public.event_chats (
+  id uuid primary key default gen_random_uuid(),
+  event_id uuid not null references public.masquerade_events on delete cascade,
+  user_a uuid not null references public.profiles on delete cascade,
+  user_b uuid not null references public.profiles on delete cascade,
+  opened_by uuid not null references public.profiles on delete cascade,
+  keep_a boolean,
+  keep_b boolean,
+  status text not null default 'open' check (status in ('open', 'matched', 'closed')),
+  match_id uuid references public.matches on delete set null,
+  created_at timestamptz not null default now(),
+  last_message_at timestamptz not null default now(),
+  check (user_a < user_b),
+  unique (event_id, user_a, user_b)
+);
+create index if not exists event_chats_a on public.event_chats (user_a, event_id);
+create index if not exists event_chats_b on public.event_chats (user_b, event_id);
+alter table public.event_chats enable row level security;
+drop policy if exists "see own event chats" on public.event_chats;
+create policy "see own event chats" on public.event_chats for select using (auth.uid() in (user_a, user_b));
+
+create table if not exists public.event_chat_messages (
+  id bigint generated always as identity primary key,
+  chat_id uuid not null references public.event_chats on delete cascade,
+  sender_id uuid not null references public.profiles on delete cascade,
+  body text not null check (char_length(body) between 1 and 1000),
+  created_at timestamptz not null default now()
+);
+create index if not exists event_chat_messages_chat on public.event_chat_messages (chat_id, id);
+alter table public.event_chat_messages enable row level security;
+drop policy if exists "see own event chat messages" on public.event_chat_messages;
+create policy "see own event chat messages" on public.event_chat_messages for select using (
+  exists (select 1 from public.event_chats c where c.id = chat_id and auth.uid() in (c.user_a, c.user_b)));
+drop policy if exists "send in open event chats" on public.event_chat_messages;
+create policy "send in open event chats" on public.event_chat_messages for insert with check (
+  sender_id = auth.uid() and exists (
+    select 1 from public.event_chats c join public.masquerade_events e on e.id = c.event_id
+    where c.id = chat_id and auth.uid() in (c.user_a, c.user_b) and c.status = 'open' and now() < e.ends_at));
+
+create or replace function public.bump_event_chat() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  update event_chats set last_message_at = new.created_at where id = new.chat_id;
+  return new;
+end $$;
+drop trigger if exists event_chat_bump on public.event_chat_messages;
+create trigger event_chat_bump after insert on public.event_chat_messages
+  for each row execute function public.bump_event_chat();
+
+-- Reminder emails already sent (so each goes out once)
+create table if not exists public.event_reminders (
+  event_id uuid not null references public.masquerade_events on delete cascade,
+  kind text not null,
+  sent_at timestamptz not null default now(),
+  primary key (event_id, kind)
+);
+alter table public.event_reminders enable row level security;
+
+do $$
+declare t text;
+begin
+  foreach t in array array['event_room_messages','event_chats','event_chat_messages'] loop
+    begin
+      execute format('alter publication supabase_realtime add table public.%I', t);
+    exception when duplicate_object then null;
+    end;
+  end loop;
+end $$;
+
+-- Event details, now with its kind, cover, music and your featured photo
+create or replace function public.event_json(e masquerade_events, uid uuid) returns json
+language sql stable security definer set search_path = public as $$
+  select json_build_object(
+    'id', e.id, 'title', e.title, 'description', e.description, 'theme', e.theme, 'intent', e.intent,
+    'kind', e.kind, 'cover_url', e.cover_url, 'stream_url', e.stream_url, 'settings', e.settings,
+    'starts_at', e.starts_at, 'ends_at', e.ends_at, 'age_min', e.age_min, 'age_max', e.age_max,
+    'entry_keys', e.entry_keys, 'max_attendees', e.max_attendees, 'status', e.status,
+    'going_count', (select count(*) from event_attendees a where a.event_id = e.id),
+    'i_am_going', exists (select 1 from event_attendees a where a.event_id = e.id and a.user_id = uid),
+    'my_photo', (select a.featured_photo from event_attendees a where a.event_id = e.id and a.user_id = uid),
+    'my_rounds', (select count(*) from masquerade_sessions s where s.event_id = e.id and (s.user_a = uid or s.user_b = uid)),
+    'my_unmasks', (select count(*) from masquerade_sessions s where s.event_id = e.id and s.status = 'matched' and (s.user_a = uid or s.user_b = uid)),
+    'my_chats', (select count(*) from event_chats c where c.event_id = e.id and uid in (c.user_a, c.user_b)),
+    'reveals_used', (select count(*) from event_reveals r where r.event_id = e.id and r.viewer = uid),
+    'media', coalesce((select json_agg(json_build_object('id', m.id, 'kind', m.kind, 'title', m.title, 'url', m.url,
+                 'duration_sec', m.duration_sec) order by m.position, m.id) from event_media m where m.event_id = e.id), '[]'::json),
+    'server_now', now()
+  )
+$$;
+revoke execute on function public.event_json(masquerade_events, uuid) from public, anon, authenticated;
+
+-- Pick which of your photos is featured on the wall
+create or replace function public.set_featured_photo(p_event uuid, p_photo text, p_blur text default null) returns void
+language plpgsql security definer set search_path = public as $$
+declare uid uuid := auth.uid();
+begin
+  if not exists (select 1 from profiles where id = uid and p_photo = any(photos)) then
+    raise exception 'Choose one of your own photos';
+  end if;
+  if p_blur is not null and (p_blur not like 'data:image/%' or char_length(p_blur) > 8000) then p_blur := null; end if;
+  update event_attendees set featured_photo = p_photo, featured_blur = p_blur
+  where event_id = p_event and user_id = uid;
+  if not found then raise exception 'Say you’re going first'; end if;
+end $$;
+
+-- Clear out chats nobody kept, an hour after an event ends
+create or replace function public.tidy_event_chats(p_event uuid) returns void
+language sql security definer set search_path = public as $$
+  delete from event_chats c using masquerade_events e
+  where c.event_id = p_event and e.id = c.event_id and c.status <> 'matched' and now() > e.ends_at + interval '1 hour'
+$$;
+revoke execute on function public.tidy_event_chats(uuid) from public, anon, authenticated;
+
+-- The wall: everyone else at a live "you choose" event who fits what you’re looking for (both ways)
+create or replace function public.event_wall(p_event uuid) returns json
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  e masquerade_events;
+  me profiles;
+begin
+  select * into e from masquerade_events where id = p_event;
+  if not found or e.kind = 'masquerade' then raise exception 'Not available'; end if;
+  if not exists (select 1 from event_attendees where event_id = p_event and user_id = uid) then raise exception 'Say you’re going first'; end if;
+  if now() < e.starts_at then return '[]'::json; end if;
+  select * into me from profiles where id = uid;
+  return coalesce((
+    select json_agg(row_to_json(t) order by t.shared desc, t.sort_key) from (
+      select p.id as user_id, split_part(coalesce(p.display_name, ''), ' ', 1) as name,
+        public.age_years(p.birthdate) as age, p.gender, a.featured_blur as blur,
+        case when r.target is not null then a.featured_photo end as photo,
+        (r.target is not null) as revealed,
+        public.shared_count(p.interests, me.interests) as shared,
+        p.interests,
+        (select c.id from event_chats c where c.event_id = p_event and c.user_a = least(uid, p.id) and c.user_b = greatest(uid, p.id)) as chat_id,
+        md5(p.id::text || p_event::text) as sort_key
+      from event_attendees a
+      join profiles p on p.id = a.user_id
+      left join event_reveals r on r.event_id = p_event and r.viewer = uid and r.target = p.id
+      where a.event_id = p_event and a.user_id <> uid
+        and public.gender_fits(me.pref_seeking, p.gender) and public.gender_fits(p.pref_seeking, me.gender)
+        and not public.is_blocked(uid, p.id)
+    ) t
+  ), '[]'::json);
+end $$;
+
+-- Tap to reveal a featured photo: free at first, then Keys
+create or replace function public.reveal_photo(p_event uuid, p_target uuid) returns json
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  e masquerade_events;
+  used int;
+  cost int := 0;
+  photo text;
+begin
+  select * into e from masquerade_events where id = p_event;
+  if not found then raise exception 'Not found'; end if;
+  if not exists (select 1 from event_attendees where event_id = p_event and user_id = uid) then raise exception 'Say you’re going first'; end if;
+  select featured_photo into photo from event_attendees where event_id = p_event and user_id = p_target;
+  if photo is null then raise exception 'No photo to show'; end if;
+  if not exists (select 1 from event_reveals where event_id = p_event and viewer = uid and target = p_target) then
+    select count(*) into used from event_reveals where event_id = p_event and viewer = uid;
+    if used >= public.event_int(e, 'free_reveals', 10) then
+      cost := public.event_int(e, 'reveal_cost', 1);
+      if cost > 0 then perform public.spend_keys(uid, cost, 'reveal', p_event::text); end if;
+    end if;
+    insert into event_reveals (event_id, viewer, target, paid) values (p_event, uid, p_target, cost);
+  end if;
+  select count(*) into used from event_reveals where event_id = p_event and viewer = uid;
+  return json_build_object('photo', photo, 'paid', cost,
+    'free_left', greatest(0, public.event_int(e, 'free_reveals', 10) - used),
+    'balance', (select balance from wallets where user_id = uid));
+end $$;
+
+-- Say hi from the wall: opens (or reopens) a private chat for the rest of the event
+create or replace function public.start_event_chat(p_event uuid, p_target uuid) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  e masquerade_events;
+  cid uuid;
+  me profiles;
+  them profiles;
+begin
+  select * into e from masquerade_events where id = p_event;
+  if not found or e.kind = 'masquerade' or e.status <> 'published' then raise exception 'Not available'; end if;
+  if now() < e.starts_at then raise exception 'The event hasn’t started yet'; end if;
+  if now() >= e.ends_at then raise exception 'This event has ended'; end if;
+  if uid = p_target then raise exception 'That’s you'; end if;
+  if not exists (select 1 from event_attendees where event_id = p_event and user_id = uid)
+     or not exists (select 1 from event_attendees where event_id = p_event and user_id = p_target) then
+    raise exception 'They’re not at this event';
+  end if;
+  if public.is_blocked(uid, p_target) then raise exception 'Not available'; end if;
+  select * into me from profiles where id = uid;
+  select * into them from profiles where id = p_target;
+  if not (public.gender_fits(me.pref_seeking, them.gender) and public.gender_fits(them.pref_seeking, me.gender)) then
+    raise exception 'Not available';
+  end if;
+  select id into cid from event_chats where event_id = p_event and user_a = least(uid, p_target) and user_b = greatest(uid, p_target);
+  if cid is not null then return cid; end if;
+  if (select count(*) from event_chats where event_id = p_event and opened_by = uid and status = 'open')
+     >= public.event_int(e, 'max_chats', 5) then
+    raise exception 'MAX_CHATS';
+  end if;
+  insert into event_chats (event_id, user_a, user_b, opened_by)
+  values (p_event, least(uid, p_target), greatest(uid, p_target), uid)
+  returning id into cid;
+  return cid;
+end $$;
+
+-- Your chats at an event
+create or replace function public.my_event_chats(p_event uuid) returns json
+language plpgsql security definer set search_path = public as $$
+declare uid uuid := auth.uid();
+begin
+  perform public.tidy_event_chats(p_event);
+  return coalesce((
+    select json_agg(row_to_json(t) order by t.last_message_at desc) from (
+      select c.id, c.status, c.created_at, c.last_message_at, c.opened_by,
+        case when c.user_a = uid then c.keep_a else c.keep_b end as my_keep,
+        p.id as other_id, split_part(coalesce(p.display_name, ''), ' ', 1) as name, public.age_years(p.birthdate) as age,
+        a.featured_blur as blur,
+        case when exists (select 1 from event_reveals r where r.event_id = c.event_id and r.viewer = uid and r.target = p.id)
+             then a.featured_photo end as photo,
+        (select body from event_chat_messages m where m.chat_id = c.id order by m.id desc limit 1) as last_message,
+        (select sender_id from event_chat_messages m where m.chat_id = c.id order by m.id desc limit 1) as last_sender
+      from event_chats c
+      join profiles p on p.id = case when c.user_a = uid then c.user_b else c.user_a end
+      left join event_attendees a on a.event_id = c.event_id and a.user_id = p.id
+      where c.event_id = p_event and uid in (c.user_a, c.user_b)
+    ) t
+  ), '[]'::json);
+end $$;
+
+-- One chat with its messages
+create or replace function public.get_event_chat(p_chat uuid) returns json
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  c event_chats;
+  e masquerade_events;
+  other uuid;
+begin
+  select * into c from event_chats where id = p_chat and uid in (user_a, user_b);
+  if not found then return null; end if;
+  select * into e from masquerade_events where id = c.event_id;
+  other := case when c.user_a = uid then c.user_b else c.user_a end;
+  return json_build_object(
+    'id', c.id, 'event_id', c.event_id, 'status', c.status, 'match_id', c.match_id,
+    'my_keep', case when c.user_a = uid then c.keep_a else c.keep_b end,
+    'their_keep_set', case when c.user_a = uid then c.keep_b is not null else c.keep_a is not null end,
+    'event', public.event_json(e, uid),
+    'other', (select json_build_object('id', p.id, 'name', split_part(coalesce(p.display_name, ''), ' ', 1),
+                'age', public.age_years(p.birthdate), 'gender', p.gender, 'interests', p.interests,
+                'blur', a.featured_blur,
+                'photo', case when exists (select 1 from event_reveals r where r.event_id = c.event_id and r.viewer = uid and r.target = p.id)
+                              then a.featured_photo end)
+              from profiles p left join event_attendees a on a.event_id = c.event_id and a.user_id = p.id where p.id = other),
+    'messages', coalesce((select json_agg(json_build_object('id', m.id, 'sender_id', m.sender_id, 'body', m.body, 'created_at', m.created_at) order by m.id)
+                 from (select * from event_chat_messages where chat_id = c.id order by id desc limit 300) m), '[]'::json)
+  );
+end $$;
+
+-- Keep or let go. Both keep -> it’s a match and the chat moves to Chats.
+create or replace function public.vote_event_chat(p_chat uuid, p_keep boolean) returns json
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  c event_chats;
+  e masquerade_events;
+  mid uuid;
+begin
+  select * into c from event_chats where id = p_chat and uid in (user_a, user_b) for update;
+  if not found then raise exception 'Not found'; end if;
+  if c.status <> 'open' then return json_build_object('status', c.status, 'match_id', c.match_id); end if;
+  select * into e from masquerade_events where id = c.event_id;
+  if now() > e.ends_at + interval '1 hour' then raise exception 'Too late to decide'; end if;
+  if c.user_a = uid then update event_chats set keep_a = p_keep where id = c.id returning * into c;
+  else update event_chats set keep_b = p_keep where id = c.id returning * into c; end if;
+
+  if c.keep_a is false or c.keep_b is false then
+    -- Someone let go: the chat is deleted
+    delete from event_chats where id = c.id;
+    return json_build_object('status', 'closed');
+  end if;
+  if c.keep_a is true and c.keep_b is true then
+    insert into matches (user_a, user_b, intent)
+    values (c.user_a, c.user_b, e.intent)
+    on conflict (user_a, user_b) do update set last_message_at = now()
+    returning id into mid;
+    insert into messages (match_id, sender_id, kind, body, created_at)
+    select mid, sender_id, 'text', body, created_at from event_chat_messages where chat_id = c.id order by id;
+    update event_chats set status = 'matched', match_id = mid where id = c.id;
+    delete from event_chat_messages where chat_id = c.id;
+    return json_build_object('status', 'matched', 'match_id', mid);
+  end if;
+  return json_build_object('status', 'open', 'waiting', true);
+end $$;
+
+-- Say something in the room (or send a hype reaction)
+create or replace function public.post_room_message(p_event uuid, p_body text, p_kind text default 'text') returns bigint
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  e masquerade_events;
+  wait int;
+  nid bigint;
+begin
+  select * into e from masquerade_events where id = p_event;
+  if not found or e.status <> 'published' then raise exception 'Not available'; end if;
+  if now() < e.starts_at or now() >= e.ends_at then raise exception 'The room is closed'; end if;
+  if not exists (select 1 from event_attendees where event_id = p_event and user_id = uid) then raise exception 'Say you’re going first'; end if;
+  p_body := btrim(coalesce(p_body, ''));
+  if p_kind = 'hype' then
+    if not public.event_bool(e, 'hype', true) then raise exception 'Hype is off for this event'; end if;
+    if p_body not in ('🔥', '😍', '😂', '👏', '💃', '🎉', '💜', '🙌') then raise exception 'Not a hype reaction'; end if;
+    if exists (select 1 from event_room_messages where event_id = p_event and user_id = uid and kind = 'hype'
+               and created_at > now() - interval '2 seconds') then
+      raise exception 'SLOW_DOWN';
+    end if;
+  elsif p_kind = 'text' then
+    if not public.event_bool(e, 'room_chat', true) then raise exception 'The room chat is off for this event'; end if;
+    if char_length(p_body) < 1 or char_length(p_body) > 300 then raise exception 'Messages are 1–300 characters'; end if;
+    wait := public.event_int(e, 'slow_mode', 0);
+    if wait > 0 and exists (select 1 from event_room_messages where event_id = p_event and user_id = uid and kind = 'text'
+                            and created_at > now() - make_interval(secs => wait)) then
+      raise exception 'SLOW_MODE';
+    end if;
+  else
+    raise exception 'Not allowed';
+  end if;
+  insert into event_room_messages (event_id, user_id, kind, body) values (p_event, uid, p_kind, p_body) returning id into nid;
+  return nid;
+end $$;
+
+-- The room’s recent messages with first names (no photos)
+create or replace function public.room_messages(p_event uuid) returns json
+language sql stable security definer set search_path = public as $$
+  select coalesce(json_agg(row_to_json(t) order by t.id), '[]'::json) from (
+    select m.id, m.user_id, m.kind, m.body, m.created_at, split_part(coalesce(p.display_name, ''), ' ', 1) as name
+    from event_room_messages m left join profiles p on p.id = m.user_id
+    where m.event_id = p_event
+      and exists (select 1 from event_attendees a where a.event_id = p_event and a.user_id = auth.uid())
+    order by m.id desc limit 150
+  ) t
+$$;
+
+-- Featured photo defaults to your main photo when you say you’re going
+create or replace function public.default_featured_photo() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.featured_photo is null then
+    select photos[1] into new.featured_photo from profiles where id = new.user_id;
+  end if;
+  return new;
+end $$;
+drop trigger if exists event_attendee_photo on public.event_attendees;
+create trigger event_attendee_photo before insert on public.event_attendees
+  for each row execute function public.default_featured_photo();
+
+-- Covers, music and video uploaded by admin (public to play)
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('event-media', 'event-media', true, 52428800,
+  array['image/jpeg','image/png','image/webp','audio/mpeg','audio/mp4','audio/aac','audio/wav','audio/ogg','audio/webm','video/mp4','video/webm','video/quicktime'])
+on conflict (id) do update set public = true, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;

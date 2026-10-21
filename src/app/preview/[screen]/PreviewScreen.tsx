@@ -102,6 +102,7 @@ function ev(over: Partial<DashpadEvent> = {}): DashpadEvent {
     theme: "violet", intent: "dating", starts_at: new Date(now + 2 * 3600_000 + 14 * 60_000).toISOString(),
     ends_at: new Date(now + 3 * 3600_000 + 14 * 60_000).toISOString(), age_min: 21, age_max: 35, entry_keys: 20,
     max_attendees: null, status: "published", going_count: 1240, i_am_going: false, my_rounds: 0, my_unmasks: 0,
+    kind: "masquerade", cover_url: null, stream_url: null, settings: {}, media: [], my_photo: null, my_chats: 0, reveals_used: 0,
     server_now: new Date(now).toISOString(), ...over,
   };
 }
