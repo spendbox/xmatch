@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarHeart, Clock3, Repeat, Users } from "lucide-react";
+import { CalendarDays, Clock3, Repeat, Users } from "lucide-react";
 import { eventPhase, type DashpadEvent } from "@/lib/events";
 import { EventCard, useNow } from "./EventCard";
 
@@ -27,7 +27,7 @@ export function EventsScreen({ events }: { events: DashpadEvent[] }) {
       {!live.length && !upcoming.length && (
         <div className="mt-8 flex flex-col items-center rounded-[32px] border border-line bg-surface px-6 py-12 text-center shadow-card">
           <span className="grid h-16 w-16 animate-float place-items-center rounded-2xl bg-brand-soft text-brand">
-            <CalendarHeart size={30} />
+            <CalendarDays size={30} />
           </span>
           <h2 className="mt-5 text-[20px] font-semibold">No nights scheduled yet</h2>
           <p className="mt-2 max-w-xs text-[15px] text-muted">Check back soon — new events are announced here.</p>

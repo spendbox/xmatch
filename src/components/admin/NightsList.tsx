@@ -4,7 +4,7 @@ import { plural, word } from "@/lib/plural";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
-import { CalendarHeart, KeyRound, MessageCircleQuestion, Plus, Users } from "lucide-react";
+import { CalendarDays, KeyRound, MessageCircleQuestion, Plus, Users } from "lucide-react";
 import { eventPhase, eventWhen, themeBg } from "@/lib/events";
 import { intentLabel } from "@/lib/constants";
 import type { Intent } from "@/lib/types";
@@ -93,7 +93,7 @@ export function NightsList({ nights }: { nights: AdminNight[] }) {
       />
       {nights.length === 0 && (
         <div className="flex flex-col items-center rounded-3xl border border-dashed border-line-strong bg-surface p-12 text-center">
-          <CalendarHeart size={34} className="text-brand" />
+          <CalendarDays size={34} className="text-brand" />
           <p className="mt-3 text-[17px] font-semibold">No nights yet</p>
           <p className="mt-1 max-w-sm text-[14px] text-muted">Create your first Masquerade Night. You can save it as a draft and publish when ready.</p>
         </div>

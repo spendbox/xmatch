@@ -71,6 +71,8 @@ export function CallProvider({ userId, children }: { userId: string; children: R
   const flipping = useRef(false);
 
   const update = useCallback((patch: Partial<ActiveCall> | null) => {
+    // Any move past ringing silences the ringtone
+    if (patch === null || (patch.status && patch.status !== "incoming" && patch.status !== "outgoing")) stopTone();
     setCall((c) => {
       const next = patch === null ? null : c ? { ...c, ...patch } : null;
       callRef.current = next;
@@ -376,19 +378,23 @@ export function CallProvider({ userId, children }: { userId: string; children: R
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "calls", filter: `caller_id=eq.${userId}` }, (p) => {
         const row = p.new as { id: string; status: string };
         if (callRef.current?.id !== row.id) return;
+        // They picked up: stop the ringback straight away, even before media connects
+        if (row.status === "accepted" && callRef.current.status === "outgoing") update({ status: "connecting" });
         if (row.status === "declined") teardown("Declined");
         if (row.status === "ended" || row.status === "missed") teardown("Call ended");
       })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "calls", filter: `callee_id=eq.${userId}` }, (p) => {
         const row = p.new as { id: string; status: string };
         if (callRef.current?.id !== row.id) return;
+        // Answered on another tab or device: stop ringing here
+        if (row.status === "accepted" && callRef.current.status === "incoming") return teardown("Answered on another device");
         if (row.status === "cancelled" || row.status === "ended" || row.status === "missed") teardown("Call ended");
       })
       .subscribe();
     return () => {
       supabase.removeChannel(ch);
     };
-  }, [supabase, teardown, userId]);
+  }, [supabase, teardown, update, userId]);
 
   // Hang up properly if the page is closed mid-call
   useEffect(() => {

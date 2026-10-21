@@ -659,6 +659,41 @@ language sql security definer set search_path = public as $$
   delete from matches where id = p_match and (user_a = auth.uid() or user_b = auth.uid());
 $$;
 
+-- Unread chats: when each person last opened the chat
+do $$ begin
+  if not exists (select 1 from information_schema.columns where table_schema = 'public'
+                 and table_name = 'matches' and column_name = 'a_read_at') then
+    alter table public.matches add column a_read_at timestamptz, add column b_read_at timestamptz;
+    -- Existing chats start as read, so nobody gets a wall of old dots
+    update public.matches set a_read_at = now(), b_read_at = now();
+  end if;
+end $$;
+
+create or replace function public.chat_unread(m public.matches, uid uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from messages x
+    where x.match_id = m.id and x.sender_id <> uid
+      and x.created_at > coalesce(case when m.user_a = uid then m.a_read_at else m.b_read_at end, '-infinity'::timestamptz)
+  )
+$$;
+
+-- Opening a chat marks it as read
+create or replace function public.mark_chat_read(p_match uuid) returns void
+language sql security definer set search_path = public as $$
+  update matches set
+    a_read_at = case when user_a = auth.uid() then now() else a_read_at end,
+    b_read_at = case when user_b = auth.uid() then now() else b_read_at end
+  where id = p_match and auth.uid() in (user_a, user_b)
+$$;
+
+-- How many chats have something new, for the dot on the menu
+create or replace function public.unread_chats() returns int
+language sql stable security definer set search_path = public as $$
+  select count(*)::int from matches m
+  where auth.uid() in (m.user_a, m.user_b) and public.chat_unread(m, auth.uid())
+$$;
+
 -- Matches list with the other person's details and the last message.
 create or replace function public.get_matches() returns json
 language sql stable security definer set search_path = public as $$
@@ -667,7 +702,8 @@ language sql stable security definer set search_path = public as $$
       p.id as other_id, p.display_name, p.photos, public.age_years(p.birthdate) as age,
       public.shared_count(p.interests, (select interests from profiles where id = auth.uid())) as shared,
       (select body from messages x where x.match_id = m.id order by x.id desc limit 1) as last_message,
-      (select sender_id from messages x where x.match_id = m.id order by x.id desc limit 1) as last_sender
+      (select sender_id from messages x where x.match_id = m.id order by x.id desc limit 1) as last_sender,
+      public.chat_unread(m, auth.uid()) as unread
     from matches m
     join profiles p on p.id = case when m.user_a = auth.uid() then m.user_b else m.user_a end
     where m.user_a = auth.uid() or m.user_b = auth.uid()

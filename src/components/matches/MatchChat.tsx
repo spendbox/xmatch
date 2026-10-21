@@ -21,6 +21,7 @@ import { GiftSheet, keysError } from "@/components/keys/GiftSheet";
 import { useWallet } from "@/components/keys/useWallet";
 import { ProfileSheet } from "./ProfileSheet";
 import { useKeyboardSafe } from "@/lib/useKeyboardSafe";
+import { refreshMenuBadges } from "@/components/app/useMenuBadges";
 
 export function MatchChat({
   matchId,
@@ -53,6 +54,11 @@ export function MatchChat({
   const [giftOpen, setGiftOpen] = useState(false);
   const { wallet, refresh: refreshWallet } = useWallet(myId);
   const nameOf = (id: string | null) => (id === myId ? "You" : other.display_name ?? "Them");
+
+  // Opening the chat (and anything that arrives while it's open) counts as read
+  useEffect(() => {
+    supabase.rpc("mark_chat_read", { p_match: matchId }).then(() => refreshMenuBadges());
+  }, [supabase, matchId, messages.length]);
 
   useEffect(() => {
     const channel = supabase

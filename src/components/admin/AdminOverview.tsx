@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { plural, word } from "@/lib/plural";
-import { CalendarHeart, Flag, Gift, Heart, MessageCircleQuestion, Plus, Users, Wallet, Wifi } from "lucide-react";
+import { CalendarDays, Flag, Gift, Heart, MessageCircleQuestion, Plus, Users, Wallet, Wifi } from "lucide-react";
 import { MaskLineIcon } from "@/components/ui/icons";
 import { naira } from "@/lib/keys";
 import { AdminTitle } from "./AdminShell";
@@ -62,7 +62,7 @@ export function AdminOverview({ overview: o, nights }: { overview: Overview; nig
         </div>
       ) : (
         <div className="flex flex-col items-center rounded-3xl border border-dashed border-line-strong bg-surface p-10 text-center">
-          <CalendarHeart size={30} className="text-brand" />
+          <CalendarDays size={30} className="text-brand" />
           <p className="mt-3 font-semibold">No nights scheduled</p>
           <p className="text-[14px] text-muted">Create one to bring everyone online at the same time.</p>
         </div>

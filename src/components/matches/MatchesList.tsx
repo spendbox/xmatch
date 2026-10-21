@@ -37,7 +37,7 @@ export function MatchesList({
       <header className="flex items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-[34px] leading-tight font-semibold tracking-tight">Chats</h1>
-          <p className="mt-1 text-[15px] text-muted">People you unmasked with.</p>
+          <p className="mt-1 text-[15px] text-muted">People you vibe with.</p>
         </div>
         {matches.length > 0 && (
           <span className="mb-1 inline-flex h-9 items-center gap-1.5 rounded-full bg-brand-soft px-3.5 text-[14px] font-semibold text-brand">
@@ -99,7 +99,7 @@ export function MatchesList({
             <ul className="space-y-2.5">
               {matches.map((m, i) => {
                 const theirTurn = !!m.last_message && m.last_sender === myId;
-                const mine = !!m.last_message && m.last_sender !== myId;
+                const mine = m.unread ?? (!!m.last_message && m.last_sender !== myId);
                 return (
                   <li key={m.id} className="animate-fade-up" style={{ animationDelay: `${i * 50}ms` }}>
                     <Link
@@ -134,7 +134,7 @@ export function MatchesList({
                               : "You matched! Start the conversation"}
                           </p>
                           {mine ? (
-                            <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-brand" aria-label="Your turn" />
+                            <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-brand" aria-label="New messages" />
                           ) : m.shared ? (
                             <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-cream px-2 py-0.5 text-[11px] font-semibold text-ink-soft">
                               <Shapes size={11} /> {m.shared} shared

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
-import { CalendarHeart, Check, Users } from "lucide-react";
+import { CalendarDays, Check, Users } from "lucide-react";
 import { countdown, eventPhase, eventWhen, themeBg, type DashpadEvent } from "@/lib/events";
 import { intentLabel } from "@/lib/constants";
 import { MaskIcon } from "@/components/ui/MaskIcon";
@@ -33,7 +33,7 @@ export function EventCard({ event: e, compact }: { event: DashpadEvent; compact?
         <span aria-hidden className="absolute -top-10 -right-10 h-36 w-36 rounded-full bg-white/10" />
         <div className="relative flex items-center justify-between">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-bold tracking-wide uppercase">
-            <CalendarHeart size={13} /> Masquerade Night
+            <CalendarDays size={13} /> Masquerade Night
           </span>
           <PhaseBadge phase={phase} startsIn={startsIn} />
         </div>

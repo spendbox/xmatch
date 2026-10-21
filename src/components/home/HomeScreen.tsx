@@ -135,6 +135,7 @@ export function HomeScreen({
   const distance = DISTANCES.find((d) => d.value === prefs.maxKm) ?? DISTANCES[1];
   const freeLeft = wallet?.free_left ?? FREE_MASQUERADES_PER_DAY;
   const balance = wallet?.balance ?? 0;
+  const hasKeys = balance > 0;
   const nextFree = wallet?.next_free_at && now ? Math.max(0, new Date(wallet.next_free_at).getTime() - now) : null;
   const online = stats?.online ?? 0;
 
@@ -244,44 +245,76 @@ export function HomeScreen({
       {nextEvent && (
         <div className="mt-7 lg:mt-0 lg:mb-7">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-[15px] font-semibold">Next Masquerade Night</h2>
+            <h2 className="text-[15px] font-semibold">Upcoming events</h2>
             <Link href="/events" className="inline-flex items-center gap-0.5 text-[13px] font-semibold text-brand">
-              All nights <ChevronRight size={16} />
+              All events <ChevronRight size={16} />
             </Link>
           </div>
           <EventCard event={nextEvent} compact />
         </div>
       )}
 
-      {/* Keys power-ups */}
+      {/* Keys power-ups: "get Keys" until you have some, then ways to spend them */}
       <div className="mt-7 mb-3 flex items-center justify-between lg:mt-0">
-        <h2 className="text-[15px] font-semibold">Use your Keys</h2>
+        <h2 className="flex items-center gap-2 text-[15px] font-semibold">
+          {hasKeys ? "Use your Keys" : "Do more with Keys"}
+          {hasKeys && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-gold-soft px-2 py-0.5 text-[12px] font-bold text-[#8a5a00]">
+              <KeyCoin size={14} /> {balance.toLocaleString()}
+            </span>
+          )}
+        </h2>
         <Link href="/wallet" className="inline-flex items-center gap-0.5 text-[13px] font-semibold text-brand">
-          Get Keys <ChevronRight size={16} />
+          {hasKeys ? "Top up" : "Get Keys"} <ChevronRight size={16} />
         </Link>
       </div>
       <div className="grid grid-cols-2 gap-2.5">
-        <Link href="/wallet" className="rounded-3xl border border-line bg-surface p-4 shadow-card transition active:scale-[0.97]">
+        <Link
+          href={hasKeys ? "/matches" : "/wallet"}
+          className="flex flex-col rounded-3xl border border-line bg-surface p-4 shadow-card transition active:scale-[0.97]"
+        >
           <span className="grid h-11 w-11 place-items-center rounded-[14px] bg-chili-soft text-chili">
             <Gift size={21} strokeWidth={1.75} />
           </span>
           <p className="mt-3 text-[15px] font-semibold">Gifts</p>
-          <p className="text-[12px] leading-snug text-muted">Send a little love in any chat · from {GIFTS[0].price} Keys</p>
+          <p className="text-[12px] leading-snug text-muted">
+            {hasKeys ? "Surprise someone you vibe with" : `Send a little love in any chat · from ${GIFTS[0].price} Keys`}
+          </p>
           <div className="mt-3 flex items-center gap-2.5">
             {["rose", "teddy", "diamond"].map((id) => (
               <span key={id} className="grid h-10 w-10 place-items-center rounded-xl bg-cream"><GiftArt id={id} size={26} /></span>
             ))}
           </div>
+          <span className="flex-1" /><span className={clsx("mt-3 flex h-9 items-center justify-center gap-1 rounded-xl text-[13px] font-semibold", hasKeys ? "bg-chili text-white" : "bg-cream text-ink-soft")}>
+            {hasKeys ? <>Send a gift <ChevronRight size={15} /></> : <>Get Keys <ChevronRight size={15} /></>}
+          </span>
         </Link>
-        <Link href="/wallet" className="rounded-3xl border border-line bg-surface p-4 shadow-card transition active:scale-[0.97]">
+        <Link
+          href={hasKeys ? "/home" : "/wallet"}
+          onClick={(e) => {
+            if (!hasKeys) return;
+            e.preventDefault();
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+          className="flex flex-col rounded-3xl border border-line bg-surface p-4 shadow-card transition active:scale-[0.97]"
+        >
           <span className="grid h-11 w-11 place-items-center rounded-[14px] bg-mint-soft text-mint">
             <Timer size={21} strokeWidth={1.75} />
           </span>
           <p className="mt-3 text-[15px] font-semibold">+2 minutes</p>
-          <p className="text-[12px] leading-snug text-muted">Keep a great masked chat going · {EXTEND_COST} Keys</p>
-          <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-mint-soft px-2.5 py-1 text-[12px] font-bold text-mint">
+          <p className="text-[12px] leading-snug text-muted">
+            {hasKeys
+              ? balance >= EXTEND_COST
+                ? `Ready to use in your next masked chat · ${EXTEND_COST} Keys`
+                : `Needs ${EXTEND_COST} Keys · you have ${balance}`
+              : `Keep a great masked chat going · ${EXTEND_COST} Keys`}
+          </p>
+          <p className="mt-2 inline-flex w-fit items-center gap-1 rounded-full bg-mint-soft px-2.5 py-1 text-[12px] font-bold text-mint">
             <Clock3 size={13} /> 5:00 → 7:00
           </p>
+          <span className="flex-1" /><span className={clsx("mt-3 flex h-9 items-center justify-center gap-1 rounded-xl text-[13px] font-semibold", hasKeys ? "bg-mint text-white" : "bg-cream text-ink-soft")}>
+            {hasKeys ? <>Mask up <ChevronRight size={15} /></> : <>Get Keys <ChevronRight size={15} /></>}
+          </span>
         </Link>
       </div>
 

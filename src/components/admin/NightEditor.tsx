@@ -109,7 +109,7 @@ export function NightEditor({ night, questions = [] }: { night?: AdminNight; que
   return (
     <>
       <Link href="/admin/nights" className="mb-4 inline-flex items-center gap-1.5 text-[14px] font-semibold text-muted hover:text-ink">
-        <ArrowLeft size={16} /> All nights
+        <ArrowLeft size={16} /> All events
       </Link>
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>

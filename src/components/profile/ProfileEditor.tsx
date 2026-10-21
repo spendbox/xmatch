@@ -24,7 +24,7 @@ import { ProfileSheet } from "@/components/matches/ProfileSheet";
 import { PhotoGrid, MAX_PHOTOS } from "./PhotoGrid";
 import { InterestPicker, MAX_INTERESTS } from "./InterestPicker";
 
-type Panel = null | "photos" | "about" | "interests" | "account" | "delete";
+type Panel = null | "photos" | "about" | "interests" | "account" | "delete" | "logout";
 
 /** How complete the profile looks, from 0 to 100. */
 function strength(p: { name: string; bio: string; interests: string[]; photos: string[] }) {
@@ -304,11 +304,13 @@ export function ProfileEditor({
             />
           </div>
 
-          <form action={logOut} className="mt-3">
-            <SubmitButton variant="ghost" className="h-14 w-full rounded-3xl border border-line bg-surface text-chili! shadow-card hover:bg-chili-soft" loadingText="Logging out…">
-              <LogOut size={18} /> Log out
-            </SubmitButton>
-          </form>
+          <Button
+            variant="ghost"
+            className="mt-3 h-14 w-full rounded-3xl border border-line bg-surface text-chili! shadow-card hover:bg-chili-soft"
+            onClick={() => openPanel("logout")}
+          >
+            <LogOut size={18} /> Log out
+          </Button>
           <p className="mt-4 text-center text-[12px] text-muted">dashpad.site</p>
         </div>
       </div>
@@ -404,11 +406,9 @@ export function ProfileEditor({
         title="Account"
         icon={<AtSign size={22} strokeWidth={1.75} />}
         footer={
-          <form action={logOut}>
-            <SubmitButton size="lg" variant="secondary" className="text-chili!" loadingText="Logging out…">
-              <LogOut size={18} /> Log out
-            </SubmitButton>
-          </form>
+          <Button size="lg" variant="secondary" className="text-chili!" onClick={() => openPanel("logout")}>
+            <LogOut size={18} /> Log out
+          </Button>
         }
       >
         <div className="divide-y divide-line rounded-2xl border border-line">
@@ -416,6 +416,29 @@ export function ProfileEditor({
           <Row label="Password" value="Forgot it? Use “Forgot password” on the login page" />
           <Row label="Age" value={age != null ? `${age} years old` : "Not set"} />
         </div>
+      </Sheet>
+
+      {/* Log out */}
+      <Sheet
+        open={panel === "logout"}
+        onClose={close}
+        title="Log out of Dashpad?"
+        subtitle="You'll need your email and password to log back in."
+        icon={<LogOut size={22} strokeWidth={1.75} />}
+        footer={
+          <div className="space-y-2">
+            <form action={logOut}>
+              <SubmitButton size="lg" variant="danger" loadingText="Logging out…">
+                Yes, log out
+              </SubmitButton>
+            </form>
+            <Button size="lg" variant="secondary" onClick={close}>
+              Stay logged in
+            </Button>
+          </div>
+        }
+      >
+        <p className="text-[14px] text-muted">You won&apos;t get Masquerade pop-ups or call alerts while you&apos;re logged out.</p>
       </Sheet>
 
       {/* Delete */}

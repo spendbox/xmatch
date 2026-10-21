@@ -3,19 +3,20 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
-import { CalendarHeart, LogOut, MessageCircle, PanelLeftClose, PanelLeftOpen, UserRound } from "lucide-react";
+import { CalendarDays, MessageCircle, PanelLeftClose, PanelLeftOpen, UserRound } from "lucide-react";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { Avatar } from "@/components/ui/Avatar";
 import { KeyCoin } from "@/components/keys/KeyIcon";
 import { useWallet } from "@/components/keys/useWallet";
-import { logOut } from "@/app/(auth)/actions";
 import { FREE_MASQUERADES_PER_DAY } from "@/lib/keys";
+import type { MenuBadges } from "./useMenuBadges";
+import { badgeFor } from "./badges";
 
 export type ChromeUser = { id: string; name: string; photo?: string | null };
 
 const items = [
   { href: "/home", label: "Home", icon: (on: boolean) => <MaskIcon className="w-[22px]" eyes={on ? "#5b3fd9" : "#faf7f2"} /> },
-  { href: "/events", label: "Events", icon: () => <CalendarHeart size={21} /> },
+  { href: "/events", label: "Events", icon: () => <CalendarDays size={21} /> },
   { href: "/matches", label: "Chats", icon: () => <MessageCircle size={21} /> },
   { href: "/wallet", label: "Keys", icon: () => <KeyCoin size={22} /> },
   { href: "/profile", label: "Profile", icon: () => <UserRound size={21} /> },
@@ -36,7 +37,7 @@ function toggleCollapsed() {
 }
 
 /** Left-hand navigation on computers. Can be folded down to icons. */
-export function Sidebar({ user }: { user: ChromeUser }) {
+export function Sidebar({ user, badges }: { user: ChromeUser; badges?: MenuBadges }) {
   const path = usePathname();
   const { wallet } = useWallet(user.id);
   const hideWhenFolded = "collapsed:hidden";
@@ -77,8 +78,22 @@ export function Sidebar({ user }: { user: ChromeUser }) {
             >
               <span className="relative grid w-7 shrink-0 place-items-center">
                 {it.icon(on)}
+                {badgeFor(it.href, badges) !== null && (
+                  <span className={clsx("absolute -top-1 -right-1 hidden h-2.5 w-2.5 rounded-full ring-2 collapsed:block", on ? "bg-white ring-brand" : "bg-chili ring-surface")} />
+                )}
               </span>
               <span className={hideWhenFolded}>{it.label}</span>
+              {badgeFor(it.href, badges) !== null && (
+                <span
+                  className={clsx(
+                    "ml-auto grid h-5 min-w-5 place-items-center rounded-full px-1.5 text-[11px] font-bold",
+                    hideWhenFolded,
+                    on ? "bg-white text-brand" : "bg-chili text-white",
+                  )}
+                >
+                  {badgeFor(it.href, badges)}
+                </span>
+              )}
               {it.href === "/wallet" && wallet && (
                 <span className={clsx("ml-auto rounded-full px-2 py-0.5 text-[12px] font-bold", hideWhenFolded, on ? "bg-white/20" : "bg-gold-soft text-[#8a5a00]")}>
                   {wallet.balance}
@@ -114,11 +129,6 @@ export function Sidebar({ user }: { user: ChromeUser }) {
             View profile
           </Link>
         </div>
-        <form action={logOut}>
-          <button className="grid h-9 w-9 place-items-center rounded-full text-muted hover:bg-chili-soft hover:text-chili" aria-label="Log out" title="Log out">
-            <LogOut size={17} />
-          </button>
-        </form>
       </div>
     </aside>
   );

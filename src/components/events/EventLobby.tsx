@@ -4,7 +4,7 @@ import { plural, word } from "@/lib/plural";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
-import { ArrowLeft, CalendarHeart, Clock3, Heart, Repeat, Sparkles, Users } from "lucide-react";
+import { ArrowLeft, CalendarDays, Clock3, Heart, Repeat, Sparkles, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { countdown, eventPhase, eventWhen, themeBg, type DashpadEvent } from "@/lib/events";
 import { intentLabel } from "@/lib/constants";
@@ -144,7 +144,7 @@ export function EventLobby({
         <div aria-hidden className="absolute -top-16 -right-16 h-56 w-56 animate-blob rounded-full bg-white/10" />
         <div aria-hidden className="absolute -bottom-20 -left-16 h-56 w-56 animate-blob rounded-full bg-black/10 [animation-delay:-6s]" />
         <div className="relative flex items-center justify-between">
-          <Link href="/events" className="grid h-10 w-10 place-items-center rounded-full bg-white/15 backdrop-blur" aria-label="All nights">
+          <Link href="/events" className="grid h-10 w-10 place-items-center rounded-full bg-white/15 backdrop-blur" aria-label="All events">
             <ArrowLeft size={20} />
           </Link>
           <PhaseBadge phase={phase} startsIn={startsIn} />
@@ -152,7 +152,7 @@ export function EventLobby({
         <div className="relative mt-6 lg:flex lg:items-end lg:justify-between lg:gap-10">
           <div>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-bold tracking-wide uppercase">
-              <CalendarHeart size={13} /> Masquerade Night
+              <CalendarDays size={13} /> Masquerade Night
             </span>
             <h1 className="mt-3 font-display text-[34px] leading-[1.05] font-semibold lg:text-[48px]">{e.title}</h1>
             <p className="mt-2 text-[15px] text-white/85">{now ? eventWhen(e.starts_at, e.ends_at) : " "}</p>

@@ -85,4 +85,6 @@ export type MatchSummary = {
   last_message: string | null;
   last_sender: string | null;
   shared?: number;
+  /** Something new from them since you last opened the chat */
+  unread?: boolean;
 };
