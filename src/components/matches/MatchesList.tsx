@@ -47,10 +47,11 @@ export function MatchesList({
         )}
       </header>
 
-      <LiveEventChats compact={side} />
-
       {matches.length === 0 ? (
-        side ? <p className="mt-6 rounded-2xl bg-surface p-4 text-[14px] text-muted">Your chats will appear here.</p> : <Empty />
+        <>
+          <LiveEventChats compact={side} />
+          {side ? <p className="mt-6 rounded-2xl bg-surface p-4 text-[14px] text-muted">Your chats will appear here.</p> : <Empty />}
+        </>
       ) : (
         <>
           {fresh.length > 0 && (
@@ -89,6 +90,8 @@ export function MatchesList({
               </div>
             </section>
           )}
+
+          <LiveEventChats compact={side} divided />
 
           <section className="mt-5">
             <h2 className="mb-3 flex items-center justify-between text-[15px] font-semibold">

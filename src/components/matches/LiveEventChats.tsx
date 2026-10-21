@@ -23,7 +23,7 @@ type LiveChat = {
 };
 
 /** Chats you have going at an event right now, with a way back in. Shown at the top of Chats. */
-export function LiveEventChats({ compact }: { compact?: boolean }) {
+export function LiveEventChats({ compact, divided }: { compact?: boolean; divided?: boolean }) {
   const supabase = useMemo(() => createClient(), []);
   const [chats, setChats] = useState<LiveChat[]>([]);
 
@@ -52,7 +52,7 @@ export function LiveEventChats({ compact }: { compact?: boolean }) {
   if (!chats.length) return null;
   const now = Date.now();
   return (
-    <section className={compact ? "mt-5" : "mt-6"}>
+    <section className={divided ? "mt-2 border-y border-line py-5" : compact ? "mt-5" : "mt-6"}>
       <h2 className="mb-3 flex items-center gap-2 text-[15px] font-semibold">
         <CalendarDays size={16} className="text-brand" /> At events now
       </h2>

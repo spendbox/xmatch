@@ -6,11 +6,11 @@ import { LiveDemo } from "@/components/landing/LiveDemo";
 import { Reveal } from "@/components/landing/Reveal";
 import { ScrollToTop } from "@/components/landing/ScrollToTop";
 import { INTEREST_OPTIONS } from "@/lib/constants";
-import { ArrowRight, Clock3, EyeOff, HeartHandshake, MapPin, ShieldCheck } from "lucide-react";
+import { ArrowRight, Clock3, EyeOff, Handshake, MapPin, ShieldCheck } from "lucide-react";
 
 const VIBE_SIGNALS = [
   {
-    icon: <HeartHandshake size={22} strokeWidth={1.75} />,
+    icon: <Handshake size={22} strokeWidth={1.75} />,
     tone: "bg-brand-soft text-brand",
     title: "Same intentions",
     body: "Friends, dating or something spicier — you only meet people who want what you want.",
@@ -44,7 +44,7 @@ const MODES = [
 const STEPS = [
   { icon: <MaskLineIcon size={20} />, title: "Put on your mask", body: "Choose your vibe in a few taps." },
   { icon: <Clock3 size={20} strokeWidth={1.75} />, title: "Chat for 5 minutes", body: "No names, no photos. Just energy." },
-  { icon: <HeartHandshake size={20} strokeWidth={1.75} />, title: "Unmask together", body: "Both say yes? It's a match. If not, the chat vanishes." },
+  { icon: <Handshake size={20} strokeWidth={1.75} />, title: "Unmask together", body: "Both say yes? It's a match. If not, the chat vanishes." },
 ];
 
 export default function Landing() {
@@ -99,8 +99,7 @@ export default function Landing() {
             </span>
           </h1>
           <p className="mx-auto mt-5 max-w-[22rem] animate-fade-up text-[17px] leading-relaxed text-muted [animation-delay:160ms] lg:mx-0 lg:max-w-md lg:text-[19px]">
-            Dashpad pairs you with someone who shares your energy. Chat masked for five minutes — if the vibe is right, you both
-            unmask.
+            Dashpad pairs you with people who match your energy. Chat masked for five minutes — if you click, you both unmask.
           </p>
           <div className="mt-7 flex animate-fade-up flex-col gap-3 [animation-delay:240ms] lg:mt-9 lg:items-start">
             <ButtonLink href="/signup" size="lg" loadingText="Opening…" className="lg:w-auto lg:px-10">

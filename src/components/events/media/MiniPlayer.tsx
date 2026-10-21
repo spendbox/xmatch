@@ -81,14 +81,14 @@ function Bar({ floating, handle, onCollapse, noStop }: { floating?: boolean; han
 }
 
 /** A mini player placed inside a page (hides the floating one while shown). */
-export function MiniPlayer({ className }: { className?: string }) {
+export function MiniPlayer({ className, noStop }: { className?: string; noStop?: boolean }) {
   const { registerBar, active, hasMedia } = useEventMedia();
   const show = !!active && hasMedia;
   useEffect(() => (show ? registerBar() : undefined), [show, registerBar]);
   if (!show) return null;
   return (
     <div className={className}>
-      <Bar />
+      <Bar noStop={noStop} />
     </div>
   );
 }

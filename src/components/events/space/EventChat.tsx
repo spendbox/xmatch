@@ -226,7 +226,7 @@ export function EventChat({ chat, myId, myInterests }: { chat: EventChatDetail; 
         )}
       </header>
 
-      {showPlayer && <MiniPlayer className="border-b border-line bg-cream px-3 py-2 lg:px-5" />}
+      {showPlayer && <MiniPlayer noStop className="border-b border-line bg-cream px-3 py-2 lg:px-5" />}
 
       {lastCall && open && (
         <div className="flex animate-fade-up items-center gap-3 border-b border-gold/40 bg-gold-soft px-4 py-2.5">

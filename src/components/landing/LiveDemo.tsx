@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import clsx from "clsx";
-import { Check, Heart, MessageCircleQuestion } from "lucide-react";
+import { Check, MessageCircleQuestion } from "lucide-react";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { InterestIcon } from "@/components/ui/icons";
 
@@ -106,8 +106,8 @@ export function LiveDemo() {
             <div className="absolute inset-0 grid animate-fade-in place-items-center bg-surface/80">
               {matched ? (
                 <div className="animate-pop text-center">
-                  <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-chili-soft text-chili">
-                    <Heart size={30} fill="currentColor" />
+                  <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-brand text-white shadow-lift">
+                    <MaskIcon className="w-9" eyes="#5b3fd9" />
                   </span>
                   <p className="mt-3 font-display text-[24px] font-semibold">It&apos;s a vibe!</p>
                   <p className="text-[13px] text-muted">You both unmasked</p>
