@@ -43,7 +43,7 @@ export type MasqueradeState = {
   };
 };
 
-export type MessageKind = "text" | "icebreaker" | "image" | "video" | "audio" | "call";
+export type MessageKind = "text" | "icebreaker" | "image" | "video" | "audio" | "call" | "gift" | "system";
 
 export type MediaMeta = {
   width?: number;
@@ -52,6 +52,7 @@ export type MediaMeta = {
   mime?: string;
   call?: "audio" | "video";
   seconds?: number;
+  gift?: string;
 };
 
 export type ChatMessage = {

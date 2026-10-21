@@ -6,7 +6,7 @@ import { intentLabel, spiceLabel, SEEKING } from "@/lib/constants";
 import { Button } from "@/components/ui/Button";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { Chilis } from "@/components/ui/Spice";
-import type { SetupPrefs } from "./MasqueradeSetup";
+import type { SetupPrefs } from "@/components/home/prefs";
 
 const TIPS = [
   "Ask follow-up questions. Curiosity is attractive.",

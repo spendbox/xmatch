@@ -3,10 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import {
-  Ban, Clock3, Copy, CornerUpLeft, MessageCircleQuestion, Phone, PhoneIncoming, PhoneMissed, PhoneOutgoing, Play, Reply, Trash2, Video,
+  Ban, Clock3, Copy, Timer, CornerUpLeft, MessageCircleQuestion, Phone, PhoneIncoming, PhoneMissed, PhoneOutgoing, Play, Reply, Trash2, Video,
 } from "lucide-react";
 import type { ChatMessage } from "@/lib/types";
 import { formatDuration } from "@/lib/chatMedia";
+import { giftById } from "@/lib/keys";
 import { Sheet } from "@/components/ui/Sheet";
 import { Spinner, tapFeedback } from "@/components/ui/Button";
 import { AudioPlayer } from "./AudioPlayer";
@@ -37,6 +38,8 @@ export function snippet(m: ChatMessage | undefined) {
       return `🎤 Voice note · ${formatDuration(m.media_meta?.duration)}`;
     case "call":
       return "📞 Call";
+    case "gift":
+      return `${giftById(m.media_meta?.gift ?? m.body)?.emoji ?? "🎁"} Gift`;
     default:
       return m.body.replace(/^💬 /, "");
   }
@@ -76,6 +79,36 @@ export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDat
             <span className="rounded-full bg-surface px-3 py-1 text-[12px] font-semibold text-muted shadow-card">{dayLabel(m.created_at)}</span>
           </div>
         ) : null;
+
+        if (m.kind === "gift") {
+          const g = giftById(m.media_meta?.gift ?? m.body);
+          const mine = m.sender_id === myId;
+          return (
+            <div key={m.id}>
+              {dateLine}
+              <div className={clsx("my-2 flex", mine ? "justify-end" : "justify-start")} data-msg={m.id}>
+                <div className={clsx("relative w-[200px] overflow-hidden rounded-[24px] p-4 text-center", mine ? "bg-gradient-to-br from-brand to-[#c2306b] text-white" : "border border-gold/40 bg-gradient-to-br from-gold-soft to-[#fff1f4]")}>
+                  <span aria-hidden className="absolute -top-6 -right-6 h-20 w-20 rounded-full bg-white/20" />
+                  <p className="relative animate-pop text-[52px] leading-none">{g?.emoji ?? "🎁"}</p>
+                  <p className={clsx("relative mt-2 text-[14px] font-semibold", !mine && "text-ink")}>
+                    {mine ? `You sent a ${g?.name ?? "gift"}` : `${nameOf(m.sender_id)} sent you a ${g?.name ?? "gift"}`}
+                  </p>
+                  {mounted && <p className={clsx("relative mt-0.5 text-[11px]", mine ? "text-white/75" : "text-muted")}>{time(m.created_at)}</p>}
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        if (m.kind === "system") {
+          return (
+            <div key={m.id} className="my-2 flex justify-center" data-msg={m.id}>
+              <span className="inline-flex animate-pop items-center gap-1.5 rounded-full bg-mint-soft px-3.5 py-1.5 text-[12px] font-semibold text-mint">
+                <Timer size={13} /> {m.body}
+              </span>
+            </div>
+          );
+        }
 
         if (m.kind === "icebreaker" || (!m.sender_id && m.kind !== "call")) {
           return (

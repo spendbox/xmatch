@@ -40,7 +40,7 @@ export function Outcome({ state }: { state: MasqueradeState }) {
         This chat has been deleted
       </p>
       <div className="mt-auto w-full pt-10 pb-8">
-        <ButtonLink href="/masquerade" size="lg" variant="gold">
+        <ButtonLink href="/home" size="lg" variant="gold">
           <RotateCcw size={18} /> Find someone new
         </ButtonLink>
       </div>
@@ -80,8 +80,8 @@ function Reveal({ state }: { state: MasqueradeState }) {
         <ButtonLink href={`/matches/${state.match_id}`} size="lg">
           <MessageCircleHeart size={20} /> Keep chatting
         </ButtonLink>
-        <ButtonLink href="/masquerade" size="lg" variant="secondary">
-          Back to Masquerade
+        <ButtonLink href="/home" size="lg" variant="secondary">
+          Back to Home
         </ButtonLink>
       </div>
     </main>

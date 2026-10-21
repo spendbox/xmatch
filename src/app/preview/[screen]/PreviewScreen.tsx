@@ -1,6 +1,8 @@
 "use client";
 
-import { MasqueradeSetup } from "@/components/masquerade/MasqueradeSetup";
+import { HomeScreen } from "@/components/home/HomeScreen";
+import { WalletScreen } from "@/components/keys/WalletScreen";
+import { GiftSheet } from "@/components/keys/GiftSheet";
 import { MasqueradeRoom } from "@/components/masquerade/MasqueradeRoom";
 import { Outcome } from "@/components/masquerade/Outcome";
 import { MatchesList } from "@/components/matches/MatchesList";
@@ -77,6 +79,12 @@ const msgs: ChatMessage[] = [
   { id: 7, sender_id: "ada", body: "When the conversation just flows and you forget to check the time… like now?", created_at: iso(60) },
 ];
 
+const recent = [
+  { id: "m1", created_at: iso(3000), last_message_at: iso(200), intent: "dating" as const, other_id: "ada", display_name: "Ada", photos: [photo("#e5484d", "#f2b33d", "A")], age: 26, last_message: null, last_sender: null },
+  { id: "m2", created_at: iso(3000), last_message_at: iso(200), intent: "friends" as const, other_id: "k", display_name: "Kemi", photos: [photo("#1f9d6b", "#f2b33d", "K")], age: 24, last_message: null, last_sender: null },
+  { id: "m3", created_at: iso(3000), last_message_at: iso(200), intent: "spicy" as const, other_id: "z", display_name: "Zara", photos: [photo("#5b3fd9", "#e5484d", "Z")], age: 29, last_message: null, last_sender: null },
+];
+
 export function PreviewScreen({ screen }: { screen: string }) {
   switch (screen) {
     case "onboarding-2":
@@ -90,15 +98,24 @@ export function PreviewScreen({ screen }: { screen: string }) {
     case "masquerade":
       return (
         <div className="pb-24">
-          <MasqueradeSetup profile={me} />
+          <HomeScreen profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} stats={{ online: 214, week_chats: 12, week_unmasks: 5, gifts_received: 3 }} matches={recent} />
           <BottomNav />
         </div>
       );
+    case "home":
+      return (
+        <div className="pb-24">
+          <HomeScreen profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} stats={{ online: 214, week_chats: 12, week_unmasks: 5, gifts_received: 3 }} matches={recent} />
+          <BottomNav />
+        </div>
+      );
+    case "sheet-keys":
+    case "sheet-meet":
     case "sheet-intent":
     case "sheet-spice":
     case "sheet-distance":
     case "sheet-seeking":
-      return <MasqueradeSetup profile={me} demoSheet={screen.replace("sheet-", "") as "intent"} />;
+      return <HomeScreen profile={me} wallet={{ balance: 3, passes: 0, free_left: 0, next_free_at: new Date(now + 3 * 3600_000 + 12 * 60_000).toISOString() }} stats={null} matches={[]} demoSheet={screen === "sheet-keys" ? "keys" : "meet"} />;
     case "buttons":
       return (
         <div className="mx-auto max-w-md space-y-3 p-5 pt-16">
@@ -109,7 +126,7 @@ export function PreviewScreen({ screen }: { screen: string }) {
         </div>
       );
     case "waiting":
-      return <MasqueradeSetup profile={me} demoWaiting />;
+      return <HomeScreen profile={me} wallet={null} stats={null} matches={[]} demoWaiting />;
     case "chat":
       return <MasqueradeRoom initial={session()} initialMessages={msgs} demo={{ remaining: 121 }} />;
     case "decide":
@@ -128,7 +145,7 @@ export function PreviewScreen({ screen }: { screen: string }) {
     case "invite":
       return (
         <div className="pb-24">
-          <MasqueradeSetup profile={me} />
+          <HomeScreen profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} stats={{ online: 214, week_chats: 12, week_unmasks: 5, gifts_received: 3 }} matches={recent} />
           <InviteSheet
             invite={{ id: "i", intent: "dating", spice: 2, from_age: 27, distance_km: 3, expires_at: new Date(now + 38_000).toISOString() }}
             onAccept={() => {}}
@@ -172,6 +189,36 @@ export function PreviewScreen({ screen }: { screen: string }) {
           ]}
         />
       );
+    case "wallet":
+      return (
+        <div className="pb-24">
+          <WalletScreen
+            userId="me"
+            wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }}
+            result="paid"
+            history={[
+              { id: 4, amount: -10, reason: "extend", created_at: iso(600) },
+              { id: 3, amount: -20, reason: "gift", created_at: iso(3600) },
+              { id: 2, amount: -5, reason: "extra_masquerade", created_at: iso(7200) },
+              { id: 1, amount: 120, reason: "purchase", created_at: iso(9000) },
+            ]}
+          />
+          <BottomNav />
+        </div>
+      );
+    case "gifts":
+      return (
+        <>
+          <MatchChat matchId="m1" myId="me" other={ada} shared={["Travel"]} intent="dating" initialMessages={[
+            { id: 1, sender_id: "ada", kind: "text", body: "That was the best 5 minutes of my week", created_at: iso(300) },
+            { id: 2, sender_id: "ada", kind: "gift", body: "bouquet", media_meta: { gift: "bouquet" }, created_at: iso(240) },
+            { id: 3, sender_id: "me", kind: "gift", body: "crown", media_meta: { gift: "crown" }, created_at: iso(120) },
+          ]} />
+          <GiftSheet open onClose={() => {}} balance={120} toName="Ada" onSend={async () => null} />
+        </>
+      );
+    case "extend":
+      return <MasqueradeRoom initial={session()} initialMessages={[...msgs, { id: 8, sender_id: "ada", kind: "gift", body: "rose", created_at: iso(30) }, { id: 9, sender_id: "me", kind: "system", body: "Golden Fox added 2 more minutes", created_at: iso(20) }]} demo={{ remaining: 74 }} />;
     case "call-incoming":
       return <CallScreen call={{ id: "c", matchId: "m1", kind: "video", role: "callee", peer: { name: "Ada", photo: ada.photos[0] }, status: "incoming" }} localStream={null} remoteStream={null} muted={false} cameraOff={false} mirrored onAccept={() => {}} onDecline={() => {}} onHangUp={() => {}} onToggleMute={() => {}} onToggleCamera={() => {}} onFlip={() => {}} />;
     case "call-audio":

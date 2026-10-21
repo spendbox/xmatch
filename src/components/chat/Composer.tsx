@@ -25,6 +25,8 @@ type Props = {
   disabled?: boolean;
   placeholder?: string;
   leading?: React.ReactNode;
+  /** Another button after `leading` (e.g. gifts in the masked chat) */
+  trailingExtra?: React.ReactNode;
 };
 
 export function Composer({
@@ -38,6 +40,7 @@ export function Composer({
   disabled,
   placeholder = "Say something…",
   leading,
+  trailingExtra,
 }: Props) {
   const [text, setText] = useState("");
   const [attachOpen, setAttachOpen] = useState(false);
@@ -142,6 +145,7 @@ export function Composer({
       ) : (
         <form onSubmit={submit} className="flex items-end gap-2 px-3 pt-3">
           {leading}
+          {trailingExtra}
           {onSendMedia && (
             <button
               type="button"
@@ -213,7 +217,6 @@ export function Composer({
           <AttachTile
             icon={<Gift size={24} strokeWidth={1.75} />}
             label="Gift"
-            badge="Soon"
             tone="bg-chili-soft text-chili"
             onClick={() => {
               setAttachOpen(false);

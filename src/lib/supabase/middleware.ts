@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PROTECTED = ["/masquerade", "/matches", "/profile", "/onboarding"];
+const PROTECTED = ["/home", "/masquerade", "/matches", "/profile", "/onboarding", "/wallet"];
 const AUTH_PAGES = ["/login", "/signup", "/forgot-password"];
 
 export async function updateSession(request: NextRequest) {
@@ -42,7 +42,7 @@ export async function updateSession(request: NextRequest) {
     return redirectTo("/login");
   }
   if (user && (AUTH_PAGES.includes(path) || path === "/")) {
-    return redirectTo("/masquerade");
+    return redirectTo("/home");
   }
   return response;
 }

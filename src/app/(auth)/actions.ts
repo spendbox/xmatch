@@ -50,7 +50,7 @@ export async function logIn(_: AuthState, form: FormData): Promise<AuthState> {
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) return { error: "Wrong email or password.", values };
-  redirect("/masquerade");
+  redirect("/home");
 }
 
 export async function logOut() {
@@ -77,5 +77,5 @@ export async function setNewPassword(_: ResetState, form: FormData): Promise<Res
   const supabase = await createClient();
   const { error } = await supabase.auth.updateUser({ password });
   if (error) return { error: "That link has expired. Please request a new one." };
-  redirect("/masquerade");
+  redirect("/home");
 }

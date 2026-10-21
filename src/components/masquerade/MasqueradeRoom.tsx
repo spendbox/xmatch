@@ -2,7 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Flag, LogOut, MoreVertical, Dices, X } from "lucide-react";
+import Link from "next/link";
+import { Flag, Gift, LogOut, MoreVertical, Dices, Timer, X } from "lucide-react";
+import { Spinner } from "@/components/ui/Button";
+import { KeyCoin } from "@/components/keys/KeyIcon";
+import { GiftSheet, keysError } from "@/components/keys/GiftSheet";
+import { useWallet } from "@/components/keys/useWallet";
+import { EXTEND_COST } from "@/lib/keys";
 import { createClient } from "@/lib/supabase/client";
 import { distanceLabel, GENDERS, intentLabel, MASQUERADE_MINUTES, spiceLabel } from "@/lib/constants";
 import type { ChatMessage, MasqueradeState } from "@/lib/types";
@@ -25,7 +31,7 @@ export function MasqueradeRoom({
 }: {
   initial: MasqueradeState;
   initialMessages: ChatMessage[];
-  demo?: { remaining: number };
+  demo?: { remaining: number; hideExtend?: boolean };
 }) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
@@ -35,6 +41,20 @@ export function MasqueradeRoom({
   const [reporting, setReporting] = useState(false);
   const [voting, setVoting] = useState(false);
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
+  const [giftOpen, setGiftOpen] = useState(false);
+  const [extending, setExtending] = useState(false);
+  const [keysNote, setKeysNote] = useState<string | null>(null);
+  const { wallet, refresh: refreshWallet } = useWallet(demo ? null : initial.me.id);
+
+  async function extend() {
+    setExtending(true);
+    setKeysNote(null);
+    const { data, error } = await supabase.rpc("extend_masquerade", { p_session: initial.id });
+    setExtending(false);
+    if (error) return setKeysNote(keysError(error.message));
+    if (data) setState((s) => ({ ...s, ends_at: data as string }));
+    refreshWallet();
+  }
   // Keep our clock in step with the server's so both timers match
   const offset = useRef(new Date(initial.server_now).getTime() - Date.now());
   const remainingNow = useCallback(
@@ -115,7 +135,7 @@ export function MasqueradeRoom({
     setMenu(false);
     if (!confirm("Leave this masquerade? The chat will be deleted.")) return;
     await supabase.rpc("vote_unmask", { p_session: state.id, p_unmask: false });
-    router.replace("/masquerade");
+    router.replace("/home");
   }
 
   async function report(reason: string) {
@@ -202,6 +222,31 @@ export function MasqueradeRoom({
         />
       </div>
 
+      {chatting && remaining <= 90 && !demo?.hideExtend && (
+        <div className="flex animate-fade-up items-center gap-3 border-t border-line bg-mint-soft/60 px-4 py-2.5">
+          <Timer size={18} className="shrink-0 text-mint" />
+          <p className="min-w-0 flex-1 text-[13px] leading-snug">
+            <span className="font-semibold text-ink">Running out of time?</span>{" "}
+            <span className="text-muted">Add 2 minutes for both of you.</span>
+          </p>
+          <button
+            type="button"
+            onClick={extend}
+            disabled={extending}
+            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-mint px-3.5 text-[13px] font-bold text-white transition active:scale-95 disabled:opacity-60"
+          >
+            {extending ? <Spinner className="h-4 w-4" /> : <KeyCoin size={18} />} +2 min · {EXTEND_COST}
+          </button>
+        </div>
+      )}
+      {keysNote && (
+        <div className="flex items-center gap-3 border-t border-line bg-gold-soft px-4 py-2.5 text-[13px]">
+          <p className="flex-1 font-medium text-[#8a5a00]">{keysNote}</p>
+          <Link href="/wallet" target="_blank" className="shrink-0 font-semibold text-brand">Get Keys</Link>
+          <button onClick={() => setKeysNote(null)} aria-label="Dismiss" className="text-muted"><X size={16} /></button>
+        </div>
+      )}
+
       {chatting ? (
         <Composer
           onSend={send}
@@ -219,9 +264,35 @@ export function MasqueradeRoom({
               <Dices size={20} />
             </button>
           }
+          trailingExtra={
+            <button
+              type="button"
+              onClick={() => {
+                refreshWallet();
+                setGiftOpen(true);
+              }}
+              className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-chili-soft text-chili"
+              aria-label="Send a gift"
+              title="Send a gift"
+            >
+              <Gift size={20} />
+            </button>
+          }
         />
       ) : null}
 
+      <GiftSheet
+        open={giftOpen}
+        onClose={() => setGiftOpen(false)}
+        balance={wallet?.balance ?? null}
+        toName={them.alias}
+        onSend={async (g) => {
+          const { error } = await supabase.rpc("send_gift", { p_gift: g.id, p_session: state.id });
+          if (error) return keysError(error.message);
+          refreshWallet();
+          return null;
+        }}
+      />
       {timeUp && <DecisionSheet state={state} voting={voting} onVote={vote} />}
       {reporting && <ReportSheet onClose={() => setReporting(false)} onReport={report} />}
     </div>

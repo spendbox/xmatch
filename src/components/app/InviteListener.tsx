@@ -21,6 +21,7 @@ export function InviteListener({ userId }: { userId: string }) {
   const [invite, setInvite] = useState<Invite | null>(null);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
+  const [needsKeys, setNeedsKeys] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
@@ -51,9 +52,24 @@ export function InviteListener({ userId }: { userId: string }) {
     if (!invite) return;
     setBusy(true);
     const supabase = createClient();
-    const { data } = await supabase.rpc("accept_masquerade_invite", { p_invite: invite.id });
+    if (needsKeys) {
+      const { error: payErr } = await supabase.rpc("buy_masquerade_pass");
+      if (payErr) {
+        setBusy(false);
+        setInvite(null);
+        setNeedsKeys(false);
+        setNote(payErr.message.includes("NOT_ENOUGH_KEYS") ? "You need 5 Keys to join. Get Keys from Home." : "Couldn't use Keys. Try again.");
+        return;
+      }
+    }
+    const { data, error } = await supabase.rpc("accept_masquerade_invite", { p_invite: invite.id });
     setBusy(false);
+    if (error?.message.includes("NEEDS_KEYS")) {
+      setNeedsKeys(true); // ask again, this time for 5 Keys
+      return;
+    }
     setInvite(null);
+    setNeedsKeys(false);
     if (data) router.push(`/masquerade/${data}`);
     else setNote("They already found someone. Keep your mask handy!");
   }, [invite, router]);
@@ -73,7 +89,7 @@ export function InviteListener({ userId }: { userId: string }) {
 
   return (
     <>
-      {invite && <InviteSheet invite={invite} busy={busy} onAccept={accept} onDecline={decline} onExpire={() => setInvite(null)} />}
+      {invite && <InviteSheet invite={invite} busy={busy} needsKeys={needsKeys} onAccept={accept} onDecline={decline} onExpire={() => setInvite(null)} />}
       {note && (
         <div className="fixed inset-x-4 top-4 z-50 mx-auto max-w-sm rounded-2xl bg-ink px-4 py-3 text-center text-sm font-medium text-white shadow-lift animate-fade-up">
           {note}

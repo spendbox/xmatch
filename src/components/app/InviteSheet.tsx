@@ -11,12 +11,14 @@ import type { Invite } from "./InviteListener";
 export function InviteSheet({
   invite,
   busy,
+  needsKeys,
   onAccept,
   onDecline,
   onExpire,
 }: {
   invite: Invite;
   busy?: boolean;
+  needsKeys?: boolean;
   onAccept: () => void;
   onDecline: () => void;
   onExpire: () => void;
@@ -57,12 +59,17 @@ export function InviteSheet({
           <Stat label="Spice" value={<Chilis level={invite.spice} />} sub={spiceLabel(invite.spice)} />
         </dl>
 
+        {needsKeys && (
+          <p className="mt-4 rounded-2xl bg-gold-soft px-4 py-3 text-[13px] font-medium text-[#8a5a00]">
+            You&apos;ve used today&apos;s 5 free masquerades. Join this one for 5 Keys?
+          </p>
+        )}
         <div className="mt-6 flex gap-3">
           <Button variant="secondary" className="h-14 flex-1" onClick={onDecline}>
             Not now
           </Button>
           <Button variant="primary" className="h-14 flex-[1.4]" onClick={onAccept} loading={busy}>
-            Join · {Math.max(0, left)}s
+            {needsKeys ? `Join for 5 Keys · ${Math.max(0, left)}s` : `Join · ${Math.max(0, left)}s`}
           </Button>
         </div>
       </div>

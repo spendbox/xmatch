@@ -17,7 +17,7 @@ Live at **dashpad.site** · Built with Next.js (hosted on Vercel) and Supabase (
 - **Open to Masquerade** switch: if you're online, you get a pop-up when someone masked is looking for someone like you.
 - Matches list and chat: replies (swipe or press and hold), photos & videos, voice notes, delete for everyone, voice & video calls
 - Report & unmatch, leave any time
-- Gifts button is in place, marked "coming soon"
+- **Keys** (in-app currency) bought with **Paystack**: gifts, +2 minutes in a masked chat, and extra masquerades after 5 free a day
 
 ## Setting it up (one time)
 
@@ -51,6 +51,18 @@ npm run dev                  # http://localhost:3000
 `/preview/<screen>` shows each screen with sample data during development (`masquerade`, `waiting`, `chat`, `decide`, `matched`, `ended`, `invite`, `matches`, `match-chat`, `profile`, `onboarding`). It is switched off on the live site.
 
 Database rules live in `supabase/migrations/0001_dashpad.sql`. Matching, timers, unmask decisions and chat deletion all run inside the database, so nobody can cheat them from the browser.
+
+## Payments (Paystack)
+
+1. Log in to [dashboard.paystack.com](https://dashboard.paystack.com) → **Settings → API Keys & Webhooks**.
+2. Copy your **Secret Key** (use the *test* key first, then the *live* key when you launch).
+3. Set **Webhook URL** to `https://dashpad.site/api/paystack/webhook` and save. (This makes sure Keys arrive even if someone closes the page after paying.)
+4. Add to Vercel → Environment Variables, then redeploy:
+   | Name | Value |
+   |---|---|
+   | `PAYSTACK_SECRET_KEY` | your Paystack secret key (keep private) |
+
+Key packs and prices live in `src/lib/keys.ts` (50 for ₦1,000 · 120 for ₦2,000 · 300 for ₦4,500). Gift prices are in the database (`gifts` table).
 
 ## Calls (voice & video)
 

@@ -155,7 +155,7 @@ function Empty() {
       <p className="mt-2 max-w-xs text-[15px] leading-relaxed text-muted">
         Your matches show up here after you both unmask. Five good minutes is all it takes.
       </p>
-      <ButtonLink href="/masquerade" variant="gold" size="lg" className="mt-6" loadingText="Opening…">
+      <ButtonLink href="/home" variant="gold" size="lg" className="mt-6" loadingText="Opening…">
         <MessageCircle size={19} /> Start a Masquerade
       </ButtonLink>
     </div>

@@ -301,7 +301,7 @@ function AllSet({ name }: { name: string }) {
         </div>
         <h1 className="mt-8 font-display text-[34px] leading-tight font-semibold">You&apos;re all set{name ? `, ${name}` : ""}!</h1>
         <p className="mt-3 text-[16px] leading-relaxed text-muted">Your mask is ready. Find someone on your wavelength and see if the vibe is mutual.</p>
-        <ButtonLink href="/masquerade" variant="gold" size="lg" className="mt-8" loadingText="Opening…">
+        <ButtonLink href="/home" variant="gold" size="lg" className="mt-8" loadingText="Opening…">
           Put on your mask <ArrowRight size={18} />
         </ButtonLink>
       </div>

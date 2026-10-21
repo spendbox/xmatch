@@ -17,6 +17,8 @@ import { ReportSheet } from "@/components/masquerade/ReportSheet";
 import { readMediaInfo, removeChatMedia, uploadChatMedia } from "@/lib/chatMedia";
 import { useCall } from "@/components/calls/CallProvider";
 import type { MediaKind } from "@/components/chat/Composer";
+import { GiftSheet, keysError } from "@/components/keys/GiftSheet";
+import { useWallet } from "@/components/keys/useWallet";
 import { ProfileSheet } from "./ProfileSheet";
 
 export function MatchChat({
@@ -46,6 +48,8 @@ export function MatchChat({
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
   const age = ageFromBirthdate(other.birthdate);
   const { startCall, call } = useCall();
+  const [giftOpen, setGiftOpen] = useState(false);
+  const { wallet, refresh: refreshWallet } = useWallet(myId);
   const nameOf = (id: string | null) => (id === myId ? "You" : other.display_name ?? "Them");
 
   useEffect(() => {
@@ -240,7 +244,10 @@ export function MatchChat({
         replyTo={replyTo}
         replyName={replyTo ? nameOf(replyTo.sender_id) : undefined}
         onCancelReply={() => setReplyTo(null)}
-        onGift={() => setToast("Gifts are coming soon 🎁")}
+        onGift={() => {
+          refreshWallet();
+          setGiftOpen(true);
+        }}
         placeholder={`Message ${other.display_name}`}
       />
 
@@ -249,6 +256,18 @@ export function MatchChat({
           {toast}
         </div>
       )}
+      <GiftSheet
+        open={giftOpen}
+        onClose={() => setGiftOpen(false)}
+        balance={wallet?.balance ?? null}
+        toName={other.display_name ?? "them"}
+        onSend={async (g) => {
+          const { error } = await supabase.rpc("send_gift", { p_gift: g.id, p_match: matchId });
+          if (error) return keysError(error.message);
+          refreshWallet();
+          return null;
+        }}
+      />
       {showProfile && <ProfileSheet profile={other} shared={shared} onClose={() => setShowProfile(false)} />}
       {reporting && <ReportSheet onClose={() => setReporting(false)} onReport={report} />}
     </div>

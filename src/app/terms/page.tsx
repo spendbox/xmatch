@@ -155,16 +155,27 @@ const sections: LegalSection[] = [
   },
   {
     id: "payments",
-    title: "Paid features and gifts",
+    title: "Keys, gifts and payments",
     body: (
       <>
         <p>
-          Dashpad is free to use today. We may introduce paid features in future, such as sending virtual gifts. If we do, prices and what you
-          get will be shown clearly before you pay, and any extra terms will be shown at that time.
+          Dashpad is free to join. Everyone gets <strong>5 free masquerades every 24 hours</strong>. Some extras use
+          <strong> Keys</strong>, our in-app currency:
+        </p>
+        <ul>
+          <li>sending gifts in a chat;</li>
+          <li>adding 2 minutes to a masked chat (for both people);</li>
+          <li>extra masquerades after your free ones (5 Keys each).</li>
+        </ul>
+        <p>
+          You can buy Keys in packs. Prices are shown in naira before you pay, and payments are processed securely by{" "}
+          <strong>Paystack</strong>. We never see or store your card details.
         </p>
         <p>
-          Virtual items have no cash value, can&apos;t be exchanged for money, and are not refundable except where the law requires. Payments will
-          be processed by a third-party payment provider.
+          Keys and gifts have no cash value, can only be used on Dashpad, can&apos;t be transferred, sold or exchanged for money, and
+          are not refundable except where the law requires or a payment was charged by mistake. If you&apos;re charged but don&apos;t
+          receive your Keys, contact us and we&apos;ll put it right. If your account is closed for breaking these Terms, unused Keys
+          are lost.
         </p>
       </>
     ),
@@ -255,6 +266,7 @@ export default function TermsPage() {
       other={{ href: "/privacy", label: "Privacy Policy" }}
       summary={[
         "You must be 18 or older, and honest about who you are.",
+        "5 free masquerades a day. Keys pay for gifts, +2 minutes and extra masquerades. Keys have no cash value.",
         "Masked chats are deleted unless you both choose to unmask.",
         "Be respectful. Harassment, scams, unwanted sexual content and impersonation get you banned.",
         "You own your photos and messages. We only use them to run Dashpad.",

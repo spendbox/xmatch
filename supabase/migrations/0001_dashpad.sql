@@ -960,3 +960,385 @@ end $$;
 do $$ begin
   alter publication supabase_realtime add table public.calls;
 exception when duplicate_object then null; end $$;
+
+-- ===========================================================================
+-- Keys (in-app currency), Paystack payments, gifts, +2 minutes,
+-- and the daily free Masquerade allowance
+-- ===========================================================================
+
+create table if not exists public.wallets (
+  user_id uuid primary key references public.profiles on delete cascade,
+  balance int not null default 0 check (balance >= 0),
+  passes int not null default 0 check (passes >= 0), -- prepaid extra masquerades
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.key_transactions (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references public.profiles on delete cascade,
+  amount int not null,          -- + added, - spent
+  reason text not null,         -- purchase, gift, extend, extra_masquerade, refund
+  ref text,
+  created_at timestamptz not null default now()
+);
+create index if not exists key_transactions_user on public.key_transactions (user_id, id desc);
+
+create table if not exists public.payments (
+  reference text primary key,
+  user_id uuid references public.profiles on delete set null,
+  pack_id text not null,
+  keys int not null,
+  amount_kobo int not null,
+  currency text not null default 'NGN',
+  status text not null default 'pending' check (status in ('pending', 'paid', 'failed')),
+  created_at timestamptz not null default now(),
+  paid_at timestamptz
+);
+
+alter table public.wallets enable row level security;
+alter table public.key_transactions enable row level security;
+alter table public.payments enable row level security;
+drop policy if exists "read own wallet" on public.wallets;
+create policy "read own wallet" on public.wallets for select using (user_id = auth.uid());
+drop policy if exists "read own key history" on public.key_transactions;
+create policy "read own key history" on public.key_transactions for select using (user_id = auth.uid());
+drop policy if exists "read own payments" on public.payments;
+create policy "read own payments" on public.payments for select using (user_id = auth.uid());
+
+create or replace function public.add_keys(uid uuid, amount int, reason text, ref text default null) returns int
+language plpgsql security definer set search_path = public as $$
+declare bal int;
+begin
+  insert into wallets (user_id, balance) values (uid, amount)
+  on conflict (user_id) do update set balance = wallets.balance + excluded.balance, updated_at = now()
+  returning balance into bal;
+  insert into key_transactions (user_id, amount, reason, ref) values (uid, amount, reason, ref);
+  return bal;
+end $$;
+
+create or replace function public.spend_keys(uid uuid, amount int, reason text, ref text default null) returns int
+language plpgsql security definer set search_path = public as $$
+declare bal int;
+begin
+  update wallets set balance = balance - amount, updated_at = now()
+  where user_id = uid and balance >= amount
+  returning balance into bal;
+  if not found then raise exception 'NOT_ENOUGH_KEYS'; end if;
+  insert into key_transactions (user_id, amount, reason, ref) values (uid, -amount, reason, ref);
+  return bal;
+end $$;
+
+-- Called by the server only, after Paystack confirms the payment. Safe to call twice.
+create or replace function public.complete_payment(p_reference text, p_amount_kobo int) returns text
+language plpgsql security definer set search_path = public as $$
+declare p payments;
+begin
+  select * into p from payments where reference = p_reference for update;
+  if not found then return 'unknown'; end if;
+  if p.status = 'paid' then return 'already_paid'; end if;
+  if p_amount_kobo < p.amount_kobo then
+    update payments set status = 'failed' where reference = p_reference;
+    return 'amount_mismatch';
+  end if;
+  update payments set status = 'paid', paid_at = now() where reference = p_reference;
+  perform public.add_keys(p.user_id, p.keys, 'purchase', p_reference);
+  return 'paid';
+end $$;
+
+revoke execute on function public.add_keys(uuid, int, text, text) from public, anon, authenticated;
+revoke execute on function public.spend_keys(uuid, int, text, text) from public, anon, authenticated;
+revoke execute on function public.complete_payment(text, int) from public, anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Daily allowance: 5 free masquerades every 24 hours, then 5 Keys each
+-- ---------------------------------------------------------------------------
+alter table public.masquerade_sessions add column if not exists paid_a boolean not null default false;
+alter table public.masquerade_sessions add column if not exists paid_b boolean not null default false;
+alter table public.masquerade_sessions add column if not exists extensions int not null default 0;
+alter table public.masquerade_queue add column if not exists paid boolean not null default false;
+
+create or replace function public.free_used(uid uuid) returns int
+language sql stable security definer set search_path = public as $$
+  select count(*)::int from masquerade_sessions
+  where started_at > now() - interval '24 hours'
+    and ((user_a = uid and not paid_a) or (user_b = uid and not paid_b))
+$$;
+
+-- Uses a free slot if there is one, otherwise a prepaid pass. Returns true if a pass was used.
+create or replace function public.take_masquerade_slot(uid uuid) returns boolean
+language plpgsql security definer set search_path = public as $$
+begin
+  if public.free_used(uid) < 5 then return false; end if;
+  update wallets set passes = passes - 1, updated_at = now() where user_id = uid and passes > 0;
+  if found then return true; end if;
+  raise exception 'NEEDS_KEYS';
+end $$;
+revoke execute on function public.take_masquerade_slot(uuid) from public, anon, authenticated;
+
+create or replace function public.queue_allowance() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  -- Re-joining the waiting list doesn't cost anything extra
+  if exists (select 1 from masquerade_queue where user_id = new.user_id) then return new; end if;
+  new.paid := public.take_masquerade_slot(new.user_id);
+  return new;
+end $$;
+drop trigger if exists masquerade_queue_allowance on public.masquerade_queue;
+create trigger masquerade_queue_allowance before insert on public.masquerade_queue
+  for each row execute function public.queue_allowance();
+
+-- Spend 5 Keys for one more masquerade today
+create or replace function public.buy_masquerade_pass() returns int
+language plpgsql security definer set search_path = public as $$
+declare uid uuid := auth.uid(); n int;
+begin
+  perform public.spend_keys(uid, 5, 'extra_masquerade');
+  update wallets set passes = passes + 1 where user_id = uid returning passes into n;
+  return n;
+end $$;
+
+-- Leaving the waiting list gives a paid pass back for next time
+create or replace function public.cancel_masquerade() returns void
+language plpgsql security definer set search_path = public as $$
+declare was_paid boolean;
+begin
+  delete from masquerade_queue where user_id = auth.uid() returning paid into was_paid;
+  if was_paid then update wallets set passes = passes + 1 where user_id = auth.uid(); end if;
+  update masquerade_invites set status = 'expired' where from_user = auth.uid() and status = 'pending';
+end $$;
+
+create or replace function public.create_masquerade_session(
+  a uuid, b uuid, p_intent public.intent, s_a smallint, s_b smallint
+) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare
+  sid uuid;
+  lvl smallint := round((s_a + s_b) / 2.0)::smallint; -- questions follow the average of both picks
+  alias_a text := public.random_alias();
+  first_q text;
+  pa boolean := coalesce((select paid from masquerade_queue where user_id = a), false);
+  pb boolean := coalesce((select paid from masquerade_queue where user_id = b), false);
+begin
+  insert into masquerade_sessions (user_a, user_b, intent, spice_a, spice_b, spice_level, alias_a, alias_b, ends_at, paid_a, paid_b)
+  values (a, b, p_intent, s_a, s_b, lvl, alias_a, public.random_alias(alias_a), now() + interval '5 minutes', pa, pb)
+  returning id into sid;
+
+  select body into first_q from icebreakers where spice = lvl order by random() limit 1;
+  if first_q is not null then
+    insert into masquerade_messages (session_id, kind, body) values (sid, 'icebreaker', first_q);
+  end if;
+
+  delete from masquerade_queue where user_id in (a, b);
+  update masquerade_invites set status = 'expired'
+    where status = 'pending' and (from_user in (a, b) or to_user in (a, b));
+  return sid;
+end $$;
+revoke execute on function public.create_masquerade_session(uuid, uuid, public.intent, smallint, smallint) from public, anon, authenticated;
+
+drop function if exists public.accept_masquerade_invite(uuid);
+create or replace function public.accept_masquerade_invite(p_invite uuid) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  inv masquerade_invites;
+  sender masquerade_queue;
+  me profiles;
+  sid uuid;
+  paid boolean;
+begin
+  perform pg_advisory_xact_lock(424242);
+  select * into inv from masquerade_invites where id = p_invite and to_user = uid for update;
+  if not found or inv.status <> 'pending' or inv.expires_at < now() then
+    update masquerade_invites set status = 'expired' where id = p_invite and status = 'pending';
+    return null;
+  end if;
+
+  select * into sender from masquerade_queue
+  where user_id = inv.from_user and last_ping_at > now() - interval '30 seconds';
+  if not found or public.my_active_session(uid) is not null then
+    update masquerade_invites set status = 'expired' where id = p_invite;
+    return null;
+  end if;
+
+  paid := public.take_masquerade_slot(uid); -- may ask for Keys
+  select * into me from profiles where id = uid;
+  sid := public.create_masquerade_session(inv.from_user, uid, sender.intent, sender.spice, me.pref_spice);
+  update masquerade_sessions set paid_b = paid where id = sid;
+  update masquerade_invites set status = 'accepted', session_id = sid where id = p_invite;
+  return sid;
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- Gifts and +2 minutes
+-- ---------------------------------------------------------------------------
+create table if not exists public.gifts (
+  id text primary key,
+  name text not null,
+  emoji text not null,
+  price int not null check (price > 0),
+  sort int not null default 0
+);
+alter table public.gifts enable row level security;
+drop policy if exists "anyone reads gifts" on public.gifts;
+create policy "anyone reads gifts" on public.gifts for select using (true);
+insert into public.gifts (id, name, emoji, price, sort) values
+  ('rose', 'Rose', '🌹', 5, 1),
+  ('coffee', 'Coffee date', '☕', 10, 2),
+  ('chocolate', 'Chocolate', '🍫', 15, 3),
+  ('cocktail', 'Cocktail', '🍸', 20, 4),
+  ('teddy', 'Teddy bear', '🧸', 30, 5),
+  ('bouquet', 'Bouquet', '💐', 40, 6),
+  ('crown', 'Crown', '👑', 60, 7),
+  ('diamond', 'Diamond', '💎', 100, 8)
+on conflict (id) do update set name = excluded.name, emoji = excluded.emoji, price = excluded.price, sort = excluded.sort;
+
+alter table public.masquerade_messages drop constraint if exists masquerade_messages_kind_check;
+alter table public.masquerade_messages add constraint masquerade_messages_kind_check check (kind in ('text', 'icebreaker', 'gift', 'system'));
+
+alter table public.messages drop constraint if exists messages_kind_check;
+alter table public.messages add constraint messages_kind_check check (kind in ('text', 'image', 'video', 'audio', 'call', 'gift'));
+alter table public.messages drop constraint if exists messages_content_check;
+alter table public.messages add constraint messages_content_check check (
+  char_length(body) <= 2000 and (
+    (kind = 'text' and (char_length(body) >= 1 or deleted_at is not null))
+    or (kind in ('image', 'video', 'audio') and (media_path is not null or deleted_at is not null))
+    or kind in ('call', 'gift')
+  )
+);
+
+-- Send a gift in a masked chat (p_session) or to a match (p_match)
+create or replace function public.send_gift(p_gift text, p_match uuid default null, p_session uuid default null) returns int
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  g gifts;
+  bal int;
+begin
+  select * into g from gifts where id = p_gift;
+  if not found then raise exception 'Unknown gift'; end if;
+  if p_match is not null then
+    if not exists (select 1 from matches where id = p_match and (user_a = uid or user_b = uid)) then raise exception 'Not your match'; end if;
+    bal := public.spend_keys(uid, g.price, 'gift', g.id);
+    insert into messages (match_id, sender_id, kind, body, media_meta)
+    values (p_match, uid, 'gift', g.id, jsonb_build_object('gift', g.id));
+  elsif p_session is not null then
+    if not exists (select 1 from masquerade_sessions where id = p_session and (user_a = uid or user_b = uid)
+                   and status = 'active' and now() < ends_at) then
+      raise exception 'This chat has ended';
+    end if;
+    bal := public.spend_keys(uid, g.price, 'gift', g.id);
+    insert into masquerade_messages (session_id, sender_id, kind, body) values (p_session, uid, 'gift', g.id);
+  else
+    raise exception 'Choose who to send it to';
+  end if;
+  return bal;
+end $$;
+
+-- Add 2 minutes to a masked chat for 10 Keys (up to 3 times)
+create or replace function public.extend_masquerade(p_session uuid) returns timestamptz
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  s masquerade_sessions;
+begin
+  select * into s from masquerade_sessions where id = p_session and (user_a = uid or user_b = uid) for update;
+  if not found or s.status <> 'active' or now() >= s.ends_at then raise exception 'This chat has ended'; end if;
+  if s.extensions >= 3 then raise exception 'MAX_EXTENSIONS'; end if;
+  perform public.spend_keys(uid, 10, 'extend', p_session::text);
+  update masquerade_sessions set ends_at = ends_at + interval '2 minutes', extensions = extensions + 1
+  where id = p_session returning * into s;
+  insert into masquerade_messages (session_id, sender_id, kind, body)
+  values (p_session, uid, 'system', (case when s.user_a = uid then s.alias_a else s.alias_b end) || ' added 2 more minutes');
+  return s.ends_at;
+end $$;
+
+-- When a masked chat becomes a match, keep the conversation (and the gifts)
+create or replace function public.finalize_masquerade(p_session uuid) returns void
+language plpgsql security definer set search_path = public as $$
+declare
+  s masquerade_sessions;
+  mid uuid;
+begin
+  select * into s from masquerade_sessions where id = p_session for update;
+  if not found or s.status <> 'active' then return; end if;
+
+  if s.unmask_a is true and s.unmask_b is true then
+    insert into matches (user_a, user_b, session_id, intent)
+    values (least(s.user_a, s.user_b), greatest(s.user_a, s.user_b), s.id, s.intent)
+    on conflict (user_a, user_b) do update set session_id = excluded.session_id
+    returning id into mid;
+
+    insert into messages (match_id, sender_id, kind, body, media_meta, created_at)
+    select mid, sender_id,
+      case when kind = 'gift' then 'gift' else 'text' end,
+      case when kind = 'icebreaker' then '💬 ' || body else body end,
+      case when kind = 'gift' then jsonb_build_object('gift', body) else null end,
+      created_at
+    from masquerade_messages where session_id = s.id and kind <> 'system' order by id;
+
+    update masquerade_sessions set status = 'matched', match_id = mid where id = s.id;
+    delete from masquerade_messages where session_id = s.id;
+  elsif s.unmask_a is false or s.unmask_b is false
+        or now() > s.ends_at + interval '90 seconds' then
+    update masquerade_sessions set status = 'ended',
+      ended_reason = coalesce(ended_reason, case when now() > s.ends_at + interval '90 seconds'
+        and (s.unmask_a is null or s.unmask_b is null) then 'timeout' else 'declined' end)
+    where id = s.id;
+    delete from masquerade_messages where session_id = s.id;
+  end if;
+end $$;
+revoke execute on function public.finalize_masquerade(uuid) from public, anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Home screen numbers
+-- ---------------------------------------------------------------------------
+create or replace function public.my_wallet() returns json
+language sql stable security definer set search_path = public as $$
+  select json_build_object(
+    'balance', coalesce((select balance from wallets where user_id = auth.uid()), 0),
+    'passes', coalesce((select passes from wallets where user_id = auth.uid()), 0),
+    'free_left', greatest(0, 5 - public.free_used(auth.uid())),
+    'next_free_at', (
+      select min(started_at) + interval '24 hours' from masquerade_sessions
+      where started_at > now() - interval '24 hours'
+        and ((user_a = auth.uid() and not paid_a) or (user_b = auth.uid() and not paid_b))
+    )
+  )
+$$;
+
+create or replace function public.home_stats() returns json
+language plpgsql stable security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  me profiles;
+  loc accounts_private;
+begin
+  select * into me from profiles where id = uid;
+  select * into loc from accounts_private where user_id = uid;
+  return json_build_object(
+    'online', (
+      select count(*) from profiles p
+      left join accounts_private a on a.user_id = p.id
+      where p.id <> uid
+        and p.last_seen_at > now() - interval '10 minutes'
+        and (p.open_to_masquerade or exists (select 1 from masquerade_queue q where q.user_id = p.id))
+        and public.within_km(public.distance_km(loc.lat, loc.lng, a.lat, a.lng), case when loc.lat is null then null else me.pref_max_km end)
+    ),
+    'week_chats', (
+      select count(*) from masquerade_sessions
+      where (user_a = uid or user_b = uid) and started_at > now() - interval '7 days'
+    ),
+    'week_unmasks', (
+      select count(*) from masquerade_sessions
+      where status = 'matched' and (user_a = uid or user_b = uid) and started_at > now() - interval '7 days'
+    ),
+    'gifts_received', (
+      select count(*) from messages m join matches x on x.id = m.match_id
+      where m.kind = 'gift' and m.sender_id <> uid and (x.user_a = uid or x.user_b = uid)
+    )
+  );
+end $$;
+
+do $$ begin
+  alter publication supabase_realtime add table public.wallets;
+exception when duplicate_object then null; end $$;

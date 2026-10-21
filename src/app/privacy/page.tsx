@@ -28,6 +28,7 @@ const sections: LegalSection[] = [
           <li><strong>Preferences:</strong> what you&apos;re here for, who you&apos;d like to meet, age range, distance and question spice level.</li>
           <li><strong>Messages:</strong> what you send in masked chats and to your matches.</li>
           <li><strong>Reports:</strong> details you give when reporting someone.</li>
+          <li><strong>Purchases:</strong> the Key packs you buy, payment references and your Keys history.</li>
         </ul>
         <p><strong>Information collected when you use Dashpad</strong></p>
         <ul>
@@ -84,7 +85,7 @@ const sections: LegalSection[] = [
         <ul>
           <li><strong>Other members</strong>, as described in section 3.</li>
           <li><strong>Service providers</strong> who host and run Dashpad for us, such as Supabase (database, file storage and login) and Vercel (website hosting), under contracts that protect your data.</li>
-          <li><strong>Payment providers</strong>, if and when paid features launch.</li>
+          <li><strong>Paystack</strong>, to process Key purchases. Paystack handles your card or bank details; we only receive the payment result and amount.</li>
           <li><strong>Authorities</strong>, when required by law or to protect someone&apos;s safety.</li>
           <li><strong>A new owner</strong>, if Dashpad is ever sold or merged, under this same policy.</li>
         </ul>

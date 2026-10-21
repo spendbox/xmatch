@@ -16,6 +16,7 @@ import { Toggle } from "@/components/ui/Toggle";
 import { Sheet } from "@/components/ui/Sheet";
 import { deleteAccount } from "@/app/(app)/profile/actions";
 import Link from "next/link";
+import { KeyCoin } from "@/components/keys/KeyIcon";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { ProfileSheet } from "@/components/matches/ProfileSheet";
 import { PhotoGrid } from "./PhotoGrid";
@@ -207,25 +208,26 @@ export function ProfileEditor({
           </div>
           <Toggle checked={open} onChange={toggleOpen} label="Open to Masquerade" />
         </div>
-        <ButtonLink href="/masquerade" variant="ghost" className="mt-3 w-full rounded-2xl bg-cream px-4 text-[14px]">
+        <ButtonLink href="/home" variant="ghost" className="mt-3 w-full rounded-2xl bg-cream px-4 text-[14px]">
           Change who you meet <ChevronRight size={18} />
         </ButtonLink>
       </section>
 
-      {/* Gifts */}
-      <section className="relative mt-3 overflow-hidden rounded-3xl bg-gradient-to-br from-brand via-[#7b5cf0] to-[#c2306b] p-5 text-white">
-        <div aria-hidden className="absolute -top-10 -right-6 h-32 w-32 animate-blob rounded-full bg-gold/30 blur-2xl" />
-        <div className="relative flex items-center gap-4">
-          <span className="grid h-12 w-12 shrink-0 animate-float place-items-center rounded-2xl bg-white/15 backdrop-blur">
-            <Gift size={24} strokeWidth={1.75} />
-          </span>
-          <div className="flex-1">
-            <p className="font-semibold">Gifts are coming soon</p>
-            <p className="text-[13px] text-white/80">Send something sweet to your matches.</p>
-          </div>
-          <span className="rounded-full bg-white/20 px-2.5 py-1 text-[11px] font-bold tracking-wide uppercase">Soon</span>
+      {/* Keys */}
+      <Link
+        href="/wallet"
+        className="relative mt-3 flex items-center gap-4 overflow-hidden rounded-3xl bg-gradient-to-br from-[#ffcf5c] via-gold to-[#e8962a] p-5 text-ink transition active:scale-[0.98]"
+      >
+        <div aria-hidden className="absolute -top-10 -right-6 h-32 w-32 rounded-full bg-white/25" />
+        <KeyCoin size={48} className="relative animate-float" />
+        <div className="relative flex-1">
+          <p className="font-semibold">Keys</p>
+          <p className="text-[13px] text-ink/70">Gifts, +2 minutes and extra masquerades</p>
         </div>
-      </section>
+        <span className="relative inline-flex items-center gap-1 rounded-full bg-white/40 px-3 py-1.5 text-[13px] font-bold">
+          Get Keys <ChevronRight size={15} />
+        </span>
+      </Link>
 
       {/* Account */}
       <section className="mt-3 overflow-hidden rounded-3xl border border-line bg-surface shadow-card">
