@@ -7,6 +7,7 @@ import { GIFTS, type Gift } from "@/lib/keys";
 import { Sheet } from "@/components/ui/Sheet";
 import { Button, tapFeedback } from "@/components/ui/Button";
 import { KeyCoin } from "./KeyIcon";
+import { GiftArt } from "./GiftArt";
 
 export function GiftSheet({
   open,
@@ -78,7 +79,7 @@ export function GiftSheet({
                 on ? "border-brand bg-brand-soft/70 shadow-[0_6px_18px_-8px_rgb(91_63_217/0.45)]" : "border-line bg-surface",
               )}
             >
-              <span className={clsx("text-[30px] leading-none", on && "animate-pop")}>{g.emoji}</span>
+              <GiftArt id={g.id} size={44} className={clsx("drop-shadow-sm", on && "animate-pop")} />
               <span className="text-[11px] font-semibold text-ink-soft">{g.name}</span>
               <span className="inline-flex items-center gap-0.5 text-[11px] font-bold text-[#a26b00]">
                 <KeyCoin size={12} /> {g.price}

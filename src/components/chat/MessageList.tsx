@@ -8,6 +8,7 @@ import {
 import type { ChatMessage } from "@/lib/types";
 import { formatDuration } from "@/lib/chatMedia";
 import { giftById } from "@/lib/keys";
+import { GiftArt } from "@/components/keys/GiftArt";
 import { Sheet } from "@/components/ui/Sheet";
 import { Spinner, tapFeedback } from "@/components/ui/Button";
 import { AudioPlayer } from "./AudioPlayer";
@@ -39,7 +40,7 @@ export function snippet(m: ChatMessage | undefined) {
     case "call":
       return "📞 Call";
     case "gift":
-      return `${giftById(m.media_meta?.gift ?? m.body)?.emoji ?? "🎁"} Gift`;
+      return `Gift · ${giftById(m.media_meta?.gift ?? m.body)?.name ?? "Surprise"}`;
     default:
       return m.body.replace(/^💬 /, "");
   }
@@ -89,7 +90,7 @@ export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDat
               <div className={clsx("my-2 flex", mine ? "justify-end" : "justify-start")} data-msg={m.id}>
                 <div className={clsx("relative w-[200px] overflow-hidden rounded-[24px] p-4 text-center", mine ? "bg-gradient-to-br from-brand to-[#c2306b] text-white" : "border border-gold/40 bg-gradient-to-br from-gold-soft to-[#fff1f4]")}>
                   <span aria-hidden className="absolute -top-6 -right-6 h-20 w-20 rounded-full bg-white/20" />
-                  <p className="relative animate-pop text-[52px] leading-none">{g?.emoji ?? "🎁"}</p>
+                  <GiftArt id={g?.id ?? ""} size={76} className="relative mx-auto animate-pop drop-shadow-md" />
                   <p className={clsx("relative mt-2 text-[14px] font-semibold", !mine && "text-ink")}>
                     {mine ? `You sent a ${g?.name ?? "gift"}` : `${nameOf(m.sender_id)} sent you a ${g?.name ?? "gift"}`}
                   </p>

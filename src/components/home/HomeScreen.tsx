@@ -15,6 +15,7 @@ import { Sheet } from "@/components/ui/Sheet";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { INTENT_ICONS, MaskLineIcon, SpiceIcon } from "@/components/ui/icons";
 import { KeyCoin } from "@/components/keys/KeyIcon";
+import { GiftArt } from "@/components/keys/GiftArt";
 import { useWallet } from "@/components/keys/useWallet";
 import { Waiting } from "@/components/masquerade/Waiting";
 import { MeetSheet } from "./MeetSheet";
@@ -250,7 +251,11 @@ export function HomeScreen({
           </span>
           <p className="mt-3 text-[15px] font-semibold">Gifts</p>
           <p className="text-[12px] leading-snug text-muted">Send a little love in any chat · from {GIFTS[0].price} Keys</p>
-          <p className="mt-2 text-[20px] tracking-tight">🌹🍸👑💎</p>
+          <div className="mt-2 flex -space-x-1.5">
+            {["rose", "cocktail", "crown", "diamond"].map((id) => (
+              <GiftArt key={id} id={id} size={28} />
+            ))}
+          </div>
         </Link>
         <Link href="/wallet" className="rounded-3xl border border-line bg-surface p-4 shadow-card transition active:scale-[0.97]">
           <span className="grid h-11 w-11 place-items-center rounded-[14px] bg-mint-soft text-mint">

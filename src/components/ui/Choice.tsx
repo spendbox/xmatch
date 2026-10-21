@@ -51,8 +51,8 @@ export function Choice<T extends string | number>({
               onChange(o.value);
             }}
             className={clsx(
-              "relative flex rounded-2xl border text-left transition duration-200 active:scale-[0.97]",
-              layout === "stack" ? "min-h-[92px] flex-col items-center justify-center gap-2 px-2 py-3 text-center" : "items-center gap-3.5 p-3.5",
+              "relative flex rounded-2xl border transition duration-200 active:scale-[0.97]",
+              layout === "stack" ? "min-h-[92px] flex-col items-center justify-center gap-2 px-2 py-3 text-center" : "items-center gap-3.5 p-3.5 text-left",
               active
                 ? "border-brand bg-brand-soft/70 shadow-[0_6px_18px_-8px_rgb(91_63_217/0.45)]"
                 : "border-line bg-surface hover:border-line-strong",
