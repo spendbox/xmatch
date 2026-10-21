@@ -19,7 +19,7 @@ const VIBE_SIGNALS = [
     icon: <InterestIcon name="Music" size={22} />,
     tone: "bg-[#fde8f1] text-[#c2306b]",
     title: "Shared interests",
-    body: "People who love the things you love are matched with you first.",
+    body: "People into the same things as you are matched with you first.",
   },
   {
     icon: <ChiliIcon size={22} />,
@@ -70,11 +70,8 @@ export default function Landing() {
             <a href="#safety" className="hover:text-brand">Safety</a>
           </nav>
           <div className="flex items-center gap-2">
-            <ButtonLink href="/login" variant="secondary" className="h-10 rounded-full px-4 text-[14px]">
-              Log in
-            </ButtonLink>
-            <ButtonLink href="/signup" className="hidden h-10 rounded-full px-5 text-[14px] lg:inline-flex">
-              Join free
+            <ButtonLink href="/login" className="h-10 rounded-full px-5 text-[14px]">
+              Log in or join
             </ButtonLink>
           </div>
         </header>
@@ -102,7 +99,7 @@ export default function Landing() {
             Talk blind for 5 minutes. If the vibe checks, the masks come off.
           </p>
           <div className="mt-7 flex animate-fade-up flex-col gap-3 [animation-delay:240ms] lg:mt-9 lg:items-start">
-            <ButtonLink href="/signup" size="lg" loadingText="Opening…" className="lg:w-auto lg:px-10">
+            <ButtonLink href="/login" size="lg" loadingText="Opening…" className="lg:w-auto lg:px-10">
               Find your vibe <ArrowRight size={18} />
             </ButtonLink>
             <p className="text-[13px] text-muted">Free to join · 18+ · Takes a minute</p>
@@ -118,7 +115,7 @@ export default function Landing() {
 
       {/* Interest marquee */}
       <section className="relative mt-14" aria-label="Interests on Dashpad">
-        <p className="mb-4 text-center text-[13px] font-semibold tracking-wide text-muted uppercase">Find people who love what you love</p>
+        <p className="mb-4 text-center text-[13px] font-semibold tracking-wide text-muted uppercase">Find people into what you’re into</p>
         <div className="space-y-2.5 [mask-image:linear-gradient(to_right,transparent,black_12%,black_88%,transparent)]">
           {[row1, row2].map((row, r) => (
             <div key={r} className="flex overflow-hidden">
@@ -227,11 +224,8 @@ export default function Landing() {
               </span>
               <h2 className="mt-5 font-display text-[30px] leading-tight font-semibold lg:text-[52px]">Your vibe is waiting.</h2>
               <p className="mx-auto mt-2 max-w-xs text-[15px] text-white/70">Five minutes could change your whole week.</p>
-              <ButtonLink href="/signup" variant="gold" size="lg" className="mt-6 lg:w-auto lg:px-12" loadingText="Opening…">
+              <ButtonLink href="/login" variant="gold" size="lg" className="mt-6 lg:w-auto lg:px-12" loadingText="Opening…">
                 Put on your mask
-              </ButtonLink>
-              <ButtonLink href="/login" variant="ghost" className="mt-2 w-full text-white/80 hover:bg-white/10 lg:mx-auto lg:flex lg:w-auto">
-                I already have an account
               </ButtonLink>
             </div>
           </section>
