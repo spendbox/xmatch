@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Flag, Gift, MoreVertical, X } from "lucide-react";
+import { ArrowLeft, Flag, Gift, HeartOff, MoreVertical, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { ageFromBirthdate } from "@/lib/constants";
 import type { ChatMessage, Intent, Profile } from "@/lib/types";
@@ -110,7 +110,19 @@ export function MatchChat({
           </button>
           {menu && (
             <div className="absolute top-11 right-0 z-20 w-52 overflow-hidden rounded-2xl border border-line bg-surface shadow-lift animate-fade-up">
-              <button onClick={() => { setMenu(false); setReporting(true); }} className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-[15px] text-chili hover:bg-chili-soft">
+              <button
+                onClick={async () => {
+                  setMenu(false);
+                  if (!confirm(`Unmatch ${other.display_name}? Your conversation will be deleted for both of you.`)) return;
+                  await supabase.rpc("unmatch", { p_match: matchId });
+                  router.replace("/matches");
+                  router.refresh();
+                }}
+                className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-[15px] hover:bg-cream"
+              >
+                <HeartOff size={18} /> Unmatch
+              </button>
+              <button onClick={() => { setMenu(false); setReporting(true); }} className="flex w-full items-center gap-3 border-t border-line px-4 py-3.5 text-left text-[15px] text-chili hover:bg-chili-soft">
                 <Flag size={18} /> Report & unmatch
               </button>
             </div>

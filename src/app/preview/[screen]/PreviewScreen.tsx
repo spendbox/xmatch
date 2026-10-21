@@ -78,6 +78,12 @@ const msgs: ChatMessage[] = [
 
 export function PreviewScreen({ screen }: { screen: string }) {
   switch (screen) {
+    case "onboarding-2":
+      return <Onboarding profile={{ ...me, bio: "", interests: ["Music", "Travel"] }} demoStep={1} />;
+    case "onboarding-3":
+      return <Onboarding profile={me} demoStep={2} />;
+    case "all-set":
+      return <Onboarding profile={me} demoDone />;
     case "onboarding":
       return <Onboarding profile={{ ...me, display_name: "", birthdate: null, gender: null }} />;
     case "masquerade":

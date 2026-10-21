@@ -10,31 +10,23 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function signUp(_: AuthState, form: FormData): Promise<AuthState> {
   const email = String(form.get("email") ?? "").trim().toLowerCase();
-  const rawPhone = String(form.get("phone") ?? "");
   const password = String(form.get("password") ?? "");
-  const values = { email, phone: rawPhone };
+  const values = { email };
 
   if (!EMAIL_RE.test(email)) return { error: "Please enter a valid email address.", values };
-  const phone = normalizePhone(rawPhone);
-  if (!phone) return { error: "Please enter a valid phone number, e.g. +234 801 234 5678.", values };
   if (password.length < 8) return { error: "Your password needs at least 8 characters.", values };
   if (form.get("age_ok") !== "on") return { error: "You must be 18 or older to use Dashpad.", values };
-
-  if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    const admin = createAdminClient();
-    const { data: existing } = await admin.rpc("email_for_phone", { p_phone: phone });
-    if (existing) return { error: "That phone number is already registered. Try logging in.", values };
-  }
+  if (form.get("terms_ok") !== "on") return { error: "Please agree to the Terms and Privacy Policy to continue.", values };
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { phone } },
+    options: { data: { terms_accepted_at: new Date().toISOString() } },
   });
 
   if (error) {
-    const msg = /already registered|already been registered/i.test(error.message)
+    const msg = /already registered|already been registered|already exists/i.test(error.message)
       ? "That email is already registered. Try logging in."
       : error.message;
     return { error: msg, values };
@@ -49,25 +41,28 @@ export async function signUp(_: AuthState, form: FormData): Promise<AuthState> {
 }
 
 export async function logIn(_: AuthState, form: FormData): Promise<AuthState> {
-  const identifier = String(form.get("identifier") ?? "").trim();
+  const method = form.get("method") === "phone" ? "phone" : "email";
   const password = String(form.get("password") ?? "");
-  const values = { identifier };
+  let email = String(form.get("email") ?? "").trim().toLowerCase();
+  const phoneRaw = String(form.get("phone") ?? "");
+  const values = { method, email };
 
-  if (!identifier || !password) return { error: "Enter your email or phone and your password.", values };
+  if (!password) return { error: "Please enter your password.", values };
 
-  let email = identifier.toLowerCase();
-  if (!identifier.includes("@")) {
-    const phone = normalizePhone(identifier);
-    if (!phone) return { error: "That doesn't look like an email or phone number.", values };
-    const admin = createAdminClient();
-    const { data } = await admin.rpc("email_for_phone", { p_phone: phone });
+  if (method === "phone") {
+    const phone = normalizePhone(phoneRaw);
+    if (!phone) return { error: "Please enter a valid phone number.", values };
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return { error: "Phone log-in isn't set up yet. Use your email.", values };
+    const { data } = await createAdminClient().rpc("email_for_phone", { p_phone: phone });
     if (!data) return { error: "Wrong phone number or password.", values };
     email = data as string;
+  } else if (!EMAIL_RE.test(email)) {
+    return { error: "Please enter a valid email address.", values };
   }
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) return { error: "Wrong login details or password.", values };
+  if (error) return { error: method === "phone" ? "Wrong phone number or password." : "Wrong email or password.", values };
   redirect("/masquerade");
 }
 
@@ -75,4 +70,25 @@ export async function logOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();
   redirect("/");
+}
+
+export type ResetState = { error?: string; sent?: boolean; email?: string } | undefined;
+
+export async function requestPasswordReset(_: ResetState, form: FormData): Promise<ResetState> {
+  const email = String(form.get("email") ?? "").trim().toLowerCase();
+  if (!EMAIL_RE.test(email)) return { error: "Please enter a valid email address.", email };
+  const site = process.env.NEXT_PUBLIC_SITE_URL ?? "https://dashpad.site";
+  const supabase = await createClient();
+  // Always say "sent" so nobody can use this to check who has an account
+  await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${site}/auth/callback?next=/reset-password` });
+  return { sent: true, email };
+}
+
+export async function setNewPassword(_: ResetState, form: FormData): Promise<ResetState> {
+  const password = String(form.get("password") ?? "");
+  if (password.length < 8) return { error: "Your password needs at least 8 characters." };
+  const supabase = await createClient();
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) return { error: "That link has expired. Please request a new one." };
+  redirect("/masquerade");
 }

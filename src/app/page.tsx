@@ -225,7 +225,14 @@ export default function Landing() {
           </section>
         </Reveal>
 
-        <footer className="py-10 text-center text-xs text-muted">© {new Date().getFullYear()} Dashpad · dashpad.site · 18+ only</footer>
+        <footer className="py-10 text-center text-xs text-muted">
+          <div className="mb-2 flex justify-center gap-4 text-[13px] font-medium">
+            <a href="/terms" className="hover:text-brand">Terms</a>
+            <a href="/privacy" className="hover:text-brand">Privacy</a>
+            <a href="mailto:support@dashpad.site" className="hover:text-brand">Contact</a>
+          </div>
+          © {new Date().getFullYear()} Dashpad · dashpad.site · 18+ only
+        </footer>
       </div>
     </main>
   );

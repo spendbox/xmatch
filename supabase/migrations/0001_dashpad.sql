@@ -115,6 +115,7 @@ create table if not exists public.masquerade_invites (
 create index if not exists masquerade_invites_to on public.masquerade_invites (to_user, status);
 
 -- Location (rounded to about 1 km, never shown exactly)
+alter table public.accounts_private add column if not exists terms_accepted_at timestamptz;
 alter table public.accounts_private add column if not exists lat double precision;
 alter table public.accounts_private add column if not exists lng double precision;
 alter table public.accounts_private add column if not exists location_at timestamptz;
@@ -618,6 +619,12 @@ begin
   delete from matches where id = m.id;
 end $$;
 
+-- Unmatch: removes the match and its messages for both people
+create or replace function public.unmatch(p_match uuid) returns void
+language sql security definer set search_path = public as $$
+  delete from matches where id = p_match and (user_a = auth.uid() or user_b = auth.uid());
+$$;
+
 -- Matches list with the other person's details and the last message.
 create or replace function public.get_matches() returns json
 language sql stable security definer set search_path = public as $$
@@ -632,6 +639,24 @@ language sql stable security definer set search_path = public as $$
     where m.user_a = auth.uid() or m.user_b = auth.uid()
   ) t
 $$;
+
+-- Add, change or remove your phone number (always in +countrycode format)
+create or replace function public.set_my_phone(p_phone text) returns text
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+begin
+  if uid is null then raise exception 'Please log in'; end if;
+  p_phone := nullif(trim(p_phone), '');
+  if p_phone is not null and p_phone !~ '^\+[1-9][0-9]{6,14}$' then
+    raise exception 'Please enter a valid phone number';
+  end if;
+  if p_phone is not null and exists (select 1 from accounts_private where phone = p_phone and user_id <> uid) then
+    raise exception 'That phone number is already linked to another account';
+  end if;
+  update accounts_private set phone = p_phone where user_id = uid;
+  return p_phone;
+end $$;
 
 -- Lets the server find which email belongs to a phone number (used for phone log-in).
 create or replace function public.email_for_phone(p_phone text) returns text
@@ -655,8 +680,8 @@ create or replace function public.handle_new_user() returns trigger
 language plpgsql security definer set search_path = public as $$
 begin
   insert into profiles (id) values (new.id) on conflict do nothing;
-  insert into accounts_private (user_id, email, phone)
-  values (new.id, new.email, nullif(new.raw_user_meta_data ->> 'phone', ''))
+  insert into accounts_private (user_id, email, terms_accepted_at)
+  values (new.id, new.email, nullif(new.raw_user_meta_data ->> 'terms_accepted_at', '')::timestamptz)
   on conflict do nothing;
   return new;
 end $$;

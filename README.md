@@ -6,7 +6,10 @@ Live at **dashpad.site** · Built with Next.js (hosted on Vercel) and Supabase (
 
 ## What's in it
 
-- Sign up / log in with **email or phone + password** (no codes)
+- Sign up with **email + password** (no codes), agree to Terms & Privacy, confirm 18+
+- Log in with email, or with phone if you've added one (country picker with flags, auto-formatting)
+- Forgot password (email link), delete account, unmatch
+- Terms of Service (`/terms`) and Privacy Policy (`/privacy`)
 - Profile setup: name, birthday (18+), gender, bio, interests, up to 6 photos
 - **Masquerade**: choose what you're here for (Friends / Dating / Spicy link-up), who you'd like to meet, age range and icebreaker spice. The questions use the average of both people's spice picks.
 - 5-minute masked chat with a live timer and icebreaker questions. You only see the other person's alias, age, gender and interests.
@@ -21,7 +24,7 @@ Live at **dashpad.site** · Built with Next.js (hosted on Vercel) and Supabase (
 1. Create a project at [supabase.com](https://supabase.com).
 2. Go to **SQL Editor → New query**, paste everything from `supabase/migrations/0001_dashpad.sql`, click **Run**.
 3. Go to **Authentication → Sign In / Providers → Email** and switch **off** "Confirm email". (So people can sign up without a code.)
-4. Go to **Authentication → URL Configuration** and set Site URL to `https://dashpad.site`.
+4. Go to **Authentication → URL Configuration**: set Site URL to `https://dashpad.site`, and under Redirect URLs add `https://dashpad.site/**` (needed for password-reset emails).
 5. Go to **Project Settings → API** and copy: Project URL, `anon` public key, `service_role` secret key.
 
 ### 2. Vercel (the website)
@@ -31,7 +34,7 @@ Live at **dashpad.site** · Built with Next.js (hosted on Vercel) and Supabase (
    |---|---|
    | `NEXT_PUBLIC_SUPABASE_URL` | Project URL from Supabase |
    | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `anon` public key |
-   | `SUPABASE_SERVICE_ROLE_KEY` | `service_role` secret key (keep private) |
+   | `SUPABASE_SERVICE_ROLE_KEY` | `service_role` secret key (keep private; used for phone log-in and account deletion) |
    | `NEXT_PUBLIC_SITE_URL` | `https://dashpad.site` |
 3. Click **Deploy**.
 4. In the project, go to **Settings → Domains**, add `dashpad.site`, and follow the DNS instructions shown there at your domain registrar.
@@ -47,3 +50,8 @@ npm run dev                  # http://localhost:3000
 `/preview/<screen>` shows each screen with sample data during development (`masquerade`, `waiting`, `chat`, `decide`, `matched`, `ended`, `invite`, `matches`, `match-chat`, `profile`, `onboarding`). It is switched off on the live site.
 
 Database rules live in `supabase/migrations/0001_dashpad.sql`. Matching, timers, unmask decisions and chat deletion all run inside the database, so nobody can cheat them from the browser.
+
+## Before launch
+
+- Create the mailbox **support@dashpad.site** — the Terms, Privacy Policy and app point people there.
+- Have a lawyer review `/terms` and `/privacy` for your country, and fill in the operator's legal name and governing law (section 15 of the Terms).
