@@ -77,9 +77,10 @@ export function WalletScreen({
       )}
 
       <div className="lg:mt-4 lg:grid lg:grid-cols-12 lg:items-start lg:gap-8">
-      <div className="lg:col-span-7">
+      {/* On computers the buying side stays put while the rest scrolls */}
+      <div className="lg:sticky lg:top-6 lg:col-span-7">
       {/* Balance */}
-      <section className="relative mt-4 overflow-hidden rounded-[30px] bg-gradient-to-br from-[#ffcf5c] via-gold to-[#e8962a] p-6 text-ink shadow-[0_18px_40px_-18px_rgb(232_150_42/0.8)]">
+      <section className="relative mt-4 lg:mt-0 overflow-hidden rounded-[30px] bg-gradient-to-br from-[#ffcf5c] via-gold to-[#e8962a] p-6 text-ink shadow-[0_18px_40px_-18px_rgb(232_150_42/0.8)]">
         <div aria-hidden className="absolute -top-10 -right-10 h-40 w-40 rounded-full bg-white/25" />
         <p className="relative text-[14px] font-semibold text-ink/70">Your balance</p>
         <p className="relative mt-1 flex items-center gap-3 font-display text-[48px] leading-none font-semibold">
@@ -133,7 +134,7 @@ export function WalletScreen({
       </div>
       <div className="lg:col-span-5">
       {/* What Keys do */}
-      <h2 className="mt-8 mb-3 text-[15px] font-semibold lg:mt-4">What you can do with Keys</h2>
+      <h2 className="mt-8 mb-3 text-[15px] font-semibold lg:mt-0">What you can do with Keys</h2>
       <div className="space-y-2.5">
         <Use icon={<Gift size={20} strokeWidth={1.75} />} tone="bg-chili-soft text-chili" title="Send gifts" body="Roses, cocktails, crowns and more, from 5 Keys." />
         <Use icon={<Timer size={20} strokeWidth={1.75} />} tone="bg-mint-soft text-mint" title={`+2 minutes · ${EXTEND_COST} Keys`} body="Chat going well? Add 2 minutes for both of you." />
