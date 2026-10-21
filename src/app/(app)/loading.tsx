@@ -1,7 +1,7 @@
 /** Shown instantly while a page loads, so taps never feel stuck. */
 export default function Loading() {
   return (
-    <main className="mx-auto max-w-md animate-fade-in px-5 pt-6" aria-busy="true" aria-label="Loading">
+    <main className="mx-auto max-w-md animate-fade-in px-5 pt-6 lg:max-w-6xl lg:px-10 lg:pt-10" aria-busy="true" aria-label="Loading">
       <div className="h-9 w-44 animate-pulse rounded-xl bg-line" />
       <div className="mt-3 h-4 w-60 animate-pulse rounded-lg bg-line/70" />
       <div className="mt-6 h-40 animate-pulse rounded-[28px] bg-line/80" />

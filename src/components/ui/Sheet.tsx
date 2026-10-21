@@ -39,10 +39,10 @@ export function Sheet({
 
   if (!open || !mounted) return null;
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end justify-center" role="dialog" aria-modal="true" aria-label={title}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-label={title}>
       <button className="absolute inset-0 animate-fade-in bg-ink/40 backdrop-blur-[3px]" aria-label="Close" onClick={onClose} />
-      <div className="relative max-h-[88dvh] w-full max-w-md animate-sheet-up overflow-y-auto rounded-t-[32px] bg-surface px-5 pt-3 pb-safe shadow-lift">
-        <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-line-strong" />
+      <div className="relative max-h-[88dvh] w-full max-w-md animate-sheet-up overflow-y-auto rounded-t-[32px] bg-surface px-5 pt-3 pb-safe shadow-lift sm:max-w-lg sm:animate-pop sm:rounded-[32px] sm:px-7 sm:pt-7 sm:pb-6">
+        <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-line-strong sm:hidden" />
         <div className="flex items-start gap-3.5">
           {icon && <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-brand-soft text-brand">{icon}</span>}
           <div className="min-w-0 flex-1">

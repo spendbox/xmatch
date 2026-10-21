@@ -22,3 +22,11 @@ export const getMyProfile = cache(async (): Promise<Profile | null> => {
   const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single();
   return (data as Profile) ?? null;
 });
+
+/** Your matches, fetched at most once per page load. */
+export const getMatches = cache(async () => {
+  const { supabase, user } = await getAuth();
+  if (!user) return [];
+  const { data } = await supabase.rpc("get_matches");
+  return (data ?? []) as import("@/lib/types").MatchSummary[];
+});

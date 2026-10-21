@@ -16,8 +16,8 @@ export function DecisionSheet({
   const waiting = state.me.vote === true;
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end justify-center bg-ink/45 backdrop-blur-[2px]" role="dialog" aria-modal="true">
-      <div className="w-full max-w-md rounded-t-[32px] bg-surface px-6 pt-7 pb-safe text-center shadow-lift animate-fade-up">
+    <div className="fixed inset-0 z-40 flex items-end justify-center bg-ink/45 backdrop-blur-[2px] sm:items-center sm:p-6" role="dialog" aria-modal="true">
+      <div className="w-full max-w-md rounded-t-[32px] bg-surface px-6 pt-7 pb-safe text-center shadow-lift animate-fade-up sm:rounded-[32px] sm:p-8">
         <span className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-brand text-white">
           <MaskIcon className="w-10" eyes="#5b3fd9" />
         </span>

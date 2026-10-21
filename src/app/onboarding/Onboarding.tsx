@@ -95,13 +95,13 @@ export function Onboarding({ profile, demoStep, demoDone }: { profile: Profile; 
   const Current = STEPS[step];
 
   return (
-    <main className="relative min-h-dvh overflow-x-clip">
-      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-80 overflow-hidden">
+    <main className="relative min-h-dvh overflow-x-clip lg:flex lg:items-center lg:justify-center lg:py-12">
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-80 overflow-hidden lg:inset-0 lg:h-auto">
         <div className="absolute -top-24 -left-16 h-64 w-64 animate-blob rounded-full bg-brand/20 blur-3xl" />
         <div className="absolute -top-10 -right-20 h-64 w-64 animate-blob rounded-full bg-[#ff8fb8]/20 blur-3xl [animation-delay:-6s]" />
       </div>
 
-      <div className="relative mx-auto flex min-h-dvh max-w-md flex-col px-5">
+      <div className="relative mx-auto flex min-h-dvh max-w-md flex-col px-5 lg:min-h-0 lg:w-full lg:max-w-xl lg:rounded-[36px] lg:border lg:border-white/80 lg:bg-surface/90 lg:px-10 lg:pt-4 lg:pb-8 lg:shadow-lift lg:backdrop-blur">
         <header className="flex h-16 items-center justify-between">
           {step > 0 ? (
             <button onClick={() => { setError(null); setStep(step - 1); }} className="-ml-2 grid h-10 w-10 place-items-center rounded-full hover:bg-ink/5" aria-label="Back">
@@ -242,7 +242,7 @@ export function Onboarding({ profile, demoStep, demoDone }: { profile: Profile; 
           </div>
         </div>
 
-        <div className="sticky bottom-0 mt-auto -mx-5 space-y-3 bg-gradient-to-t from-cream via-cream to-transparent px-5 pt-8 pb-safe">
+        <div className="sticky bottom-0 mt-auto -mx-5 space-y-3 bg-gradient-to-t from-cream via-cream to-transparent px-5 pt-8 pb-safe lg:static lg:mx-0 lg:bg-none lg:px-0 lg:pb-0">
           <FormError message={error} />
           <Button size="lg" onClick={next} loading={saving} loadingText="Saving…">
             {step < STEPS.length - 1 ? "Continue" : "Finish"} <ArrowRight size={18} />

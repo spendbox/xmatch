@@ -38,7 +38,7 @@ export function LiveDemo() {
   const timer = matched || deciding ? "0:00" : `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 
   return (
-    <div className="relative mx-auto w-full max-w-[340px]">
+    <div className="relative mx-auto w-full max-w-[340px] lg:max-w-[400px]">
       <div aria-hidden className="absolute -inset-4 rounded-[44px] bg-gradient-to-br from-brand/25 via-[#ff8fb8]/20 to-gold/30 blur-2xl" />
       <div className="relative overflow-hidden rounded-[32px] border border-white/70 bg-surface/90 shadow-[0_30px_60px_-20px_rgb(28_24_40/0.35)] backdrop-blur">
         {/* Header */}

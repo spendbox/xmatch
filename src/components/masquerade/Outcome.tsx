@@ -30,7 +30,7 @@ export function Outcome({ state }: { state: MasqueradeState }) {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col items-center px-6 pt-20 text-center">
+    <main className="mx-auto flex min-h-dvh max-w-md flex-col items-center px-6 pt-20 text-center lg:justify-center lg:pt-0">
       <span className="grid h-24 w-24 place-items-center rounded-full bg-line text-muted">
         <MaskIcon className="w-14" eyes="#ebe5dc" />
       </span>
@@ -39,7 +39,7 @@ export function Outcome({ state }: { state: MasqueradeState }) {
       <p className="mt-6 rounded-full bg-surface px-4 py-2 text-[13px] font-medium text-muted shadow-card">
         This chat has been deleted
       </p>
-      <div className="mt-auto w-full pt-10 pb-8">
+      <div className="mt-auto w-full pt-10 pb-8 lg:mt-4">
         <ButtonLink href="/home" size="lg" variant="gold">
           <RotateCcw size={18} /> Find someone new
         </ButtonLink>
@@ -52,7 +52,7 @@ function Reveal({ state }: { state: MasqueradeState }) {
   const p = state.them.profile!;
   const photo = p.photos?.[0];
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col px-5 pt-8 pb-8">
+    <main className="mx-auto flex min-h-dvh max-w-md flex-col px-5 pt-8 pb-8 lg:justify-center">
       <p className="text-center text-sm font-semibold tracking-wide text-brand uppercase">It&apos;s a match</p>
       <h1 className="mt-1 text-center font-display text-[32px] leading-tight font-semibold">
         Meet {p.display_name}
@@ -76,7 +76,7 @@ function Reveal({ state }: { state: MasqueradeState }) {
         </div>
       </div>
 
-      <div className="mt-auto space-y-3 pt-8">
+      <div className="mt-auto space-y-3 pt-8 lg:mt-2">
         <ButtonLink href={`/matches/${state.match_id}`} size="lg">
           <MessageCircleHeart size={20} /> Keep chatting
         </ButtonLink>

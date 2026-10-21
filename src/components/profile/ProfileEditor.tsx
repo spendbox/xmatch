@@ -96,7 +96,7 @@ export function ProfileEditor({
   const ring = 2 * Math.PI * 22;
 
   return (
-    <main className="mx-auto max-w-md px-5 pt-6 pb-6">
+    <main className="mx-auto max-w-md px-5 pt-6 pb-6 lg:max-w-6xl lg:px-10 lg:pt-10">
       <header className="flex items-end justify-between">
         <h1 className="font-display text-[34px] leading-tight font-semibold tracking-tight">Profile</h1>
         <button
@@ -110,6 +110,8 @@ export function ProfileEditor({
         </button>
       </header>
 
+      <div className="lg:mt-6 lg:grid lg:grid-cols-12 lg:items-start lg:gap-8">
+        <div className="lg:col-span-5">
       {/* Hero */}
       <section className="relative mt-5 animate-fade-up overflow-hidden rounded-[30px] bg-ink shadow-lift">
         {photos[0] ? (
@@ -154,47 +156,6 @@ export function ProfileEditor({
           </p>
         </div>
       </section>
-
-      {/* Photos */}
-      <Card icon={<ImagePlus size={20} strokeWidth={1.75} />} tone="bg-[#fde8f1] text-[#c2306b]" title="Photos" subtitle={`${photos.length} of 6 · first one is your main photo`}>
-        <PhotoGrid
-          photos={photos}
-          onAdd={async (f) => {
-            const url = await uploadPhoto(supabase, profile.id, f);
-            setPhotos((p) => {
-              const next = [...p, url];
-              supabase.from("profiles").update({ photos: next }).eq("id", profile.id).then(() => {});
-              return next;
-            });
-          }}
-          onRemove={(url) => {
-            if (photos.length <= 1) return setError("Keep at least one photo.");
-            savePhotos(photos.filter((p) => p !== url));
-            deletePhoto(supabase, url);
-          }}
-        />
-      </Card>
-
-      {/* About */}
-      <Card icon={<PenLine size={20} strokeWidth={1.75} />} tone="bg-brand-soft text-brand" title="About you" subtitle="Revealed when you both unmask">
-        <div className="space-y-5">
-          <div>
-            <Label htmlFor="name">First name</Label>
-            <Input id="name" value={name} maxLength={40} onChange={(e) => setName(e.target.value)} />
-          </div>
-          <div>
-            <Label htmlFor="bio">Bio</Label>
-            <Textarea id="bio" rows={4} maxLength={500} value={bio} onChange={(e) => setBio(e.target.value)}
-              placeholder="What makes you laugh? What are you into lately?" />
-            <p className="mt-1 text-right text-xs text-muted">{bio.length}/500</p>
-          </div>
-        </div>
-      </Card>
-
-      {/* Interests */}
-      <Card icon={<Shapes size={20} strokeWidth={1.75} />} tone="bg-gold-soft text-[#a26b00]" title="Interests" subtitle={`${interests.length} of ${MAX_INTERESTS} · shown while masked, shared ones help you match`}>
-        <InterestPicker value={interests} onChange={setInterests} />
-      </Card>
 
       {/* Masquerade */}
       <section className="mt-3 rounded-3xl border border-line bg-surface p-4 shadow-card">
@@ -255,6 +216,52 @@ export function ProfileEditor({
         <Link href="/terms" className="hover:text-brand">Terms</Link> · <Link href="/privacy" className="hover:text-brand">Privacy</Link> · dashpad.site
       </p>
 
+        </div>
+        <div className="lg:col-span-7 lg:[&>section:first-child]:mt-0">
+      {/* Photos */}
+      <Card icon={<ImagePlus size={20} strokeWidth={1.75} />} tone="bg-[#fde8f1] text-[#c2306b]" title="Photos" subtitle={`${photos.length} of 6 · first one is your main photo`}>
+        <PhotoGrid
+          photos={photos}
+          onAdd={async (f) => {
+            const url = await uploadPhoto(supabase, profile.id, f);
+            setPhotos((p) => {
+              const next = [...p, url];
+              supabase.from("profiles").update({ photos: next }).eq("id", profile.id).then(() => {});
+              return next;
+            });
+          }}
+          onRemove={(url) => {
+            if (photos.length <= 1) return setError("Keep at least one photo.");
+            savePhotos(photos.filter((p) => p !== url));
+            deletePhoto(supabase, url);
+          }}
+        />
+      </Card>
+
+      {/* About */}
+      <Card icon={<PenLine size={20} strokeWidth={1.75} />} tone="bg-brand-soft text-brand" title="About you" subtitle="Revealed when you both unmask">
+        <div className="space-y-5">
+          <div>
+            <Label htmlFor="name">First name</Label>
+            <Input id="name" value={name} maxLength={40} onChange={(e) => setName(e.target.value)} />
+          </div>
+          <div>
+            <Label htmlFor="bio">Bio</Label>
+            <Textarea id="bio" rows={4} maxLength={500} value={bio} onChange={(e) => setBio(e.target.value)}
+              placeholder="What makes you laugh? What are you into lately?" />
+            <p className="mt-1 text-right text-xs text-muted">{bio.length}/500</p>
+          </div>
+        </div>
+      </Card>
+
+      {/* Interests */}
+      <Card icon={<Shapes size={20} strokeWidth={1.75} />} tone="bg-gold-soft text-[#a26b00]" title="Interests" subtitle={`${interests.length} of ${MAX_INTERESTS} · shown while masked, shared ones help you match`}>
+        <InterestPicker value={interests} onChange={setInterests} />
+      </Card>
+
+        </div>
+      </div>
+
       <Sheet
         open={deleting}
         onClose={() => setDeleting(false)}
@@ -284,7 +291,7 @@ export function ProfileEditor({
 
       {/* Floating save bar */}
       {(dirty || justSaved || error) && (
-        <div className="fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-30 px-4">
+        <div className="fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-30 px-4 lg:bottom-6 lg:left-[260px]">
           <div className="mx-auto flex max-w-md animate-fade-up items-center gap-3 rounded-2xl border border-line bg-surface/95 p-2.5 pl-4 shadow-lift backdrop-blur">
             <p className={clsx("min-w-0 flex-1 truncate text-[14px] font-medium", error ? "text-chili" : "text-ink-soft")}>
               {error ?? (justSaved && !dirty ? "All changes saved" : "You have unsaved changes")}

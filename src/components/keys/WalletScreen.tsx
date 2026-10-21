@@ -49,12 +49,12 @@ export function WalletScreen({
   }
 
   return (
-    <main className="mx-auto max-w-md px-5 pt-5">
+    <main className="mx-auto max-w-md px-5 pt-5 lg:max-w-6xl lg:px-10 lg:pt-10">
       <header className="flex items-center gap-2">
-        <Link href="/home" className="-ml-2 grid h-10 w-10 place-items-center rounded-full hover:bg-ink/5" aria-label="Back">
+        <Link href="/home" className="-ml-2 grid h-10 w-10 place-items-center rounded-full hover:bg-ink/5 lg:hidden" aria-label="Back">
           <ArrowLeft size={22} />
         </Link>
-        <h1 className="font-display text-[30px] leading-tight font-semibold">Keys</h1>
+        <h1 className="font-display text-[30px] leading-tight font-semibold lg:text-[40px]">Keys</h1>
       </header>
 
       {result && (
@@ -75,6 +75,8 @@ export function WalletScreen({
         </div>
       )}
 
+      <div className="lg:mt-4 lg:grid lg:grid-cols-12 lg:items-start lg:gap-8">
+      <div className="lg:col-span-7">
       {/* Balance */}
       <section className="relative mt-4 overflow-hidden rounded-[30px] bg-gradient-to-br from-[#ffcf5c] via-gold to-[#e8962a] p-6 text-ink shadow-[0_18px_40px_-18px_rgb(232_150_42/0.8)]">
         <div aria-hidden className="absolute -top-10 -right-10 h-40 w-40 rounded-full bg-white/25" />
@@ -127,8 +129,10 @@ export function WalletScreen({
         <ShieldCheck size={14} /> Secure payment by Paystack · card, transfer or USSD
       </p>
 
+      </div>
+      <div className="lg:col-span-5">
       {/* What Keys do */}
-      <h2 className="mt-8 mb-3 text-[15px] font-semibold">What you can do with Keys</h2>
+      <h2 className="mt-8 mb-3 text-[15px] font-semibold lg:mt-4">What you can do with Keys</h2>
       <div className="space-y-2.5">
         <Use icon={<Gift size={20} strokeWidth={1.75} />} tone="bg-chili-soft text-chili" title="Send gifts" body="Roses, cocktails, crowns and more, from 5 Keys." />
         <Use icon={<Timer size={20} strokeWidth={1.75} />} tone="bg-mint-soft text-mint" title={`+2 minutes · ${EXTEND_COST} Keys`} body="Chat going well? Add 2 minutes for both of you." />
@@ -160,6 +164,8 @@ export function WalletScreen({
           </ul>
         </>
       )}
+      </div>
+      </div>
       <p className="mt-6 pb-4 text-center text-[12px] leading-relaxed text-muted">
         Keys can only be used on Dashpad and have no cash value. See our <Link href="/terms" className="underline">Terms</Link>.
       </p>

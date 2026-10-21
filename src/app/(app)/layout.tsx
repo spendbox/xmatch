@@ -11,5 +11,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     redirect("/onboarding");
   }
 
-  return <AppChrome userId={user.id}>{children}</AppChrome>;
+  return (
+    <AppChrome user={{ id: user.id, name: profile!.display_name ?? "You", photo: profile!.photos?.[0] }}>{children}</AppChrome>
+  );
 }

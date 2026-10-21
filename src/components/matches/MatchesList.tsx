@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import { Heart, MessageCircle, Shapes } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
@@ -14,12 +17,23 @@ const INTENT_TONE: Record<Intent, string> = {
   spicy: "bg-chili text-white",
 };
 
-export function MatchesList({ matches, myId }: { matches: MatchSummary[]; myId: string }) {
+export function MatchesList({
+  matches,
+  myId,
+  variant = "page",
+}: {
+  matches: MatchSummary[];
+  myId: string;
+  /** "sidebar" = the list beside an open chat on computers */
+  variant?: "page" | "sidebar";
+}) {
+  const path = usePathname();
+  const side = variant === "sidebar";
   const fresh = matches.filter((m) => !m.last_message || Date.now() - new Date(m.created_at).getTime() < 48 * 3600_000);
   const yourTurn = matches.filter((m) => m.last_message && m.last_sender !== myId).length;
 
   return (
-    <main className="mx-auto max-w-md px-5 pt-6">
+    <main className={side ? "px-4 pt-7 pb-6" : "mx-auto max-w-md px-5 pt-6 lg:max-w-3xl lg:px-10 lg:pt-10"}>
       <header className="flex items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-[34px] leading-tight font-semibold tracking-tight">Matches</h1>
@@ -33,7 +47,7 @@ export function MatchesList({ matches, myId }: { matches: MatchSummary[]; myId: 
       </header>
 
       {matches.length === 0 ? (
-        <Empty />
+        side ? <p className="mt-6 rounded-2xl bg-surface p-4 text-[14px] text-muted">Your matches will appear here.</p> : <Empty />
       ) : (
         <>
           {fresh.length > 0 && (
@@ -90,7 +104,10 @@ export function MatchesList({ matches, myId }: { matches: MatchSummary[]; myId: 
                   <li key={m.id} className="animate-fade-up" style={{ animationDelay: `${i * 50}ms` }}>
                     <Link
                       href={`/matches/${m.id}`}
-                      className="flex items-center gap-3.5 rounded-3xl border border-line bg-surface p-3 pr-4 shadow-card transition hover:border-line-strong active:scale-[0.98]"
+                      className={clsx(
+                        "flex items-center gap-3.5 rounded-3xl border p-3 pr-4 shadow-card transition hover:border-line-strong active:scale-[0.98]",
+                        path === `/matches/${m.id}` ? "border-brand bg-brand-soft/60 ring-1 ring-brand" : "border-line bg-surface",
+                      )}
                     >
                       <span className="relative shrink-0">
                         <Avatar src={m.photos?.[0]} name={m.display_name} size={56} />

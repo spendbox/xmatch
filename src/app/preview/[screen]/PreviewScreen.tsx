@@ -11,6 +11,7 @@ import { ProfileSheet } from "@/components/matches/ProfileSheet";
 import { CallScreen } from "@/components/calls/CallScreen";
 import { ProfileEditor } from "@/components/profile/ProfileEditor";
 import { BottomNav } from "@/components/app/BottomNav";
+import { Sidebar } from "@/components/app/Sidebar";
 import { InviteSheet } from "@/components/app/InviteSheet";
 import { Onboarding } from "@/app/onboarding/Onboarding";
 import { Button } from "@/components/ui/Button";
@@ -85,7 +86,20 @@ const recent = [
   { id: "m3", created_at: iso(3000), last_message_at: iso(200), intent: "spicy" as const, other_id: "z", display_name: "Zara", photos: [photo("#5b3fd9", "#e5484d", "Z")], age: 29, last_message: null, last_sender: null },
 ];
 
+const APP_SCREENS = ["home", "matches", "wallet", "profile", "rich-chat", "extend", "chat", "desktop-matches", "gifts"];
+
 export function PreviewScreen({ screen }: { screen: string }) {
+  const inner = <ScreenBody screen={screen} />;
+  if (!APP_SCREENS.includes(screen)) return inner;
+  return (
+    <>
+      <Sidebar user={{ id: "me", name: "Tolu", photo: me.photos[0] }} />
+      <div className="lg:pl-[260px]">{inner}</div>
+    </>
+  );
+}
+
+function ScreenBody({ screen }: { screen: string }) {
   switch (screen) {
     case "onboarding-2":
       return <Onboarding profile={{ ...me, bio: "", interests: ["Music", "Travel"] }} demoStep={1} />;
@@ -188,6 +202,21 @@ export function PreviewScreen({ screen }: { screen: string }) {
             { id: 18, sender_id: "me", kind: "text", body: "", deleted_at: iso(60), created_at: iso(80) },
           ]}
         />
+      );
+    case "desktop-matches":
+      return (
+        <div className="lg:flex lg:h-dvh">
+          <aside className="hidden lg:block lg:w-[380px] lg:shrink-0 lg:overflow-y-auto lg:border-r lg:border-line lg:bg-cream">
+            <MatchesList myId="me" variant="sidebar" matches={[
+              { id: "m1", created_at: iso(3000), last_message_at: iso(120), intent: "dating", other_id: "ada", display_name: "Ada", photos: ada.photos, age: 26, last_message: "Haha deal. I'll bring the playlist", last_sender: "ada", shared: 2 },
+              { id: "m2", created_at: iso(90000), last_message_at: iso(7200), intent: "friends", other_id: "x", display_name: "Kemi", photos: [photo("#1f9d6b", "#f2b33d", "K")], age: 24, last_message: "See you Saturday!", last_sender: "me", shared: 3 },
+              { id: "m3", created_at: iso(20000), last_message_at: iso(19000), intent: "spicy", other_id: "y", display_name: "Zara", photos: [photo("#5b3fd9", "#e5484d", "Z")], age: 29, last_message: null, last_sender: null },
+            ]} />
+          </aside>
+          <div className="min-w-0 lg:flex-1">
+            <ScreenBody screen="rich-chat" />
+          </div>
+        </div>
       );
     case "wallet":
       return (

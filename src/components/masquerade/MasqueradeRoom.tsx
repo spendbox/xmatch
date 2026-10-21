@@ -155,7 +155,8 @@ export function MasqueradeRoom({
   const chatting = !timeUp;
 
   return (
-    <div className="mx-auto flex h-dvh max-w-md flex-col bg-cream">
+    <div className="flex h-dvh">
+    <div className="mx-auto flex h-dvh w-full max-w-md flex-col bg-cream lg:max-w-none lg:flex-1">
       {/* Header */}
       <header className="z-10 border-b border-line bg-surface/95 backdrop-blur">
         <div className="flex items-center gap-3 px-4 py-3">
@@ -186,8 +187,8 @@ export function MasqueradeRoom({
           </div>
         </div>
 
-        {/* What we know so far */}
-        <div className="flex items-center gap-2 overflow-x-auto px-4 pb-3 no-scrollbar">
+        {/* What we know so far (shown in the side panel on computers) */}
+        <div className="flex items-center gap-2 overflow-x-auto px-4 pb-3 no-scrollbar lg:hidden">
           <Tag>
             You <Chilis level={state.me.spice} />
           </Tag>
@@ -296,6 +297,52 @@ export function MasqueradeRoom({
       {timeUp && <DecisionSheet state={state} voting={voting} onVote={vote} />}
       {reporting && <ReportSheet onClose={() => setReporting(false)} onReport={report} />}
     </div>
+
+    {/* About them — side panel on computers */}
+    <aside className="hidden w-[340px] shrink-0 flex-col overflow-y-auto border-l border-line bg-surface px-6 py-8 lg:flex">
+      <div className="flex flex-col items-center text-center">
+        <span className="grid h-24 w-24 animate-float place-items-center rounded-full bg-ink text-white shadow-lift">
+          <MaskIcon className="w-14" eyes="#1c1828" />
+        </span>
+        <p className="mt-4 font-display text-[26px] font-semibold">{them.alias}</p>
+        <p className="text-[14px] text-muted">
+          {[them.age, gender, distanceLabel(them.distance_km)].filter(Boolean).join(" · ")}
+        </p>
+        <div className="mt-5">
+          <TimerRing remaining={remaining} total={TOTAL} />
+        </div>
+        <p className="mt-1 text-[12px] text-muted">until you both decide</p>
+      </div>
+
+      <h3 className="mt-8 mb-2 text-[12px] font-semibold tracking-wide text-muted uppercase">Here for</h3>
+      <p className="text-[15px] font-semibold">{intentLabel(state.intent)}</p>
+
+      <h3 className="mt-6 mb-2 text-[12px] font-semibold tracking-wide text-muted uppercase">Question spice</h3>
+      <div className="flex flex-wrap gap-2">
+        <Tag>
+          You <Chilis level={state.me.spice} />
+        </Tag>
+        <Tag>
+          Them <Chilis level={them.spice} />
+        </Tag>
+        <Tag strong>{spiceLabel(state.spice_level)}</Tag>
+      </div>
+
+      <h3 className="mt-6 mb-2 text-[12px] font-semibold tracking-wide text-muted uppercase">Into</h3>
+      <div className="flex flex-wrap gap-2">
+        {[...(them.shared_interests ?? []), ...them.interests.filter((i) => !(them.shared_interests ?? []).includes(i))].map((i) => (
+          <InterestTag key={i} name={i} highlight={(them.shared_interests ?? []).includes(i)} />
+        ))}
+      </div>
+      {(them.shared_interests ?? []).length > 0 && (
+        <p className="mt-2 text-[13px] font-semibold text-brand">You both like {formatList(them.shared_interests)} ✓</p>
+      )}
+
+      <p className="mt-auto rounded-2xl bg-cream p-4 text-[13px] leading-relaxed text-muted">
+        You&apos;re <span className="font-semibold text-ink">{state.me.alias}</span>. Names and photos stay hidden until you both unmask.
+      </p>
+    </aside>
+        </div>
   );
 }
 

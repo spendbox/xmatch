@@ -134,15 +134,15 @@ export function HomeScreen({
   const online = stats?.online ?? 0;
 
   return (
-    <main className="mx-auto max-w-md px-5 pt-5">
+    <main className="mx-auto max-w-md px-5 pt-5 lg:max-w-6xl lg:px-10 lg:pt-10">
       {/* Top bar */}
       <header className="flex items-center gap-3">
-        <Link href="/profile" aria-label="Your profile">
+        <Link href="/profile" aria-label="Your profile" className="lg:hidden">
           <Avatar src={profile.photos?.[0]} name={profile.display_name} size={46} className="ring-2 ring-surface" />
         </Link>
         <div className="min-w-0 flex-1">
           <p className="text-[13px] text-muted">{greeting}</p>
-          <p className="truncate text-[19px] leading-tight font-semibold">{profile.display_name}</p>
+          <p className="truncate text-[19px] leading-tight font-semibold lg:font-display lg:text-[34px]">{profile.display_name}</p>
         </div>
         <Link
           href="/wallet"
@@ -153,8 +153,9 @@ export function HomeScreen({
         </Link>
       </header>
 
+      <div className="lg:mt-8 lg:grid lg:grid-cols-12 lg:items-start lg:gap-8">
       {/* Masquerade card */}
-      <section className="relative mt-5 overflow-hidden rounded-[30px] bg-gradient-to-br from-brand via-[#6d4ff0] to-[#8f6bff] p-5 text-white shadow-[0_18px_40px_-18px_rgb(91_63_217/0.8)]">
+      <section className="relative mt-5 lg:sticky lg:top-8 lg:col-span-7 lg:mt-0 lg:p-8 overflow-hidden rounded-[30px] bg-gradient-to-br from-brand via-[#6d4ff0] to-[#8f6bff] p-5 text-white shadow-[0_18px_40px_-18px_rgb(91_63_217/0.8)]">
         <div aria-hidden className="absolute -top-12 -right-10 h-44 w-44 rounded-full bg-white/10" />
         <div aria-hidden className="absolute -bottom-16 -left-12 h-40 w-40 rounded-full bg-gold/20 blur-2xl" />
 
@@ -166,11 +167,12 @@ export function HomeScreen({
             </span>
             {online > 0 ? `${online} ready to mask up near you` : "Be the first to mask up"}
           </span>
-          <span className="grid h-12 w-12 shrink-0 animate-float place-items-center rounded-2xl bg-white/15">
-            <MaskIcon className="w-8 text-white" eyes="#6d4ff0" />
+          <span className="grid h-12 w-12 shrink-0 animate-float place-items-center rounded-2xl bg-white/15 lg:h-20 lg:w-20 lg:rounded-3xl">
+            <MaskIcon className="w-8 text-white lg:w-12" eyes="#6d4ff0" />
           </span>
         </div>
-        <h1 className="relative mt-1 font-display text-[28px] leading-tight font-semibold">Ready to mask up?</h1>
+        <h1 className="relative mt-1 font-display text-[28px] leading-tight font-semibold lg:mt-4 lg:text-[44px]">Ready to mask up?</h1>
+        <p className="relative mt-1 hidden text-[15px] text-white/80 lg:block">Five minutes with someone new, both masked. Unmask only if you both say yes.</p>
 
         {/* Summary of choices */}
         <button
@@ -233,8 +235,9 @@ export function HomeScreen({
         </p>
       </section>
 
+      <div className="lg:col-span-5">
       {/* Keys power-ups */}
-      <div className="mt-7 mb-3 flex items-center justify-between">
+      <div className="mt-7 mb-3 flex items-center justify-between lg:mt-0">
         <h2 className="text-[15px] font-semibold">Use your Keys</h2>
         <Link href="/wallet" className="inline-flex items-center gap-0.5 text-[13px] font-semibold text-brand">
           Get Keys <ChevronRight size={16} />
@@ -288,6 +291,8 @@ export function HomeScreen({
           </div>
         </>
       )}
+      </div>
+      </div>
       <div className="h-4" />
 
       <MeetSheet

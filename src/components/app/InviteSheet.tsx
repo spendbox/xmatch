@@ -36,7 +36,7 @@ export function InviteSheet({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 backdrop-blur-sm sm:items-center" role="dialog" aria-modal="true">
-      <div className="w-full max-w-md rounded-t-3xl bg-surface p-6 pb-safe shadow-lift animate-fade-up sm:rounded-3xl">
+      <div className="w-full max-w-md rounded-t-3xl bg-surface p-6 pb-safe shadow-lift animate-fade-up sm:max-w-lg sm:rounded-[32px] sm:p-8">
         <div className="mx-auto mb-5 h-1.5 w-10 rounded-full bg-line-strong sm:hidden" />
         <div className="flex items-center gap-4">
           <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-brand text-white">

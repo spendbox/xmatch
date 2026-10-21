@@ -18,7 +18,7 @@ export function useWallet(userId: string | null, initial?: Wallet | null) {
     if (!initial) refresh();
     const supabase = createClient();
     const ch = supabase
-      .channel(`wallet-${userId}`)
+      .channel(`wallet-${userId}-${Math.random().toString(36).slice(2)}`) // unique: several screens may watch at once
       .on("postgres_changes", { event: "*", schema: "public", table: "wallets", filter: `user_id=eq.${userId}` }, () => refresh())
       .subscribe();
     return () => {

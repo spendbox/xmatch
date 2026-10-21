@@ -69,7 +69,7 @@ export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDat
   }, []);
 
   return (
-    <div className="flex flex-col gap-1 px-3 py-4">
+    <div className="flex flex-col gap-1 px-3 py-4 lg:px-8">
       {messages.map((m, i) => {
         const prev = messages[i - 1];
         const next = messages[i + 1];
@@ -338,7 +338,7 @@ function Bubble({
 }) {
   const media = m.kind === "image" || m.kind === "video";
   const shell = clsx(
-    "max-w-[80%] overflow-hidden break-words transition-shadow duration-500",
+    "max-w-[80%] overflow-hidden break-words transition-shadow duration-500 lg:max-w-[62%]",
     mine ? "bg-brand text-white" : "bg-surface text-ink shadow-card",
     tail ? (mine ? "rounded-[20px] rounded-br-md" : "rounded-[20px] rounded-bl-md") : "rounded-[20px]",
     flash && "ring-4 ring-gold/70",
