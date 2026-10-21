@@ -59,6 +59,7 @@ function Bar({ floating, handle, onCollapse, noStop }: { floating?: boolean; han
         </button>
       )}
       <button
+        data-sound-toggle
         onClick={m.toggleMute}
         className={clsx("grid h-10 w-10 place-items-center rounded-full", m.soundOff ? "animate-pulse bg-brand text-white" : "text-ink-soft hover:bg-ink/5")}
         aria-label={m.muted ? "Unmute" : "Mute"}
@@ -257,7 +258,7 @@ export function MediaStage({ big }: { big?: boolean }) {
         <button onClick={m.toggle} className="inline-flex h-11 items-center gap-2 rounded-full bg-white px-5 text-[14px] font-semibold text-ink transition active:scale-95">
           {m.playing && !m.needsTap ? <><Pause size={16} fill="currentColor" /> Pause</> : <><Play size={16} fill="currentColor" /> {m.needsTap ? "Tap to play" : "Play"}</>}
         </button>
-        <button onClick={m.toggleMute} className="grid h-11 w-11 place-items-center rounded-full bg-white/15" aria-label={m.muted ? "Unmute" : "Mute"}>
+        <button data-sound-toggle onClick={m.toggleMute} className="grid h-11 w-11 place-items-center rounded-full bg-white/15" aria-label={m.muted ? "Unmute" : "Mute"}>
           {m.muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
         </button>
       </div>

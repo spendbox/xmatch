@@ -283,7 +283,8 @@ export function EventMediaProvider({ userId, children }: { userId: string; child
   }, [isYouTube, playing, needsTap, ytCommand, tryPlay, loadItem]);
 
   const toggleMute = useCallback(() => {
-    const next = !muted;
+    // Go by what's actually playing, so one tap always flips it
+    const next = isYouTube ? !muted : !(video.current?.muted ?? muted);
     setMuted(next);
     if (!next) setSoundOff(false);
     if (isYouTube) ytCommand(next ? "mute" : "unMute");
@@ -404,7 +405,11 @@ export function EventMediaProvider({ userId, children }: { userId: string; child
   // Started silently (no tap yet): the first tap or key press anywhere turns the sound on
   useEffect(() => {
     if (!soundOff) return;
-    const on = () => {
+    const on = (ev: Event) => {
+      // A tap on the speaker button is handled by the button itself
+      if ((ev.target as Element | null)?.closest?.("[data-sound-toggle]")) return;
+      document.removeEventListener("pointerdown", on, { capture: true });
+      document.removeEventListener("keydown", on, { capture: true });
       setSoundOff(false);
       setMuted(false);
       if (isYouTube) {
@@ -415,8 +420,8 @@ export function EventMediaProvider({ userId, children }: { userId: string; child
         if (video.current.paused) tryPlay();
       }
     };
-    document.addEventListener("pointerdown", on, { once: true, capture: true });
-    document.addEventListener("keydown", on, { once: true, capture: true });
+    document.addEventListener("pointerdown", on, { capture: true });
+    document.addEventListener("keydown", on, { capture: true });
     return () => {
       document.removeEventListener("pointerdown", on, { capture: true });
       document.removeEventListener("keydown", on, { capture: true });
