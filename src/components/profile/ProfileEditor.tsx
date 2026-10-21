@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import clsx from "clsx";
 import {
-  AtSign, BellRing, ChevronRight, Eye, FileText, Heart, ImagePlus, LogOut, PenLine, Shapes, ShieldCheck, SlidersHorizontal, Trash2,
+  AtSign, BellRing, Cake, ChevronRight, Eye, FileText, Heart, ImagePlus, LogOut, PenLine, Shapes, ShieldCheck, SlidersHorizontal, Trash2,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { uploadPhoto, deletePhoto } from "@/lib/photos";
@@ -155,7 +155,8 @@ export function ProfileEditor({
                 <span className="font-normal text-white/80">, {age}</span>
               </h2>
               <p className="mt-1.5 text-[14px] text-white/75">{gender}</p>
-              <div className="mt-4 grid grid-cols-2 gap-2">
+              <div className="mt-4 grid grid-cols-3 gap-2">
+                <Stat icon={<Cake size={16} />} value={age != null ? String(age) : "–"} label={age === 1 ? "year" : "years"} />
                 <Stat icon={<Heart size={16} />} value={matchCount.toLocaleString()} label={word(matchCount, "match", "matches")} />
                 <Stat icon={<Shapes size={16} />} value={String(interests.length)} label={word(interests.length, "interest")} />
               </div>
@@ -358,6 +359,14 @@ export function ProfileEditor({
         }
       >
         <div className="space-y-5">
+          <div className="flex items-center gap-3 rounded-2xl bg-cream px-4 py-3">
+            <Cake size={18} className="shrink-0 text-ink-soft" />
+            <p className="text-[14px]">
+              <span className="font-semibold">{age != null ? `${age} years old` : "Age not set"}</span>
+              {gender ? ` · ${gender}` : ""}
+              <span className="block text-[12px] text-muted">Worked out from your birthday, which is never shown</span>
+            </p>
+          </div>
           <div>
             <Label htmlFor="name">First name</Label>
             <Input id="name" value={draftName} maxLength={40} onChange={(e) => setDraftName(e.target.value)} />
@@ -405,7 +414,7 @@ export function ProfileEditor({
         <div className="divide-y divide-line rounded-2xl border border-line">
           <Row label="Email" value={email} />
           <Row label="Password" value="Forgot it? Use “Forgot password” on the login page" />
-          <Row label="Born" value={`${age} years old`} />
+          <Row label="Age" value={age != null ? `${age} years old` : "Not set"} />
         </div>
       </Sheet>
 
@@ -455,10 +464,12 @@ function SectionTitle({ children, className }: { children: React.ReactNode; clas
 
 function Stat({ icon, value, label }: { icon: React.ReactNode; value: string; label: string }) {
   return (
-    <div className="flex items-center gap-2 rounded-2xl bg-black/30 px-3 py-2.5">
-      <span className="text-white/80">{icon}</span>
-      <span className="text-[16px] font-semibold">{value}</span>
-      <span className="text-[13px] text-white/70">{label}</span>
+    <div className="flex min-w-0 flex-col items-center rounded-2xl bg-black/35 px-2 py-2.5 text-center">
+      <span className="flex items-center gap-1.5">
+        <span className="text-white/80">{icon}</span>
+        <span className="text-[17px] leading-none font-semibold">{value}</span>
+      </span>
+      <span className="mt-1 text-[12px] text-white/75">{label}</span>
     </div>
   );
 }

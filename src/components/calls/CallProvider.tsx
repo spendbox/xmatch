@@ -64,7 +64,11 @@ export function CallProvider({ userId, children }: { userId: string; children: R
   const pendingIce = useRef<RTCIceCandidateInit[]>([]);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const local = useRef<MediaStream | null>(null);
+  const remote = useRef<MediaStream | null>(null);
   const offering = useRef(false);
+  const signalQueue = useRef<Promise<void>>(Promise.resolve());
+  const restartTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flipping = useRef(false);
 
   const update = useCallback((patch: Partial<ActiveCall> | null) => {
     setCall((c) => {
@@ -75,8 +79,13 @@ export function CallProvider({ userId, children }: { userId: string; children: R
   }, []);
 
   const send = useCallback((s: Signal) => {
-    channel.current?.send({ type: "broadcast", event: "signal", payload: s });
+    channel.current?.send({ type: "broadcast", event: "signal", payload: s }).catch(() => {});
   }, []);
+
+  const clearRestart = () => {
+    if (restartTimer.current) clearTimeout(restartTimer.current);
+    restartTimer.current = null;
+  };
 
   /** Stops everything and shows the "call ended" state briefly. */
   const teardown = useCallback(
@@ -84,18 +93,22 @@ export function CallProvider({ userId, children }: { userId: string; children: R
       stopTone();
       timers.current.forEach(clearTimeout);
       timers.current = [];
+      clearRestart();
       pc.current?.close();
       pc.current = null;
       local.current?.getTracks().forEach((t) => t.stop());
       local.current = null;
+      remote.current = null;
       setLocalStream(null);
       setRemoteStream(null);
       if (channel.current) supabase.removeChannel(channel.current);
       channel.current = null;
       pendingIce.current = [];
       offering.current = false;
+      signalQueue.current = Promise.resolve();
       setMuted(false);
       setCameraOff(false);
+      setFacing("user");
       if (callRef.current) {
         update({ status: "ended", endedReason: reason });
         timers.current.push(setTimeout(() => update(null), 1800));
@@ -114,28 +127,67 @@ export function CallProvider({ userId, children }: { userId: string; children: R
     return stream;
   }, []);
 
+  /** Caller only: sends a fresh offer that restarts ICE (e.g. after switching networks). */
+  const restartIce = useCallback(async () => {
+    const peer = pc.current;
+    if (!peer || callRef.current?.role !== "caller" || peer.signalingState !== "stable") return;
+    try {
+      const offer = await peer.createOffer({ iceRestart: true });
+      await peer.setLocalDescription(offer);
+      send({ type: "offer", sdp: offer });
+    } catch {
+      /* the give-up timer will end the call */
+    }
+  }, [send]);
+
   const makePeer = useCallback(
     async (stream: MediaStream) => {
-      const peer = new RTCPeerConnection({ iceServers: await iceServers() });
+      const servers = await iceServers();
+      // Call was ended while we were fetching servers
+      if (local.current !== stream) return null;
+      const peer = new RTCPeerConnection({ iceServers: servers });
+      // Tracks go on before any offer/answer so both sides send media
       stream.getTracks().forEach((t) => peer.addTrack(t, stream));
       peer.onicecandidate = (e) => e.candidate && send({ type: "ice", candidate: e.candidate.toJSON() });
-      peer.ontrack = (e) => setRemoteStream(e.streams[0] ?? new MediaStream([e.track]));
+      peer.ontrack = (e) => {
+        // Collect their audio + video into one stream; new object so the UI re-renders
+        const r = remote.current ?? new MediaStream();
+        const tracks = e.streams[0]?.getTracks() ?? [e.track];
+        for (const t of [...tracks, e.track]) if (!r.getTrackById(t.id)) r.addTrack(t);
+        remote.current = r;
+        setRemoteStream(new MediaStream(r.getTracks()));
+        e.track.onunmute = () => remote.current && setRemoteStream(new MediaStream(remote.current.getTracks()));
+      };
       peer.onconnectionstatechange = () => {
+        if (pc.current !== peer) return;
         const st = peer.connectionState;
-        if (st === "connected" && callRef.current?.status !== "connected") {
-          stopTone();
-          update({ status: "connected", connectedAt: Date.now() });
+        if (st === "connected") {
+          clearRestart();
+          if (callRef.current?.status !== "connected") {
+            stopTone();
+            update({ status: "connected", connectedAt: Date.now() });
+          }
         }
-        if (st === "failed") {
-          const c = callRef.current;
-          if (c) supabase.rpc("update_call", { p_call: c.id, p_status: "ended" });
-          teardown("Connection lost");
+        if (st === "disconnected" || st === "failed") {
+          // Try to recover (network switch, weak signal) before giving up
+          if (st === "failed") restartIce();
+          else if (!restartTimer.current) timers.current.push(setTimeout(() => pc.current === peer && peer.connectionState === "disconnected" && restartIce(), 4000));
+          if (!restartTimer.current) {
+            restartTimer.current = setTimeout(() => {
+              restartTimer.current = null;
+              if (pc.current !== peer || peer.connectionState === "connected") return;
+              const c = callRef.current;
+              if (c) supabase.rpc("update_call", { p_call: c.id, p_status: "ended" });
+              send({ type: "bye" });
+              teardown("Connection lost");
+            }, 20000);
+          }
         }
       };
       pc.current = peer;
       return peer;
     },
-    [send, supabase, teardown, update],
+    [restartIce, send, supabase, teardown, update],
   );
 
   const flushIce = useCallback(async () => {
@@ -148,7 +200,7 @@ export function CallProvider({ userId, children }: { userId: string; children: R
   const joinRoom = useCallback(
     (callId: string, onSignal: (s: Signal) => void) =>
       new Promise<void>((resolve) => {
-        const ch = supabase.channel(`call:${callId}`, { config: { broadcast: { self: false } } });
+        const ch = supabase.channel(`call:${callId}`, { config: { broadcast: { self: false, ack: true } } });
         ch.on("broadcast", { event: "signal" }, ({ payload }) => onSignal(payload as Signal));
         ch.subscribe((status) => status === "SUBSCRIBED" && resolve());
         channel.current = ch;
@@ -156,42 +208,64 @@ export function CallProvider({ userId, children }: { userId: string; children: R
     [supabase],
   );
 
-  const handleSignal = useCallback(
+  const processSignal = useCallback(
     async (s: Signal) => {
       const c = callRef.current;
-      if (!c) return;
+      if (!c || c.status === "ended") return;
       if (s.type === "bye") {
-        teardown(c.status === "connected" ? "Call ended" : "Call ended");
+        teardown("Call ended");
         return;
       }
+      const peer = pc.current;
       if (s.type === "ice") {
-        if (pc.current?.remoteDescription) await pc.current.addIceCandidate(s.candidate).catch(() => {});
+        // Hold candidates until the other side's description is set
+        if (peer?.remoteDescription) await peer.addIceCandidate(s.candidate).catch(() => {});
         else pendingIce.current.push(s.candidate);
         return;
       }
       if (c.role === "caller") {
-        if (s.type === "ready" && !pc.current && !offering.current && local.current) {
-          offering.current = true;
-          stopTone();
-          update({ status: "connecting" });
-          const peer = await makePeer(local.current);
-          const offer = await peer.createOffer();
-          await peer.setLocalDescription(offer);
-          send({ type: "offer", sdp: offer });
+        if (s.type === "ready") {
+          if (!peer && !offering.current && local.current) {
+            offering.current = true;
+            stopTone();
+            update({ status: "connecting" });
+            const p = await makePeer(local.current);
+            if (!p) return;
+            const offer = await p.createOffer();
+            await p.setLocalDescription(offer);
+            send({ type: "offer", sdp: offer });
+          } else if (peer?.signalingState === "have-local-offer" && peer.localDescription) {
+            // They're still waiting: our offer (or their answer) got lost, send it again
+            send({ type: "offer", sdp: peer.localDescription.toJSON() });
+          }
         }
-        if (s.type === "answer" && pc.current && !pc.current.remoteDescription) {
-          await pc.current.setRemoteDescription(s.sdp);
+        if (s.type === "answer" && peer?.signalingState === "have-local-offer") {
+          await peer.setRemoteDescription(s.sdp);
           await flushIce();
         }
-      } else if (s.type === "offer" && pc.current && !pc.current.remoteDescription) {
-        await pc.current.setRemoteDescription(s.sdp);
+      } else if (s.type === "offer" && peer) {
+        if (peer.remoteDescription?.sdp === s.sdp.sdp && peer.localDescription?.type === "answer") {
+          // Same offer again: our answer got lost
+          send({ type: "answer", sdp: peer.localDescription.toJSON() });
+          return;
+        }
+        if (peer.signalingState !== "stable") return;
+        await peer.setRemoteDescription(s.sdp);
         await flushIce();
-        const answer = await pc.current.createAnswer();
-        await pc.current.setLocalDescription(answer);
+        const answer = await peer.createAnswer();
+        await peer.setLocalDescription(answer);
         send({ type: "answer", sdp: answer });
       }
     },
     [flushIce, makePeer, send, teardown, update],
+  );
+
+  // Handle signals one at a time so async steps never interleave
+  const handleSignal = useCallback(
+    (s: Signal) => {
+      signalQueue.current = signalQueue.current.then(() => processSignal(s)).catch(() => {});
+    },
+    [processSignal],
   );
 
   // ---- Outgoing ----
@@ -232,7 +306,7 @@ export function CallProvider({ userId, children }: { userId: string; children: R
   // ---- Incoming ----
   const accept = useCallback(async () => {
     const c = callRef.current;
-    if (!c || c.role !== "callee") return;
+    if (!c || c.role !== "callee" || c.status !== "incoming") return;
     stopTone();
     let stream: MediaStream;
     try {
@@ -244,14 +318,16 @@ export function CallProvider({ userId, children }: { userId: string; children: R
     update({ status: "connecting" });
     const { data } = await supabase.rpc("update_call", { p_call: c.id, p_status: "accepted" });
     if (data !== "accepted") return teardown("Call ended");
-    await makePeer(stream);
+    if (!(await makePeer(stream))) return;
     await joinRoom(c.id, handleSignal);
-    // Say we're ready until the caller sends the offer
+    // Say we're ready until media flows; the caller re-sends its offer if it was lost
+    let tries = 0;
     const ping = () => {
-      if (pc.current && !pc.current.remoteDescription && callRef.current?.id === c.id) {
-        send({ type: "ready" });
-        timers.current.push(setTimeout(ping, 1500));
-      }
+      const peer = pc.current;
+      if (!peer || callRef.current?.id !== c.id || callRef.current.status === "ended") return;
+      if (peer.connectionState === "connected" || tries++ > 20) return;
+      send({ type: "ready" });
+      timers.current.push(setTimeout(ping, 1500));
     };
     ping();
   }, [getMedia, handleSignal, joinRoom, makePeer, send, supabase, teardown, update]);
@@ -338,22 +414,43 @@ export function CallProvider({ userId, children }: { userId: string; children: R
     setCameraOff(next);
   }
   async function flipCamera() {
-    const nextFacing = facing === "user" ? "environment" : "user";
+    const stream = local.current;
+    if (!stream || flipping.current) return;
+    flipping.current = true;
+    const nextFacing: "user" | "environment" = facing === "user" ? "environment" : "user";
+    const old = stream.getVideoTracks()[0];
+    const open = async (f: "user" | "environment") =>
+      (await navigator.mediaDevices.getUserMedia({ video: { facingMode: f, width: { ideal: 1280 }, height: { ideal: 720 } } })).getVideoTracks()[0];
+    let track: MediaStreamTrack | undefined;
+    let used = nextFacing;
     try {
-      const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: nextFacing } });
-      const track = s.getVideoTracks()[0];
-      const sender = pc.current?.getSenders().find((x) => x.track?.kind === "video");
-      await sender?.replaceTrack(track);
-      local.current?.getVideoTracks().forEach((t) => {
-        t.stop();
-        local.current?.removeTrack(t);
-      });
-      local.current?.addTrack(track);
-      setLocalStream(new MediaStream(local.current?.getTracks() ?? []));
-      setFacing(nextFacing);
+      track = await open(nextFacing);
     } catch {
-      /* phone has one camera */
+      // Many phones can't open two cameras at once: release the current one and retry
+      old?.stop();
+      track = await open(nextFacing).catch(() => {
+        used = facing;
+        return open(facing).catch(() => undefined);
+      });
     }
+    if (track && local.current === stream) {
+      track.enabled = !cameraOff;
+      const peer = pc.current;
+      const sender =
+        peer?.getTransceivers().find((t) => t.receiver.track.kind === "video")?.sender ??
+        peer?.getSenders().find((x) => x.track?.kind === "video");
+      await sender?.replaceTrack(track).catch(() => {});
+      if (old) {
+        old.stop();
+        stream.removeTrack(old);
+      }
+      stream.addTrack(track);
+      setLocalStream(new MediaStream(stream.getTracks()));
+      setFacing(used);
+    } else {
+      track?.stop();
+    }
+    flipping.current = false;
   }
 
   return (

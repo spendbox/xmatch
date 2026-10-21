@@ -24,6 +24,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   viewportFit: "cover",
+  // Android: shrink the page when the keyboard opens, so inputs stay visible
+  interactiveWidget: "resizes-content",
   themeColor: "#faf7f2",
 };
 

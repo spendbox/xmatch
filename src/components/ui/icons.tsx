@@ -2,9 +2,9 @@ import type { LucideIcon, LucideProps } from "lucide-react";
 import {
   Briefcase, BookOpen, Camera, ChefHat, Church, Clapperboard, Cpu, Disc3, Dumbbell, Feather,
   Gamepad2, Globe, Heart, Laugh, Leaf, Martini, Mars, Music, Palette, PawPrint, Plane, Shirt,
-  Smile, Trophy, Tv, UsersRound, UtensilsCrossed, Venus, Footprints, Car, TrainFront, Sprout, Flame,
+  Smile, Trophy, Tv, UserRound, UsersRound, UtensilsCrossed, Venus, Footprints, Car, TrainFront, Sprout, Flame,
 } from "lucide-react";
-import type { Intent, Seeking } from "@/lib/types";
+import type { Intent, SeekKey } from "@/lib/types";
 
 type IconProps = { size?: number; className?: string; strokeWidth?: number };
 
@@ -80,6 +80,6 @@ export const INTENT_ICONS: Record<Intent, (p: IconProps) => React.ReactNode> = {
   spicy: (p) => <Flame strokeWidth={1.75} {...p} />,
 };
 
-export const SEEKING_ICONS: Record<Seeking, LucideIcon> = { women: Venus, men: Mars, anyone: UsersRound };
+export const SEEKING_ICONS: Record<SeekKey | "anyone", LucideIcon> = { women: Venus, men: Mars, other: UserRound, anyone: UsersRound };
 
 export const DISTANCE_ICONS: Record<number, LucideIcon> = { 10: Footprints, 50: Car, 200: TrainFront, 0: Globe };

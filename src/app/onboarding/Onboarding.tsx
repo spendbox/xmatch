@@ -73,7 +73,10 @@ export function Onboarding({ profile, demoStep, demoDone }: { profile: Profile; 
     if (problem) return;
     setSaving(true);
     const patch =
-      step === 0 ? { display_name: name.trim(), birthdate, gender } : step === 1 ? { bio: bio.trim(), interests } : { photos };
+      step === 0
+        ? // Brand-new members start with "Open to Masquerade" switched on
+          { display_name: name.trim(), birthdate, gender, ...(profile.display_name ? {} : { open_to_masquerade: true }) }
+        : step === 1 ? { bio: bio.trim(), interests } : { photos };
     const { error: err } = await supabase.from("profiles").update(patch).eq("id", profile.id);
     setSaving(false);
     if (err) return setError("Couldn't save. Please check your connection and try again.");
@@ -178,8 +181,8 @@ export function Onboarding({ profile, demoStep, demoDone }: { profile: Profile; 
                     value={gender as Gender}
                     onChange={setGender}
                     options={[
-                      { value: "woman", label: "Woman", icon: <Venus size={22} strokeWidth={1.75} /> },
-                      { value: "man", label: "Man", icon: <Mars size={22} strokeWidth={1.75} /> },
+                      { value: "woman", label: "Female", icon: <Venus size={22} strokeWidth={1.75} /> },
+                      { value: "man", label: "Male", icon: <Mars size={22} strokeWidth={1.75} /> },
                       { value: "other", label: "Other", icon: <UserRound size={22} strokeWidth={1.75} /> },
                     ]}
                   />

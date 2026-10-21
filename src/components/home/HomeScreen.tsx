@@ -6,7 +6,7 @@ import Link from "next/link";
 import clsx from "clsx";
 import { BellRing, ChevronRight, Clock3, Gift, MapPin, SlidersHorizontal, Timer, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { DISTANCES, getLocation, INTENTS, SEEKING, SPICE_LEVELS } from "@/lib/constants";
+import { DISTANCES, getLocation, INTENTS, seekingLabel, SPICE_LEVELS } from "@/lib/constants";
 import { EXTEND_COST, EXTRA_MASQUERADE_COST, FREE_MASQUERADES_PER_DAY, GIFTS, type Wallet } from "@/lib/keys";
 import type { MatchSummary, Profile } from "@/lib/types";
 import { Toggle } from "@/components/ui/Toggle";
@@ -132,7 +132,6 @@ export function HomeScreen({
   if (waiting) return <Waiting prefs={prefs} userId={profile.id} onCancel={() => { setWaiting(false); refresh(); }} />;
 
   const intent = INTENTS.find((i) => i.value === prefs.intent)!;
-  const seeking = SEEKING.find((s) => s.value === prefs.seeking)!;
   const distance = DISTANCES.find((d) => d.value === prefs.maxKm) ?? DISTANCES[1];
   const freeLeft = wallet?.free_left ?? FREE_MASQUERADES_PER_DAY;
   const balance = wallet?.balance ?? 0;
@@ -191,7 +190,7 @@ export function HomeScreen({
           aria-label="Change who you meet"
         >
           <Chip icon={INTENT_ICONS[prefs.intent]({ size: 15 })} text={intent.label} />
-          <Chip icon={<Users size={15} />} text={`${seeking.label} · ${prefs.ageMin}–${prefs.ageMax}`} />
+          <Chip icon={<Users size={15} />} text={`${seekingLabel(prefs.seeking)} · ${prefs.ageMin}–${prefs.ageMax}`} />
           <Chip icon={<MapPin size={15} />} text={distance.value ? `Within ${distance.label}` : "Anywhere"} />
           <Chip icon={<SpiceIcon level={prefs.spice} size={15} />} text={SPICE_LEVELS[prefs.spice].label} />
         </button>

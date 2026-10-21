@@ -21,6 +21,7 @@ import { InterestTag } from "@/components/profile/InterestPicker";
 import { DecisionSheet } from "./DecisionSheet";
 import { Outcome } from "./Outcome";
 import { ReportSheet } from "./ReportSheet";
+import { useKeyboardSafe } from "@/lib/useKeyboardSafe";
 
 const TOTAL = MASQUERADE_MINUTES * 60;
 
@@ -36,6 +37,7 @@ export function MasqueradeRoom({
   /** Set when this chat is a round of a Masquerade Night */
   eventId?: string | null;
 }) {
+  const shell = useKeyboardSafe<HTMLDivElement>();
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [state, setState] = useState(initial);
@@ -158,7 +160,7 @@ export function MasqueradeRoom({
   const chatting = !timeUp;
 
   return (
-    <div className="flex h-dvh">
+    <div ref={shell} className="fixed inset-x-0 top-0 z-20 flex h-dvh overflow-hidden lg:static">
     <div className="mx-auto flex h-dvh w-full max-w-md flex-col bg-cream lg:max-w-none lg:flex-1">
       {/* Header */}
       <header className="z-10 border-b border-line bg-surface">
@@ -208,7 +210,7 @@ export function MasqueradeRoom({
       </header>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto">
+      <div data-chat-scroll className="flex-1 overflow-y-auto overscroll-contain">
         <p className="px-6 pt-5 text-center text-[13px] leading-relaxed text-muted">
           You&apos;re <span className="font-semibold text-ink">{state.me.alias}</span>. Names and photos stay hidden
           until you both unmask.

@@ -20,6 +20,7 @@ import type { MediaKind } from "@/components/chat/Composer";
 import { GiftSheet, keysError } from "@/components/keys/GiftSheet";
 import { useWallet } from "@/components/keys/useWallet";
 import { ProfileSheet } from "./ProfileSheet";
+import { useKeyboardSafe } from "@/lib/useKeyboardSafe";
 
 export function MatchChat({
   matchId,
@@ -38,6 +39,7 @@ export function MatchChat({
   matchedAt?: string;
   intent?: Intent;
 }) {
+  const shell = useKeyboardSafe<HTMLDivElement>();
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [messages, setMessages] = useState(initialMessages);
@@ -149,7 +151,7 @@ export function MatchChat({
   }
 
   return (
-    <div className="mx-auto flex h-dvh max-w-md flex-col bg-cream lg:max-w-none">
+    <div ref={shell} className="fixed inset-x-0 top-0 z-20 mx-auto flex h-dvh max-w-md flex-col overflow-hidden bg-cream lg:static lg:max-w-none">
       <header className="flex items-center gap-2 border-b border-line bg-surface px-2 py-2.5 lg:px-5 lg:py-3.5">
         <Link href="/matches" className="grid h-10 w-10 place-items-center rounded-full hover:bg-ink/5 lg:hidden" aria-label="Back to matches">
           <ArrowLeft size={22} />
@@ -208,7 +210,7 @@ export function MatchChat({
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto">
+      <div data-chat-scroll className="flex-1 overflow-y-auto overscroll-contain">
         <div className="mx-4 mt-4 animate-fade-up rounded-3xl border border-line bg-surface p-5 text-center shadow-card">
           <div className="flex justify-center -space-x-3">
             <span className="grid h-14 w-14 place-items-center rounded-full bg-ink text-white ring-4 ring-surface">

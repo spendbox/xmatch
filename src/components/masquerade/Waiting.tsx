@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { intentLabel, spiceLabel, SEEKING } from "@/lib/constants";
+import { intentLabel, spiceLabel, seekingLabel } from "@/lib/constants";
 import { Button } from "@/components/ui/Button";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { Chilis } from "@/components/ui/Spice";
@@ -62,7 +62,7 @@ export function Waiting({ prefs, userId, onCancel }: { prefs: SetupPrefs; userId
   const mm = Math.floor(seconds / 60);
   const ss = String(seconds % 60).padStart(2, "0");
   const tip = TIPS[Math.floor(seconds / 6) % TIPS.length];
-  const seeking = SEEKING.find((s) => s.value === prefs.seeking)?.label;
+  const seeking = seekingLabel(prefs.seeking);
 
   return (
     <main className="mx-auto flex min-h-[calc(100dvh-6rem)] max-w-md flex-col items-center px-5 pt-14 text-center">

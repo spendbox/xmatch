@@ -38,9 +38,9 @@ create table if not exists public.profiles (
   interests text[] not null default '{}',
   photos text[] not null default '{}',
   -- Masquerade settings
-  open_to_masquerade boolean not null default false,
+  open_to_masquerade boolean not null default true,
   pref_intent public.intent not null default 'dating',
-  pref_seeking public.seeking not null default 'anyone',
+  pref_seeking text not null default 'anyone',
   pref_age_min int not null default 18 check (pref_age_min >= 18),
   pref_age_max int not null default 40 check (pref_age_max <= 99),
   pref_spice smallint not null default 1 check (pref_spice between 0 and 3),
@@ -61,7 +61,7 @@ create table if not exists public.accounts_private (
 create table if not exists public.masquerade_queue (
   user_id uuid primary key references public.profiles on delete cascade,
   intent public.intent not null,
-  seeking public.seeking not null,
+  seeking text not null,
   age_min int not null,
   age_max int not null,
   spice smallint not null,
@@ -165,14 +165,46 @@ create table if not exists public.reports (
 );
 
 -- ---------------------------------------------------------------------------
+-- "I’d like to meet" can hold up to two choices, e.g. 'women,other', or 'anyone'.
+-- (Older databases stored a single choice; convert them in place.)
+-- ---------------------------------------------------------------------------
+do $$ begin
+  if exists (select 1 from information_schema.columns where table_schema = 'public'
+             and table_name = 'profiles' and column_name = 'pref_seeking' and data_type = 'USER-DEFINED') then
+    alter table public.profiles alter column pref_seeking drop default;
+    alter table public.profiles alter column pref_seeking type text using pref_seeking::text;
+    alter table public.profiles alter column pref_seeking set default 'anyone';
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public'
+             and table_name = 'masquerade_queue' and column_name = 'seeking' and data_type = 'USER-DEFINED') then
+    alter table public.masquerade_queue alter column seeking type text using seeking::text;
+  end if;
+end $$;
+
+create or replace function public.seeking_ok(s text) returns boolean
+language sql immutable as $$
+  select s = 'anyone' or (
+    cardinality(string_to_array(s, ',')) between 1 and 2
+    and string_to_array(s, ',') <@ array['women', 'men', 'other']
+  )
+$$;
+
+alter table public.profiles drop constraint if exists profiles_pref_seeking_ok;
+alter table public.profiles add constraint profiles_pref_seeking_ok check (public.seeking_ok(pref_seeking));
+
+-- New members start with "Open to Masquerade" switched on
+alter table public.profiles alter column open_to_masquerade set default true;
+
+-- ---------------------------------------------------------------------------
 -- Helpers
 -- ---------------------------------------------------------------------------
 create or replace function public.age_years(d date) returns int
 language sql stable as $$ select extract(year from age(current_date, d))::int $$;
 
-create or replace function public.gender_fits(s public.seeking, g public.gender) returns boolean
+drop function if exists public.gender_fits(public.seeking, public.gender);
+create or replace function public.gender_fits(s text, g public.gender) returns boolean
 language sql immutable as $$
-  select s = 'anyone' or (s = 'women' and g = 'woman') or (s = 'men' and g = 'man')
+  select s = 'anyone' or (case g when 'woman' then 'women' when 'man' then 'men' else 'other' end) = any(string_to_array(s, ','))
 $$;
 
 -- Distance in km between two points (null if either is unknown)
@@ -307,8 +339,9 @@ end $$;
 
 -- "Put on your mask": join the waiting list and try to match right away.
 drop function if exists public.start_masquerade(public.intent, public.seeking, int, int, smallint);
+drop function if exists public.start_masquerade(public.intent, public.seeking, int, int, smallint, int, double precision, double precision);
 create or replace function public.start_masquerade(
-  p_intent public.intent, p_seeking public.seeking, p_age_min int, p_age_max int, p_spice smallint,
+  p_intent public.intent, p_seeking text, p_age_min int, p_age_max int, p_spice smallint,
   p_max_km int default null, p_lat double precision default null, p_lng double precision default null
 ) returns uuid
 language plpgsql security definer set search_path = public as $$
@@ -324,6 +357,7 @@ begin
     raise exception 'Please finish your profile first';
   end if;
   if p_spice < 0 or p_spice > 3 then raise exception 'Invalid spice level'; end if;
+  if p_seeking is null or not public.seeking_ok(p_seeking) then p_seeking := 'anyone'; end if;
   p_age_min := greatest(18, least(p_age_min, 99));
   p_age_max := greatest(p_age_min, least(p_age_max, 99));
   my_age := public.age_years(me.birthdate);

@@ -34,20 +34,16 @@ export function CallScreen({
   onToggleCamera: () => void;
   onFlip: () => void;
 }) {
-  const remoteVideo = useRef<HTMLVideoElement>(null);
-  const remoteAudio = useRef<HTMLAudioElement>(null);
-  const localVideo = useRef<HTMLVideoElement>(null);
+  // Video/audio elements mount and unmount as the call changes state, so the
+  // stream is attached whenever either the element or the stream changes.
+  // Their sound plays through <audio>; both videos stay muted so autoplay is allowed.
+  const remoteVideo = useMediaStream<HTMLVideoElement>(remoteStream, true);
+  const remoteAudio = useMediaStream<HTMLAudioElement>(remoteStream, false);
+  const localVideo = useMediaStream<HTMLVideoElement>(localStream, true);
+  const root = useRef<HTMLDivElement>(null);
   const [now, setNow] = useState(Date.now());
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
-
-  useEffect(() => {
-    if (remoteVideo.current) remoteVideo.current.srcObject = remoteStream;
-    if (remoteAudio.current) remoteAudio.current.srcObject = remoteStream;
-  }, [remoteStream]);
-  useEffect(() => {
-    if (localVideo.current) localVideo.current.srcObject = localStream;
-  }, [localStream]);
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
@@ -55,7 +51,10 @@ export function CallScreen({
 
   const video = call.kind === "video";
   const live = call.status === "connected";
-  const showRemoteVideo = video && live && remoteStream;
+  const showRemoteVideo = video && live && !!remoteStream?.getVideoTracks().length;
+
+  // Phones may block playback until a tap: retry on any tap on the call screen
+  const resume = () => root.current?.querySelectorAll<HTMLMediaElement>("video, audio").forEach((m) => m.paused && m.srcObject && m.play().catch(() => {}));
   const secs = call.connectedAt ? Math.floor((now - call.connectedAt) / 1000) : 0;
   const statusText =
     call.status === "incoming"
@@ -70,10 +69,10 @@ export function CallScreen({
 
   if (!mounted) return null;
   return createPortal(
-    <div className="fixed inset-0 z-[80] flex animate-fade-in flex-col overflow-hidden bg-ink text-white" role="dialog" aria-modal="true" aria-label="Call">
+    <div ref={root} onPointerDown={resume} className="fixed inset-0 z-[80] flex animate-fade-in flex-col overflow-hidden bg-ink text-white" role="dialog" aria-modal="true" aria-label="Call">
       {/* Background: their video, or a soft blurred photo */}
       {showRemoteVideo ? (
-        <video ref={remoteVideo} autoPlay playsInline className="absolute inset-0 h-full w-full object-cover" />
+        <video ref={remoteVideo} autoPlay playsInline muted className="absolute inset-0 h-full w-full object-cover" />
       ) : (
         <>
           {call.peer.photo && (
@@ -83,7 +82,7 @@ export function CallScreen({
           <div className="absolute inset-0 bg-gradient-to-b from-brand/40 via-ink/60 to-ink" />
         </>
       )}
-      <audio ref={remoteAudio} autoPlay />
+      <audio ref={remoteAudio} autoPlay playsInline />
 
       {/* Who and status */}
       <div className={clsx("relative z-10 flex flex-col items-center px-6 text-center", showRemoteVideo ? "pt-[max(1.25rem,env(safe-area-inset-top))]" : "pt-[18vh]")}>
@@ -152,6 +151,18 @@ export function CallScreen({
     </div>,
     document.body,
   );
+}
+
+/** Callback ref that keeps a media element playing the given stream. */
+function useMediaStream<T extends HTMLMediaElement>(stream: MediaStream | null, muted: boolean) {
+  const [el, setEl] = useState<T | null>(null);
+  useEffect(() => {
+    if (!el) return;
+    el.muted = muted;
+    if (el.srcObject !== stream) el.srcObject = stream;
+    if (stream) el.play().catch(() => {});
+  }, [el, stream, muted]);
+  return setEl;
 }
 
 function RoundButton({

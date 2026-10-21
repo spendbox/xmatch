@@ -1,6 +1,8 @@
 export type Gender = "woman" | "man" | "other";
 export type Intent = "friends" | "dating" | "spicy";
-export type Seeking = "women" | "men" | "anyone";
+/** Who someone wants to meet: one or two of SeekKey joined by commas (e.g. "women,other"), or "anyone". */
+export type SeekKey = "women" | "men" | "other";
+export type Seeking = string;
 
 export type Profile = {
   id: string;

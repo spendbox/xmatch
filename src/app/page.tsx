@@ -4,6 +4,7 @@ import { MaskIcon } from "@/components/ui/MaskIcon";
 import { ChiliIcon, INTENT_ICONS, InterestIcon, MaskLineIcon } from "@/components/ui/icons";
 import { LiveDemo } from "@/components/landing/LiveDemo";
 import { Reveal } from "@/components/landing/Reveal";
+import { ScrollToTop } from "@/components/landing/ScrollToTop";
 import { INTEREST_OPTIONS } from "@/lib/constants";
 import { ArrowRight, Clock3, EyeOff, HeartHandshake, MapPin, ShieldCheck } from "lucide-react";
 
@@ -52,6 +53,7 @@ export default function Landing() {
 
   return (
     <main className="relative overflow-x-clip">
+      <ScrollToTop />
       {/* Soft moving colour in the background */}
       <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-[900px] overflow-hidden">
         <div className="absolute -top-24 -left-24 h-80 w-80 animate-blob rounded-full text-brand/25 glow" />

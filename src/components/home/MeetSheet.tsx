@@ -1,8 +1,8 @@
 "use client";
 
 import clsx from "clsx";
-import { ChevronDown, SlidersHorizontal } from "lucide-react";
-import { DISTANCES, INTENTS, SEEKING, SPICE_LEVELS } from "@/lib/constants";
+import { Check, ChevronDown, SlidersHorizontal } from "lucide-react";
+import { DISTANCES, INTENTS, MAX_SEEK, SEEK_OPTIONS, SPICE_LEVELS, seekingList, toSeeking } from "@/lib/constants";
 import { Choice } from "@/components/ui/Choice";
 import { Sheet } from "@/components/ui/Sheet";
 import { Button, tapFeedback } from "@/components/ui/Button";
@@ -48,16 +48,8 @@ export function MeetSheet({
             options={INTENTS.map((i) => ({ value: i.value, label: i.label, hint: INTENT_HINTS[i.value], icon: INTENT_ICONS[i.value]({ size: 22 }) }))}
           />
         </Section>
-        <Section title="I'd like to meet">
-          <Choice
-            name="I'd like to meet"
-            value={prefs.seeking}
-            onChange={(v) => set("seeking", v)}
-            options={SEEKING.map((s) => {
-              const I = SEEKING_ICONS[s.value];
-              return { value: s.value, label: s.label, icon: <I size={22} strokeWidth={1.75} /> };
-            })}
-          />
+        <Section title="I'd like to meet" note={`Pick up to ${MAX_SEEK}, or Anyone`}>
+          <SeekPicker value={prefs.seeking} onChange={(v) => set("seeking", v)} />
         </Section>
         <Section title="Aged">
           <div className="grid grid-cols-2 gap-2.5">
@@ -136,5 +128,53 @@ function AgeSelect({ label, value, onChange }: { label: string; value: number; o
         ))}
       </select>
     </label>
+  );
+}
+
+/** Pick one or two genders to meet, or Anyone. Tapping a third swaps out the oldest pick. */
+function SeekPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const picked = seekingList(value);
+  const anyone = picked.length === 0;
+  const options = [
+    ...SEEK_OPTIONS.map((o) => ({ key: o.value as string, label: o.label })),
+    { key: "anyone", label: "Anyone" },
+  ];
+  return (
+    <div role="group" aria-label="I'd like to meet" className="grid grid-cols-4 gap-2">
+      {options.map((o) => {
+        const isAnyone = o.key === "anyone";
+        const on = isAnyone ? anyone : picked.includes(o.key as never);
+        const I = SEEKING_ICONS[o.key as keyof typeof SEEKING_ICONS];
+        return (
+          <button
+            key={o.key}
+            type="button"
+            aria-pressed={on}
+            onClick={() => {
+              tapFeedback();
+              if (isAnyone) return onChange("anyone");
+              const k = o.key as (typeof picked)[number];
+              let next = on ? picked.filter((p) => p !== k) : [...picked, k];
+              if (next.length > MAX_SEEK) next = next.slice(next.length - MAX_SEEK);
+              onChange(toSeeking(next));
+            }}
+            className={clsx(
+              "relative flex min-h-[88px] flex-col items-center justify-center gap-2 rounded-2xl border px-1 py-3 text-center transition duration-200 active:scale-[0.97]",
+              on ? "border-brand bg-brand-soft/70 shadow-[0_6px_18px_-8px_rgb(91_63_217/0.45)]" : "border-line bg-surface hover:border-line-strong",
+            )}
+          >
+            <span className={clsx("grid h-10 w-10 place-items-center rounded-[13px] transition", on ? "animate-pop bg-brand text-white" : "bg-cream text-ink-soft")}>
+              <I size={20} strokeWidth={1.75} />
+            </span>
+            <span className={clsx("text-[13px] leading-tight font-semibold", on ? "text-brand-ink" : "text-ink")}>{o.label}</span>
+            {on && (
+              <span className="absolute top-1.5 right-1.5 grid h-5 w-5 animate-pop place-items-center rounded-full bg-brand text-white">
+                <Check size={12} strokeWidth={3} />
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
   );
 }

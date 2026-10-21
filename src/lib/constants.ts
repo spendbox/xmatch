@@ -1,4 +1,4 @@
-import type { Intent, Seeking, Gender } from "./types";
+import type { Intent, Seeking, SeekKey, Gender } from "./types";
 
 export const INTENTS: { value: Intent; label: string; hint: string }[] = [
   { value: "friends", label: "Friends", hint: "Good company, no pressure" },
@@ -6,15 +6,34 @@ export const INTENTS: { value: Intent; label: string; hint: string }[] = [
   { value: "spicy", label: "Spicy link-up", hint: "Flirty and fun" },
 ];
 
-export const SEEKING: { value: Seeking; label: string }[] = [
-  { value: "women", label: "Women" },
-  { value: "men", label: "Men" },
-  { value: "anyone", label: "Anyone" },
+/** The genders you can choose to meet. Pick up to MAX_SEEK, or none for anyone. */
+export const SEEK_OPTIONS: { value: SeekKey; label: string }[] = [
+  { value: "women", label: "Female" },
+  { value: "men", label: "Male" },
+  { value: "other", label: "Other" },
 ];
+export const MAX_SEEK = 2;
+
+export function seekingList(s: Seeking | null | undefined): SeekKey[] {
+  if (!s || s === "anyone") return [];
+  const parts = s.split(",");
+  return SEEK_OPTIONS.map((o) => o.value).filter((v) => parts.includes(v));
+}
+
+export function toSeeking(list: SeekKey[]): Seeking {
+  const ordered = SEEK_OPTIONS.map((o) => o.value).filter((v) => list.includes(v));
+  return ordered.length === 0 || ordered.length === SEEK_OPTIONS.length ? "anyone" : ordered.join(",");
+}
+
+export function seekingLabel(s: Seeking | null | undefined) {
+  const list = seekingList(s);
+  if (!list.length) return "Anyone";
+  return list.map((v) => SEEK_OPTIONS.find((o) => o.value === v)!.label).join(" & ");
+}
 
 export const GENDERS: { value: Gender; label: string }[] = [
-  { value: "woman", label: "Woman" },
-  { value: "man", label: "Man" },
+  { value: "woman", label: "Female" },
+  { value: "man", label: "Male" },
   { value: "other", label: "Other" },
 ];
 
