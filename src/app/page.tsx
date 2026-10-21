@@ -99,7 +99,7 @@ export default function Landing() {
             </span>
           </h1>
           <p className="mx-auto mt-5 max-w-[22rem] animate-fade-up text-[17px] leading-relaxed text-muted [animation-delay:160ms] lg:mx-0 lg:max-w-md lg:text-[19px]">
-            Dashpad pairs you with people who match your energy. Chat masked for five minutes — if you click, you both unmask.
+            Talk blind for 5 minutes. If the vibe checks, the masks come off.
           </p>
           <div className="mt-7 flex animate-fade-up flex-col gap-3 [animation-delay:240ms] lg:mt-9 lg:items-start">
             <ButtonLink href="/signup" size="lg" loadingText="Opening…" className="lg:w-auto lg:px-10">
