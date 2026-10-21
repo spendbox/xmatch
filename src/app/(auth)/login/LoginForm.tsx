@@ -30,7 +30,7 @@ export function LoginForm() {
         </div>
       </div>
       <FormError message={state?.error} />
-      <Button type="submit" size="lg" loading={pending}>
+      <Button type="submit" size="lg" loading={pending} loadingText="Logging you in…">
         Log in
       </Button>
     </form>

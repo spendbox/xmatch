@@ -147,7 +147,7 @@ export function Onboarding({ profile }: { profile: Profile }) {
 
       <div className="mt-auto space-y-3 pt-8 pb-2">
         <FormError message={error} />
-        <Button size="lg" onClick={next} loading={saving}>
+        <Button size="lg" onClick={next} loading={saving} loadingText="Saving…">
           {step < STEPS.length - 1 ? "Continue" : "Finish"}
         </Button>
       </div>

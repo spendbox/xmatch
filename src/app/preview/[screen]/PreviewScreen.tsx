@@ -9,6 +9,8 @@ import { ProfileEditor } from "@/components/profile/ProfileEditor";
 import { BottomNav } from "@/components/app/BottomNav";
 import { InviteSheet } from "@/components/app/InviteSheet";
 import { Onboarding } from "@/app/onboarding/Onboarding";
+import { Button } from "@/components/ui/Button";
+import { InterestPicker } from "@/components/profile/InterestPicker";
 import type { ChatMessage, MasqueradeState, Profile } from "@/lib/types";
 
 const photo = (a: string, b: string, letter: string) =>
@@ -59,7 +61,7 @@ const session = (over: Partial<MasqueradeState> = {}): MasqueradeState => ({
   server_now: new Date(now).toISOString(),
   match_id: "m1",
   me: { id: "me", alias: "Golden Fox", spice: 1, vote: null },
-  them: { alias: "Velvet Owl", spice: 3, age: 26, gender: "woman", interests: ["Books", "Travel", "Dancing", "Food"], distance_km: 4, has_voted: false, profile: null },
+  them: { alias: "Velvet Owl", spice: 3, age: 26, gender: "woman", interests: ["Books", "Travel", "Dancing", "Food"], shared_interests: ["Travel", "Food"], distance_km: 4, has_voted: false, profile: null },
   ...over,
 });
 
@@ -82,6 +84,20 @@ export function PreviewScreen({ screen }: { screen: string }) {
         <div className="pb-24">
           <MasqueradeSetup profile={me} />
           <BottomNav />
+        </div>
+      );
+    case "sheet-intent":
+    case "sheet-spice":
+    case "sheet-distance":
+    case "sheet-seeking":
+      return <MasqueradeSetup profile={me} demoSheet={screen.replace("sheet-", "") as "intent"} />;
+    case "buttons":
+      return (
+        <div className="mx-auto max-w-md space-y-3 p-5 pt-16">
+          <Button size="lg" loading loadingText="Logging you in…">Log in</Button>
+          <Button variant="gold" size="lg" loading loadingText="Masking up…">Put on your mask</Button>
+          <Button variant="secondary" size="lg" loading loadingText="Saving…">Save</Button>
+          <div className="pt-4"><InterestPicker value={["Music", "Travel", "Food", "Art"]} onChange={() => {}} /></div>
         </div>
       );
     case "waiting":

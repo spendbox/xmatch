@@ -189,6 +189,12 @@ $$;
 create or replace function public.within_km(d double precision, max_km int) returns boolean
 language sql immutable as $$ select max_km is null or (d is not null and d <= max_km) $$;
 
+-- How many interests two people have in common
+create or replace function public.shared_count(a text[], b text[]) returns int
+language sql immutable as $$
+  select coalesce(cardinality(array(select unnest(a) intersect select unnest(b))), 0)
+$$;
+
 create or replace function public.is_blocked(a uuid, b uuid) returns boolean
 language sql stable security definer set search_path = public as $$
   select exists (
@@ -283,8 +289,10 @@ begin
     and public.within_km(public.distance_km(me_q.lat, me_q.lng, q.lat, q.lng), q.max_km)
     and not public.is_blocked(uid, q.user_id)
     and not public.already_matched(uid, q.user_id)
-  -- Closest people first, then whoever has waited longest
-  order by public.distance_km(me_q.lat, me_q.lng, q.lat, q.lng) nulls last, q.created_at
+  -- Closest people first (in 10 km steps), then most shared interests, then whoever waited longest
+  order by floor(public.distance_km(me_q.lat, me_q.lng, q.lat, q.lng) / 10) nulls last,
+    public.shared_count(p.interests, me_p.interests) desc,
+    q.created_at
   limit 1;
 
   if not found then return null; end if;
@@ -370,8 +378,9 @@ begin
     and public.within_km(public.distance_km(p_lat, p_lng, a.lat, a.lng), p.pref_max_km)
     and not public.is_blocked(uid, p.id)
     and not public.already_matched(uid, p.id)
-  -- Invite the closest people first
-  order by public.distance_km(p_lat, p_lng, a.lat, a.lng) nulls last, random()
+  -- Invite the closest people first, then those with the most in common
+  order by floor(public.distance_km(p_lat, p_lng, a.lat, a.lng) / 10) nulls last,
+    public.shared_count(p.interests, me.interests) desc, random()
   limit 3;
 
   return null;
@@ -507,6 +516,7 @@ declare
   other uuid;
   op profiles;
   my_loc accounts_private;
+  mp profiles;
   their_loc accounts_private;
   i_am_a boolean;
 begin
@@ -521,6 +531,7 @@ begin
   other := case when i_am_a then s.user_b else s.user_a end;
   select * into op from profiles where id = other;
   select * into my_loc from accounts_private where user_id = uid;
+  select * into mp from profiles where id = uid;
   select * into their_loc from accounts_private where user_id = other;
 
   return json_build_object(
@@ -545,6 +556,7 @@ begin
       'age', public.age_years(op.birthdate),
       'gender', op.gender,
       'interests', op.interests,
+      'shared_interests', array(select unnest(op.interests) intersect select unnest(mp.interests)),
       'distance_km', ceil(public.distance_km(my_loc.lat, my_loc.lng, their_loc.lat, their_loc.lng))::int,
       'has_voted', (case when i_am_a then s.unmask_b else s.unmask_a end) is not null,
       -- Only revealed after you both unmask

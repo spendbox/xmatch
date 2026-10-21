@@ -11,6 +11,7 @@ import { Composer } from "@/components/chat/Composer";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { Chilis } from "@/components/ui/Spice";
 import { TimerRing } from "./TimerRing";
+import { InterestTag } from "@/components/profile/InterestPicker";
 import { DecisionSheet } from "./DecisionSheet";
 import { Outcome } from "./Outcome";
 import { ReportSheet } from "./ReportSheet";
@@ -171,8 +172,10 @@ export function MasqueradeRoom({
             Them <Chilis level={them.spice} />
           </Tag>
           <Tag strong>Questions: {spiceLabel(state.spice_level)}</Tag>
-          {them.interests.slice(0, 6).map((i) => (
-            <Tag key={i}>{i}</Tag>
+          {[...(them.shared_interests ?? []), ...them.interests.filter((i) => !(them.shared_interests ?? []).includes(i))]
+            .slice(0, 8)
+            .map((i) => (
+              <InterestTag key={i} name={i} highlight={(them.shared_interests ?? []).includes(i)} />
           ))}
         </div>
       </header>
@@ -182,6 +185,11 @@ export function MasqueradeRoom({
         <p className="px-6 pt-5 text-center text-[13px] leading-relaxed text-muted">
           You&apos;re <span className="font-semibold text-ink">{state.me.alias}</span>. Names and photos stay hidden
           until you both unmask.
+          {(them.shared_interests ?? []).length > 0 && (
+            <span className="mt-2 block font-semibold text-brand">
+              You both like {formatList(them.shared_interests)} ✓
+            </span>
+          )}
         </p>
         <MessageList messages={messages} myId={state.me.id} />
       </div>
@@ -220,4 +228,9 @@ function Tag({ children, strong }: { children: React.ReactNode; strong?: boolean
       {children}
     </span>
   );
+}
+
+function formatList(items: string[]) {
+  if (items.length <= 1) return items.join("");
+  return items.slice(0, -1).join(", ") + " & " + items[items.length - 1];
 }

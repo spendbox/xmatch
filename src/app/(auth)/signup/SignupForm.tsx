@@ -39,7 +39,7 @@ export function SignupForm() {
         I&apos;m 18 or older and I&apos;ll treat people with respect.
       </label>
       <FormError message={state?.error} />
-      <Button type="submit" size="lg" loading={pending}>
+      <Button type="submit" size="lg" loading={pending} loadingText="Creating your account…">
         Create account
       </Button>
     </form>

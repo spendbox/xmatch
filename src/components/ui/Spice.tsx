@@ -1,5 +1,7 @@
-export function Chilis({ level, className }: { level: number; className?: string }) {
-  if (level <= 0) return <span className={className}>🌿</span>;
-  if (level >= 3) return <span className={className}>😈</span>;
-  return <span className={className}>{"🌶️".repeat(level)}</span>;
+import { SpiceIcon } from "./icons";
+
+/** Small inline spice icon (leaf, chili, two chilis, devil). */
+export function Chilis({ level, className, size = 16 }: { level: number; className?: string; size?: number }) {
+  const color = level <= 0 ? "text-mint" : level >= 3 ? "text-[#b42da8]" : "text-chili";
+  return <SpiceIcon level={level} size={size} className={(className ?? "") + " " + color} />;
 }

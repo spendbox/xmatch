@@ -7,7 +7,7 @@ import { uploadPhoto, deletePhoto } from "@/lib/photos";
 import { ageFromBirthdate, GENDERS } from "@/lib/constants";
 import type { Profile } from "@/lib/types";
 import { logOut } from "@/app/(auth)/actions";
-import { Button } from "@/components/ui/Button";
+import { Button, SubmitButton } from "@/components/ui/Button";
 import { FormError, Input, Label, Textarea } from "@/components/ui/Field";
 import { PhotoGrid } from "./PhotoGrid";
 import { InterestPicker, MAX_INTERESTS } from "./InterestPicker";
@@ -87,7 +87,7 @@ export function ProfileEditor({ profile, email, phone }: { profile: Profile; ema
           <InterestPicker value={interests} onChange={setInterests} />
         </div>
         <FormError message={error} />
-        <Button size="lg" onClick={save} loading={saving}>
+        <Button size="lg" onClick={save} loading={saving} loadingText="Saving…">
           {saved ? (
             <>
               <Check size={18} /> Saved
@@ -115,9 +115,9 @@ export function ProfileEditor({ profile, email, phone }: { profile: Profile; ema
           <Row label="Phone" value={phone || "—"} />
         </dl>
         <form action={logOut} className="mt-4">
-          <Button variant="ghost" size="lg" type="submit" className="text-chili">
+          <SubmitButton variant="ghost" size="lg" className="text-chili" loadingText="Logging out…">
             <LogOut size={18} /> Log out
-          </Button>
+          </SubmitButton>
         </form>
       </section>
     </main>

@@ -36,6 +36,7 @@ export type MasqueradeState = {
     age: number;
     gender: Gender;
     interests: string[];
+    shared_interests: string[];
     distance_km: number | null;
     has_voted: boolean;
     profile: { id: string; display_name: string; bio: string; photos: string[] } | null;

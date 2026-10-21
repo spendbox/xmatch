@@ -52,7 +52,9 @@ export function Waiting({ prefs, userId, onCancel }: { prefs: SetupPrefs; userId
     };
   }, [userId]);
 
+  const [cancelling, setCancelling] = useState(false);
   async function cancel() {
+    setCancelling(true);
     await createClient().rpc("cancel_masquerade");
     onCancel();
   }
@@ -94,7 +96,7 @@ export function Waiting({ prefs, userId, onCancel }: { prefs: SetupPrefs; userId
       </p>
 
       <div className="mt-auto w-full pt-10 pb-4">
-        <Button variant="secondary" size="lg" onClick={cancel}>
+        <Button variant="secondary" size="lg" onClick={cancel} loading={cancelling} loadingText="Taking off mask…">
           Take off mask
         </Button>
       </div>

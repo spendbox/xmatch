@@ -3,6 +3,7 @@ import "@fontsource-variable/plus-jakarta-sans";
 import "@fontsource-variable/fraunces";
 import "@fontsource-variable/fraunces/wght-italic.css";
 import "./globals.css";
+import { NavProgress } from "@/components/ui/NavProgress";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://dashpad.site"),
@@ -30,7 +31,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="min-h-dvh">{children}</body>
+      <body className="min-h-dvh">
+        <NavProgress />
+        {children}
+      </body>
     </html>
   );
 }
