@@ -17,6 +17,7 @@ Live at **dashpad.site** · Built with Next.js (hosted on Vercel) and Supabase (
 - **Open to Masquerade** switch: if you're online, you get a pop-up when someone masked is looking for someone like you.
 - Matches list and chat: replies (swipe or press and hold), photos & videos, voice notes, delete for everyone, voice & video calls
 - Report & unmatch, leave any time
+- **Masquerade Nights**: themed hours of 5-minute masked rounds, someone new each round, set up from the admin dashboard
 - **Keys** (in-app currency) bought with **Paystack**: gifts, +2 minutes in a masked chat, and extra masquerades after 5 free a day
 
 ## Setting it up (one time)
@@ -51,6 +52,30 @@ npm run dev                  # http://localhost:3000
 `/preview/<screen>` shows each screen with sample data during development (`masquerade`, `waiting`, `chat`, `decide`, `matched`, `ended`, `invite`, `matches`, `match-chat`, `profile`, `onboarding`). It is switched off on the live site.
 
 Database rules live in `supabase/migrations/0001_dashpad.sql`. Matching, timers, unmask decisions and chat deletion all run inside the database, so nobody can cheat them from the browser.
+
+## Admin dashboard
+
+Go to **dashpad.site/admin**. Log in with the email and password you set in Vercel:
+
+| Name | Value |
+|---|---|
+| `ADMIN_EMAIL` | the admin login email |
+| `ADMIN_PASSWORD` | a long, strong password |
+
+To change them, edit the values in Vercel → Settings → Environment Variables and redeploy (everyone logged in to admin is logged out).
+
+Admin has: an **Overview** (members, online now, masquerades, matches, revenue, gifts, reports), **Masquerade Nights** (create, edit, publish, cancel with automatic refunds, night-specific icebreakers, live preview) and **Icebreakers** (browse by spice level, search, edit, switch off, delete, and bulk-add by pasting one question per line).
+
+## Bot protection (Cloudflare Turnstile)
+
+1. In Cloudflare go to **Turnstile → Add widget**. Add the domain `dashpad.site`, choose **Managed**.
+2. Copy the **Site Key** and **Secret Key** into Vercel, then redeploy:
+   | Name | Value |
+   |---|---|
+   | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | the Site Key |
+   | `TURNSTILE_SECRET_KEY` | the Secret Key (keep private) |
+
+It protects sign-up and the admin login. Most real people never see a challenge.
 
 ## Payments (Paystack)
 

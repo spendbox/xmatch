@@ -2,12 +2,18 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { verifyHuman } from "@/lib/turnstile";
 
-export type AuthState = { error?: string; values?: Record<string, string> } | undefined;
+export type AuthState = { error?: string; values?: Record<string, string>; at?: number } | undefined;
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export async function signUp(_: AuthState, form: FormData): Promise<AuthState> {
+export async function signUp(prev: AuthState, form: FormData): Promise<AuthState> {
+  const res = await signUpInner(prev, form);
+  return res ? { ...res, at: Date.now() } : res; // fresh security check after any error
+}
+
+async function signUpInner(_: AuthState, form: FormData): Promise<AuthState> {
   const email = String(form.get("email") ?? "").trim().toLowerCase();
   const password = String(form.get("password") ?? "");
   const values = { email };
@@ -16,6 +22,9 @@ export async function signUp(_: AuthState, form: FormData): Promise<AuthState> {
   if (password.length < 8) return { error: "Your password needs at least 8 characters.", values };
   if (form.get("age_ok") !== "on") return { error: "You must be 18 or older to use Dashpad.", values };
   if (form.get("terms_ok") !== "on") return { error: "Please agree to the Terms and Privacy Policy to continue.", values };
+  if (!(await verifyHuman(form.get("cf-turnstile-response")))) {
+    return { error: "Please complete the security check and try again.", values, at: Date.now() };
+  }
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({

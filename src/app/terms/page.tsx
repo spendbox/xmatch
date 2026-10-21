@@ -165,7 +165,8 @@ const sections: LegalSection[] = [
         <ul>
           <li>sending gifts in a chat;</li>
           <li>adding 2 minutes to a masked chat (for both people);</li>
-          <li>extra masquerades after your free ones (5 Keys each).</li>
+          <li>extra masquerades after your free ones (5 Keys each);</li>
+          <li>entry to some Masquerade Nights (refunded if you cancel before it starts, or if we cancel it).</li>
         </ul>
         <p>
           You can buy Keys in packs. Prices are shown in naira before you pay, and payments are processed securely by{" "}

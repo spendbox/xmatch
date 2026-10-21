@@ -19,6 +19,7 @@ const REASONS: Record<string, string> = {
   extend: "Added 2 minutes",
   extra_masquerade: "Extra masquerade",
   refund: "Refund",
+  event: "Masquerade Night entry",
 };
 
 export function WalletScreen({

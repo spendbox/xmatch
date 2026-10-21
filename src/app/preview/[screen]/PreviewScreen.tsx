@@ -3,6 +3,14 @@
 import { HomeScreen } from "@/components/home/HomeScreen";
 import { WalletScreen } from "@/components/keys/WalletScreen";
 import { GiftSheet } from "@/components/keys/GiftSheet";
+import { EventsScreen } from "@/components/events/EventsScreen";
+import { EventLobby } from "@/components/events/EventLobby";
+import { AdminShell } from "@/components/admin/AdminShell";
+import { AdminOverview } from "@/components/admin/AdminOverview";
+import { NightsList, type AdminNight } from "@/components/admin/NightsList";
+import { NightEditor } from "@/components/admin/NightEditor";
+import { IcebreakerManager } from "@/components/admin/IcebreakerManager";
+import type { DashpadEvent } from "@/lib/events";
 import { MasqueradeRoom } from "@/components/masquerade/MasqueradeRoom";
 import { Outcome } from "@/components/masquerade/Outcome";
 import { MatchesList } from "@/components/matches/MatchesList";
@@ -86,7 +94,24 @@ const recent = [
   { id: "m3", created_at: iso(3000), last_message_at: iso(200), intent: "spicy" as const, other_id: "z", display_name: "Zara", photos: [photo("#5b3fd9", "#e5484d", "Z")], age: 29, last_message: null, last_sender: null },
 ];
 
-const APP_SCREENS = ["home", "matches", "wallet", "profile", "rich-chat", "extend", "chat", "desktop-matches", "gifts"];
+const APP_SCREENS = ["events", "event-upcoming", "event-live", "event-waiting", "event-ended", "home", "matches", "wallet", "profile", "rich-chat", "extend", "chat", "desktop-matches", "gifts"];
+
+function ev(over: Partial<DashpadEvent> = {}): DashpadEvent {
+  return {
+    id: "e1", title: "Afrobeats Lovers", description: "Everyone here loves Afrobeats. Bring your best song recommendations and your dance-floor energy.",
+    theme: "violet", intent: "dating", starts_at: new Date(now + 2 * 3600_000 + 14 * 60_000).toISOString(),
+    ends_at: new Date(now + 3 * 3600_000 + 14 * 60_000).toISOString(), age_min: 21, age_max: 35, entry_keys: 20,
+    max_attendees: null, status: "published", going_count: 1240, i_am_going: false, my_rounds: 0, my_unmasks: 0,
+    server_now: new Date(now).toISOString(), ...over,
+  };
+}
+
+const adminNights: AdminNight[] = [
+  { id: "e1", title: "Afrobeats Lovers", description: "Everyone here loves Afrobeats.", theme: "violet", intent: "dating", starts_at: new Date(now + 2 * 86400_000).toISOString(), ends_at: new Date(now + 2 * 86400_000 + 3600_000).toISOString(), age_min: 21, age_max: 35, entry_keys: 20, max_attendees: null, status: "published", going_count: 1240, rounds: 0, unmasks: 0, keys_collected: 24800, question_count: 3 },
+  { id: "e2", title: "Faith & Friendship", description: "", theme: "mint", intent: "friends", starts_at: new Date(now + 5 * 86400_000).toISOString(), ends_at: new Date(now + 5 * 86400_000 + 3600_000).toISOString(), age_min: 18, age_max: 40, entry_keys: 0, max_attendees: 500, status: "draft", going_count: 0, rounds: 0, unmasks: 0, keys_collected: 0, question_count: 8 },
+  { id: "e3", title: "Spicy Saturday", description: "", theme: "rose", intent: "spicy", starts_at: new Date(now + 6 * 86400_000).toISOString(), ends_at: new Date(now + 6 * 86400_000 + 5400_000).toISOString(), age_min: 25, age_max: 40, entry_keys: 30, max_attendees: null, status: "published", going_count: 312, rounds: 0, unmasks: 0, keys_collected: 9360, question_count: 12 },
+  { id: "e4", title: "Valentine's Masquerade", description: "", theme: "rose", intent: "dating", starts_at: new Date(now - 9 * 86400_000).toISOString(), ends_at: new Date(now - 9 * 86400_000 + 7200_000).toISOString(), age_min: 21, age_max: 45, entry_keys: 25, max_attendees: null, status: "published", going_count: 2210, rounds: 8420, unmasks: 1930, keys_collected: 55250, question_count: 15 },
+];
 
 export function PreviewScreen({ screen }: { screen: string }) {
   const inner = <ScreenBody screen={screen} />;
@@ -218,6 +243,33 @@ function ScreenBody({ screen }: { screen: string }) {
           </div>
         </div>
       );
+    case "events":
+      return <EventsScreen events={[ev({ starts_at: iso(1200), ends_at: new Date(now + 2400_000).toISOString(), i_am_going: true, going_count: 186 }), ev({ id: "e2", title: "Faith & Friendship", theme: "mint", intent: "friends", entry_keys: 0, starts_at: new Date(now + 3 * 86400_000).toISOString(), ends_at: new Date(now + 3 * 86400_000 + 3600_000).toISOString(), going_count: 54 }), ev({ id: "e3", title: "Spicy Saturday", theme: "rose", intent: "spicy", age_min: 25, age_max: 40, starts_at: new Date(now + 5 * 86400_000).toISOString(), ends_at: new Date(now + 5 * 86400_000 + 5400_000).toISOString(), going_count: 312 })]} />;
+    case "event-upcoming":
+      return <EventLobby userId="me" event={ev({ i_am_going: false })} />;
+    case "event-live":
+      return <EventLobby userId="me" event={ev({ starts_at: iso(1200), ends_at: new Date(now + 2400_000).toISOString(), i_am_going: true, my_rounds: 3, my_unmasks: 1 })} />;
+    case "event-waiting":
+      return <EventLobby userId="me" demo="waiting" event={ev({ starts_at: iso(1200), ends_at: new Date(now + 2400_000).toISOString(), i_am_going: true, my_rounds: 3, my_unmasks: 1 })} />;
+    case "event-ended":
+      return <EventLobby userId="me" event={ev({ starts_at: iso(7200), ends_at: iso(3600), i_am_going: true, my_rounds: 9, my_unmasks: 2 })} />;
+    case "admin":
+      return <AdminShell><AdminOverview overview={{ users: 2841, new_users_7d: 312, online_now: 214, masquerades_today: 1290, unmasks_today: 388, matches_total: 6120, revenue_30d_kobo: 184500000, keys_sold_30d: 112400, gifts_7d: 2290, reports_7d: 4, icebreakers: 112 }} nights={adminNights} /></AdminShell>;
+    case "admin-nights":
+      return <AdminShell><NightsList nights={adminNights} /></AdminShell>;
+    case "admin-night":
+      return <AdminShell><NightEditor night={adminNights[0]} questions={["Which Afrobeats song never leaves your playlist?", "Best concert you've ever been to?", "Who's your dream duet partner?"]} /></AdminShell>;
+    case "admin-icebreakers":
+      return <AdminShell><IcebreakerManager initial={[
+        { id: 1, spice: 0, body: "What's a small thing that made you smile this week?", active: true, created_at: iso(0) },
+        { id: 2, spice: 0, body: "Beach holiday or city break?", active: true, created_at: iso(0) },
+        { id: 3, spice: 1, body: "What's your biggest dating ick?", active: true, created_at: iso(0) },
+        { id: 4, spice: 1, body: "Texting all day or calling at night?", active: false, created_at: iso(0) },
+        { id: 5, spice: 2, body: "Where's the best place for a first kiss?", active: true, created_at: iso(0) },
+        { id: 6, spice: 2, body: "Morning kisses or goodnight kisses?", active: true, created_at: iso(0) },
+        { id: 7, spice: 3, body: "What's a fantasy you'd only admit behind a mask?", active: true, created_at: iso(0) },
+        { id: 8, spice: 3, body: "If tonight had no rules, what would you do?", active: true, created_at: iso(0) },
+      ]} /></AdminShell>;
     case "wallet":
       return (
         <div className="pb-24">

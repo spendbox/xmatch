@@ -28,10 +28,13 @@ export function MasqueradeRoom({
   initial,
   initialMessages,
   demo,
+  eventId = null,
 }: {
   initial: MasqueradeState;
   initialMessages: ChatMessage[];
   demo?: { remaining: number; hideExtend?: boolean };
+  /** Set when this chat is a round of a Masquerade Night */
+  eventId?: string | null;
 }) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
@@ -148,7 +151,7 @@ export function MasqueradeRoom({
     await supabase.rpc("next_icebreaker", { p_session: state.id });
   }
 
-  if (state.status !== "active") return <Outcome state={state} />;
+  if (state.status !== "active") return <Outcome state={state} eventId={eventId} />;
 
   const them = state.them;
   const gender = GENDERS.find((g) => g.value === them.gender)?.label;

@@ -824,11 +824,11 @@ alter table public.messages add constraint messages_content_check check (
   char_length(body) <= 2000 and (
     (kind = 'text' and (char_length(body) >= 1 or deleted_at is not null))
     or (kind in ('image', 'video', 'audio') and (media_path is not null or deleted_at is not null))
-    or kind = 'call'
+    or kind in ('call', 'gift')
   )
 );
 alter table public.messages drop constraint if exists messages_kind_check;
-alter table public.messages add constraint messages_kind_check check (kind in ('text', 'image', 'video', 'audio', 'call'));
+alter table public.messages add constraint messages_kind_check check (kind in ('text', 'image', 'video', 'audio', 'call', 'gift'));
 
 -- Replies in the masked chat too
 alter table public.masquerade_messages add column if not exists reply_to bigint references public.masquerade_messages (id) on delete set null;
@@ -1342,3 +1342,435 @@ end $$;
 do $$ begin
   alter publication supabase_realtime add table public.wallets;
 exception when duplicate_object then null; end $$;
+
+-- ===========================================================================
+-- Masquerade Nights (events) and icebreaker management
+-- ===========================================================================
+
+-- Icebreakers can be switched off, and can belong to a specific night
+alter table public.icebreakers add column if not exists active boolean not null default true;
+alter table public.icebreakers add column if not exists event_id uuid;
+alter table public.icebreakers add column if not exists created_at timestamptz not null default now();
+
+create table if not exists public.masquerade_events (
+  id uuid primary key default gen_random_uuid(),
+  title text not null check (char_length(title) between 3 and 80),
+  description text not null default '',
+  theme text not null default 'violet' check (theme in ('violet', 'rose', 'gold', 'midnight', 'mint')),
+  intent public.intent not null default 'dating',
+  starts_at timestamptz not null,
+  ends_at timestamptz not null,
+  age_min int not null default 18 check (age_min >= 18),
+  age_max int not null default 99,
+  entry_keys int not null default 0 check (entry_keys >= 0),
+  max_attendees int,
+  status text not null default 'draft' check (status in ('draft', 'published', 'cancelled')),
+  created_at timestamptz not null default now(),
+  check (ends_at > starts_at)
+);
+create index if not exists masquerade_events_time on public.masquerade_events (status, starts_at);
+
+do $$ begin
+  alter table public.icebreakers add constraint icebreakers_event_fk
+    foreign key (event_id) references public.masquerade_events on delete cascade;
+exception when duplicate_object then null; end $$;
+
+create table if not exists public.event_attendees (
+  event_id uuid not null references public.masquerade_events on delete cascade,
+  user_id uuid not null references public.profiles on delete cascade,
+  keys_paid int not null default 0,
+  joined_at timestamptz not null default now(),
+  primary key (event_id, user_id)
+);
+
+alter table public.masquerade_queue add column if not exists event_id uuid references public.masquerade_events on delete cascade;
+alter table public.masquerade_sessions add column if not exists event_id uuid references public.masquerade_events on delete set null;
+
+alter table public.masquerade_events enable row level security;
+alter table public.event_attendees enable row level security;
+drop policy if exists "read published events" on public.masquerade_events;
+create policy "read published events" on public.masquerade_events for select
+  using (status in ('published', 'cancelled') and auth.role() = 'authenticated');
+drop policy if exists "read own attendance" on public.event_attendees;
+create policy "read own attendance" on public.event_attendees for select using (user_id = auth.uid());
+
+-- Event rounds don't use up the 5 free daily masquerades
+create or replace function public.free_used(uid uuid) returns int
+language sql stable security definer set search_path = public as $$
+  select count(*)::int from masquerade_sessions
+  where started_at > now() - interval '24 hours' and event_id is null
+    and ((user_a = uid and not paid_a) or (user_b = uid and not paid_b))
+$$;
+
+create or replace function public.queue_allowance() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.event_id is not null then new.paid := false; return new; end if;
+  if exists (select 1 from masquerade_queue where user_id = new.user_id) then return new; end if;
+  new.paid := public.take_masquerade_slot(new.user_id);
+  return new;
+end $$;
+
+-- Picks a question: the night's own questions first, otherwise by spice level
+create or replace function public.pick_icebreaker(p_session uuid, p_spice smallint, p_event uuid) returns text
+language sql volatile security definer set search_path = public as $$
+  select body from (
+    select body, 0 as pri from icebreakers i
+    where p_event is not null and i.event_id = p_event and i.active
+      and not exists (select 1 from masquerade_messages m where m.session_id = p_session and m.kind = 'icebreaker' and m.body = i.body)
+    union all
+    select body, 1 from icebreakers i
+    where i.event_id is null and i.active and i.spice = p_spice
+      and not exists (select 1 from masquerade_messages m where m.session_id = p_session and m.kind = 'icebreaker' and m.body = i.body)
+    union all
+    select body, 2 from icebreakers i where i.event_id is null and i.active and i.spice = p_spice
+  ) x order by pri, random() limit 1
+$$;
+revoke execute on function public.pick_icebreaker(uuid, smallint, uuid) from public, anon, authenticated;
+
+create or replace function public.create_masquerade_session(
+  a uuid, b uuid, p_intent public.intent, s_a smallint, s_b smallint
+) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare
+  sid uuid;
+  lvl smallint := round((s_a + s_b) / 2.0)::smallint;
+  alias_a text := public.random_alias();
+  first_q text;
+  pa boolean := coalesce((select paid from masquerade_queue where user_id = a), false);
+  pb boolean := coalesce((select paid from masquerade_queue where user_id = b), false);
+  ev uuid := (select event_id from masquerade_queue where user_id = a);
+begin
+  insert into masquerade_sessions (user_a, user_b, intent, spice_a, spice_b, spice_level, alias_a, alias_b, ends_at, paid_a, paid_b, event_id)
+  values (a, b, p_intent, s_a, s_b, lvl, alias_a, public.random_alias(alias_a), now() + interval '5 minutes', pa, pb, ev)
+  returning id into sid;
+
+  first_q := public.pick_icebreaker(sid, lvl, ev);
+  if first_q is not null then
+    insert into masquerade_messages (session_id, kind, body) values (sid, 'icebreaker', first_q);
+  end if;
+
+  delete from masquerade_queue where user_id in (a, b);
+  update masquerade_invites set status = 'expired'
+    where status = 'pending' and (from_user in (a, b) or to_user in (a, b));
+  return sid;
+end $$;
+revoke execute on function public.create_masquerade_session(uuid, uuid, public.intent, smallint, smallint) from public, anon, authenticated;
+
+create or replace function public.next_icebreaker(p_session uuid) returns void
+language plpgsql security definer set search_path = public as $$
+declare
+  s masquerade_sessions;
+  q text;
+begin
+  select * into s from masquerade_sessions
+  where id = p_session and (user_a = auth.uid() or user_b = auth.uid()) and status = 'active' and ends_at > now();
+  if not found then return; end if;
+  q := public.pick_icebreaker(s.id, s.spice_level, s.event_id);
+  if q is not null then
+    insert into masquerade_messages (session_id, kind, body) values (s.id, 'icebreaker', q);
+  end if;
+end $$;
+
+-- Matching now keeps event rounds inside their event, and never pairs the same two people twice in one night
+create or replace function public.try_masquerade_match(uid uuid) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare
+  me_q masquerade_queue;
+  me_p profiles;
+  cand masquerade_queue;
+begin
+  perform pg_advisory_xact_lock(424242);
+
+  select * into me_q from masquerade_queue where user_id = uid;
+  if not found then return public.my_active_session(uid); end if;
+  if me_q.event_id is not null and not exists (
+    select 1 from masquerade_events e where e.id = me_q.event_id and now() < e.ends_at and e.status = 'published'
+  ) then
+    delete from masquerade_queue where user_id = uid;
+    return null;
+  end if;
+  select * into me_p from profiles where id = uid;
+
+  select q.* into cand
+  from masquerade_queue q
+  join profiles p on p.id = q.user_id
+  where q.user_id <> uid
+    and q.event_id is not distinct from me_q.event_id
+    and q.intent = me_q.intent
+    and q.last_ping_at > now() - interval '30 seconds'
+    and public.gender_fits(me_q.seeking, p.gender)
+    and public.gender_fits(q.seeking, me_p.gender)
+    and public.age_years(p.birthdate) between me_q.age_min and me_q.age_max
+    and public.age_years(me_p.birthdate) between q.age_min and q.age_max
+    and public.within_km(public.distance_km(me_q.lat, me_q.lng, q.lat, q.lng), me_q.max_km)
+    and public.within_km(public.distance_km(me_q.lat, me_q.lng, q.lat, q.lng), q.max_km)
+    and not public.is_blocked(uid, q.user_id)
+    and not public.already_matched(uid, q.user_id)
+    and (me_q.event_id is null or not exists (
+      select 1 from masquerade_sessions s where s.event_id = me_q.event_id
+        and ((s.user_a = uid and s.user_b = q.user_id) or (s.user_b = uid and s.user_a = q.user_id))
+    ))
+  order by floor(public.distance_km(me_q.lat, me_q.lng, q.lat, q.lng) / 10) nulls last,
+    public.shared_count(p.interests, me_p.interests) desc,
+    q.created_at
+  limit 1;
+
+  if not found then return null; end if;
+  return public.create_masquerade_session(cand.user_id, uid, me_q.intent, cand.spice, me_q.spice);
+end $$;
+revoke execute on function public.try_masquerade_match(uuid) from public, anon, authenticated;
+
+-- Everything an event card or lobby needs
+create or replace function public.event_json(e masquerade_events, uid uuid) returns json
+language sql stable security definer set search_path = public as $$
+  select json_build_object(
+    'id', e.id, 'title', e.title, 'description', e.description, 'theme', e.theme, 'intent', e.intent,
+    'starts_at', e.starts_at, 'ends_at', e.ends_at, 'age_min', e.age_min, 'age_max', e.age_max,
+    'entry_keys', e.entry_keys, 'max_attendees', e.max_attendees, 'status', e.status,
+    'going_count', (select count(*) from event_attendees a where a.event_id = e.id),
+    'i_am_going', exists (select 1 from event_attendees a where a.event_id = e.id and a.user_id = uid),
+    'my_rounds', (select count(*) from masquerade_sessions s where s.event_id = e.id and (s.user_a = uid or s.user_b = uid)),
+    'my_unmasks', (select count(*) from masquerade_sessions s where s.event_id = e.id and s.status = 'matched' and (s.user_a = uid or s.user_b = uid)),
+    'server_now', now()
+  )
+$$;
+revoke execute on function public.event_json(masquerade_events, uuid) from public, anon, authenticated;
+
+create or replace function public.list_events() returns json
+language sql stable security definer set search_path = public as $$
+  select coalesce(json_agg(public.event_json(e, auth.uid()) order by e.starts_at), '[]'::json)
+  from masquerade_events e
+  where e.status = 'published' and e.ends_at > now() - interval '2 days'
+$$;
+
+create or replace function public.get_event(p_event uuid) returns json
+language sql stable security definer set search_path = public as $$
+  select public.event_json(e, auth.uid()) from masquerade_events e
+  where e.id = p_event and e.status in ('published', 'cancelled')
+$$;
+
+create or replace function public.rsvp_event(p_event uuid) returns json
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  e masquerade_events;
+  me profiles;
+  age int;
+begin
+  select * into e from masquerade_events where id = p_event for update;
+  if not found or e.status <> 'published' then raise exception 'This night is not available'; end if;
+  if now() >= e.ends_at then raise exception 'This night has ended'; end if;
+  if exists (select 1 from event_attendees where event_id = p_event and user_id = uid) then
+    return public.event_json(e, uid);
+  end if;
+  select * into me from profiles where id = uid;
+  age := public.age_years(me.birthdate);
+  if age is null or age < e.age_min or age > e.age_max then
+    raise exception 'This night is for ages %–%', e.age_min, e.age_max;
+  end if;
+  if e.max_attendees is not null and (select count(*) from event_attendees where event_id = p_event) >= e.max_attendees then
+    raise exception 'EVENT_FULL';
+  end if;
+  if e.entry_keys > 0 then perform public.spend_keys(uid, e.entry_keys, 'event', p_event::text); end if;
+  insert into event_attendees (event_id, user_id, keys_paid) values (p_event, uid, e.entry_keys);
+  return public.event_json(e, uid);
+end $$;
+
+-- Change your mind before it starts: Keys come back
+create or replace function public.cancel_rsvp(p_event uuid) returns json
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  e masquerade_events;
+  paid int;
+begin
+  select * into e from masquerade_events where id = p_event;
+  if not found then raise exception 'Not found'; end if;
+  if now() >= e.starts_at then raise exception 'This night has already started'; end if;
+  delete from event_attendees where event_id = p_event and user_id = uid returning keys_paid into paid;
+  if paid > 0 then perform public.add_keys(uid, paid, 'refund', p_event::text); end if;
+  return public.event_json(e, uid);
+end $$;
+
+-- During the night: get paired for the next round
+create or replace function public.join_event_round(p_event uuid) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  e masquerade_events;
+  me profiles;
+  sid uuid;
+begin
+  select * into e from masquerade_events where id = p_event;
+  if not found or e.status <> 'published' then raise exception 'This night is not available'; end if;
+  if now() < e.starts_at then raise exception 'This night hasn''t started yet'; end if;
+  if now() >= e.ends_at - interval '1 minute' then raise exception 'This night has ended'; end if;
+  if not exists (select 1 from event_attendees where event_id = p_event and user_id = uid) then
+    raise exception 'Tap "I''m going" first';
+  end if;
+  sid := public.my_active_session(uid);
+  if sid is not null then return sid; end if;
+
+  select * into me from profiles where id = uid;
+  update profiles set last_seen_at = now() where id = uid;
+  delete from masquerade_queue where user_id = uid and event_id is distinct from p_event;
+  insert into masquerade_queue (user_id, intent, seeking, age_min, age_max, spice, event_id)
+  values (uid, e.intent, me.pref_seeking, e.age_min, e.age_max, me.pref_spice, p_event)
+  on conflict (user_id) do update set last_ping_at = now();
+
+  return public.try_masquerade_match(uid);
+end $$;
+
+-- Where a finished chat came from (to offer "next round")
+create or replace function public.session_event(p_session uuid) returns uuid
+language sql stable security definer set search_path = public as $$
+  select event_id from masquerade_sessions where id = p_session and (user_a = auth.uid() or user_b = auth.uid())
+$$;
+
+create or replace function public.next_event() returns json
+language sql stable security definer set search_path = public as $$
+  select public.event_json(e, auth.uid()) from masquerade_events e
+  where e.status = 'published' and e.ends_at > now()
+  order by e.starts_at limit 1
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Lots more icebreakers
+-- ---------------------------------------------------------------------------
+insert into public.icebreakers (spice, body)
+select v.spice, v.body from (values
+  (0, 'What''s a skill you''d love to learn this year?'),
+  (0, 'What''s the best meal you''ve ever had?'),
+  (0, 'Beach holiday or city break?'),
+  (0, 'What''s a movie you could watch over and over?'),
+  (0, 'What always cheers you up on a bad day?'),
+  (0, 'What''s your go-to karaoke song?'),
+  (0, 'Tea, coffee or something else to start the day?'),
+  (0, 'What''s the most spontaneous thing you''ve ever done?'),
+  (0, 'If you could have dinner with anyone, who would it be?'),
+  (0, 'What''s a hobby you got into recently?'),
+  (0, 'Which app on your phone do you use the most?'),
+  (0, 'What''s a place that feels like home to you?'),
+  (0, 'What would your dream job be if money didn''t matter?'),
+  (0, 'Sweet or savoury snacks?'),
+  (0, 'What''s the last thing that made you laugh out loud?'),
+  (0, 'Are you a planner or do you go with the flow?'),
+  (0, 'What''s your favourite season and why?'),
+  (0, 'What''s a small win you had recently?'),
+  (0, 'What''s the best concert or show you''ve been to?'),
+  (0, 'If you won the lottery tomorrow, what''s the first thing you''d do?'),
+  (1, 'What''s your love language?'),
+  (1, 'What''s the cheesiest pickup line that would actually work on you?'),
+  (1, 'What makes someone instantly more attractive to you?'),
+  (1, 'What''s your biggest dating ick?'),
+  (1, 'Have you ever been on a truly terrible date? Tell me everything.'),
+  (1, 'Texting all day or calling at night?'),
+  (1, 'What''s a song that makes you feel a little flirty?'),
+  (1, 'Would you rather be swept off your feet or do the sweeping?'),
+  (1, 'What''s something people get wrong about you at first?'),
+  (1, 'Dinner date or adventure date?'),
+  (1, 'What''s the sweetest thing someone has done for you?'),
+  (1, 'Who usually makes the first move — you or them?'),
+  (1, 'How do you flirt without saying a word?'),
+  (1, 'What''s a quality you just can''t resist in someone?'),
+  (1, 'Have you ever slid into someone''s DMs? How did it go?'),
+  (1, 'What would make you say yes to a second date straight away?'),
+  (1, 'What''s a cute habit you secretly love in a partner?'),
+  (1, 'What''s the most romantic city you''ve been to?'),
+  (1, 'What''s your idea of a perfect lazy day with someone?'),
+  (1, 'What''s your most attractive habit?'),
+  (2, 'What''s the most flirtatious thing you''ve ever said to someone?'),
+  (2, 'Where''s the best place for a first kiss?'),
+  (2, 'What''s something small that drives you wild?'),
+  (2, 'What''s your idea of a perfect date night in?'),
+  (2, 'Do you like to take the lead or be led?'),
+  (2, 'What''s the boldest compliment you''ve ever received?'),
+  (2, 'Have you ever had chemistry with someone you really shouldn''t have?'),
+  (2, 'Slow dance in the kitchen or a night out dancing?'),
+  (2, 'What''s a romantic gesture that would win you over instantly?'),
+  (2, 'What''s a look that says "come closer" to you?'),
+  (2, 'What would make tonight unforgettable?'),
+  (2, 'Morning kisses or goodnight kisses?'),
+  (2, 'Describe your flirting style in three words.'),
+  (2, 'What''s a secret crush you never acted on?'),
+  (2, 'What''s the most daring thing you''ve done for love?'),
+  (2, 'Candlelight or city lights?'),
+  (2, 'What''s something you''ve always wanted someone to say to you?'),
+  (2, 'What''s the longest you''ve flirted with someone before making a move?'),
+  (2, 'Holding hands or an arm around the waist?'),
+  (2, 'What''s the most attractive thing someone can do on a first date?'),
+  (3, 'What''s your most adventurous date idea?'),
+  (3, 'What''s the boldest thing you''d do on a first date?'),
+  (3, 'What''s a guilty pleasure you''d never post online?'),
+  (3, 'What''s a compliment that would make you blush?'),
+  (3, 'Describe your perfect night in — no details spared.'),
+  (3, 'What''s one rule you love to break?'),
+  (3, 'What''s the cheekiest text you''ve ever sent?'),
+  (3, 'What''s something you''d only try with the right person?'),
+  (3, 'What''s the most mischievous thing you''ve ever done?'),
+  (3, 'What''s your secret flirting weapon?'),
+  (3, 'What''s the riskiest place you''ve flirted with someone?'),
+  (3, 'What would you whisper to someone you''re really into?'),
+  (3, 'What''s your favourite way to tease someone?'),
+  (3, 'If tonight had no rules, what would you do?'),
+  (3, 'What''s the wildest dare you''ve ever accepted?'),
+  (3, 'What''s your weakness when someone flirts with you?'),
+  (3, 'What''s a fantasy date you''ve never told anyone about?'),
+  (3, 'What''s the most irresistible thing someone can wear?'),
+  (3, 'What''s the most spontaneous thing you''d do for someone you fancy?'),
+  (3, 'What instantly makes you want to kiss someone?')
+) v(spice, body)
+where not exists (select 1 from public.icebreakers i where i.body = v.body);
+
+-- ---------------------------------------------------------------------------
+-- Admin helpers (only the server can call these)
+-- ---------------------------------------------------------------------------
+create or replace function public.admin_overview() returns json
+language sql stable security definer set search_path = public as $$
+  select json_build_object(
+    'users', (select count(*) from profiles where display_name is not null),
+    'new_users_7d', (select count(*) from profiles where created_at > now() - interval '7 days'),
+    'online_now', (select count(*) from profiles where last_seen_at > now() - interval '5 minutes'),
+    'masquerades_today', (select count(*) from masquerade_sessions where started_at > now() - interval '24 hours'),
+    'unmasks_today', (select count(*) from masquerade_sessions where status = 'matched' and started_at > now() - interval '24 hours'),
+    'matches_total', (select count(*) from matches),
+    'revenue_30d_kobo', (select coalesce(sum(amount_kobo), 0) from payments where status = 'paid' and paid_at > now() - interval '30 days'),
+    'keys_sold_30d', (select coalesce(sum(keys), 0) from payments where status = 'paid' and paid_at > now() - interval '30 days'),
+    'gifts_7d', (select count(*) from key_transactions where reason = 'gift' and created_at > now() - interval '7 days'),
+    'reports_7d', (select count(*) from reports where created_at > now() - interval '7 days'),
+    'icebreakers', (select count(*) from icebreakers where event_id is null and active)
+  )
+$$;
+
+create or replace function public.admin_events() returns json
+language sql stable security definer set search_path = public as $$
+  select coalesce(json_agg(row_to_json(t) order by t.starts_at desc), '[]'::json) from (
+    select e.*,
+      (select count(*) from event_attendees a where a.event_id = e.id) as going_count,
+      (select count(*) from masquerade_sessions s where s.event_id = e.id) as rounds,
+      (select count(*) from masquerade_sessions s where s.event_id = e.id and s.status = 'matched') as unmasks,
+      (select coalesce(sum(keys_paid), 0) from event_attendees a where a.event_id = e.id) as keys_collected,
+      (select count(*) from icebreakers i where i.event_id = e.id) as question_count
+    from masquerade_events e
+  ) t
+$$;
+
+-- Cancel a night and give everyone their Keys back
+create or replace function public.admin_cancel_event(p_event uuid) returns int
+language plpgsql security definer set search_path = public as $$
+declare r record; n int := 0;
+begin
+  update masquerade_events set status = 'cancelled' where id = p_event;
+  for r in select user_id, keys_paid from event_attendees where event_id = p_event and keys_paid > 0 loop
+    perform public.add_keys(r.user_id, r.keys_paid, 'refund', p_event::text);
+    update event_attendees set keys_paid = 0 where event_id = p_event and user_id = r.user_id;
+    n := n + 1;
+  end loop;
+  delete from masquerade_queue where event_id = p_event;
+  return n;
+end $$;
+
+revoke execute on function public.admin_overview() from public, anon, authenticated;
+revoke execute on function public.admin_events() from public, anon, authenticated;
+revoke execute on function public.admin_cancel_event(uuid) from public, anon, authenticated;

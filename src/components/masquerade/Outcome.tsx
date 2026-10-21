@@ -5,8 +5,8 @@ import { ButtonLink } from "@/components/ui/Button";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import type { MasqueradeState } from "@/lib/types";
 
-export function Outcome({ state }: { state: MasqueradeState }) {
-  if (state.status === "matched" && state.them.profile) return <Reveal state={state} />;
+export function Outcome({ state, eventId }: { state: MasqueradeState; eventId?: string | null }) {
+  if (state.status === "matched" && state.them.profile) return <Reveal state={state} eventId={eventId} />;
 
   const alias = state.them.alias;
   const reason = state.ended_reason;
@@ -40,15 +40,21 @@ export function Outcome({ state }: { state: MasqueradeState }) {
         This chat has been deleted
       </p>
       <div className="mt-auto w-full pt-10 pb-8 lg:mt-4">
-        <ButtonLink href="/home" size="lg" variant="gold">
-          <RotateCcw size={18} /> Find someone new
-        </ButtonLink>
+        {eventId ? (
+          <ButtonLink href={`/events/${eventId}?next=1`} size="lg" variant="gold">
+            <RotateCcw size={18} /> Next round
+          </ButtonLink>
+        ) : (
+          <ButtonLink href="/home" size="lg" variant="gold">
+            <RotateCcw size={18} /> Find someone new
+          </ButtonLink>
+        )}
       </div>
     </main>
   );
 }
 
-function Reveal({ state }: { state: MasqueradeState }) {
+function Reveal({ state, eventId }: { state: MasqueradeState; eventId?: string | null }) {
   const p = state.them.profile!;
   const photo = p.photos?.[0];
   return (
@@ -80,9 +86,15 @@ function Reveal({ state }: { state: MasqueradeState }) {
         <ButtonLink href={`/matches/${state.match_id}`} size="lg">
           <MessageCircleHeart size={20} /> Keep chatting
         </ButtonLink>
-        <ButtonLink href="/home" size="lg" variant="secondary">
-          Back to Home
-        </ButtonLink>
+        {eventId ? (
+          <ButtonLink href={`/events/${eventId}?next=1`} size="lg" variant="secondary">
+            <RotateCcw size={18} /> Next round
+          </ButtonLink>
+        ) : (
+          <ButtonLink href="/home" size="lg" variant="secondary">
+            Back to Home
+          </ButtonLink>
+        )}
       </div>
     </main>
   );

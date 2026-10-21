@@ -13,11 +13,16 @@ export default async function RoomPage({ params }: { params: Promise<{ id: strin
   const { data: state } = await supabase.rpc("get_masquerade", { p_session: id });
   if (!state) notFound();
 
-  const { data: messages } = await supabase
-    .from("masquerade_messages")
-    .select("id, sender_id, kind, body, created_at, reply_to")
-    .eq("session_id", id)
-    .order("id");
+  const [{ data: messages }, { data: eventId }] = await Promise.all([
+    supabase.from("masquerade_messages").select("id, sender_id, kind, body, created_at, reply_to").eq("session_id", id).order("id"),
+    supabase.rpc("session_event", { p_session: id }),
+  ]);
 
-  return <MasqueradeRoom initial={state as MasqueradeState} initialMessages={(messages ?? []) as ChatMessage[]} />;
+  return (
+    <MasqueradeRoom
+      initial={state as MasqueradeState}
+      initialMessages={(messages ?? []) as ChatMessage[]}
+      eventId={(eventId as string | null) ?? null}
+    />
+  );
 }

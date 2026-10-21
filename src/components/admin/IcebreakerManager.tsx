@@ -1,0 +1,210 @@
+"use client";
+
+import { useMemo, useState, useTransition } from "react";
+import clsx from "clsx";
+import { Check, Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { addIcebreakers, deleteIcebreaker, updateIcebreaker, type Icebreaker } from "@/app/admin/(panel)/actions";
+import { SPICE_LEVELS } from "@/lib/constants";
+import { Button } from "@/components/ui/Button";
+import { Textarea } from "@/components/ui/Field";
+import { Toggle } from "@/components/ui/Toggle";
+import { SpiceIcon } from "@/components/ui/icons";
+import { AdminTitle } from "./AdminShell";
+
+const TONES = ["bg-mint-soft text-mint", "bg-chili-soft text-chili", "bg-chili-soft text-chili", "bg-[#f6e6f8] text-[#b42da8]"];
+
+export function IcebreakerManager({ initial }: { initial: Icebreaker[] }) {
+  const [items, setItems] = useState(initial);
+  const [level, setLevel] = useState<number | "all">("all");
+  const [query, setQuery] = useState("");
+  const [showOff, setShowOff] = useState(true);
+  const [addLevel, setAddLevel] = useState(1);
+  const [addText, setAddText] = useState("");
+  const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
+  const [pending, start] = useTransition();
+
+  const counts = useMemo(() => [0, 1, 2, 3].map((l) => items.filter((i) => i.spice === l && i.active).length), [items]);
+  const shown = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return items.filter(
+      (i) => (level === "all" || i.spice === level) && (showOff || i.active) && (!q || i.body.toLowerCase().includes(q)),
+    );
+  }, [items, level, query, showOff]);
+  const lines = addText.split("\n").filter((l) => l.trim().length >= 5).length;
+
+  function add() {
+    setNote(null);
+    start(async () => {
+      const res = await addIcebreakers(addLevel, addText);
+      if (res.error) return setNote({ ok: false, text: res.error });
+      setItems((list) => [...res.added, ...list]);
+      setAddText("");
+      setNote({
+        ok: true,
+        text: `Added ${res.added.length} question${res.added.length === 1 ? "" : "s"} to ${SPICE_LEVELS[addLevel].label}${res.skipped ? ` · ${res.skipped} already existed` : ""}.`,
+      });
+    });
+  }
+
+  function patch(id: number, p: Partial<Icebreaker>) {
+    setItems((list) => list.map((i) => (i.id === id ? { ...i, ...p } : i)));
+  }
+
+  return (
+    <>
+      <AdminTitle title="Icebreakers" subtitle={`${counts.reduce((a, b) => a + b, 0)} active questions. They're picked by the average of both people's spice choices.`} />
+
+      {/* Level summary */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {SPICE_LEVELS.map((s) => (
+          <button
+            key={s.value}
+            onClick={() => setLevel(level === s.value ? "all" : s.value)}
+            className={clsx(
+              "flex items-center gap-3 rounded-3xl border bg-surface p-4 text-left shadow-card transition",
+              level === s.value ? "border-brand ring-2 ring-brand/30" : "border-line hover:border-line-strong",
+            )}
+          >
+            <span className={clsx("grid h-11 w-11 place-items-center rounded-xl", TONES[s.value])}>
+              <SpiceIcon level={s.value} size={22} />
+            </span>
+            <span>
+              <span className="block font-display text-[24px] leading-none font-semibold">{counts[s.value]}</span>
+              <span className="text-[13px] text-muted">{s.label}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-6 grid gap-6 lg:grid-cols-12">
+        {/* Add in bulk */}
+        <section className="h-fit rounded-3xl border border-line bg-surface p-5 shadow-card lg:sticky lg:top-8 lg:col-span-4">
+          <h2 className="flex items-center gap-2 text-[16px] font-semibold"><Plus size={18} /> Add questions</h2>
+          <p className="mt-1 text-[13px] text-muted">Paste as many as you like — one question per line. Duplicates are skipped.</p>
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            {SPICE_LEVELS.map((s) => (
+              <button
+                key={s.value}
+                type="button"
+                onClick={() => setAddLevel(s.value)}
+                className={clsx(
+                  "flex h-11 items-center justify-center gap-1.5 rounded-xl border text-[13px] font-semibold",
+                  addLevel === s.value ? "border-brand bg-brand-soft text-brand-ink" : "border-line",
+                )}
+              >
+                <SpiceIcon level={s.value} size={16} /> {s.label}
+              </button>
+            ))}
+          </div>
+          <Textarea
+            rows={9}
+            className="mt-3 text-[15px]"
+            value={addText}
+            onChange={(e) => setAddText(e.target.value)}
+            placeholder={"What's your favourite way to spend a rainy day?\nWhat's a song that always gets you dancing?\n…"}
+          />
+          {note && <p className={clsx("mt-3 rounded-xl px-3 py-2 text-[13px] font-medium", note.ok ? "bg-mint-soft text-mint" : "bg-chili-soft text-chili")}>{note.text}</p>}
+          <Button size="lg" className="mt-3" onClick={add} disabled={!lines} loading={pending} loadingText="Adding…">
+            Add {lines || ""} question{lines === 1 ? "" : "s"}
+          </Button>
+        </section>
+
+        {/* List */}
+        <section className="lg:col-span-8">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <label className="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-2xl border border-line-strong bg-surface px-4 focus-within:border-brand">
+              <Search size={17} className="text-muted" />
+              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search questions" className="h-full min-w-0 flex-1 bg-transparent text-[15px] outline-none" />
+            </label>
+            <div className="flex gap-1 rounded-2xl bg-surface p-1 shadow-card">
+              {(["all", 0, 1, 2, 3] as const).map((l) => (
+                <button
+                  key={String(l)}
+                  onClick={() => setLevel(l)}
+                  className={clsx("h-9 rounded-xl px-3 text-[13px] font-semibold", level === l ? "bg-ink text-white" : "text-muted hover:text-ink")}
+                >
+                  {l === "all" ? "All" : SPICE_LEVELS[l].short}
+                </button>
+              ))}
+            </div>
+            <label className="flex items-center gap-2 text-[13px] text-muted">
+              <input type="checkbox" checked={showOff} onChange={(e) => setShowOff(e.target.checked)} className="accent-brand" /> Show switched-off
+            </label>
+          </div>
+
+          <p className="mb-2 text-[13px] text-muted">{shown.length} shown</p>
+          <ul className="space-y-2">
+            {shown.map((i) => (
+              <Row key={i.id} item={i} onChange={(p) => patch(i.id, p)} onDeleted={() => setItems((l) => l.filter((x) => x.id !== i.id))} />
+            ))}
+            {!shown.length && <li className="rounded-2xl bg-surface p-6 text-center text-[14px] text-muted">No questions match.</li>}
+          </ul>
+        </section>
+      </div>
+    </>
+  );
+}
+
+function Row({ item, onChange, onDeleted }: { item: Icebreaker; onChange: (p: Partial<Icebreaker>) => void; onDeleted: () => void }) {
+  const [editing, setEditing] = useState(false);
+  const [body, setBody] = useState(item.body);
+  const [spice, setSpice] = useState(item.spice);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+
+  function save() {
+    start(async () => {
+      const res = await updateIcebreaker(item.id, { body, spice });
+      if ("error" in res && res.error) return setError(res.error);
+      onChange({ body: body.replace(/\s+/g, " ").trim(), spice });
+      setEditing(false);
+      setError(null);
+    });
+  }
+  function toggle(v: boolean) {
+    onChange({ active: v });
+    start(async () => {
+      const res = await updateIcebreaker(item.id, { active: v });
+      if ("error" in res && res.error) onChange({ active: !v });
+    });
+  }
+  function remove() {
+    if (!confirm("Delete this question?")) return;
+    start(async () => {
+      const res = await deleteIcebreaker(item.id);
+      if ("ok" in res) onDeleted();
+    });
+  }
+
+  return (
+    <li className={clsx("rounded-2xl border bg-surface p-3.5 transition", item.active ? "border-line" : "border-dashed border-line-strong opacity-60")}>
+      {editing ? (
+        <div className="space-y-2">
+          <Textarea rows={2} value={body} onChange={(e) => setBody(e.target.value)} className="text-[15px]" autoFocus />
+          <div className="flex flex-wrap items-center gap-2">
+            <select value={spice} onChange={(e) => setSpice(Number(e.target.value))} className="h-10 rounded-xl border border-line-strong bg-surface px-3 text-[14px]">
+              {SPICE_LEVELS.map((s) => (
+                <option key={s.value} value={s.value}>{s.label}</option>
+              ))}
+            </select>
+            <Button className="h-10" onClick={save} loading={pending} loadingText="Saving…"><Check size={16} /> Save</Button>
+            <Button className="h-10" variant="ghost" onClick={() => { setEditing(false); setBody(item.body); setSpice(item.spice); }}><X size={16} /> Cancel</Button>
+            {error && <span className="text-[13px] text-chili">{error}</span>}
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-start gap-3">
+          <span className={clsx("mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg", TONES[item.spice])} title={SPICE_LEVELS[item.spice].label}>
+            <SpiceIcon level={item.spice} size={16} />
+          </span>
+          <p className="min-w-0 flex-1 pt-1 text-[15px] leading-snug">{item.body}</p>
+          <div className="flex shrink-0 items-center gap-1">
+            <Toggle checked={item.active} onChange={toggle} label={item.active ? "Switch off" : "Switch on"} />
+            <button onClick={() => setEditing(true)} className="grid h-9 w-9 place-items-center rounded-full text-muted hover:bg-cream hover:text-ink" aria-label="Edit"><Pencil size={16} /></button>
+            <button onClick={remove} className="grid h-9 w-9 place-items-center rounded-full text-muted hover:bg-chili-soft hover:text-chili" aria-label="Delete"><Trash2 size={16} /></button>
+          </div>
+        </div>
+      )}
+    </li>
+  );
+}

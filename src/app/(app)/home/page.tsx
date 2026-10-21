@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getAuth, getMyProfile } from "@/lib/auth";
 import type { MatchSummary, Profile } from "@/lib/types";
 import type { Wallet } from "@/lib/keys";
+import type { DashpadEvent } from "@/lib/events";
 import { HomeScreen, type HomeStats } from "@/components/home/HomeScreen";
 
 export const metadata = { title: "Home" };
@@ -11,7 +12,7 @@ export default async function HomePage() {
   if (!user) redirect("/login");
 
   // Everything loads at the same time
-  const [{ data: active }, profile, { data: wallet }, { data: stats }, { data: matches }] = await Promise.all([
+  const [{ data: active }, profile, { data: wallet }, { data: stats }, { data: matches }, { data: nextEvent }] = await Promise.all([
     supabase
       .from("masquerade_sessions")
       .select("id")
@@ -24,6 +25,7 @@ export default async function HomePage() {
     supabase.rpc("my_wallet"),
     supabase.rpc("home_stats"),
     supabase.rpc("get_matches"),
+    supabase.rpc("next_event"),
   ]);
   if (active) redirect(`/masquerade/${active.id}`);
 
@@ -33,6 +35,7 @@ export default async function HomePage() {
       wallet={(wallet as Wallet) ?? null}
       stats={(stats as HomeStats) ?? null}
       matches={((matches ?? []) as MatchSummary[]).slice(0, 8)}
+      nextEvent={(nextEvent as DashpadEvent | null) ?? null}
     />
   );
 }

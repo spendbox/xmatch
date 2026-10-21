@@ -7,6 +7,7 @@ import { signUp } from "../actions";
 import { PasswordField } from "../PasswordField";
 import { Button } from "@/components/ui/Button";
 import { CheckRow, FormError, IconInput, Label } from "@/components/ui/Field";
+import { Turnstile } from "@/components/ui/Turnstile";
 
 export function SignupForm() {
   const [state, action, pending] = useActionState(signUp, undefined);
@@ -39,6 +40,8 @@ export function SignupForm() {
         </CheckRow>
       </div>
 
+      {/* New check after every attempt, since each one can only be used once */}
+      <Turnstile key={state?.at ?? state?.error ?? "first"} />
       <FormError message={state?.error} />
       <Button type="submit" size="lg" loading={pending} loadingText="Creating your account…">
         Create account

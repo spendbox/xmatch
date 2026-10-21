@@ -19,6 +19,8 @@ import { GiftArt } from "@/components/keys/GiftArt";
 import { useWallet } from "@/components/keys/useWallet";
 import { Waiting } from "@/components/masquerade/Waiting";
 import { MeetSheet } from "./MeetSheet";
+import { EventCard } from "@/components/events/EventCard";
+import type { DashpadEvent } from "@/lib/events";
 import { prefsFromProfile, type SetupPrefs } from "./prefs";
 
 export type HomeStats = { online: number; week_chats: number; week_unmasks: number; gifts_received: number };
@@ -28,6 +30,7 @@ export function HomeScreen({
   wallet: initialWallet,
   stats,
   matches,
+  nextEvent = null,
   demoWaiting,
   demoSheet,
 }: {
@@ -35,6 +38,7 @@ export function HomeScreen({
   wallet: Wallet | null;
   stats: HomeStats | null;
   matches: MatchSummary[];
+  nextEvent?: DashpadEvent | null;
   demoWaiting?: boolean;
   demoSheet?: "meet" | "keys";
 }) {
@@ -237,6 +241,18 @@ export function HomeScreen({
       </section>
 
       <div className="lg:col-span-5">
+      {nextEvent && (
+        <div className="mt-7 lg:mt-0 lg:mb-7">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-[15px] font-semibold">Next Masquerade Night</h2>
+            <Link href="/events" className="inline-flex items-center gap-0.5 text-[13px] font-semibold text-brand">
+              All nights <ChevronRight size={16} />
+            </Link>
+          </div>
+          <EventCard event={nextEvent} compact />
+        </div>
+      )}
+
       {/* Keys power-ups */}
       <div className="mt-7 mb-3 flex items-center justify-between lg:mt-0">
         <h2 className="text-[15px] font-semibold">Use your Keys</h2>
@@ -251,9 +267,9 @@ export function HomeScreen({
           </span>
           <p className="mt-3 text-[15px] font-semibold">Gifts</p>
           <p className="text-[12px] leading-snug text-muted">Send a little love in any chat · from {GIFTS[0].price} Keys</p>
-          <div className="mt-2 flex -space-x-1.5">
-            {["rose", "cocktail", "crown", "diamond"].map((id) => (
-              <GiftArt key={id} id={id} size={28} />
+          <div className="mt-3 flex items-center gap-2.5">
+            {["rose", "teddy", "diamond"].map((id) => (
+              <span key={id} className="grid h-10 w-10 place-items-center rounded-xl bg-cream"><GiftArt id={id} size={26} /></span>
             ))}
           </div>
         </Link>

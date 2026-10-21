@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
-import { Heart, LogOut, UserRound } from "lucide-react";
+import { CalendarHeart, Heart, LogOut, UserRound } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { Avatar } from "@/components/ui/Avatar";
@@ -16,6 +16,7 @@ export type ChromeUser = { id: string; name: string; photo?: string | null };
 
 const items = [
   { href: "/home", label: "Home", icon: (on: boolean) => <MaskIcon className="w-[22px]" eyes={on ? "#5b3fd9" : "#faf7f2"} /> },
+  { href: "/events", label: "Masquerade Nights", icon: () => <CalendarHeart size={21} /> },
   { href: "/matches", label: "Matches", icon: () => <Heart size={21} /> },
   { href: "/wallet", label: "Keys", icon: () => <KeyCoin size={22} /> },
   { href: "/profile", label: "Profile", icon: () => <UserRound size={21} /> },
