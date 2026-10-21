@@ -26,7 +26,7 @@ Live at **dashpad.site** · Built with Next.js (hosted on Vercel) and Supabase (
 1. Create a project at [supabase.com](https://supabase.com).
 2. Go to **SQL Editor → New query**, paste everything from `supabase/migrations/0001_dashpad.sql`, click **Run**.
 3. Go to **Authentication → Sign In / Providers → Email** and switch **off** "Confirm email". (So people can sign up without a code.)
-4. Go to **Authentication → URL Configuration**: set Site URL to `https://dashpad.site`, and under Redirect URLs add `https://dashpad.site/**` (needed for password-reset emails).
+4. Go to **Authentication → URL Configuration** and set Site URL to `https://dashpad.site`.
 5. Go to **Project Settings → API** and copy: Project URL, `anon` public key, `service_role` secret key.
 
 ### 2. Vercel (the website)
@@ -77,6 +77,20 @@ Admin has: an **Overview** (members, online now, masquerades, matches, revenue, 
 
 It protects sign-up and the admin login. Most real people never see a challenge.
 
+## Password reset emails (Resend)
+
+Dashpad sends its own password reset emails through [Resend](https://resend.com) (not Supabase's email).
+
+1. Sign up at resend.com → **Domains → Add domain** → `dashpad.site`, and add the DNS records it shows at your domain registrar. Wait until it says **Verified**.
+2. **API Keys → Create API key** (Sending access).
+3. Add to Vercel → Environment Variables, then redeploy:
+   | Name | Value |
+   |---|---|
+   | `RESEND_API_KEY` | the API key (keep private) |
+   | `EMAIL_FROM` | `Dashpad <no-reply@dashpad.site>` |
+
+Reset links last 1 hour, work once, and each account can request at most 3 per hour.
+
 ## Payments (Paystack)
 
 1. Log in to [dashboard.paystack.com](https://dashboard.paystack.com) → **Settings → API Keys & Webhooks**.
@@ -87,7 +101,7 @@ It protects sign-up and the admin login. Most real people never see a challenge.
    |---|---|
    | `PAYSTACK_SECRET_KEY` | your Paystack secret key (keep private) |
 
-Key packs and prices live in `src/lib/keys.ts` (50 for ₦1,000 · 120 for ₦2,000 · 300 for ₦4,500). Gift prices are in the database (`gifts` table).
+Key packs and prices live in `src/lib/keys.ts` (50 for ₦750 · 150 for ₦2,000 · 500 for ₦4,500). Gift prices are in the database (`gifts` table).
 
 ## Calls (voice & video)
 

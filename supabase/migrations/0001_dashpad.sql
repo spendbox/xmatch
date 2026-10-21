@@ -1774,3 +1774,18 @@ end $$;
 revoke execute on function public.admin_overview() from public, anon, authenticated;
 revoke execute on function public.admin_events() from public, anon, authenticated;
 revoke execute on function public.admin_cancel_event(uuid) from public, anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Password reset links (sent by Dashpad through Resend)
+-- ---------------------------------------------------------------------------
+create table if not exists public.password_resets (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references auth.users on delete cascade,
+  token_hash text not null unique,
+  expires_at timestamptz not null,
+  used_at timestamptz,
+  created_at timestamptz not null default now()
+);
+create index if not exists password_resets_user on public.password_resets (user_id, created_at desc);
+-- Locked: no policies, so only the server (service role) can read or write it
+alter table public.password_resets enable row level security;

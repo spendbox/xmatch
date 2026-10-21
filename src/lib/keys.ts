@@ -9,9 +9,9 @@ export const EXTEND_MINUTES = 2;
 export type KeyPack = { id: string; keys: number; naira: number; tag?: string };
 
 export const KEY_PACKS: KeyPack[] = [
-  { id: "p50", keys: 50, naira: 1000 },
-  { id: "p120", keys: 120, naira: 2000, tag: "Popular" },
-  { id: "p300", keys: 300, naira: 4500, tag: "Best value" },
+  { id: "p50", keys: 50, naira: 750 },
+  { id: "p150", keys: 150, naira: 2000, tag: "Popular" },
+  { id: "p500", keys: 500, naira: 4500, tag: "Best value" },
 ];
 
 export type Gift = { id: string; name: string; emoji: string; price: number };
