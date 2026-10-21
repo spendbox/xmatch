@@ -100,7 +100,7 @@ const recent = [
   { id: "m3", created_at: iso(3000), last_message_at: iso(200), intent: "spicy" as const, other_id: "z", display_name: "Zara", photos: [photo("#5b3fd9", "#e5484d", "Z")], age: 29, last_message: null, last_sender: null },
 ];
 
-const APP_SCREENS = ["event-spotlight", "event-spotlight-live", "events", "event-upcoming", "event-live", "event-waiting", "event-ended", "home", "matches", "wallet", "profile", "rich-chat", "extend", "chat", "desktop-matches", "gifts"];
+const APP_SCREENS = ["events-empty", "event-spotlight", "event-spotlight-live", "events", "event-upcoming", "event-live", "event-waiting", "event-ended", "home", "matches", "wallet", "profile", "rich-chat", "extend", "chat", "desktop-matches", "gifts"];
 
 function ev(over: Partial<DashpadEvent> = {}): DashpadEvent {
   return {
@@ -250,6 +250,8 @@ function ScreenBody({ screen }: { screen: string }) {
           </div>
         </div>
       );
+    case "events-empty":
+      return <EventsScreen events={[]} />;
     case "events":
       return <EventsScreen events={[ev({ starts_at: iso(1200), ends_at: new Date(now + 2400_000).toISOString(), i_am_going: true, going_count: 186 }), ev({ id: "e2", title: "Faith & Friendship", theme: "mint", intent: "friends", entry_keys: 0, starts_at: new Date(now + 3 * 86400_000).toISOString(), ends_at: new Date(now + 3 * 86400_000 + 3600_000).toISOString(), going_count: 54 }), ev({ id: "e3", title: "Spicy Saturday", theme: "rose", intent: "spicy", age_min: 25, age_max: 40, starts_at: new Date(now + 5 * 86400_000).toISOString(), ends_at: new Date(now + 5 * 86400_000 + 5400_000).toISOString(), going_count: 312 })]} />;
     case "event-upcoming":

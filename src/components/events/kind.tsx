@@ -1,10 +1,10 @@
 import clsx from "clsx";
-import { Headphones, Sparkles } from "lucide-react";
+import { Headphones, Images } from "lucide-react";
 import { EVENT_KINDS, type EventKind } from "@/lib/events";
 import { MaskLineIcon } from "@/components/ui/icons";
 
 export function KindIcon({ kind, size = 13 }: { kind?: string; size?: number }) {
-  if (kind === "spotlight") return <Sparkles size={size} />;
+  if (kind === "spotlight") return <Images size={size} />;
   if (kind === "party") return <Headphones size={size} />;
   return <MaskLineIcon size={size} />;
 }
