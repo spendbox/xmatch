@@ -4,7 +4,7 @@ import { plural, word } from "@/lib/plural";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
-import { BellRing, ChevronRight, Clock3, Gift, MapPin, SlidersHorizontal, Timer, Users } from "lucide-react";
+import { BellRing, ChevronRight, Gift, MapPin, SlidersHorizontal, Timer, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { DISTANCES, getLocation, INTENTS, seekingLabel, SPICE_LEVELS } from "@/lib/constants";
 import { EXTEND_COST, EXTRA_MASQUERADE_COST, FREE_MASQUERADES_PER_DAY, GIFTS, type Wallet } from "@/lib/keys";
@@ -254,69 +254,59 @@ export function HomeScreen({
         </div>
       )}
 
-      {/* Keys power-ups: "get Keys" until you have some, then ways to spend them */}
-      <div className="mt-7 mb-3 flex items-center justify-between lg:mt-0">
-        <h2 className="flex items-center gap-2 text-[15px] font-semibold">
-          {hasKeys ? "Use your Keys" : "Do more with Keys"}
-          {hasKeys && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-gold-soft px-2 py-0.5 text-[12px] font-bold text-[#8a5a00]">
-              <KeyCoin size={14} /> {balance.toLocaleString()}
-            </span>
-          )}
-        </h2>
-        <Link href="/wallet" className="inline-flex items-center gap-0.5 text-[13px] font-semibold text-brand">
-          {hasKeys ? "Top up" : "Get Keys"} <ChevronRight size={16} />
-        </Link>
-      </div>
-      <div className="grid grid-cols-2 gap-2.5">
-        <Link
-          href={hasKeys ? "/matches" : "/wallet"}
-          className="flex flex-col rounded-3xl border border-line bg-surface p-4 shadow-card transition active:scale-[0.97]"
-        >
-          <span className="grid h-11 w-11 place-items-center rounded-[14px] bg-chili-soft text-chili">
-            <Gift size={21} strokeWidth={1.75} />
-          </span>
-          <p className="mt-3 text-[15px] font-semibold">Gifts</p>
-          <p className="text-[12px] leading-snug text-muted">
-            {hasKeys ? "Surprise someone you vibe with" : `Send a little love in any chat · from ${GIFTS[0].price} Keys`}
-          </p>
-          <div className="mt-3 flex items-center gap-2.5">
-            {["rose", "teddy", "diamond"].map((id) => (
-              <span key={id} className="grid h-10 w-10 place-items-center rounded-xl bg-cream"><GiftArt id={id} size={26} /></span>
-            ))}
+      {/* Keys: one card. Shows your balance and what Keys do; one button to get or use them. */}
+      <section className="mt-7 overflow-hidden rounded-3xl border border-line bg-surface shadow-card lg:mt-0">
+        <div className="flex items-center gap-3.5 bg-gradient-to-br from-[#fff3d6] to-[#ffe2a8] px-4 py-4">
+          <KeyCoin size={40} className="shrink-0" />
+          <div className="min-w-0 flex-1">
+            <p className="text-[15px] font-semibold">{hasKeys ? "Your Keys" : "Do more with Keys"}</p>
+            <p className="text-[13px] text-ink/65">
+              {hasKeys ? "Ready to use in any chat" : "Small extras that make a chat special"}
+            </p>
           </div>
-          <span className="flex-1" /><span className={clsx("mt-3 flex h-9 items-center justify-center gap-1 rounded-xl text-[13px] font-semibold", hasKeys ? "bg-chili text-white" : "bg-cream text-ink-soft")}>
-            {hasKeys ? <>Send a gift <ChevronRight size={15} /></> : <>Get Keys <ChevronRight size={15} /></>}
-          </span>
-        </Link>
-        <Link
-          href={hasKeys ? "/home" : "/wallet"}
-          onClick={(e) => {
-            if (!hasKeys) return;
-            e.preventDefault();
-            window.scrollTo({ top: 0, behavior: "smooth" });
-          }}
-          className="flex flex-col rounded-3xl border border-line bg-surface p-4 shadow-card transition active:scale-[0.97]"
-        >
-          <span className="grid h-11 w-11 place-items-center rounded-[14px] bg-mint-soft text-mint">
-            <Timer size={21} strokeWidth={1.75} />
-          </span>
-          <p className="mt-3 text-[15px] font-semibold">+2 minutes</p>
-          <p className="text-[12px] leading-snug text-muted">
-            {hasKeys
-              ? balance >= EXTEND_COST
-                ? `Ready to use in your next masked chat · ${EXTEND_COST} Keys`
-                : `Needs ${EXTEND_COST} Keys · you have ${balance}`
-              : `Keep a great masked chat going · ${EXTEND_COST} Keys`}
-          </p>
-          <p className="mt-2 inline-flex w-fit items-center gap-1 rounded-full bg-mint-soft px-2.5 py-1 text-[12px] font-bold text-mint">
-            <Clock3 size={13} /> 5:00 → 7:00
-          </p>
-          <span className="flex-1" /><span className={clsx("mt-3 flex h-9 items-center justify-center gap-1 rounded-xl text-[13px] font-semibold", hasKeys ? "bg-mint text-white" : "bg-cream text-ink-soft")}>
-            {hasKeys ? <>Mask up <ChevronRight size={15} /></> : <>Get Keys <ChevronRight size={15} /></>}
-          </span>
-        </Link>
-      </div>
+          {hasKeys && (
+            <span className="font-display text-[30px] leading-none font-semibold tabular-nums">{balance.toLocaleString()}</span>
+          )}
+        </div>
+
+        <ul className="divide-y divide-line px-4">
+          <KeyUse
+            icon={<Gift size={18} strokeWidth={1.75} />}
+            tone="bg-chili-soft text-chili"
+            title="Send a gift"
+            body="Any chat"
+            cost={`from ${GIFTS[0].price}`}
+            extra={
+              <span className="hidden items-center gap-1 sm:flex">
+                {["rose", "teddy", "diamond"].map((id) => (
+                  <GiftArt key={id} id={id} size={20} />
+                ))}
+              </span>
+            }
+          />
+          <KeyUse icon={<Timer size={18} strokeWidth={1.75} />} tone="bg-mint-soft text-mint" title="+2 minutes" body="Keep a masked chat going" cost={String(EXTEND_COST)} />
+          <KeyUse
+            icon={<MaskLineIcon size={18} />}
+            tone="bg-brand-soft text-brand"
+            title="Extra masquerades"
+            body={`After your ${FREE_MASQUERADES_PER_DAY} free ones each day`}
+            cost={String(EXTRA_MASQUERADE_COST)}
+          />
+        </ul>
+
+        <div className="p-4 pt-2">
+          <Link
+            href="/wallet"
+            onClick={() => tapFeedback()}
+            className={clsx(
+              "flex h-12 w-full items-center justify-center gap-1.5 rounded-2xl text-[15px] font-semibold transition active:scale-[0.98]",
+              hasKeys ? "border border-line-strong bg-surface text-ink hover:bg-cream" : "bg-gold text-ink shadow-[0_8px_20px_-8px_rgb(242_179_61/0.7)]",
+            )}
+          >
+            {hasKeys ? "Top up Keys" : "Get Keys"} <ChevronRight size={17} />
+          </Link>
+        </div>
+      </section>
 
       {/* Your week */}
       <h2 className="mt-7 mb-3 text-[15px] font-semibold">Your week</h2>
@@ -412,4 +402,22 @@ function formatWait(ms: number) {
   const h = Math.floor(mins / 60);
   const m = mins % 60;
   return m ? `${h}h ${m}m` : `${h}h`;
+}
+
+function KeyUse({
+  icon, tone, title, body, cost, extra,
+}: { icon: React.ReactNode; tone: string; title: string; body: string; cost: string; extra?: React.ReactNode }) {
+  return (
+    <li className="flex items-center gap-3 py-3">
+      <span className={"grid h-9 w-9 shrink-0 place-items-center rounded-xl " + tone}>{icon}</span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[14px] font-semibold">{title}</p>
+        <p className="truncate text-[12px] text-muted">{body}</p>
+      </div>
+      {extra}
+      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-gold-soft px-2 py-0.5 text-[12px] font-bold text-[#8a5a00]">
+        <KeyCoin size={13} /> {cost}
+      </span>
+    </li>
+  );
 }
