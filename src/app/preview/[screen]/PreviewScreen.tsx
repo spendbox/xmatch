@@ -7,6 +7,8 @@ import { EventsScreen } from "@/components/events/EventsScreen";
 import { EventMediaProvider } from "@/components/events/media/EventMediaProvider";
 import { AuthShell } from "@/app/(auth)/AuthShell";
 import { AuthFlow } from "@/app/(auth)/AuthFlow";
+import { MembersList } from "@/components/admin/MembersList";
+import { MemberDetail } from "@/components/admin/MemberDetail";
 import { EventSpace } from "@/components/events/space/EventSpace";
 import { EventLobby } from "@/components/events/EventLobby";
 import { AdminShell } from "@/components/admin/AdminShell";
@@ -278,6 +280,48 @@ function ScreenBody({ screen }: { screen: string }) {
         <AuthShell title="Welcome to Dashpad" subtitle="Log in or create an account. Just your email to start.">
           <AuthFlow demo={{ step: screen === "auth-login" ? "login" : "signup", email: "tolu@example.com" }} />
         </AuthShell>
+      );
+    case "admin-members":
+      return (
+        <AdminShell>
+          <MembersList
+            total={2841}
+            q=""
+            filter="all"
+            page={1}
+            pageSize={30}
+            rows={[
+              { id: "1", display_name: "Ada", photo: photo("#e5484d", "#f2b33d", "A"), gender: "woman", age: 26, created_at: iso(86400), last_seen_at: iso(60), email: "ada@example.com", banned_at: null, balance: 120, reports: 0, matches: 4, onboarded: true },
+              { id: "2", display_name: "Kemi", photo: photo("#1f9d6b", "#f2b33d", "K"), gender: "woman", age: 24, created_at: iso(3 * 86400), last_seen_at: iso(7200), email: "kemi@example.com", banned_at: null, balance: 15, reports: 2, matches: 1, onboarded: true },
+              { id: "3", display_name: "Tunde", photo: photo("#5b3fd9", "#f2b33d", "T"), gender: "man", age: 31, created_at: iso(9 * 86400), last_seen_at: iso(5 * 86400), email: "tunde@example.com", banned_at: iso(86400), balance: 0, reports: 5, matches: 0, onboarded: true },
+              { id: "4", display_name: null, photo: null, gender: null, age: null, created_at: iso(3600), last_seen_at: iso(3600), email: "newbie@example.com", banned_at: null, balance: 0, reports: 0, matches: 0, onboarded: false },
+            ]}
+          />
+        </AdminShell>
+      );
+    case "admin-member":
+      return (
+        <AdminShell>
+          <MemberDetail
+            id="2"
+            info={{
+              profile: { id: "2", display_name: "Kemi", gender: "woman", bio: "Weekend baker, weekday spreadsheet wizard. Looking for someone who laughs at their own jokes.", interests: ["Food", "Music", "Travel", "Comedy"], photos: [photo("#1f9d6b", "#f2b33d", "K"), photo("#7b5cf0", "#ff8fb8", "K")], open_to_masquerade: true, pref_intent: "dating", created_at: iso(3 * 86400), last_seen_at: iso(7200) },
+              age: 24, email: "kemi@example.com", terms_accepted_at: iso(3 * 86400), banned_at: null, ban_reason: null,
+              wallet: { balance: 15, passes: 0 }, matches: 1, masquerades: 12, events: 2,
+              reports_against: [
+                { id: 1, reason: "Rude in chat", created_at: iso(86400), reporter_id: "1", reporter_name: "Ada" },
+                { id: 2, reason: "Spam", created_at: iso(7200), reporter_id: "3", reporter_name: "Tunde" },
+              ],
+              reports_made: 0,
+              transactions: [
+                { id: 3, amount: -10, reason: "extend", ref: null, created_at: iso(7200) },
+                { id: 2, amount: -5, reason: "gift", ref: "rose", created_at: iso(86400) },
+                { id: 1, amount: 30, reason: "purchase", ref: null, created_at: iso(2 * 86400) },
+              ],
+              paid_naira: 750,
+            }}
+          />
+        </AdminShell>
       );
     case "admin-night-spotlight":
       return <AdminShell><NightEditor night={{ ...adminNights[0], kind: "spotlight", settings: { free_reveals: 10, reveal_cost: 1, max_chats: 5 } }} /></AdminShell>;

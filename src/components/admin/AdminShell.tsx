@@ -4,12 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import { useEffect, useState } from "react";
-import { CalendarDays, ExternalLink, LayoutDashboard, LogOut, Menu, MessageCircleQuestion, X } from "lucide-react";
+import { CalendarDays, ExternalLink, LayoutDashboard, LogOut, Menu, MessageCircleQuestion, Users, X } from "lucide-react";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { adminLogout } from "@/app/admin/actions";
 
 const NAV = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
+  { href: "/admin/members", label: "Members", icon: Users },
   { href: "/admin/nights", label: "Events", icon: CalendarDays },
   { href: "/admin/icebreakers", label: "Icebreakers", icon: MessageCircleQuestion },
 ];

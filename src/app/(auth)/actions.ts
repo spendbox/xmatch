@@ -69,7 +69,10 @@ export async function logIn(_: AuthState, form: FormData): Promise<AuthState> {
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) return { error: "Wrong email or password.", values };
+  if (error) {
+    if (/banned/i.test(error.message)) return { error: "This account has been suspended. Email support@dashpad.site if you think this is a mistake.", values };
+    return { error: "Wrong email or password.", values };
+  }
   redirect("/home");
 }
 

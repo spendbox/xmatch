@@ -2358,3 +2358,69 @@ language sql stable security definer set search_path = public as $$
   where auth.uid() in (c.user_a, c.user_b) and c.status = 'open' and now() < e.ends_at + interval '1 hour'
     and public.event_chat_unread(c, auth.uid())
 $$;
+
+-- ---------------------------------------------------------------------------
+-- Admin: members list and member details (only the server can call these)
+-- ---------------------------------------------------------------------------
+alter table public.accounts_private add column if not exists banned_at timestamptz;
+alter table public.accounts_private add column if not exists ban_reason text;
+
+-- filter: all | online | new | reported | banned | incomplete
+create or replace function public.admin_members(p_q text default '', p_filter text default 'all', p_limit int default 30, p_offset int default 0)
+returns json language sql stable security definer set search_path = public as $$
+  with base as (
+    select p.id, p.display_name, p.photos, p.gender, public.age_years(p.birthdate) as age, p.created_at, p.last_seen_at,
+      a.email, a.banned_at,
+      coalesce(w.balance, 0) as balance,
+      (select count(*) from reports r where r.reported_id = p.id) as reports,
+      (select count(*) from matches m where p.id in (m.user_a, m.user_b)) as matches,
+      (p.display_name is not null and p.birthdate is not null and p.gender is not null and cardinality(p.photos) > 0) as onboarded
+    from profiles p
+    left join accounts_private a on a.user_id = p.id
+    left join wallets w on w.user_id = p.id
+    where (coalesce(p_q, '') = '' or p.display_name ilike '%' || p_q || '%' or a.email ilike '%' || p_q || '%')
+  ), filtered as (
+    select * from base where case coalesce(p_filter, 'all')
+      when 'online' then last_seen_at > now() - interval '5 minutes'
+      when 'new' then created_at > now() - interval '7 days'
+      when 'reported' then reports > 0
+      when 'banned' then banned_at is not null
+      when 'incomplete' then not onboarded
+      else true end
+  )
+  select json_build_object(
+    'total', (select count(*) from filtered),
+    'rows', coalesce((select json_agg(row_to_json(t)) from (
+      select id, display_name, photos[1] as photo, gender, age, created_at, last_seen_at, email, banned_at, balance, reports, matches, onboarded
+      from filtered
+      order by case when p_filter = 'reported' then reports else 0 end desc, created_at desc
+      limit greatest(1, least(p_limit, 100)) offset greatest(0, p_offset)
+    ) t), '[]'::json)
+  )
+$$;
+
+create or replace function public.admin_member(p_id uuid) returns json
+language sql stable security definer set search_path = public as $$
+  select json_build_object(
+    'profile', (select row_to_json(p) from profiles p where p.id = p_id),
+    'age', (select public.age_years(birthdate) from profiles where id = p_id),
+    'email', (select email from accounts_private where user_id = p_id),
+    'terms_accepted_at', (select terms_accepted_at from accounts_private where user_id = p_id),
+    'banned_at', (select banned_at from accounts_private where user_id = p_id),
+    'ban_reason', (select ban_reason from accounts_private where user_id = p_id),
+    'wallet', (select row_to_json(w) from wallets w where w.user_id = p_id),
+    'matches', (select count(*) from matches m where p_id in (m.user_a, m.user_b)),
+    'masquerades', (select count(*) from masquerade_sessions s where p_id in (s.user_a, s.user_b)),
+    'events', (select count(*) from event_attendees e where e.user_id = p_id),
+    'reports_against', coalesce((select json_agg(json_build_object('id', r.id, 'reason', r.reason, 'created_at', r.created_at,
+        'reporter_id', r.reporter_id, 'reporter_name', rp.display_name) order by r.id desc)
+      from reports r left join profiles rp on rp.id = r.reporter_id where r.reported_id = p_id), '[]'::json),
+    'reports_made', (select count(*) from reports r where r.reporter_id = p_id),
+    'transactions', coalesce((select json_agg(t order by t.id desc) from (
+        select id, amount, reason, ref, created_at from key_transactions where user_id = p_id order by id desc limit 30) t), '[]'::json),
+    'paid_naira', (select coalesce(sum(amount_kobo), 0) / 100 from payments where user_id = p_id and status = 'paid')
+  )
+$$;
+
+revoke execute on function public.admin_members(text, text, int, int) from public, anon, authenticated;
+revoke execute on function public.admin_member(uuid) from public, anon, authenticated;
