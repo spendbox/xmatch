@@ -148,6 +148,7 @@ function cleanSettings(s: EventSettings): Required<EventSettings> {
     free_reveals: int(s.free_reveals, d.free_reveals, 0, 1000),
     reveal_cost: int(s.reveal_cost, d.reveal_cost, 0, 100),
     media_under_chats: bool(s.media_under_chats, d.media_under_chats),
+    show_video: bool(s.show_video, d.show_video),
     reminders: bool(s.reminders, d.reminders),
   };
 }

@@ -9,6 +9,7 @@ import { ButtonLink } from "@/components/ui/Button";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { INTENT_ICONS } from "@/components/ui/icons";
 import { intentLabel } from "@/lib/constants";
+import { LiveEventChats } from "./LiveEventChats";
 import type { Intent, MatchSummary } from "@/lib/types";
 
 const INTENT_TONE: Record<Intent, string> = {
@@ -45,6 +46,8 @@ export function MatchesList({
           </span>
         )}
       </header>
+
+      <LiveEventChats compact={side} />
 
       {matches.length === 0 ? (
         side ? <p className="mt-6 rounded-2xl bg-surface p-4 text-[14px] text-muted">Your chats will appear here.</p> : <Empty />

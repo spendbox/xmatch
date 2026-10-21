@@ -1,5 +1,6 @@
 "use client";
 
+import { sexLabel } from "@/lib/eventSpace";
 import { useMemo, useState } from "react";
 import clsx from "clsx";
 import { Eye, MessageCircle, RefreshCw, Sparkles, Users } from "lucide-react";
@@ -109,6 +110,7 @@ export function Wall({
                     {p.name || "Someone"}
                     {p.age ? <span className="font-normal text-white/85">, {p.age}</span> : null}
                   </span>
+                  {sexLabel(p.gender) && <span className="block text-[12px] font-medium text-white/85">{sexLabel(p.gender)}</span>}
                   {p.shared > 0 && (
                     <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-semibold backdrop-blur">
                       <Sparkles size={11} /> {p.shared} in common

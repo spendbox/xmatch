@@ -1,5 +1,6 @@
 "use client";
 
+import { sexLabel } from "@/lib/eventSpace";
 import clsx from "clsx";
 import { Eye, EyeOff, UserRound } from "lucide-react";
 import { plural } from "@/lib/plural";
@@ -56,6 +57,7 @@ export function revealPrice(s: Required<EventSettings>, used: number): RevealPri
 export type SheetPerson = {
   name: string;
   age: number | null;
+  gender?: string | null;
   blur: string | null;
   photo: string | null;
   revealed: boolean;
@@ -92,7 +94,7 @@ export function PersonSheet({
   const others = person.interests.filter((t) => !myInterests.includes(t));
   const short = !price.free && balance !== null && balance < price.cost;
   return (
-    <Sheet open={open} onClose={onClose} title={`${person.name || "Someone"}${person.age ? `, ${person.age}` : ""}`} subtitle={shared.length ? `${shared.length} ${shared.length === 1 ? "interest" : "interests"} in common` : undefined}>
+    <Sheet open={open} onClose={onClose} title={`${person.name || "Someone"}${person.age ? `, ${person.age}` : ""}`} subtitle={[sexLabel(person.gender), shared.length ? `${shared.length} ${shared.length === 1 ? "interest" : "interests"} in common` : ""].filter(Boolean).join(" · ") || undefined}>
       <div className="relative mx-auto aspect-[4/5] max-h-[46dvh] overflow-hidden rounded-3xl">
         <BlurPhoto blur={person.blur} photo={person.photo} alt={person.name} className="h-full w-full" />
         {!person.photo && (

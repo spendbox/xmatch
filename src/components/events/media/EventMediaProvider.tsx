@@ -19,7 +19,7 @@ type Toast = { id: number; text: string; href?: string };
 export type EventMediaCtx = {
   active: ActiveEvent | null;
   /** Call straight from a tap (phones only allow sound after one). */
-  start: (e: ActiveEvent, skewMs?: number) => void;
+  start: (e: ActiveEvent, skewMs?: number, opts?: { auto?: boolean }) => void;
   /** Stop the music/video but stay at the event */
   stop: () => void;
   /** Leave the event entirely (it ended) */
@@ -32,6 +32,8 @@ export type EventMediaCtx = {
   muted: boolean;
   /** The browser blocked playback; a tap on "Tap to play" fixes it. */
   needsTap: boolean;
+  /** Started without a tap (coming back to the event), so it's playing silently until they unmute */
+  soundOff: boolean;
   hasMedia: boolean;
   /** Something to look at (video or a YouTube stream), not just sound. */
   isVideo: boolean;
@@ -56,6 +58,7 @@ const Ctx = createContext<EventMediaCtx>({
   stop: noop,
   leave: noop,
   mediaOff: false,
+  soundOff: false,
   toggle: noop,
   toggleMute: noop,
   playing: false,
@@ -95,6 +98,9 @@ export function EventMediaProvider({ userId, children }: { userId: string; child
   const [toast, setToast] = useState<Toast | null>(null);
   const [drag, setDrag] = useState({ x: 0, y: 0 });
   const [mediaOff, setMediaOff] = useState(false);
+  const [soundOff, setSoundOff] = useState(false);
+  const [ytMuted, setYtMuted] = useState(false);
+  const [hint, setHint] = useState(false);
   const off = useRef(false);
 
   const video = useRef<HTMLVideoElement>(null);
@@ -110,7 +116,8 @@ export function EventMediaProvider({ userId, children }: { userId: string; child
   const kind: StreamType | "playlist" | null = !active ? null : active.stream_url ? streamType(active.stream_url) : active.media.length ? "playlist" : null;
   const isYouTube = kind === "youtube";
   const hasMedia = !!kind && !mediaOff;
-  const isVideo = hasMedia && (isYouTube || hasPicture);
+  const showVideo = active?.settings?.show_video !== false;
+  const isVideo = hasMedia && showVideo && (isYouTube || hasPicture);
   const now = () => Date.now() + skew.current;
 
   /* ---------- playback ---------- */
@@ -121,7 +128,16 @@ export function EventMediaProvider({ userId, children }: { userId: string; child
     const p = v.play();
     if (p)
       p.then(() => setNeedsTap(false)).catch((err: Error) => {
-        if (err?.name === "NotAllowedError") setNeedsTap(true);
+        if (err?.name !== "NotAllowedError") return;
+        // No tap yet (e.g. coming back to the event): play silently in step with everyone; one tap turns the sound on
+        v.muted = true;
+        setMuted(true);
+        v.play()
+          .then(() => {
+            setNeedsTap(false);
+            setSoundOff(true);
+          })
+          .catch(() => setNeedsTap(true));
       });
   }, []);
 
@@ -156,9 +172,13 @@ export function EventMediaProvider({ userId, children }: { userId: string; child
   }, []);
 
   const start = useCallback(
-    (e: ActiveEvent, skewMs = 0) => {
+    (e: ActiveEvent, skewMs = 0, opts?: { auto?: boolean }) => {
       const v = video.current;
       skew.current = skewMs;
+      try {
+        // Remember they joined, so coming back to the event picks the music up again
+        localStorage.setItem("dp-event-joined", e.id);
+      } catch {}
       if (ev.current?.id === e.id && !off.current) {
         // Already on: just make sure it's playing
         if (v && v.paused && !(e.stream_url && youtubeId(e.stream_url))) tryPlay();
@@ -175,9 +195,15 @@ export function EventMediaProvider({ userId, children }: { userId: string; child
       off.current = false;
       setMediaOff(false);
       setNeedsTap(false);
+      setSoundOff(false);
       if (!v) return;
       v.muted = false;
       setMuted(false);
+      setYtMuted(!!opts?.auto);
+      if (opts?.auto) {
+        setMuted(true);
+        setSoundOff(true);
+      }
       if (e.stream_url) {
         const type = streamType(e.stream_url);
         if (type === "youtube") {
@@ -254,6 +280,7 @@ export function EventMediaProvider({ userId, children }: { userId: string; child
   const toggleMute = useCallback(() => {
     const next = !muted;
     setMuted(next);
+    if (!next) setSoundOff(false);
     if (isYouTube) ytCommand(next ? "mute" : "unMute");
     else if (video.current) video.current.muted = next;
   }, [muted, isYouTube, ytCommand]);
@@ -270,6 +297,12 @@ export function EventMediaProvider({ userId, children }: { userId: string; child
     const onMeta = () => {
       if (!ev.current || off.current) return;
       setHasPicture(v.videoWidth > 0);
+      const e0 = ev.current;
+      if (e0.stream_url && Number.isFinite(v.duration) && v.duration > 1) {
+        // A video or audio file link: everyone is at the same point, looping
+        const elapsed = (now() - new Date(e0.starts_at).getTime()) / 1000;
+        if (elapsed > 1) v.currentTime = elapsed % v.duration;
+      }
       const seek = pendingSeek.current;
       pendingSeek.current = null;
       if (seek != null && !ev.current.stream_url) {
@@ -283,7 +316,14 @@ export function EventMediaProvider({ userId, children }: { userId: string; child
     const onEnded = () => {
       const e = ev.current;
       if (!e || off.current) return;
-      if (e.stream_url) return; // a stream that stops has ended
+      if (e.stream_url) {
+        // A file link loops; a live stream that stops has ended
+        if (Number.isFinite(v.duration) && v.duration > 1) {
+          v.currentTime = 0;
+          tryPlay();
+        }
+        return;
+      }
       const n = e.media.length;
       const pos = playlistPosition(e.media, e.starts_at, now());
       if (!pos || pos.index === idx.current || n === 1) loadItem((idx.current + 1) % n, 0);
@@ -309,7 +349,7 @@ export function EventMediaProvider({ userId, children }: { userId: string; child
       v.removeEventListener("ended", onEnded);
       v.removeEventListener("error", onError);
     };
-  }, [loadItem]);
+  }, [loadItem, tryPlay]);
 
   // Stay in step with everyone else, and stop when the event ends
   useEffect(() => {
@@ -319,7 +359,14 @@ export function EventMediaProvider({ userId, children }: { userId: string; child
       if (!e) return;
       if (now() >= new Date(e.ends_at).getTime()) return leave();
       const v = video.current;
-      if (!v || e.stream_url || v.paused) return;
+      if (!v || v.paused) return;
+      if (e.stream_url) {
+        if (Number.isFinite(v.duration) && v.duration > 1) {
+          const want = ((now() - new Date(e.starts_at).getTime()) / 1000) % v.duration;
+          if (Math.abs(v.currentTime - want) > 5) v.currentTime = want;
+        }
+        return;
+      }
       const pos = playlistPosition(e.media, e.starts_at, now());
       if (pos && pos.index === idx.current && Math.abs(v.currentTime - pos.offset) > 5 && Number.isFinite(v.duration) && pos.offset < v.duration) {
         v.currentTime = pos.offset;
@@ -348,6 +395,49 @@ export function EventMediaProvider({ userId, children }: { userId: string; child
       else tryPlay();
     }
   }, [quietHere, active, isYouTube, ytCommand, tryPlay]);
+
+  // YouTube videos (not live streams): jump to where everyone else is
+  useEffect(() => {
+    if (!isYouTube || !active) return;
+    let synced = false;
+    const startsAt = new Date(active.starts_at).getTime();
+    const onMsg = (m: MessageEvent) => {
+      if (typeof m.origin !== "string" || !m.origin.includes("youtube")) return;
+      let d: { event?: string; info?: { duration?: number } } | null = null;
+      try {
+        d = typeof m.data === "string" ? JSON.parse(m.data) : m.data;
+      } catch {
+        return;
+      }
+      const dur = d?.info?.duration;
+      if (synced || typeof dur !== "number" || dur <= 1) return;
+      synced = true;
+      const elapsed = (Date.now() + skew.current - startsAt) / 1000;
+      if (elapsed > 2) {
+        yt.current?.contentWindow?.postMessage(JSON.stringify({ event: "command", func: "seekTo", args: [elapsed % dur, true] }), "*");
+      }
+    };
+    window.addEventListener("message", onMsg);
+    return () => window.removeEventListener("message", onMsg);
+  }, [isYouTube, active]);
+
+  // First time someone sees a video at an event: tell them they can move it
+  useEffect(() => {
+    if (!isVideo || mediaOff) return;
+    try {
+      if (localStorage.getItem("dp-video-hint")) return;
+    } catch {
+      return;
+    }
+    const t = setTimeout(() => setHint(true), 1200);
+    return () => clearTimeout(t);
+  }, [isVideo, mediaOff]);
+  const dismissHint = () => {
+    setHint(false);
+    try {
+      localStorage.setItem("dp-video-hint", "1");
+    } catch {}
+  };
 
   /* ---------- people saying hi ---------- */
 
@@ -467,6 +557,7 @@ export function EventMediaProvider({ userId, children }: { userId: string; child
     playing,
     muted,
     needsTap,
+    soundOff,
     hasMedia,
     isVideo,
     isLive: !!active?.stream_url,
@@ -495,12 +586,15 @@ export function EventMediaProvider({ userId, children }: { userId: string; child
         style={mode === "pip" ? { transform: `translate(${drag.x}px, ${drag.y}px)` } : undefined}
         className={clsx(
           "fixed overflow-hidden bg-black",
-          mode === "stage" && "z-[5] rounded-3xl",
+          mode === "stage" && "z-[41] rounded-3xl lg:z-[5]",
           mode === "pip" &&
             (onChat
-              ? "top-[calc(env(safe-area-inset-top)+8.5rem)] right-3 z-40 aspect-video w-44 rounded-2xl shadow-lift ring-2 ring-white lg:top-36 lg:right-8 lg:w-72"
-              : "right-3 bottom-[calc(5.25rem+env(safe-area-inset-bottom))] z-40 aspect-video w-48 rounded-2xl shadow-lift ring-2 ring-white lg:right-8 lg:bottom-8 lg:w-80"),
-          mode === "hidden" && "pointer-events-none bottom-0 left-0 h-px w-px opacity-0",
+              ? "top-[calc(env(safe-area-inset-top)+8.5rem)] right-3 z-[45] aspect-video w-44 rounded-2xl shadow-lift ring-2 ring-white lg:top-36 lg:right-8 lg:w-72"
+              : "right-3 bottom-[calc(5.25rem+env(safe-area-inset-bottom))] z-[45] aspect-video w-48 rounded-2xl shadow-lift ring-2 ring-white lg:right-8 lg:bottom-8 lg:w-80"),
+          mode === "hidden" &&
+            (isYouTube
+              ? "pointer-events-none top-0 -left-[2000px] h-[180px] w-[320px] opacity-0"
+              : "pointer-events-none bottom-0 left-0 h-px w-px opacity-0"),
         )}
       >
         <video ref={video} playsInline preload="auto" className={clsx("h-full w-full object-contain", isYouTube && "hidden")} />
@@ -508,7 +602,11 @@ export function EventMediaProvider({ userId, children }: { userId: string; child
           <iframe
             ref={yt}
             key={active!.id}
-            src={`https://www.youtube.com/embed/${ytId}?autoplay=1&playsinline=1&enablejsapi=1&rel=0&modestbranding=1`}
+            src={`https://www.youtube.com/embed/${ytId}?autoplay=1&playsinline=1&enablejsapi=1&rel=0&modestbranding=1${ytMuted ? "&mute=1" : ""}`}
+            onLoad={(ev) => {
+              // Ask YouTube to tell us the video length so we can join everyone at the same point
+              ev.currentTarget.contentWindow?.postMessage(JSON.stringify({ event: "listening", id: 1, channel: "widget" }), "*");
+            }}
             title="Live stream"
             allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
             allowFullScreen
@@ -538,6 +636,23 @@ export function EventMediaProvider({ userId, children }: { userId: string; child
       </div>
 
       {showFloating && <FloatingMiniPlayer />}
+
+      {hint && onEventArea && (
+        <div role="status" className="fixed inset-x-3 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-[60] mx-auto max-w-sm animate-fade-up">
+          <div className="flex items-start gap-3 rounded-2xl bg-ink p-3.5 text-white shadow-lift">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/15">
+              <GripHorizontal size={18} />
+            </span>
+            <p className="min-w-0 flex-1 text-[13px] leading-snug">
+              <span className="block text-[14px] font-semibold">You can move the video</span>
+              When you leave the room it shrinks to a small window. Drag its top bar to move it, or tap the camera icon to hide it and keep the sound.
+            </p>
+            <button onClick={dismissHint} className="shrink-0 rounded-full bg-white px-3 py-1.5 text-[12px] font-semibold text-ink">
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
 
       {toast && (
         <div role="status" className="fixed inset-x-3 top-[calc(env(safe-area-inset-top)+0.75rem)] z-[60] mx-auto max-w-sm animate-fade-up">

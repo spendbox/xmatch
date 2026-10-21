@@ -32,6 +32,7 @@ export type EventSettings = {
   free_reveals?: number; // free photo reveals per person, default 10
   reveal_cost?: number; // Keys per reveal after the free ones, default 1
   media_under_chats?: boolean; // keep music/video playing in private chats, default true
+  show_video?: boolean; // show the picture of videos and links; off = sound only, default true
   reminders?: boolean; // reminder emails, default true
 };
 export const SETTING_DEFAULTS: Required<EventSettings> = {
@@ -42,6 +43,7 @@ export const SETTING_DEFAULTS: Required<EventSettings> = {
   free_reveals: 10,
   reveal_cost: 1,
   media_under_chats: true,
+  show_video: true,
   reminders: true,
 };
 export const settingsOf = (e: { settings?: EventSettings | null }): Required<EventSettings> => ({ ...SETTING_DEFAULTS, ...(e.settings ?? {}) });
@@ -133,6 +135,7 @@ export type EventChatSummary = {
   other_id: string;
   name: string;
   age: number | null;
+  gender?: string | null;
   blur: string | null;
   photo: string | null;
   last_message: string | null;

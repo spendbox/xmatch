@@ -33,8 +33,14 @@ function Bar({ floating }: { floating?: boolean }) {
       <div className="min-w-0 flex-1">
         <p className="truncate text-[14px] leading-tight font-semibold">{m.title}</p>
         <p className="truncate text-[12px] text-muted">
-          {m.isLive && <span className="mr-1 font-bold text-chili">LIVE ·</span>}
-          {m.active.title}
+          {m.soundOff ? (
+            <span className="font-semibold text-brand">Sound is off · tap the speaker to hear it</span>
+          ) : (
+            <>
+              {m.isLive && <span className="mr-1 font-bold text-chili">LIVE ·</span>}
+              {m.active.title}
+            </>
+          )}
         </p>
       </div>
       {m.isVideo && m.videoHidden && (
@@ -51,7 +57,11 @@ function Bar({ floating }: { floating?: boolean }) {
           {m.playing ? <Pause size={17} fill="currentColor" /> : <Play size={17} fill="currentColor" className="ml-0.5" />}
         </button>
       )}
-      <button onClick={m.toggleMute} className="grid h-10 w-10 place-items-center rounded-full text-ink-soft hover:bg-ink/5" aria-label={m.muted ? "Unmute" : "Mute"}>
+      <button
+        onClick={m.toggleMute}
+        className={clsx("grid h-10 w-10 place-items-center rounded-full", m.soundOff ? "animate-pulse bg-brand text-white" : "text-ink-soft hover:bg-ink/5")}
+        aria-label={m.muted ? "Unmute" : "Mute"}
+      >
         {m.muted ? <VolumeX size={19} /> : <Volume2 size={19} />}
       </button>
       <button onClick={m.stop} className="grid h-10 w-10 place-items-center rounded-full text-muted hover:bg-ink/5" aria-label="Stop the music">

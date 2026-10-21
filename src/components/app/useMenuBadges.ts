@@ -19,12 +19,17 @@ export function useMenuBadges(userId: string): MenuBadges {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const refresh = useCallback(async () => {
-    const [chats, event] = await Promise.all([supabase.rpc("unread_chats"), supabase.rpc("next_event")]);
+    const [chats, eventChats, event] = await Promise.all([
+      supabase.rpc("unread_chats"),
+      supabase.rpc("unread_event_chats"),
+      supabase.rpc("next_event"),
+    ]);
     const ev = event.data as { i_am_going?: boolean; starts_at?: string; ends_at?: string } | null;
     const now = Date.now();
     const eventLive =
       !!ev?.i_am_going && !!ev.starts_at && !!ev.ends_at && new Date(ev.starts_at).getTime() <= now && new Date(ev.ends_at).getTime() > now;
-    setBadges((b) => ({ chats: typeof chats.data === "number" ? chats.data : b.chats, eventLive }));
+    const n = (typeof chats.data === "number" ? chats.data : 0) + (typeof eventChats.data === "number" ? eventChats.data : 0);
+    setBadges((b) => ({ chats: chats.error && eventChats.error ? b.chats : n, eventLive }));
   }, [supabase]);
 
   // Wait a moment so a burst of messages only triggers one check
@@ -42,6 +47,7 @@ export function useMenuBadges(userId: string): MenuBadges {
       .channel(`badges-${userId}-${Math.random().toString(36).slice(2, 8)}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, soon)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "matches" }, soon)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "event_chat_messages" }, soon)
       .subscribe();
     const onFocus = () => document.visibilityState === "visible" && soon();
     window.addEventListener("dp:badges", soon);

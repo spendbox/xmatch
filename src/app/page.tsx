@@ -91,16 +91,12 @@ export default function Landing() {
           </span>
           <h1 className="mt-5 animate-fade-up font-display text-[44px] leading-[1.02] font-semibold tracking-tight [animation-delay:80ms] md:text-[56px] lg:text-[68px]">
             Match on{" "}
-            <span className="whitespace-nowrap">
-              <span className="relative inline-block">
-                <em className="bg-gradient-to-r from-brand via-[#c2306b] to-[#e8962a] bg-clip-text pr-1 text-transparent">vibes</em>
-                <svg aria-hidden viewBox="0 0 120 12" className="absolute -bottom-1 left-0 w-full text-gold" preserveAspectRatio="none">
-                  <path d="M2 9c30-6 80-8 116-3" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-                </svg>
-              </span>
-              ,
-            </span>{" "}
-            not looks.
+            <span className="relative inline-block">
+              <em className="bg-gradient-to-r from-brand via-[#c2306b] to-[#e8962a] bg-clip-text pr-1 text-transparent">Vibes</em>
+              <svg aria-hidden viewBox="0 0 120 12" className="absolute -bottom-1 left-0 w-full text-gold" preserveAspectRatio="none">
+                <path d="M2 9c30-6 80-8 116-3" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+              </svg>
+            </span>
           </h1>
           <p className="mx-auto mt-5 max-w-[22rem] animate-fade-up text-[17px] leading-relaxed text-muted [animation-delay:160ms] lg:mx-0 lg:max-w-md lg:text-[19px]">
             Dashpad pairs you with someone who shares your energy. Chat masked for five minutes — if the vibe is right, you both

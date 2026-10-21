@@ -1,5 +1,6 @@
 "use client";
 
+import { sexLabel } from "@/lib/eventSpace";
 import Link from "next/link";
 import clsx from "clsx";
 import { Check, Clock3, Heart, HeartHandshake, MessageCircle, X } from "lucide-react";
@@ -91,6 +92,7 @@ export function ChatsPanel({
                       <span className="truncate">
                         {c.name || "Someone"}
                         {c.age ? <span className="font-normal text-muted">, {c.age}</span> : null}
+                        {sexLabel(c.gender) && <span className="font-normal text-muted"> · {sexLabel(c.gender)}</span>}
                       </span>
                     </p>
                     <p className={clsx("truncate text-[13px]", count ? "font-semibold text-ink" : "text-muted")}>{last}</p>

@@ -107,3 +107,8 @@ export function nameColor(id: string | null) {
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
   return colors[Math.abs(h) % colors.length];
 }
+
+/** "Female", "Male" or "Other" — shown even while someone is masked. */
+export function sexLabel(g?: string | null) {
+  return g === "woman" ? "Female" : g === "man" ? "Male" : g === "other" ? "Other" : "";
+}

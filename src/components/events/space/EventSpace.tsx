@@ -25,6 +25,7 @@ import { FeaturedPhotoPicker } from "./FeaturedPhotoPicker";
 import { Room } from "./Room";
 import { Wall } from "./Wall";
 import { useEventChats } from "./useEventChats";
+import { useKeyboardSafe } from "@/lib/useKeyboardSafe";
 
 type Tab = "room" | "wall" | "chats";
 
@@ -50,6 +51,8 @@ export function EventSpace({
   const endsIn = now ? new Date(e.ends_at).getTime() - now : 0;
   const decideBy = new Date(e.ends_at).getTime() + 60 * 60 * 1000;
   const media = useEventMedia();
+  // Inside a live event the phone layout is one screen: only the room or the wall scrolls
+  const shell = useKeyboardSafe<HTMLElement>();
   const joined = media.active?.id === e.id;
   const inside = phase === "live" && e.i_am_going && joined;
   const { wallet, refresh: refreshWallet } = useWallet(userId);
@@ -190,6 +193,17 @@ export function EventSpace({
     setTab(defaultTab);
   }
 
+  // Joined before (e.g. the app was closed): go straight back in, in step with everyone
+  const startMedia = media.start;
+  useEffect(() => {
+    if (phase !== "live" || !e.i_am_going || joined) return;
+    let saved: string | null = null;
+    try {
+      saved = localStorage.getItem("dp-event-joined");
+    } catch {}
+    if (saved === e.id) startMedia(e, skew.current, { auto: true });
+  }, [phase, e, joined, startMedia]);
+
   const canAfford = (wallet?.balance ?? 0) >= e.entry_keys;
   const unreadTotal = joined ? media.unreadTotal : 0;
 
@@ -217,18 +231,23 @@ export function EventSpace({
     const mainTab: Tab = tab === "chats" ? defaultTab : tab;
     const content = (t: Tab) =>
       t === "room" ? (
-        <div className="space-y-4">
-          <MediaStage big={e.kind === "party"} />
-          <Room eventId={e.id} userId={userId} settings={s} names={names} live={phase === "live"} />
+        <div className="flex min-h-0 flex-1 flex-col gap-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:block lg:space-y-4 lg:pb-0">
+          <div className="shrink-0">
+            <MediaStage big={e.kind === "party"} />
+          </div>
+          <Room eventId={e.id} userId={userId} settings={s} names={names} live={phase === "live"} className="min-h-0 flex-1 lg:flex-none" />
         </div>
       ) : (
         <Wall people={wall} onOpen={(p) => { setSheetError(null); setStarting(false); setPersonId(p.user_id); }} onRefresh={loadWall} refreshing={wallBusy} />
       );
 
     return (
-      <main className="mx-auto max-w-md pb-8 lg:max-w-6xl lg:px-10 lg:pt-8">
+      <main
+        ref={shell}
+        className="fixed inset-x-0 top-0 z-40 mx-auto flex h-dvh max-w-md flex-col overflow-hidden bg-cream lg:static lg:z-auto lg:block lg:h-auto lg:max-w-6xl lg:overflow-visible lg:px-10 lg:pt-8 lg:pb-8"
+      >
         {/* Compact header */}
-        <header className={clsx("sticky top-0 z-20 overflow-hidden bg-gradient-to-br text-white lg:static lg:rounded-[28px] lg:shadow-card", themeBg(e.theme))}>
+        <header className={clsx("relative shrink-0 overflow-hidden bg-gradient-to-br text-white lg:static lg:rounded-[28px] lg:shadow-card", themeBg(e.theme))}>
           <CoverImage src={e.cover_url} />
           <div className="relative flex items-center gap-3 px-3 py-3 lg:px-6 lg:py-5">
             <Link href="/events" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/15 backdrop-blur" aria-label="All events">
@@ -254,13 +273,13 @@ export function EventSpace({
           </div>
         </header>
 
-        <div className="px-4 lg:mt-6 lg:grid lg:grid-cols-12 lg:items-start lg:gap-6 lg:px-0">
-          <div className="lg:col-span-8">
-            <MiniPlayer className="mt-3 lg:mt-0" />
+        <div className="flex min-h-0 flex-1 flex-col px-4 lg:mt-6 lg:grid lg:grid-cols-12 lg:items-start lg:gap-6 lg:px-0">
+          <div className="flex min-h-0 flex-1 flex-col lg:col-span-8 lg:block">
+            <MiniPlayer className="mt-3 shrink-0 lg:mt-0" />
             {media.mediaOff && (
               <button
                 onClick={() => media.start(e, skew.current)}
-                className="mt-3 flex w-full items-center gap-3 rounded-2xl border border-dashed border-line-strong bg-surface/60 p-3 text-left transition hover:bg-surface lg:mt-0"
+                className="mt-3 flex w-full shrink-0 items-center gap-3 rounded-2xl border border-dashed border-line-strong bg-surface/60 p-3 text-left transition hover:bg-surface lg:mt-0"
               >
                 <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand-soft text-brand">
                   <Headphones size={18} />
@@ -273,7 +292,7 @@ export function EventSpace({
             )}
 
             {/* Tabs */}
-            <div role="tablist" aria-label="Event sections" className="mt-3 grid grid-cols-3 gap-1 rounded-2xl bg-line/60 p-1 lg:grid-cols-2">
+            <div role="tablist" aria-label="Event sections" className="mt-3 grid shrink-0 grid-cols-3 gap-1 rounded-2xl bg-line/60 p-1 lg:grid-cols-2">
               <TabButton active={tab === "room"} desktopActive={mainTab === "room"} onClick={() => setTab("room")} icon={<MessagesSquare size={16} />} label="Room" />
               <TabButton active={tab === "wall"} desktopActive={mainTab === "wall"} onClick={() => setTab("wall")} icon={<LayoutGrid size={16} />} label="Wall" />
               <TabButton
@@ -288,9 +307,16 @@ export function EventSpace({
               />
             </div>
 
-            <div className="mt-4">
+            <div
+              className={clsx(
+                "mt-3 min-h-0 flex-1 lg:mt-4",
+                tab === "room"
+                  ? "flex flex-col lg:block"
+                  : "-mx-4 overflow-y-auto overscroll-contain px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] lg:mx-0 lg:overflow-visible lg:px-0 lg:pb-0",
+              )}
+            >
               {tab === "chats" && <div className="lg:hidden">{chatsPanel}</div>}
-              <div className={clsx(tab === "chats" && "hidden lg:block")}>{content(mainTab)}</div>
+              <div className={clsx(tab === "chats" ? "hidden lg:block" : tab === "room" && "flex min-h-0 flex-1 flex-col lg:block")}>{content(mainTab)}</div>
             </div>
           </div>
 

@@ -1884,6 +1884,8 @@ language sql immutable as $$ select coalesce((e.settings ->> k)::boolean, d) $$;
 -- Featured photo for "you choose" events, plus a tiny blurred copy shown until revealed
 alter table public.event_attendees add column if not exists featured_photo text;
 alter table public.event_attendees add column if not exists featured_blur text;
+-- Guests stay masked at events: a random alias instead of their name until they match
+alter table public.event_attendees add column if not exists alias text;
 
 -- Music and video for an event, played in order from the start time
 create table if not exists public.event_media (
@@ -2060,7 +2062,7 @@ begin
   select * into me from profiles where id = uid;
   return coalesce((
     select json_agg(row_to_json(t) order by t.shared desc, t.sort_key) from (
-      select p.id as user_id, split_part(coalesce(p.display_name, ''), ' ', 1) as name,
+      select p.id as user_id, coalesce(a.alias, 'Masked guest') as name,
         public.age_years(p.birthdate) as age, p.gender, a.featured_blur as blur,
         case when r.target is not null then a.featured_photo end as photo,
         (r.target is not null) as revealed,
@@ -2154,7 +2156,7 @@ begin
     select json_agg(row_to_json(t) order by t.last_message_at desc) from (
       select c.id, c.status, c.created_at, c.last_message_at, c.opened_by,
         case when c.user_a = uid then c.keep_a else c.keep_b end as my_keep,
-        p.id as other_id, split_part(coalesce(p.display_name, ''), ' ', 1) as name, public.age_years(p.birthdate) as age,
+        p.id as other_id, coalesce(a.alias, 'Masked guest') as name, public.age_years(p.birthdate) as age, p.gender,
         a.featured_blur as blur,
         case when exists (select 1 from event_reveals r where r.event_id = c.event_id and r.viewer = uid and r.target = p.id)
              then a.featured_photo end as photo,
@@ -2186,7 +2188,7 @@ begin
     'my_keep', case when c.user_a = uid then c.keep_a else c.keep_b end,
     'their_keep_set', case when c.user_a = uid then c.keep_b is not null else c.keep_a is not null end,
     'event', public.event_json(e, uid),
-    'other', (select json_build_object('id', p.id, 'name', split_part(coalesce(p.display_name, ''), ' ', 1),
+    'other', (select json_build_object('id', p.id, 'name', coalesce(a.alias, 'Masked guest'),
                 'age', public.age_years(p.birthdate), 'gender', p.gender, 'interests', p.interests,
                 'blur', a.featured_blur,
                 'photo', case when exists (select 1 from event_reveals r where r.event_id = c.event_id and r.viewer = uid and r.target = p.id)
@@ -2273,8 +2275,8 @@ end $$;
 create or replace function public.room_messages(p_event uuid) returns json
 language sql stable security definer set search_path = public as $$
   select coalesce(json_agg(row_to_json(t) order by t.id), '[]'::json) from (
-    select m.id, m.user_id, m.kind, m.body, m.created_at, split_part(coalesce(p.display_name, ''), ' ', 1) as name
-    from event_room_messages m left join profiles p on p.id = m.user_id
+    select m.id, m.user_id, m.kind, m.body, m.created_at, coalesce(a.alias, '') as name
+    from event_room_messages m left join event_attendees a on a.event_id = m.event_id and a.user_id = m.user_id
     where m.event_id = p_event
       and exists (select 1 from event_attendees a where a.event_id = p_event and a.user_id = auth.uid())
     order by m.id desc limit 150
@@ -2288,14 +2290,71 @@ begin
   if new.featured_photo is null then
     select photos[1] into new.featured_photo from profiles where id = new.user_id;
   end if;
+  if new.alias is null then
+    -- A fresh alias, different from others at the same event where possible
+    for i in 1..8 loop
+      new.alias := public.random_alias();
+      exit when not exists (select 1 from event_attendees x where x.event_id = new.event_id and x.alias = new.alias);
+    end loop;
+  end if;
   return new;
 end $$;
 drop trigger if exists event_attendee_photo on public.event_attendees;
 create trigger event_attendee_photo before insert on public.event_attendees
   for each row execute function public.default_featured_photo();
+update public.event_attendees set alias = public.random_alias() where alias is null;
 
 -- Covers, music and video uploaded by admin (public to play)
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('event-media', 'event-media', true, 52428800,
   array['image/jpeg','image/png','image/webp','audio/mpeg','audio/mp4','audio/aac','audio/wav','audio/ogg','audio/webm','video/mp4','video/webm','video/quicktime'])
 on conflict (id) do update set public = true, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
+
+-- ---------------------------------------------------------------------------
+-- Event chats in the Chats tab: unread dots and a shortcut back to the event
+-- ---------------------------------------------------------------------------
+alter table public.event_chats add column if not exists a_read_at timestamptz;
+alter table public.event_chats add column if not exists b_read_at timestamptz;
+
+create or replace function public.event_chat_unread(c public.event_chats, uid uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from event_chat_messages x
+    where x.chat_id = c.id and x.sender_id <> uid
+      and x.created_at > coalesce(case when c.user_a = uid then c.a_read_at else c.b_read_at end, '-infinity'::timestamptz)
+  )
+$$;
+
+create or replace function public.mark_event_chat_read(p_chat uuid) returns void
+language sql security definer set search_path = public as $$
+  update event_chats set
+    a_read_at = case when user_a = auth.uid() then now() else a_read_at end,
+    b_read_at = case when user_b = auth.uid() then now() else b_read_at end
+  where id = p_chat and auth.uid() in (user_a, user_b)
+$$;
+
+-- Your open chats at events that are on now (or just ended and waiting for keep / let go)
+create or replace function public.my_live_event_chats() returns json
+language sql stable security definer set search_path = public as $$
+  select coalesce(json_agg(row_to_json(t) order by t.unread desc, t.last_message_at desc), '[]'::json) from (
+    select c.id, c.event_id, e.title as event_title, e.ends_at, c.last_message_at,
+      p.id as other_id, coalesce(a.alias, 'Masked guest') as name, public.age_years(p.birthdate) as age, p.gender,
+      a.featured_blur as blur,
+      case when exists (select 1 from event_reveals r where r.event_id = c.event_id and r.viewer = auth.uid() and r.target = p.id)
+           then a.featured_photo end as photo,
+      (select body from event_chat_messages m where m.chat_id = c.id order by m.id desc limit 1) as last_message,
+      public.event_chat_unread(c, auth.uid()) as unread
+    from event_chats c
+    join masquerade_events e on e.id = c.event_id
+    join profiles p on p.id = case when c.user_a = auth.uid() then c.user_b else c.user_a end
+    left join event_attendees a on a.event_id = c.event_id and a.user_id = p.id
+    where auth.uid() in (c.user_a, c.user_b) and c.status = 'open' and now() < e.ends_at + interval '1 hour'
+  ) t
+$$;
+
+create or replace function public.unread_event_chats() returns int
+language sql stable security definer set search_path = public as $$
+  select count(*)::int from event_chats c join masquerade_events e on e.id = c.event_id
+  where auth.uid() in (c.user_a, c.user_b) and c.status = 'open' and now() < e.ends_at + interval '1 hour'
+    and public.event_chat_unread(c, auth.uid())
+$$;

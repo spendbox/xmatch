@@ -325,6 +325,7 @@ export function NightEditor({
                 {streamBad ? "Links must start with https://" : "YouTube links, .m3u8 live streams and direct .mp3 / .mp4 links all work."}
               </p>
             </div>
+            <ToggleRow label="Show the video" hint="Off plays only the sound of YouTube links and videos (good for music videos)" checked={s.show_video} onChange={(v) => setting("show_video", v)} />
             <ToggleRow label="Keep playing under private chats" hint="Music keeps going quietly while people chat one-to-one" checked={s.media_under_chats} onChange={(v) => setting("media_under_chats", v)} />
             <p className="rounded-xl bg-gold-soft px-3.5 py-2.5 text-[12px] text-[#8a5a00]">Only upload music and videos you have the rights to play.</p>
           </Section>

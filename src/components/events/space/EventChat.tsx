@@ -1,5 +1,7 @@
 "use client";
 
+import { refreshMenuBadges } from "@/components/app/useMenuBadges";
+import { sexLabel } from "@/lib/eventSpace";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -55,6 +57,11 @@ export function EventChat({ chat, myId, myInterests }: { chat: EventChatDetail; 
   const showPlayer = media.active?.id === e.id && s.media_under_chats !== false;
   const name = other.name || "them";
   const nameOf = (id: string | null) => (id === myId ? "You" : other.name || "Them");
+
+  // Opening the chat (and anything that arrives while it's open) counts as read
+  useEffect(() => {
+    supabase.rpc("mark_event_chat_read", { p_chat: chat.id }).then(() => refreshMenuBadges());
+  }, [supabase, chat.id, messages.length]);
 
   const matched = useCallback((mid: string | null) => {
     setStatus("matched");
@@ -174,6 +181,7 @@ export function EventChat({ chat, myId, myInterests }: { chat: EventChatDetail; 
             <p className="truncate text-[16px] font-semibold">
               {other.name || "Someone"}
               {other.age ? `, ${other.age}` : ""}
+              {sexLabel(other.gender) && <span className="font-normal text-muted"> · {sexLabel(other.gender)}</span>}
             </p>
             <p className={clsx("inline-flex items-center gap-1 text-[12px] font-medium", lastCall ? "text-[#9a6a0c]" : "text-muted")}>
               <Clock3 size={12} />
@@ -299,7 +307,7 @@ export function EventChat({ chat, myId, myInterests }: { chat: EventChatDetail; 
       <PersonSheet
         open={sheet}
         onClose={() => setSheet(false)}
-        person={{ name: other.name, age: other.age, blur: other.blur, photo: other.photo, revealed: !!other.photo, interests: other.interests ?? [] }}
+        person={{ name: other.name, age: other.age, gender: other.gender, blur: other.blur, photo: other.photo, revealed: !!other.photo, interests: other.interests ?? [] }}
         myInterests={myInterests}
         price={price}
         balance={wallet?.balance ?? null}

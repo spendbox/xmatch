@@ -18,6 +18,7 @@ export function useKeyboardSafe<T extends HTMLElement>() {
     let lastHeight = 0;
 
     const apply = () => {
+      lock(phone.matches);
       if (!phone.matches) {
         el.style.height = "";
         el.style.top = "";
@@ -33,12 +34,14 @@ export function useKeyboardSafe<T extends HTMLElement>() {
       lastHeight = vv.height;
     };
 
-    // Stop the page itself from scrolling behind the chat
+    // Stop the page itself from scrolling behind the chat (phones only)
     const html = document.documentElement;
     const prevHtml = html.style.overflow;
     const prevBody = document.body.style.overflow;
-    html.style.overflow = "hidden";
-    document.body.style.overflow = "hidden";
+    const lock = (on: boolean) => {
+      html.style.overflow = on ? "hidden" : prevHtml;
+      document.body.style.overflow = on ? "hidden" : prevBody;
+    };
 
     apply();
     vv.addEventListener("resize", apply);
@@ -48,8 +51,7 @@ export function useKeyboardSafe<T extends HTMLElement>() {
       vv.removeEventListener("resize", apply);
       vv.removeEventListener("scroll", apply);
       phone.removeEventListener("change", apply);
-      html.style.overflow = prevHtml;
-      document.body.style.overflow = prevBody;
+      lock(false);
       el.style.height = "";
       el.style.top = "";
     };

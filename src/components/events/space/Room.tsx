@@ -155,7 +155,7 @@ export function Room({
           const el = e.currentTarget;
           stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
         }}
-        className="h-[44dvh] min-h-[260px] space-y-1.5 overflow-y-auto overscroll-contain px-3 py-3 lg:h-[52vh]"
+        className="min-h-0 flex-1 space-y-1.5 overflow-y-auto overscroll-contain px-3 py-3 lg:h-[52vh] lg:flex-none"
         aria-live="polite"
       >
         {messages === null && <p className="py-10 text-center text-[14px] text-muted">Loading the room…</p>}
