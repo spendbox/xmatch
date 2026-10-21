@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
-import { Music2, Pause, Play, Radio, Video, Volume2, VolumeX, X } from "lucide-react";
+import { GripVertical, Minimize2, Music2, Pause, Play, Radio, Video, Volume2, VolumeX, X } from "lucide-react";
 import { useEventMedia } from "./EventMediaProvider";
 
 /** Little moving bars that show music is playing. */
@@ -16,7 +16,7 @@ export function Equalizer({ playing, className }: { playing: boolean; className?
   );
 }
 
-function Bar({ floating }: { floating?: boolean }) {
+function Bar({ floating, handle, onCollapse }: { floating?: boolean; handle?: React.ReactNode; onCollapse?: () => void }) {
   const m = useEventMedia();
   if (!m.active || !m.hasMedia) return null;
   const Icon = m.isLive ? Radio : m.isVideo ? Video : Music2;
@@ -27,6 +27,7 @@ function Bar({ floating }: { floating?: boolean }) {
         floating ? "shadow-lift" : "shadow-card",
       )}
     >
+      {handle}
       <span className="relative grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-brand to-[#c2306b] text-white">
         {m.playing && !m.needsTap ? <Equalizer playing className="text-white" /> : <Icon size={18} />}
       </span>
@@ -64,6 +65,11 @@ function Bar({ floating }: { floating?: boolean }) {
       >
         {m.muted ? <VolumeX size={19} /> : <Volume2 size={19} />}
       </button>
+      {onCollapse && (
+        <button onClick={onCollapse} className="grid h-10 w-9 place-items-center rounded-full text-muted hover:bg-ink/5" aria-label="Make the player small">
+          <Minimize2 size={17} />
+        </button>
+      )}
       <button onClick={m.stop} className="grid h-10 w-10 place-items-center rounded-full text-muted hover:bg-ink/5" aria-label="Stop the music">
         <X size={19} />
       </button>
@@ -84,11 +90,114 @@ export function MiniPlayer({ className }: { className?: string }) {
   );
 }
 
-/** Shown over other pages while an event is playing. */
+/** Shown over other pages while an event is playing. Drag it anywhere, or shrink it to a small bubble. */
 export function FloatingMiniPlayer() {
+  const m = useEventMedia();
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+  const [small, setSmall] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  const drag = useRef<{ x: number; y: number; ox: number; oy: number; moved: boolean } | null>(null);
+
+  // Remember where they put it
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("dp-mini-player") ?? "null");
+      if (saved) {
+        setPos({ x: saved.x ?? 0, y: saved.y ?? 0 });
+        setSmall(!!saved.small);
+      }
+    } catch {}
+  }, []);
+  const save = (p: { x: number; y: number }, sm: boolean) => {
+    try {
+      localStorage.setItem("dp-mini-player", JSON.stringify({ ...p, small: sm }));
+    } catch {}
+  };
+
+  // Keep it on screen
+  const clamp = (x: number, y: number) => {
+    const el = box.current;
+    if (!el) return { x, y };
+    const r = el.getBoundingClientRect();
+    const baseLeft = r.left - pos.x;
+    const baseTop = r.top - pos.y;
+    const minX = 8 - baseLeft;
+    const maxX = window.innerWidth - 8 - r.width - baseLeft;
+    const minY = 8 - baseTop;
+    const maxY = window.innerHeight - 8 - r.height - baseTop;
+    return { x: Math.min(maxX, Math.max(minX, x)), y: Math.min(maxY, Math.max(minY, y)) };
+  };
+
+  const down = (e: React.PointerEvent) => {
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    drag.current = { x: e.clientX, y: e.clientY, ox: pos.x, oy: pos.y, moved: false };
+  };
+  const move = (e: React.PointerEvent) => {
+    const d = drag.current;
+    if (!d) return;
+    const dx = e.clientX - d.x;
+    const dy = e.clientY - d.y;
+    if (Math.abs(dx) + Math.abs(dy) > 6) d.moved = true;
+    if (d.moved) setPos(clamp(d.ox + dx, d.oy + dy));
+  };
+  const up = () => {
+    const d = drag.current;
+    drag.current = null;
+    if (d?.moved) save(pos, small);
+    return !!d?.moved;
+  };
+
+  const handle = (
+    <span
+      onPointerDown={down}
+      onPointerMove={move}
+      onPointerUp={up}
+      className="-ml-1 grid h-10 w-6 shrink-0 cursor-grab touch-none place-items-center text-muted active:cursor-grabbing"
+      aria-label="Drag to move the player"
+      title="Drag to move"
+    >
+      <GripVertical size={18} />
+    </span>
+  );
+
   return (
-    <div className="fixed inset-x-3 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-30 mx-auto max-w-md animate-fade-up lg:inset-x-auto lg:right-6 lg:bottom-6 lg:w-[380px]">
-      <Bar floating />
+    <div
+      ref={box}
+      style={{ transform: `translate(${pos.x}px, ${pos.y}px)` }}
+      className={
+        small
+          ? "fixed right-4 bottom-[calc(5.25rem+env(safe-area-inset-bottom))] z-30 lg:right-6 lg:bottom-6"
+          : "fixed inset-x-3 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-30 mx-auto max-w-md animate-fade-up lg:inset-x-auto lg:right-6 lg:bottom-6 lg:w-[400px]"
+      }
+    >
+      {small ? (
+        <button
+          onPointerDown={down}
+          onPointerMove={move}
+          onPointerUp={() => {
+            if (!up()) {
+              setSmall(false);
+              setPos({ x: 0, y: 0 });
+              save({ x: 0, y: 0 }, false);
+            }
+          }}
+          className="relative grid h-14 w-14 touch-none place-items-center rounded-full bg-gradient-to-br from-brand to-[#c2306b] text-white shadow-lift ring-4 ring-surface"
+          aria-label="Open the music player (drag to move)"
+        >
+          {m.playing && !m.needsTap ? <Equalizer playing className="scale-125 text-white" /> : <Music2 size={22} />}
+          {m.soundOff && <span className="absolute -top-0.5 -right-0.5 grid h-5 w-5 place-items-center rounded-full bg-surface text-brand"><VolumeX size={12} /></span>}
+        </button>
+      ) : (
+        <Bar
+          floating
+          handle={handle}
+          onCollapse={() => {
+            setSmall(true);
+            setPos({ x: 0, y: 0 });
+            save({ x: 0, y: 0 }, true);
+          }}
+        />
+      )}
     </div>
   );
 }

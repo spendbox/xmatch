@@ -12,7 +12,7 @@ import { playlistPosition, streamType, youtubeId, type StreamType } from "@/lib/
 import { FloatingMiniPlayer } from "./MiniPlayer";
 
 /** What the player needs to know about the event that's on. */
-export type ActiveEvent = Pick<DashpadEvent, "id" | "title" | "kind" | "stream_url" | "media" | "starts_at" | "ends_at" | "settings">;
+export type ActiveEvent = Pick<DashpadEvent, "id" | "title" | "kind" | "stream_url" | "media" | "starts_at" | "ends_at" | "settings"> & { cover_url?: string | null };
 
 type Toast = { id: number; text: string; href?: string };
 
@@ -102,6 +102,8 @@ export function EventMediaProvider({ userId, children }: { userId: string; child
   const [ytMuted, setYtMuted] = useState(false);
   const [hint, setHint] = useState(false);
   const off = useRef(false);
+  const userPaused = useRef(false);
+  const titleRef = useRef("");
 
   const video = useRef<HTMLVideoElement>(null);
   const yt = useRef<HTMLIFrameElement>(null);
@@ -199,8 +201,10 @@ export function EventMediaProvider({ userId, children }: { userId: string; child
       if (!v) return;
       v.muted = false;
       setMuted(false);
-      setYtMuted(!!opts?.auto);
-      if (opts?.auto) {
+      // YouTube can only start by itself muted; the first tap anywhere turns the sound back on
+      const ytAuto = !!opts?.auto && !!e.stream_url && streamType(e.stream_url) === "youtube";
+      setYtMuted(ytAuto);
+      if (ytAuto) {
         setMuted(true);
         setSoundOff(true);
       }
@@ -265,6 +269,7 @@ export function EventMediaProvider({ userId, children }: { userId: string; child
     }
     const v = video.current;
     if (!v) return;
+    userPaused.current = !(v.paused || needsTap);
     if (v.paused || needsTap) {
       // Rejoin the shared clock when coming back from a pause
       const e = ev.current;
@@ -395,6 +400,77 @@ export function EventMediaProvider({ userId, children }: { userId: string; child
       else tryPlay();
     }
   }, [quietHere, active, isYouTube, ytCommand, tryPlay]);
+
+  // Started silently (no tap yet): the first tap or key press anywhere turns the sound on
+  useEffect(() => {
+    if (!soundOff) return;
+    const on = () => {
+      setSoundOff(false);
+      setMuted(false);
+      if (isYouTube) {
+        ytCommand("unMute");
+        ytCommand("playVideo");
+      } else if (video.current) {
+        video.current.muted = false;
+        if (video.current.paused) tryPlay();
+      }
+    };
+    document.addEventListener("pointerdown", on, { once: true, capture: true });
+    document.addEventListener("keydown", on, { once: true, capture: true });
+    return () => {
+      document.removeEventListener("pointerdown", on, { capture: true });
+      document.removeEventListener("keydown", on, { capture: true });
+    };
+  }, [soundOff, isYouTube, ytCommand, tryPlay]);
+
+  // Coming back to the app: if the phone paused the music, pick it up again in step with everyone
+  useEffect(() => {
+    if (!active) return;
+    const onVisible = () => {
+      if (document.visibilityState !== "visible" || off.current || userPaused.current) return;
+      const v = video.current;
+      if (isYouTube || !v || !v.paused || !v.src) return;
+      const e = ev.current;
+      if (e && !e.stream_url) {
+        const pos = playlistPosition(e.media, e.starts_at, now());
+        if (pos && pos.index !== idx.current) return loadItem(pos.index, pos.offset);
+        if (pos && Number.isFinite(v.duration) && pos.offset < v.duration) v.currentTime = pos.offset;
+      }
+      tryPlay();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [active, isYouTube, tryPlay, loadItem]);
+
+  // Lock-screen and notification controls (also helps phones keep playing in the background)
+  useEffect(() => {
+    if (!("mediaSession" in navigator)) return;
+    const ms = navigator.mediaSession;
+    if (!active || mediaOff || !kind) {
+      ms.metadata = null;
+      return;
+    }
+    try {
+      ms.metadata = new MediaMetadata({
+        title: titleRef.current || active.title,
+        artist: active.title,
+        album: "Dashpad",
+        artwork: active.cover_url ? [{ src: active.cover_url, sizes: "512x512" }] : [{ src: "/icon.svg", sizes: "512x512", type: "image/svg+xml" }],
+      });
+      ms.setActionHandler("play", () => {
+        userPaused.current = false;
+        if (isYouTube) ytCommand("playVideo");
+        else tryPlay();
+      });
+      ms.setActionHandler("pause", () => {
+        userPaused.current = true;
+        if (isYouTube) ytCommand("pauseVideo");
+        else video.current?.pause();
+      });
+    } catch {
+      /* not supported on this browser */
+    }
+  }, [active, mediaOff, kind, index, isYouTube, ytCommand, tryPlay]);
 
   // YouTube videos (not live streams): jump to where everyone else is
   useEffect(() => {
@@ -545,6 +621,8 @@ export function EventMediaProvider({ userId, children }: { userId: string; child
         ? "Live stream"
         : "Live audio"
       : media?.title || `Track ${index + 1}`;
+
+  titleRef.current = title;
 
   const value: EventMediaCtx = {
     active,

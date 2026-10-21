@@ -292,7 +292,7 @@ export function EventSpace({
             )}
 
             {/* Tabs */}
-            <div role="tablist" aria-label="Event sections" className="mt-3 grid shrink-0 grid-cols-3 gap-1 rounded-2xl bg-line/60 p-1 lg:grid-cols-2">
+            <div role="tablist" aria-label="Event sections" className="mt-3 grid shrink-0 grid-cols-3 gap-1 rounded-2xl border border-line bg-surface p-1 shadow-card lg:grid-cols-2">
               <TabButton active={tab === "room"} desktopActive={mainTab === "room"} onClick={() => setTab("room")} icon={<MessagesSquare size={16} />} label="Room" />
               <TabButton active={tab === "wall"} desktopActive={mainTab === "wall"} onClick={() => setTab("wall")} icon={<LayoutGrid size={16} />} label="Wall" />
               <TabButton
@@ -526,8 +526,10 @@ function TabButton({
       onClick={onClick}
       className={clsx(
         "relative inline-flex h-10 items-center justify-center gap-1.5 rounded-xl text-[14px] font-semibold transition",
-        active ? "bg-surface text-ink shadow-card" : "text-muted hover:text-ink",
-        desktopActive ? "lg:bg-surface lg:text-ink lg:shadow-card" : "lg:bg-transparent lg:text-muted lg:shadow-none",
+        active ? "bg-brand text-white shadow-[0_6px_16px_-8px_rgb(91_63_217/0.7)]" : "bg-cream text-ink-soft hover:bg-line/70 hover:text-ink",
+        desktopActive
+          ? "lg:bg-brand lg:text-white lg:shadow-[0_6px_16px_-8px_rgb(91_63_217/0.7)]"
+          : "lg:bg-cream lg:text-ink-soft lg:shadow-none lg:hover:bg-line/70 lg:hover:text-ink",
         className,
       )}
     >
