@@ -16,6 +16,7 @@ export const config = {
     "/forgot-password",
     "/home/:path*",
     "/events/:path*",
+    "/feed/:path*",
     "/masquerade/:path*",
     "/matches/:path*",
     "/profile/:path*",

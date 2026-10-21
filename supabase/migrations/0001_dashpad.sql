@@ -2441,3 +2441,529 @@ create table if not exists public.push_subscriptions (
 );
 create index if not exists push_subscriptions_user on public.push_subscriptions (user_id);
 alter table public.push_subscriptions enable row level security;
+
+-- ---------------------------------------------------------------------------
+-- The Feed: one Daily Prompt for everyone. People answer masked, react for free,
+-- send gifts (the person learns who sent it), or pay Keys to start a masked chat
+-- with whoever wrote an answer. Feed chats last 24 hours; then both choose to keep
+-- (it becomes a match) or let go.
+-- ---------------------------------------------------------------------------
+
+-- Today in Nigeria (prompts change at midnight Lagos time)
+create or replace function public.feed_today() returns date
+language sql stable as $$ select (now() at time zone 'Africa/Lagos')::date $$;
+
+create table if not exists public.prompts (
+  id uuid primary key default gen_random_uuid(),
+  body text not null check (char_length(body) between 3 and 300),
+  day date not null unique,
+  chat_cost int not null default 5 check (chat_cost between 0 and 1000),
+  created_at timestamptz not null default now()
+);
+alter table public.prompts enable row level security;
+-- When the morning notification for this prompt went out (so it only goes once)
+alter table public.prompts add column if not exists pushed_at timestamptz;
+
+create table if not exists public.prompt_answers (
+  id uuid primary key default gen_random_uuid(),
+  prompt_id uuid not null references public.prompts on delete cascade,
+  user_id uuid not null references public.profiles on delete cascade,
+  alias text not null,
+  body text not null check (char_length(body) between 1 and 500),
+  hidden_at timestamptz,
+  created_at timestamptz not null default now(),
+  unique (prompt_id, user_id)
+);
+create index if not exists prompt_answers_prompt on public.prompt_answers (prompt_id, created_at desc);
+create index if not exists prompt_answers_user on public.prompt_answers (user_id);
+alter table public.prompt_answers enable row level security;
+
+create table if not exists public.prompt_reactions (
+  answer_id uuid not null references public.prompt_answers on delete cascade,
+  user_id uuid not null references public.profiles on delete cascade,
+  emoji text not null check (emoji in ('fire', 'laugh', 'hundred', 'eyes', 'wow')),
+  created_at timestamptz not null default now(),
+  primary key (answer_id, user_id)
+);
+alter table public.prompt_reactions enable row level security;
+
+create table if not exists public.prompt_gifts (
+  id bigint generated always as identity primary key,
+  answer_id uuid references public.prompt_answers on delete set null,
+  from_user uuid not null references public.profiles on delete cascade,
+  to_user uuid not null references public.profiles on delete cascade,
+  gift_id text not null references public.gifts,
+  answer_body text,
+  prompt_body text,
+  seen_at timestamptz,
+  created_at timestamptz not null default now()
+);
+create index if not exists prompt_gifts_to on public.prompt_gifts (to_user, created_at desc);
+create index if not exists prompt_gifts_answer on public.prompt_gifts (answer_id);
+alter table public.prompt_gifts enable row level security;
+
+-- Reporting an answer also blocks its writer for you (reports power is_blocked)
+alter table public.reports add column if not exists answer_id uuid references public.prompt_answers on delete set null;
+
+-- Chats started from the feed. alias_a / alias_b: the name each person goes by in
+-- this chat (empty = their real name and photo show, e.g. someone who sent a gift).
+create table if not exists public.feed_chats (
+  id uuid primary key default gen_random_uuid(),
+  answer_id uuid references public.prompt_answers on delete set null,
+  user_a uuid not null references public.profiles on delete cascade,
+  user_b uuid not null references public.profiles on delete cascade,
+  opened_by uuid not null references public.profiles on delete cascade,
+  alias_a text,
+  alias_b text,
+  prompt_body text,
+  answer_body text,
+  keep_a boolean,
+  keep_b boolean,
+  status text not null default 'open' check (status in ('open', 'matched')),
+  match_id uuid references public.matches on delete set null,
+  paid int not null default 0,
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null default now() + interval '24 hours',
+  last_message_at timestamptz not null default now(),
+  a_read_at timestamptz,
+  b_read_at timestamptz,
+  check (user_a < user_b)
+);
+create unique index if not exists feed_chats_pair_open on public.feed_chats (user_a, user_b) where status = 'open';
+create index if not exists feed_chats_a on public.feed_chats (user_a);
+create index if not exists feed_chats_b on public.feed_chats (user_b);
+create index if not exists feed_chats_opened on public.feed_chats (opened_by, created_at);
+alter table public.feed_chats enable row level security;
+drop policy if exists "see own feed chats" on public.feed_chats;
+create policy "see own feed chats" on public.feed_chats for select using (auth.uid() in (user_a, user_b));
+
+create table if not exists public.feed_chat_messages (
+  id bigint generated always as identity primary key,
+  chat_id uuid not null references public.feed_chats on delete cascade,
+  sender_id uuid not null references public.profiles on delete cascade,
+  body text not null check (char_length(body) between 1 and 1000),
+  created_at timestamptz not null default now()
+);
+create index if not exists feed_chat_messages_chat on public.feed_chat_messages (chat_id, id);
+alter table public.feed_chat_messages enable row level security;
+drop policy if exists "see own feed chat messages" on public.feed_chat_messages;
+create policy "see own feed chat messages" on public.feed_chat_messages for select using (
+  exists (select 1 from public.feed_chats c where c.id = chat_id and auth.uid() in (c.user_a, c.user_b)));
+drop policy if exists "send in open feed chats" on public.feed_chat_messages;
+create policy "send in open feed chats" on public.feed_chat_messages for insert with check (
+  sender_id = auth.uid() and exists (
+    select 1 from public.feed_chats c
+    where c.id = chat_id and auth.uid() in (c.user_a, c.user_b) and c.status = 'open' and now() < c.expires_at));
+
+create or replace function public.bump_feed_chat() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  update feed_chats set last_message_at = new.created_at where id = new.chat_id;
+  return new;
+end $$;
+drop trigger if exists feed_chat_bump on public.feed_chat_messages;
+create trigger feed_chat_bump after insert on public.feed_chat_messages
+  for each row execute function public.bump_feed_chat();
+
+do $$
+declare t text;
+begin
+  foreach t in array array['feed_chats','feed_chat_messages'] loop
+    begin
+      execute format('alter publication supabase_realtime add table public.%I', t);
+    exception when duplicate_object then null;
+    end;
+  end loop;
+end $$;
+
+-- Can these two chat? (both fit what the other is looking for, no block, not matched yet)
+create or replace function public.feed_can_chat(a uuid, b uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select a <> b
+    and not public.is_blocked(a, b)
+    and exists (select 1 from profiles pa, profiles pb
+                where pa.id = a and pb.id = b
+                  and pa.gender is not null and pb.gender is not null
+                  and public.gender_fits(pa.pref_seeking, pb.gender)
+                  and public.gender_fits(pb.pref_seeking, pa.gender))
+$$;
+
+-- Chats nobody decided on within a day of closing are removed
+create or replace function public.tidy_feed_chats() returns void
+language sql security definer set search_path = public as $$
+  delete from feed_chats where status = 'open' and now() > expires_at + interval '24 hours'
+$$;
+
+-- Everything the Feed page needs: the prompt, your answer, everyone else (once you answered)
+create or replace function public.get_feed(p_sort text default 'new', p_limit int default 30, p_offset int default 0) returns json
+language plpgsql stable security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  pr prompts;
+  mine prompt_answers;
+begin
+  if uid is null then raise exception 'Please log in'; end if;
+  select * into pr from prompts where day = public.feed_today();
+  if not found then
+    return json_build_object('prompt', null, 'gifts_unseen',
+      (select count(*) from prompt_gifts where to_user = uid and seen_at is null));
+  end if;
+  select * into mine from prompt_answers where prompt_id = pr.id and user_id = uid;
+
+  return json_build_object(
+    'prompt', json_build_object('id', pr.id, 'body', pr.body, 'day', pr.day, 'chat_cost', pr.chat_cost,
+      'answers', (select count(*) from prompt_answers where prompt_id = pr.id and hidden_at is null)),
+    'gifts_unseen', (select count(*) from prompt_gifts where to_user = uid and seen_at is null),
+    'my_answer', case when mine.id is null then null else json_build_object(
+      'id', mine.id, 'alias', mine.alias, 'body', mine.body, 'created_at', mine.created_at, 'hidden', mine.hidden_at is not null,
+      'reactions', (select count(*) from prompt_reactions r where r.answer_id = mine.id),
+      'gifts', (select count(*) from prompt_gifts g where g.answer_id = mine.id),
+      'chats', (select count(*) from feed_chats c where c.answer_id = mine.id)) end,
+    'answers', case when mine.id is null then '[]'::json else coalesce((
+      select json_agg(row_to_json(t)) from (
+        select a.id, a.alias, a.body, a.created_at, public.age_years(p.birthdate) as age, p.gender,
+          (a.user_id = uid) as mine,
+          (select coalesce(json_object_agg(x.emoji, x.n), '{}'::json) from (
+             select emoji, count(*) as n from prompt_reactions r where r.answer_id = a.id group by emoji) x) as reactions,
+          (select emoji from prompt_reactions r where r.answer_id = a.id and r.user_id = uid) as my_reaction,
+          (select count(*) from prompt_gifts g where g.answer_id = a.id) as gifts,
+          (select c.id from feed_chats c where c.status = 'open'
+             and c.user_a = least(uid, a.user_id) and c.user_b = greatest(uid, a.user_id)) as chat_id,
+          (a.user_id <> uid and public.feed_can_chat(uid, a.user_id) and not public.already_matched(uid, a.user_id)) as can_chat,
+          public.already_matched(uid, a.user_id) as matched
+        from prompt_answers a
+        join profiles p on p.id = a.user_id
+        where a.prompt_id = pr.id and a.hidden_at is null
+          and not public.is_blocked(uid, a.user_id)
+        order by
+          (a.user_id = uid) desc,
+          case when p_sort = 'top' then
+            (select count(*) from prompt_reactions r where r.answer_id = a.id)
+            + 3 * (select count(*) from prompt_gifts g where g.answer_id = a.id) end desc nulls last,
+          a.created_at desc
+        limit greatest(1, least(p_limit, 50)) offset greatest(0, p_offset)
+      ) t), '[]'::json) end
+  );
+end $$;
+
+-- Answer today’s prompt (or change your answer)
+create or replace function public.answer_prompt(p_prompt uuid, p_body text) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  pr prompts;
+  aid uuid;
+begin
+  if uid is null then raise exception 'Please log in'; end if;
+  select * into pr from prompts where id = p_prompt;
+  if not found or pr.day <> public.feed_today() then raise exception 'This prompt has closed'; end if;
+  p_body := btrim(p_body);
+  if char_length(p_body) < 1 then raise exception 'Write something first'; end if;
+  if char_length(p_body) > 500 then raise exception 'Keep it under 500 characters'; end if;
+  insert into prompt_answers (prompt_id, user_id, alias, body)
+  values (p_prompt, uid, public.random_alias(), p_body)
+  on conflict (prompt_id, user_id) do update set body = excluded.body
+  returning id into aid;
+  update profiles set last_seen_at = now() where id = uid;
+  return aid;
+end $$;
+
+create or replace function public.delete_my_answer(p_answer uuid) returns void
+language sql security definer set search_path = public as $$
+  delete from prompt_answers where id = p_answer and user_id = auth.uid()
+$$;
+
+-- React for free. Empty emoji takes your reaction back.
+create or replace function public.react_answer(p_answer uuid, p_emoji text) returns void
+language plpgsql security definer set search_path = public as $$
+declare uid uuid := auth.uid();
+begin
+  if uid is null then raise exception 'Please log in'; end if;
+  if p_emoji is null or char_length(p_emoji) = 0 then
+    delete from prompt_reactions where answer_id = p_answer and user_id = uid;
+    return;
+  end if;
+  if not exists (select 1 from prompt_answers a join prompts p on p.id = a.prompt_id
+                 where a.id = p_answer and a.hidden_at is null and a.user_id <> uid) then
+    raise exception 'Not available';
+  end if;
+  insert into prompt_reactions (answer_id, user_id, emoji) values (p_answer, uid, p_emoji)
+  on conflict (answer_id, user_id) do update set emoji = excluded.emoji, created_at = now();
+end $$;
+
+-- Send a gift to whoever wrote an answer. They see who sent it.
+create or replace function public.gift_answer(p_answer uuid, p_gift text) returns int
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  a prompt_answers;
+  g gifts;
+  bal int;
+begin
+  if uid is null then raise exception 'Please log in'; end if;
+  select * into a from prompt_answers where id = p_answer and hidden_at is null;
+  if not found then raise exception 'Not available'; end if;
+  if a.user_id = uid then raise exception 'That’s your own answer'; end if;
+  if public.is_blocked(uid, a.user_id) then raise exception 'Not available'; end if;
+  select * into g from gifts where id = p_gift;
+  if not found then raise exception 'Unknown gift'; end if;
+  bal := public.spend_keys(uid, g.price, 'feed_gift', g.id);
+  insert into prompt_gifts (answer_id, from_user, to_user, gift_id, answer_body, prompt_body)
+  values (a.id, uid, a.user_id, g.id, a.body, (select body from prompts where id = a.prompt_id));
+  return bal;
+end $$;
+
+-- Gifts you received on your answers (newest first), with who sent them
+create or replace function public.my_feed_gifts() returns json
+language sql stable security definer set search_path = public as $$
+  select coalesce(json_agg(row_to_json(t) order by t.created_at desc), '[]'::json) from (
+    select g.id, g.gift_id, g.created_at, g.seen_at, g.answer_body, g.prompt_body,
+      p.id as from_id, p.display_name as from_name, p.photos[1] as from_photo,
+      public.age_years(p.birthdate) as from_age, p.gender as from_gender,
+      (select c.id from feed_chats c where c.status = 'open'
+         and c.user_a = least(auth.uid(), p.id) and c.user_b = greatest(auth.uid(), p.id)) as chat_id,
+      (public.feed_can_chat(auth.uid(), p.id) and not public.already_matched(auth.uid(), p.id)) as can_chat,
+      (select m.id from matches m where m.user_a = least(auth.uid(), p.id) and m.user_b = greatest(auth.uid(), p.id)) as match_id
+    from prompt_gifts g
+    join profiles p on p.id = g.from_user
+    where g.to_user = auth.uid() and g.created_at > now() - interval '30 days'
+      and not public.is_blocked(auth.uid(), p.id)
+    order by g.created_at desc
+    limit 50
+  ) t
+$$;
+
+create or replace function public.mark_feed_gifts_seen() returns void
+language sql security definer set search_path = public as $$
+  update prompt_gifts set seen_at = now() where to_user = auth.uid() and seen_at is null
+$$;
+
+-- Pay Keys (the price is set per prompt) to start a masked chat with whoever wrote an answer
+create or replace function public.start_feed_chat(p_answer uuid) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  a prompt_answers;
+  pr prompts;
+  cid uuid;
+  my_alias text;
+begin
+  if uid is null then raise exception 'Please log in'; end if;
+  select * into a from prompt_answers where id = p_answer and hidden_at is null;
+  if not found then raise exception 'Not available'; end if;
+  if a.user_id = uid then raise exception 'That’s your own answer'; end if;
+  select * into pr from prompts where id = a.prompt_id;
+  if public.already_matched(uid, a.user_id) then raise exception 'ALREADY_MATCHED'; end if;
+  if not public.feed_can_chat(uid, a.user_id) then raise exception 'Not available'; end if;
+  select id into cid from feed_chats
+  where status = 'open' and user_a = least(uid, a.user_id) and user_b = greatest(uid, a.user_id);
+  if cid is not null then return cid; end if;
+  if (select count(*) from feed_chats where opened_by = uid and created_at > now() - interval '24 hours') >= 30 then
+    raise exception 'TOO_MANY_CHATS';
+  end if;
+  if pr.chat_cost > 0 then
+    perform public.spend_keys(uid, pr.chat_cost, 'feed_chat', a.id::text);
+  end if;
+  my_alias := public.random_alias(a.alias);
+  insert into feed_chats (answer_id, user_a, user_b, opened_by, alias_a, alias_b, prompt_body, answer_body, paid)
+  values (a.id, least(uid, a.user_id), greatest(uid, a.user_id), uid,
+    case when uid < a.user_id then my_alias else a.alias end,
+    case when uid < a.user_id then a.alias else my_alias end,
+    pr.body, a.body, pr.chat_cost)
+  returning id into cid;
+  return cid;
+end $$;
+
+-- Got a gift? Chat back for free. You stay masked; they show as themselves (they chose to gift).
+create or replace function public.chat_back_gift(p_gift bigint) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  g prompt_gifts;
+  my_alias text;
+  cid uuid;
+begin
+  select * into g from prompt_gifts where id = p_gift and to_user = uid;
+  if not found then raise exception 'Not available'; end if;
+  if public.already_matched(uid, g.from_user) then raise exception 'ALREADY_MATCHED'; end if;
+  if not public.feed_can_chat(uid, g.from_user) then raise exception 'Not available'; end if;
+  select id into cid from feed_chats
+  where status = 'open' and user_a = least(uid, g.from_user) and user_b = greatest(uid, g.from_user);
+  if cid is not null then return cid; end if;
+  my_alias := coalesce((select alias from prompt_answers where id = g.answer_id), public.random_alias());
+  insert into feed_chats (answer_id, user_a, user_b, opened_by, alias_a, alias_b, prompt_body, answer_body)
+  values (g.answer_id, least(uid, g.from_user), greatest(uid, g.from_user), uid,
+    case when uid < g.from_user then my_alias else null end,
+    case when uid < g.from_user then null else my_alias end,
+    g.prompt_body, g.answer_body)
+  returning id into cid;
+  update prompt_gifts set seen_at = coalesce(seen_at, now()) where id = g.id;
+  return cid;
+end $$;
+
+-- How a person shows in a feed chat: their alias (masked) or, with no alias, their real name and photo
+create or replace function public.feed_person(c feed_chats, who uuid, viewer uuid) returns json
+language sql stable security definer set search_path = public as $$
+  select json_build_object(
+    'id', p.id,
+    'name', coalesce(case when who = c.user_a then c.alias_a else c.alias_b end, p.display_name),
+    'masked', (case when who = c.user_a then c.alias_a else c.alias_b end) is not null,
+    'photo', case when (case when who = c.user_a then c.alias_a else c.alias_b end) is null then p.photos[1] end,
+    'age', public.age_years(p.birthdate), 'gender', p.gender,
+    'interests', case when who <> viewer then p.interests end)
+  from profiles p where p.id = who
+$$;
+
+create or replace function public.get_feed_chat(p_chat uuid) returns json
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  c feed_chats;
+  other uuid;
+begin
+  select * into c from feed_chats where id = p_chat and uid in (user_a, user_b);
+  if not found then return null; end if;
+  other := case when c.user_a = uid then c.user_b else c.user_a end;
+  return json_build_object(
+    'id', c.id, 'status', c.status, 'match_id', c.match_id, 'opened_by', c.opened_by,
+    'created_at', c.created_at, 'expires_at', c.expires_at, 'decide_by', c.expires_at + interval '24 hours',
+    'prompt_body', c.prompt_body, 'answer_body', c.answer_body,
+    'answer_mine', exists (select 1 from prompt_answers a where a.id = c.answer_id and a.user_id = uid),
+    'my_keep', case when c.user_a = uid then c.keep_a else c.keep_b end,
+    'their_keep_set', case when c.user_a = uid then c.keep_b is not null else c.keep_a is not null end,
+    'me', public.feed_person(c, uid, uid),
+    'other', public.feed_person(c, other, uid),
+    'messages', coalesce((select json_agg(json_build_object('id', m.id, 'sender_id', m.sender_id, 'body', m.body, 'created_at', m.created_at) order by m.id)
+                 from (select * from feed_chat_messages where chat_id = c.id order by id desc limit 300) m), '[]'::json)
+  );
+end $$;
+
+-- Keep or let go. Both keep: it is a match and the chat moves to Chats.
+create or replace function public.vote_feed_chat(p_chat uuid, p_keep boolean) returns json
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  c feed_chats;
+  mid uuid;
+begin
+  select * into c from feed_chats where id = p_chat and uid in (user_a, user_b) for update;
+  if not found then raise exception 'Not found'; end if;
+  if c.status <> 'open' then return json_build_object('status', c.status, 'match_id', c.match_id); end if;
+  if now() > c.expires_at + interval '24 hours' then raise exception 'Too late to decide'; end if;
+  if c.user_a = uid then update feed_chats set keep_a = p_keep where id = c.id returning * into c;
+  else update feed_chats set keep_b = p_keep where id = c.id returning * into c; end if;
+
+  if c.keep_a is false or c.keep_b is false then
+    delete from feed_chats where id = c.id;
+    return json_build_object('status', 'closed');
+  end if;
+  if c.keep_a is true and c.keep_b is true then
+    insert into matches (user_a, user_b)
+    values (c.user_a, c.user_b)
+    on conflict (user_a, user_b) do update set last_message_at = now()
+    returning id into mid;
+    insert into messages (match_id, sender_id, kind, body, created_at)
+    select mid, sender_id, 'text', body, created_at from feed_chat_messages where chat_id = c.id order by id;
+    update feed_chats set status = 'matched', match_id = mid where id = c.id;
+    delete from feed_chat_messages where chat_id = c.id;
+    return json_build_object('status', 'matched', 'match_id', mid);
+  end if;
+  return json_build_object('status', 'open', 'waiting', true);
+end $$;
+
+create or replace function public.feed_chat_unread(c public.feed_chats, uid uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from feed_chat_messages x
+    where x.chat_id = c.id and x.sender_id <> uid
+      and x.created_at > coalesce(case when c.user_a = uid then c.a_read_at else c.b_read_at end, '-infinity'::timestamptz)
+  )
+$$;
+
+create or replace function public.mark_feed_chat_read(p_chat uuid) returns void
+language sql security definer set search_path = public as $$
+  update feed_chats set
+    a_read_at = case when user_a = auth.uid() then now() else a_read_at end,
+    b_read_at = case when user_b = auth.uid() then now() else b_read_at end
+  where id = p_chat and auth.uid() in (user_a, user_b)
+$$;
+
+-- Your open feed chats (and ones waiting on keep or let go)
+create or replace function public.my_feed_chats() returns json
+language plpgsql security definer set search_path = public as $$
+begin
+  perform public.tidy_feed_chats();
+  return coalesce((
+    select json_agg(row_to_json(t) order by t.unread desc, t.last_message_at desc) from (
+      select c.id, c.expires_at, c.last_message_at, c.prompt_body,
+        public.feed_person(c, case when c.user_a = auth.uid() then c.user_b else c.user_a end, auth.uid()) as other,
+        (select body from feed_chat_messages m where m.chat_id = c.id order by m.id desc limit 1) as last_message,
+        public.feed_chat_unread(c, auth.uid()) as unread
+      from feed_chats c
+      where auth.uid() in (c.user_a, c.user_b) and c.status = 'open'
+    ) t
+  ), '[]'::json);
+end $$;
+
+create or replace function public.unread_feed_chats() returns int
+language sql stable security definer set search_path = public as $$
+  select count(*)::int from feed_chats c
+  where auth.uid() in (c.user_a, c.user_b) and c.status = 'open'
+    and now() < c.expires_at + interval '24 hours'
+    and public.feed_chat_unread(c, auth.uid())
+$$;
+
+-- For the menu dot: is there a prompt you have not answered, and new gifts?
+create or replace function public.feed_status() returns json
+language sql stable security definer set search_path = public as $$
+  select json_build_object(
+    'prompt', (select json_build_object('id', p.id, 'body', p.body,
+                 'answered', exists (select 1 from prompt_answers a where a.prompt_id = p.id and a.user_id = auth.uid()),
+                 'answers', (select count(*) from prompt_answers a where a.prompt_id = p.id and a.hidden_at is null))
+               from prompts p where p.day = public.feed_today()),
+    'gifts_unseen', (select count(*) from prompt_gifts where to_user = auth.uid() and seen_at is null)
+  )
+$$;
+
+create or replace function public.report_answer(p_answer uuid, p_reason text) returns void
+language plpgsql security definer set search_path = public as $$
+declare a prompt_answers;
+begin
+  select * into a from prompt_answers where id = p_answer;
+  if not found or a.user_id = auth.uid() then return; end if;
+  insert into reports (reporter_id, reported_id, reason, answer_id)
+  values (auth.uid(), a.user_id, left(coalesce(p_reason, 'Feed answer'), 500), a.id);
+end $$;
+
+-- Admin (only the server can call these)
+create or replace function public.admin_prompts() returns json
+language sql stable security definer set search_path = public as $$
+  select coalesce(json_agg(row_to_json(t) order by t.day desc), '[]'::json) from (
+    select p.id, p.body, p.day, p.chat_cost, p.created_at,
+      (select count(*) from prompt_answers a where a.prompt_id = p.id) as answers,
+      (select count(*) from prompt_answers a where a.prompt_id = p.id and a.hidden_at is not null) as hidden,
+      (select count(*) from prompt_reactions r join prompt_answers a on a.id = r.answer_id where a.prompt_id = p.id) as reactions,
+      (select count(*) from prompt_gifts g join prompt_answers a on a.id = g.answer_id where a.prompt_id = p.id) as gifts,
+      (select count(*) from feed_chats c join prompt_answers a on a.id = c.answer_id where a.prompt_id = p.id) as chats,
+      (select count(*) from reports r join prompt_answers a on a.id = r.answer_id where a.prompt_id = p.id) as reports
+    from prompts p
+    where p.day >= public.feed_today() - 60
+  ) t
+$$;
+
+create or replace function public.admin_prompt_answers(p_prompt uuid) returns json
+language sql stable security definer set search_path = public as $$
+  select coalesce(json_agg(row_to_json(t) order by t.reports desc, t.created_at desc), '[]'::json) from (
+    select a.id, a.alias, a.body, a.created_at, a.hidden_at, a.user_id, p.display_name, p.photos[1] as photo,
+      (select count(*) from prompt_reactions r where r.answer_id = a.id) as reactions,
+      (select count(*) from prompt_gifts g where g.answer_id = a.id) as gifts,
+      (select count(*) from reports r where r.answer_id = a.id) as reports
+    from prompt_answers a join profiles p on p.id = a.user_id
+    where a.prompt_id = p_prompt
+  ) t
+$$;
+
+revoke execute on function public.admin_prompts() from public, anon, authenticated;
+revoke execute on function public.admin_prompt_answers(uuid) from public, anon, authenticated;
+revoke execute on function public.tidy_feed_chats() from public, anon;
+revoke execute on function public.feed_person(public.feed_chats, uuid, uuid) from public, anon, authenticated;

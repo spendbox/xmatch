@@ -87,7 +87,13 @@ export async function refreshSubscription() {
 }
 
 /** Tell the server to notify the other person about something you just did. Fire and forget. */
-export function notify(body: { kind: "message" | "call" | "event_message" | "event_match"; matchId?: string; callId?: string; chatId?: string }) {
+export function notify(body: {
+  kind: "message" | "call" | "event_message" | "event_match" | "feed_message" | "feed_match" | "feed_gift";
+  matchId?: string;
+  callId?: string;
+  chatId?: string;
+  answerId?: string;
+}) {
   fetch("/api/push/notify", {
     method: "POST",
     headers: { "Content-Type": "application/json" },

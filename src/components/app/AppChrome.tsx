@@ -14,7 +14,7 @@ import { EventMediaProvider } from "@/components/events/media/EventMediaProvider
 export function AppChrome({ user, children }: { user: ChromeUser; children: React.ReactNode }) {
   const path = usePathname();
   // Full-screen chats hide the phone tab bar
-  const fullScreen = /^\/(masquerade|matches)\/[^/]+|^\/events\/[^/]+\/chat\//.test(path);
+  const fullScreen = /^\/(masquerade|matches)\/[^/]+|^\/events\/[^/]+\/chat\/|^\/feed\/chat\//.test(path);
   useHeartbeat();
   const badges = useMenuBadges(user.id);
   // Background helper for notifications; keeps this phone's subscription fresh

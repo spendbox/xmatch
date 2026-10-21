@@ -16,12 +16,14 @@ export function GiftSheet({
   balance,
   toName,
   onSend,
+  subtitle = "Gifts pop up in the chat. A sweet way to stand out.",
 }: {
   open: boolean;
   onClose: () => void;
   balance: number | null;
   toName: string;
   onSend: (gift: Gift) => Promise<string | null>; // returns an error message, or null
+  subtitle?: string;
 }) {
   const [picked, setPicked] = useState<Gift>(GIFTS[0]);
   const [sending, setSending] = useState(false);
@@ -42,7 +44,7 @@ export function GiftSheet({
       open={open}
       onClose={onClose}
       title={`Send ${toName} a gift`}
-      subtitle="Gifts pop up in the chat. A sweet way to stand out."
+      subtitle={subtitle}
       footer={
         <div className="space-y-2">
           {error && <p className="rounded-xl bg-chili-soft px-4 py-2.5 text-[14px] font-medium text-chili">{error}</p>}

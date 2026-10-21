@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { EMAIL_CAP, emailAttendees, type MailEvent } from "@/lib/eventEmails";
+import { pushToUsers } from "@/lib/push";
 
 // Vercel Cron calls this once a day (see vercel.json) with "Authorization: Bearer CRON_SECRET".
 export const dynamic = "force-dynamic";
@@ -14,9 +15,10 @@ export async function GET(req: Request) {
   if (!secret || req.headers.get("authorization") !== `Bearer ${secret}`) {
     return NextResponse.json({ error: "Not allowed" }, { status: 401 });
   }
-  if (!process.env.RESEND_API_KEY) return NextResponse.json({ error: "RESEND_API_KEY is not set" }, { status: 500 });
-
   const db = createAdminClient();
+  const prompt = await pushDailyPrompt(db).catch(() => ({ sent: 0, skipped: "error" }));
+  if (!process.env.RESEND_API_KEY) return NextResponse.json({ error: "RESEND_API_KEY is not set", prompt }, { status: 500 });
+
   const now = Date.now();
   const { data: events, error } = await db
     .from("masquerade_events")
@@ -49,5 +51,20 @@ export async function GET(req: Request) {
     budget -= res.sent + res.failed;
     report.push({ id: e.id, title: e.title, kind, ...res });
   }
-  return NextResponse.json({ ok: true, report });
+  return NextResponse.json({ ok: true, prompt, report });
+}
+
+/** Morning nudge: today's Feed prompt is up. Goes to everyone with notifications on, once per prompt. */
+async function pushDailyPrompt(db: ReturnType<typeof createAdminClient>) {
+  const today = lagosDay(new Date());
+  // Claim it first so it only ever goes out once
+  const { data: p } = await db.from("prompts").update({ pushed_at: new Date().toISOString() }).eq("day", today).is("pushed_at", null).select("id, body").maybeSingle();
+  if (!p) return { sent: 0, skipped: "no new prompt" };
+  const ids = new Set<string>();
+  for (let from = 0; ; from += 1000) {
+    const { data } = await db.from("push_subscriptions").select("user_id").range(from, from + 999);
+    (data ?? []).forEach((r) => ids.add(r.user_id as string));
+    if (!data || data.length < 1000) break;
+  }
+  return pushToUsers([...ids], { title: "Today's prompt is up", body: `${p.body} Answer masked and see what everyone said.`, url: "/feed", tag: "daily-prompt" });
 }

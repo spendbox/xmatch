@@ -9,7 +9,7 @@ import { ButtonLink } from "@/components/ui/Button";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { INTENT_ICONS } from "@/components/ui/icons";
 import { intentLabel } from "@/lib/constants";
-import { LiveEventChats } from "./LiveEventChats";
+import { LiveEventChats, LiveFeedChats } from "./LiveEventChats";
 import { isOnline, usePresence } from "@/lib/usePresence";
 import type { Intent, MatchSummary } from "@/lib/types";
 
@@ -53,6 +53,7 @@ export function MatchesList({
       {matches.length === 0 ? (
         <>
           <LiveEventChats compact={side} userId={myId} />
+          <LiveFeedChats compact={side} userId={myId} />
           {side ? <p className="mt-6 rounded-2xl bg-surface p-4 text-[14px] text-muted">Your chats will appear here.</p> : <Empty />}
         </>
       ) : (
@@ -99,6 +100,7 @@ export function MatchesList({
           )}
 
           <LiveEventChats compact={side} divided userId={myId} />
+          <LiveFeedChats divided userId={myId} />
 
           <section className="mt-5">
             <h2 className="mb-3 flex items-center justify-between text-[15px] font-semibold">

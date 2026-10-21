@@ -4,32 +4,48 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-export type MenuBadges = { chats: number; eventLive: boolean };
+export type MenuBadges = {
+  chats: number;
+  eventLive: boolean;
+  /** Today's prompt is up and you haven't answered */
+  feedNew: boolean;
+  /** Gifts on your answers you haven't seen */
+  feedGifts: number;
+};
 
 /** Tell the menu to re-check (e.g. after a chat was opened and read). */
 export function refreshMenuBadges() {
   window.dispatchEvent(new Event("dp:badges"));
 }
 
-/** Dots on the menu: unread chats, and an event you're going to that's live now. */
+/** Dots on the menu: unread chats, an event you're going to that's live now, and the Feed. */
 export function useMenuBadges(userId: string): MenuBadges {
   const supabase = useMemo(() => createClient(), []);
   const path = usePathname();
-  const [badges, setBadges] = useState<MenuBadges>({ chats: 0, eventLive: false });
+  const [badges, setBadges] = useState<MenuBadges>({ chats: 0, eventLive: false, feedNew: false, feedGifts: 0 });
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const refresh = useCallback(async () => {
-    const [chats, eventChats, event] = await Promise.all([
+    const [chats, eventChats, event, feedChats, feed] = await Promise.all([
       supabase.rpc("unread_chats"),
       supabase.rpc("unread_event_chats"),
       supabase.rpc("next_event"),
+      supabase.rpc("unread_feed_chats"),
+      supabase.rpc("feed_status"),
     ]);
     const ev = event.data as { i_am_going?: boolean; starts_at?: string; ends_at?: string } | null;
     const now = Date.now();
     const eventLive =
       !!ev?.i_am_going && !!ev.starts_at && !!ev.ends_at && new Date(ev.starts_at).getTime() <= now && new Date(ev.ends_at).getTime() > now;
-    const n = (typeof chats.data === "number" ? chats.data : 0) + (typeof eventChats.data === "number" ? eventChats.data : 0);
-    setBadges((b) => ({ chats: chats.error && eventChats.error ? b.chats : n, eventLive }));
+    const num = (x: unknown) => (typeof x === "number" ? x : 0);
+    const n = num(chats.data) + num(eventChats.data) + num(feedChats.data);
+    const f = feed.data as { prompt: { answered: boolean } | null; gifts_unseen: number } | null;
+    setBadges((b) => ({
+      chats: chats.error && eventChats.error ? b.chats : n,
+      eventLive,
+      feedNew: !!f?.prompt && !f.prompt.answered,
+      feedGifts: f?.gifts_unseen ?? 0,
+    }));
   }, [supabase]);
 
   // Wait a moment so a burst of messages only triggers one check
@@ -51,6 +67,8 @@ export function useMenuBadges(userId: string): MenuBadges {
       .on("postgres_changes", { event: "*", schema: "public", table: "matches", filter: `user_b=eq.${userId}` }, soon)
       .on("postgres_changes", { event: "*", schema: "public", table: "event_chats", filter: `user_a=eq.${userId}` }, soon)
       .on("postgres_changes", { event: "*", schema: "public", table: "event_chats", filter: `user_b=eq.${userId}` }, soon)
+      .on("postgres_changes", { event: "*", schema: "public", table: "feed_chats", filter: `user_a=eq.${userId}` }, soon)
+      .on("postgres_changes", { event: "*", schema: "public", table: "feed_chats", filter: `user_b=eq.${userId}` }, soon)
       .subscribe();
     const onFocus = () => document.visibilityState === "visible" && soon();
     window.addEventListener("dp:badges", soon);

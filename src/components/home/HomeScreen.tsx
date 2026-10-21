@@ -4,7 +4,7 @@ import { plural, word } from "@/lib/plural";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
-import { BellRing, ChevronRight, Gift, MapPin, SlidersHorizontal, Timer, Users } from "lucide-react";
+import { BellRing, ChevronRight, Gift, MapPin, SlidersHorizontal, Sparkles, Timer, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { DISTANCES, getLocation, INTENTS, seekingLabel, SPICE_LEVELS } from "@/lib/constants";
 import { EXTEND_COST, EXTRA_MASQUERADE_COST, FREE_MASQUERADES_PER_DAY, GIFTS, type Wallet } from "@/lib/keys";
@@ -26,6 +26,7 @@ import type { DashpadEvent } from "@/lib/events";
 import { prefsFromProfile, type SetupPrefs } from "./prefs";
 
 export type HomeStats = { online: number; week_chats: number; week_unmasks: number; gifts_received: number };
+export type TodayPrompt = { id: string; body: string; answered: boolean; answers: number };
 
 export function HomeScreen({
   profile,
@@ -33,6 +34,7 @@ export function HomeScreen({
   stats,
   matches,
   nextEvent = null,
+  prompt = null,
   demoWaiting,
   demoSheet,
 }: {
@@ -41,6 +43,7 @@ export function HomeScreen({
   stats: HomeStats | null;
   matches: MatchSummary[];
   nextEvent?: DashpadEvent | null;
+  prompt?: TodayPrompt | null;
   demoWaiting?: boolean;
   demoSheet?: "meet" | "keys";
 }) {
@@ -235,6 +238,33 @@ export function HomeScreen({
       </section>
 
       <div className="lg:col-span-5">
+      {prompt && (
+        <Link
+          href="/feed"
+          onClick={() => tapFeedback()}
+          className="mt-6 block rounded-3xl border border-line bg-surface p-4 shadow-card transition active:scale-[0.99] lg:mt-0 lg:mb-7"
+        >
+          <span className="flex items-center justify-between gap-2">
+            <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold tracking-wide text-brand uppercase">
+              <Sparkles size={14} /> Today&apos;s prompt
+            </span>
+            <span className="text-[12px] text-muted">{prompt.answers > 0 ? `${prompt.answers} ${word(prompt.answers, "answer")}` : "Be the first"}</span>
+          </span>
+          <span className="mt-1.5 block font-display text-[20px] leading-snug font-semibold">{prompt.body}</span>
+          <span className="mt-3 flex items-center justify-between gap-3">
+            <span className="text-[13px] text-muted">{prompt.answered ? "You answered. See what others said." : "Answer masked to see everyone else's."}</span>
+            <span
+              className={clsx(
+                "inline-flex h-9 shrink-0 items-center gap-1 rounded-full px-3.5 text-[13px] font-semibold",
+                prompt.answered ? "bg-brand-soft text-brand" : "bg-brand text-white",
+              )}
+            >
+              {prompt.answered ? "See answers" : "Answer"} <ChevronRight size={15} />
+            </span>
+          </span>
+        </Link>
+      )}
+
       {nextEvent && (
         <div className="mt-7 lg:mt-0 lg:mb-7">
           <div className="mb-3 flex items-center justify-between">

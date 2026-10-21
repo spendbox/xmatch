@@ -80,7 +80,7 @@ const Ctx = createContext<EventMediaCtx>({
 export const useEventMedia = () => useContext(Ctx);
 
 const CHAT_PATH = /^\/events\/([^/]+)\/chat\/([^/]+)/;
-const OTHER_FULL_SCREEN = /^\/(masquerade|matches)\/[^/]+/;
+const OTHER_FULL_SCREEN = /^\/(masquerade|matches)\/[^/]+|^\/feed\/chat\//;
 
 export function EventMediaProvider({ userId, children }: { userId: string; children: React.ReactNode }) {
   const path = usePathname();

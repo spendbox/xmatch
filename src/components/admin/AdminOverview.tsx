@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { plural, word } from "@/lib/plural";
-import { CalendarDays, Flag, Gift, Handshake, MessageCircleQuestion, Plus, Users, Wallet, Wifi } from "lucide-react";
+import { CalendarDays, ChevronRight, Flag, Gift, Handshake, MessageCircleQuestion, Plus, Sparkles, Users, Wallet, Wifi } from "lucide-react";
 import { MaskLineIcon } from "@/components/ui/icons";
 import { naira } from "@/lib/keys";
 import { AdminTitle } from "./AdminShell";
@@ -20,7 +20,7 @@ export type Overview = {
   icebreakers: number;
 };
 
-export function AdminOverview({ overview: o, nights }: { overview: Overview; nights: AdminNight[] }) {
+export function AdminOverview({ overview: o, nights, promptsAhead = 0 }: { overview: Overview; nights: AdminNight[]; promptsAhead?: number }) {
   const upcoming = nights.filter((n) => n.status !== "cancelled" && new Date(n.ends_at).getTime() > Date.now()).reverse().slice(0, 3);
   const stats = [
     { label: "Members", value: o.users.toLocaleString(), sub: `+${o.new_users_7d} this week`, icon: Users, tone: "bg-brand-soft text-brand" },
@@ -35,6 +35,23 @@ export function AdminOverview({ overview: o, nights }: { overview: Overview; nig
   return (
     <>
       <AdminTitle title="Overview" subtitle="How Dashpad is doing right now." />
+      <Link
+        href="/admin/prompts"
+        className={
+          "mb-5 flex items-center gap-3 rounded-2xl border p-4 transition " +
+          (promptsAhead < 2 ? "border-chili/30 bg-chili-soft text-chili" : promptsAhead < 7 ? "border-gold/50 bg-gold-soft text-[#8a5a00]" : "border-line bg-surface text-ink")
+        }
+      >
+        <Sparkles size={20} className="shrink-0" />
+        <span className="min-w-0 flex-1 text-[14px] font-semibold">
+          {promptsAhead === 0
+            ? "No Daily prompt today. Add one now."
+            : promptsAhead === 1
+              ? "Only today has a Daily prompt. Schedule tomorrow's."
+              : `Daily prompts are scheduled for the next ${promptsAhead} days.`}
+        </span>
+        <ChevronRight size={18} className="shrink-0" />
+      </Link>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {stats.map((s) => (
           <div key={s.label} className="rounded-3xl border border-line bg-surface p-5 shadow-card">

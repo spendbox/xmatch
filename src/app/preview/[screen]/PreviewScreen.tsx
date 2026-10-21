@@ -30,6 +30,11 @@ import { InviteSheet } from "@/components/app/InviteSheet";
 import { Onboarding } from "@/app/onboarding/Onboarding";
 import { Button } from "@/components/ui/Button";
 import { InterestPicker } from "@/components/profile/InterestPicker";
+import { FeedScreen } from "@/components/feed/FeedScreen";
+import { FeedChat } from "@/components/feed/FeedChat";
+import { PromptManager } from "@/components/admin/PromptManager";
+import { PromptAnswers } from "@/components/admin/PromptAnswers";
+import type { Feed, FeedAnswer, FeedGift } from "@/lib/feed";
 import type { ChatMessage, MasqueradeState, Profile } from "@/lib/types";
 
 const photo = (a: string, b: string, letter: string) =>
@@ -100,7 +105,7 @@ const recent = [
   { id: "m3", created_at: iso(3000), last_message_at: iso(200), intent: "spicy" as const, other_id: "z", display_name: "Zara", photos: [photo("#5b3fd9", "#e5484d", "Z")], age: 29, last_message: null, last_sender: null },
 ];
 
-const APP_SCREENS = ["events-empty", "event-spotlight", "event-spotlight-live", "events", "event-upcoming", "event-live", "event-waiting", "event-ended", "home", "matches", "wallet", "profile", "rich-chat", "extend", "chat", "desktop-matches", "gifts"];
+const APP_SCREENS = ["events-empty", "event-spotlight", "event-spotlight-live", "events", "event-upcoming", "event-live", "event-waiting", "event-ended", "home", "matches", "wallet", "profile", "rich-chat", "extend", "chat", "desktop-matches", "gifts", "feed", "feed-locked", "feed-chat", "feed-gifts"];
 
 function ev(over: Partial<DashpadEvent> = {}): DashpadEvent {
   return {
@@ -118,6 +123,26 @@ const adminNights: AdminNight[] = [
   { id: "e2", title: "Faith & Friendship", description: "", theme: "mint", intent: "friends", starts_at: new Date(now + 5 * 86400_000).toISOString(), ends_at: new Date(now + 5 * 86400_000 + 3600_000).toISOString(), age_min: 18, age_max: 40, entry_keys: 0, max_attendees: 500, status: "draft", going_count: 0, rounds: 0, unmasks: 0, keys_collected: 0, question_count: 8 },
   { id: "e3", title: "Spicy Saturday", description: "", theme: "rose", intent: "spicy", starts_at: new Date(now + 6 * 86400_000).toISOString(), ends_at: new Date(now + 6 * 86400_000 + 5400_000).toISOString(), age_min: 25, age_max: 40, entry_keys: 30, max_attendees: null, status: "published", going_count: 312, rounds: 0, unmasks: 0, keys_collected: 9360, question_count: 12 },
   { id: "e4", title: "Valentine's Masquerade", description: "", theme: "rose", intent: "dating", starts_at: new Date(now - 9 * 86400_000).toISOString(), ends_at: new Date(now - 9 * 86400_000 + 7200_000).toISOString(), age_min: 21, age_max: 45, entry_keys: 25, max_attendees: null, status: "published", going_count: 2210, rounds: 8420, unmasks: 1930, keys_collected: 55250, question_count: 15 },
+];
+
+const fa = (id: string, alias: string, body: string, over: Partial<FeedAnswer> = {}): FeedAnswer => ({
+  id, alias, body, created_at: iso(1800), age: 26, gender: "woman", mine: false, reactions: {}, my_reaction: null, gifts: 0, chat_id: null, can_chat: true, matched: false, ...over,
+});
+const feedPrompt = { id: "p1", body: "What's the most toxic thing you find attractive?", day: "2026-10-22", chat_cost: 5, answers: 128 };
+const feedDemo: Feed = {
+  prompt: feedPrompt,
+  gifts_unseen: 2,
+  my_answer: { id: "mine", alias: "Velvet Fox", body: "Someone who replies 'k' but shows up with food. Mixed signals, full stomach.", created_at: iso(5400), hidden: false, reactions: 23, gifts: 2, chats: 1 },
+  answers: [
+    fa("a1", "Midnight Owl", "When they're a little bit rude to me but sweet to my mum. I can't explain it.", { reactions: { fire: 14, laugh: 31, hundred: 6 }, my_reaction: "laugh", gifts: 3, age: 27 }),
+    fa("a2", "Golden Panther", "Confidence that borders on delusion. If you think you're Burna Boy, I'm listening.", { gender: "woman", age: 24, reactions: { fire: 8, hundred: 12 }, chat_id: "c1" }),
+    fa("a3", "Quiet Heron", "Being bad at texting but great in person. I'm the problem honestly.", { gender: "man", age: 29, reactions: { eyes: 4 }, can_chat: false }),
+    fa("a4", "Electric Comet", "Jealousy. A little bit. Like 2%. Ok maybe 10%.", { age: 25, reactions: {} }),
+  ],
+};
+const feedGifts: FeedGift[] = [
+  { id: 1, gift_id: "rose", created_at: iso(900), seen_at: null, answer_body: feedDemo.my_answer!.body, prompt_body: feedPrompt.body, from_id: "t", from_name: "Tunde", from_photo: photo("#5b3fd9", "#f2b33d", "T"), from_age: 29, from_gender: "man", chat_id: null, can_chat: true, match_id: null },
+  { id: 2, gift_id: "teddy", created_at: iso(7200), seen_at: null, answer_body: feedDemo.my_answer!.body, prompt_body: feedPrompt.body, from_id: "d", from_name: "David", from_photo: photo("#1f9d6b", "#e5484d", "D"), from_age: 31, from_gender: "man", chat_id: "c9", can_chat: true, match_id: null },
 ];
 
 export function PreviewScreen({ screen }: { screen: string }) {
@@ -151,7 +176,7 @@ function ScreenBody({ screen }: { screen: string }) {
     case "home":
       return (
         <div className="pb-24">
-          <HomeScreen profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} stats={{ online: 214, week_chats: 12, week_unmasks: 5, gifts_received: 3 }} matches={recent} />
+          <HomeScreen prompt={{ id: "p1", body: feedPrompt.body, answered: false, answers: 128 }} profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} stats={{ online: 214, week_chats: 12, week_unmasks: 5, gifts_received: 3 }} matches={recent} />
           <BottomNav />
         </div>
       );
@@ -328,7 +353,54 @@ function ScreenBody({ screen }: { screen: string }) {
     case "admin-night-spotlight":
       return <AdminShell><NightEditor night={{ ...adminNights[0], kind: "spotlight", settings: { free_reveals: 10, reveal_cost: 1, max_chats: 5 } }} /></AdminShell>;
     case "admin":
-      return <AdminShell><AdminOverview overview={{ users: 2841, new_users_7d: 312, online_now: 214, masquerades_today: 1290, unmasks_today: 388, matches_total: 6120, revenue_30d_kobo: 184500000, keys_sold_30d: 112400, gifts_7d: 2290, reports_7d: 4, icebreakers: 112 }} nights={adminNights} /></AdminShell>;
+      return <AdminShell><AdminOverview promptsAhead={1} overview={{ users: 2841, new_users_7d: 312, online_now: 214, masquerades_today: 1290, unmasks_today: 388, matches_total: 6120, revenue_30d_kobo: 184500000, keys_sold_30d: 112400, gifts_7d: 2290, reports_7d: 4, icebreakers: 112 }} nights={adminNights} /></AdminShell>;
+    case "feed":
+    case "feed-gifts":
+      return (
+        <div className="pb-24">
+          <FeedScreen initial={feedDemo} myId="me" wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} demoGifts={feedGifts} demoGiftsOpen={screen === "feed-gifts"} />
+          <BottomNav badges={{ chats: 2, eventLive: false, feedNew: false, feedGifts: 2 }} />
+        </div>
+      );
+    case "feed-locked":
+      return (
+        <div className="pb-24">
+          <FeedScreen initial={{ prompt: feedPrompt, gifts_unseen: 0, my_answer: null, answers: [] }} myId="me" wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} />
+          <BottomNav badges={{ chats: 0, eventLive: false, feedNew: true, feedGifts: 0 }} />
+        </div>
+      );
+    case "feed-chat":
+      return (
+        <FeedChat
+          myId="me"
+          chat={{
+            id: "c1", status: "open", match_id: null, opened_by: "me", created_at: iso(3 * 3600), expires_at: new Date(now + 21 * 3600_000).toISOString(),
+            decide_by: new Date(now + 45 * 3600_000).toISOString(), prompt_body: feedPrompt.body,
+            answer_body: "Confidence that borders on delusion. If you think you're Burna Boy, I'm listening.", answer_mine: false, my_keep: null, their_keep_set: false,
+            me: { id: "me", name: "Silver Lynx", masked: true, photo: null, age: 28, gender: "man" },
+            other: { id: "o", name: "Golden Panther", masked: true, photo: null, age: 24, gender: "woman" },
+            messages: [
+              { id: 1, sender_id: "me", body: "Ok but how delusional are we talking? 😂", created_at: iso(3 * 3600) },
+              { id: 2, sender_id: "o", body: "Like 'I can sing' when you can't. Main character energy", created_at: iso(3 * 3600 - 120) },
+              { id: 3, sender_id: "me", body: "Then I'm your guy. I sing in traffic every morning", created_at: iso(3 * 3600 - 200) },
+            ],
+          }}
+        />
+      );
+    case "admin-prompts": {
+      const day = (n: number) => { const d = new Date(now + 3600_000); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+      const P = (n: number, body: string, answers = 0) => ({ id: "p" + n, body, day: day(n), chat_cost: 5, created_at: iso(0), answers, hidden: answers ? 2 : 0, reactions: answers * 6, gifts: Math.round(answers / 9), chats: Math.round(answers / 5), reports: n === -1 ? 3 : 0 });
+      return <AdminShell><PromptManager today={day(0)} prompts={[
+        P(0, feedPrompt.body, 128), P(1, "Describe your ideal Sunday in 5 words."), P(2, "What's a green flag nobody talks about?"), P(4, "Jollof: Ghana or Nigeria? Defend your answer."),
+        P(-1, "Your most toxic trait?", 412), P(-2, "What song would play when you walk into a room?", 356),
+      ]} /></AdminShell>;
+    }
+    case "admin-prompt-answers":
+      return <AdminShell><PromptAnswers today="2026-10-22" prompt={{ id: "p", body: "Your most toxic trait?", day: "2026-10-21" }} answers={[
+        { id: "x1", alias: "Bold Dove", body: "I screenshot everything. Everything.", created_at: iso(0), hidden_at: null, user_id: "u", display_name: "Kemi Ade", photo: photo("#1f9d6b", "#f2b33d", "K"), reactions: 40, gifts: 2, reports: 3 },
+        { id: "x2", alias: "Wild Fox", body: "I say I'm 5 minutes away when I haven't showered.", created_at: iso(0), hidden_at: null, user_id: "u2", display_name: "Tunde B", photo: null, reactions: 81, gifts: 6, reports: 0 },
+        { id: "x3", alias: "Misty Hare", body: "(removed by admin)", created_at: iso(0), hidden_at: iso(0), user_id: "u3", display_name: "Sam", photo: null, reactions: 1, gifts: 0, reports: 1 },
+      ]} /></AdminShell>;
     case "admin-nights":
       return <AdminShell><NightsList nights={adminNights} /></AdminShell>;
     case "admin-night":
