@@ -72,7 +72,7 @@ function BrandPanel() {
           <MaskIcon className="w-[72px] text-white" eyes="#6d4ff0" />
         </span>
         <h2 className="mt-10 font-display text-[56px] leading-[1.02] font-semibold">
-          Match on <em className="text-gold">vibes</em>, not looks.
+          Match on <em className="text-gold">vibes</em>.
         </h2>
         <ul className="mt-10 space-y-4 text-[17px]">
           {[
