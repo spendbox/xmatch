@@ -19,6 +19,9 @@ export type Profile = {
   pref_age_max: number;
   pref_spice: number;
   pref_max_km: number | null;
+  place_country?: string | null;
+  place_region?: string | null;
+  place_label?: string | null;
 };
 
 export type MasqueradeState = {
@@ -45,6 +48,9 @@ export type MasqueradeState = {
     interests: string[];
     shared_interests: string[];
     distance_km: number | null;
+    /** "Lagos, Nigeria" */
+    place?: string | null;
+    same_place?: boolean | null;
     has_voted: boolean;
     profile: { id: string; display_name: string; bio: string; photos: string[] } | null;
   };

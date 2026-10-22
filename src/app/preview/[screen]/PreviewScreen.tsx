@@ -31,6 +31,7 @@ import { Onboarding } from "@/app/onboarding/Onboarding";
 import { Button } from "@/components/ui/Button";
 import { InterestPicker } from "@/components/profile/InterestPicker";
 import { FeedScreen } from "@/components/feed/FeedScreen";
+import { PlacePicker } from "@/components/home/PlacePicker";
 import { FeedChat } from "@/components/feed/FeedChat";
 import { PromptManager } from "@/components/admin/PromptManager";
 import { PromptAnswers } from "@/components/admin/PromptAnswers";
@@ -132,7 +133,7 @@ function demoHour(kind: "live" | "next" | "off" = "live"): MasqueradeHour {
   return {
     enabled: kind !== "off", server_now: new Date(now).toISOString(), hour_at: h.toISOString(), hour_open: true, hour_ran: true, pairs_this_hour: 107,
     next_at: end,
-    current: kind === "live" ? { id: "s1", status: "active", intent: "dating", ends_at: end, match_id: null, my_alias: "Velvet Fox", their_alias: "Golden Owl", their_age: 26, their_gender: "woman", their_name: null, their_photo: null, my_vote: null, they_voted: false, messages: 6, last_message: "Wait, you're into Afrobeats too?", last_from_them: true } : null,
+    current: kind === "live" ? { id: "s1", status: "active", intent: "dating", ends_at: end, match_id: null, my_alias: "Velvet Fox", their_alias: "Golden Owl", their_age: 26, their_gender: "woman", their_place: "Lagos, Nigeria", their_name: null, their_photo: null, my_vote: null, they_voted: false, messages: 6, last_message: "Wait, you're into Afrobeats too?", last_from_them: true } : null,
     past: [
       { id: "p1", status: "lapsed", intent: "friends", hour_at: new Date(h.getTime() - 3 * 3600_000).toISOString(), reopened_at: null, their_alias: "Quiet Heron", their_age: 29, their_gender: "man", my_vote: true, last_message: "Haha same. Talk soon?" },
       { id: "p2", status: "active", intent: "dating", hour_at: new Date(h.getTime() - 26 * 3600_000).toISOString(), reopened_at: iso(3600), their_alias: "Wild Comet", their_age: 24, their_gender: "woman", my_vote: null, last_message: "You reopened the chat 👀" },
@@ -188,6 +189,8 @@ function ScreenBody({ screen }: { screen: string }) {
           <BottomNav />
         </div>
       );
+    case "place":
+      return <PlacePicker open onClose={() => {}} userId="me" current={{ country: "NG", region: "Lagos" }} onSaved={() => {}} />;
     case "home-next":
     case "home-off":
       return (

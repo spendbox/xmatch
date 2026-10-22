@@ -20,6 +20,9 @@ import type { DashpadEvent } from "@/lib/events";
 import { MeetSheet } from "./MeetSheet";
 import { MasqueradeCard, useMasqueradeHour } from "./MasqueradeCard";
 import { PastPairs } from "./PastPairs";
+import { PlacePicker } from "./PlacePicker";
+import { intentLabel } from "@/lib/constants";
+import { INTENT_ICONS } from "@/components/ui/icons";
 import { prefsFromProfile, type SetupPrefs } from "./prefs";
 
 export type HomeStats = { online: number; week_chats: number; week_unmasks: number; gifts_received: number };
@@ -47,6 +50,8 @@ export function HomeScreen({
   const [meetOpen, setMeetOpen] = useState(demoSheet === "meet");
   const [greeting, setGreeting] = useState("Hello");
   const ctl = useMasqueradeHour(profile.id, initialHour);
+  const [placeOpen, setPlaceOpen] = useState(false);
+  const [place, setPlace] = useState({ country: profile.place_country ?? null, region: profile.place_region ?? null, label: profile.place_label ?? null });
 
   useEffect(() => {
     const h = new Date().getHours();
@@ -62,18 +67,10 @@ export function HomeScreen({
         pref_age_min: prefs.ageMin,
         pref_age_max: prefs.ageMax,
         pref_spice: prefs.spice,
-        pref_max_km: prefs.maxKm || null,
+        // Distance is decided for you now (closest first)
+        pref_max_km: null,
       })
       .eq("id", profile.id);
-  }
-
-  async function pickIntent(v: SetupPrefs["intent"]) {
-    if (v === prefs.intent) return;
-    tapFeedback();
-    const before = prefs.intent;
-    setPrefs((p) => ({ ...p, intent: v }));
-    const { error: err } = await supabase.from("profiles").update({ pref_intent: v }).eq("id", profile.id);
-    if (err) setPrefs((p) => ({ ...p, intent: before }));
   }
 
   const balance = wallet?.balance ?? 0;
@@ -90,6 +87,18 @@ export function HomeScreen({
           <p className="text-[13px] text-muted">{greeting}</p>
           <p className="truncate text-[19px] leading-tight font-semibold lg:font-display lg:text-[34px]">{profile.display_name}</p>
         </div>
+        <button
+          type="button"
+          onClick={() => {
+            tapFeedback();
+            setMeetOpen(true);
+          }}
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-brand/20 bg-brand-soft text-brand transition active:scale-95"
+          aria-label={`Your Masquerade settings: ${intentLabel(prefs.intent)}`}
+          title={`${intentLabel(prefs.intent)} · Masquerade settings`}
+        >
+          {INTENT_ICONS[prefs.intent]({ size: 20, strokeWidth: 2 })}
+        </button>
         <Link
           href="/wallet"
           className="inline-flex h-11 items-center gap-2 rounded-full border border-gold/40 bg-gold-soft pr-4 pl-1.5 text-[15px] font-bold text-[#8a5a00] transition active:scale-95"
@@ -101,7 +110,7 @@ export function HomeScreen({
 
       <div className="lg:mt-8 lg:grid lg:grid-cols-12 lg:items-start lg:gap-8">
       <div className="mt-5 lg:sticky lg:top-8 lg:col-span-7 lg:mt-0">
-        <MasqueradeCard userId={profile.id} ctl={ctl} prefs={prefs} onPickIntent={pickIntent} onEdit={() => setMeetOpen(true)} />
+        <MasqueradeCard userId={profile.id} ctl={ctl} hasPlace={!!place.country} onPlace={() => setPlaceOpen(true)} />
       </div>
 
       <div className="lg:col-span-5">
@@ -211,6 +220,16 @@ export function HomeScreen({
         }}
         prefs={prefs}
         setPrefs={setPrefs}
+        place={place.label}
+        onPlace={() => setPlaceOpen(true)}
+      />
+
+      <PlacePicker
+        open={placeOpen}
+        onClose={() => setPlaceOpen(false)}
+        userId={profile.id}
+        current={place}
+        onSaved={(p) => setPlace({ country: p.country, region: p.region, label: p.label })}
       />
     </main>
   );

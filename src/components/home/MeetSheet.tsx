@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import clsx from "clsx";
-import { Check, ChevronDown, SlidersHorizontal } from "lucide-react";
-import { DISTANCES, INTENTS, MAX_SEEK, SEEK_OPTIONS, SPICE_LEVELS, seekingLabel, seekingList, toSeeking } from "@/lib/constants";
+import { Check, ChevronDown, ChevronRight, MapPin, SlidersHorizontal } from "lucide-react";
+import { INTENTS, MAX_SEEK, SEEK_OPTIONS, SPICE_LEVELS, seekingLabel, seekingList, toSeeking } from "@/lib/constants";
 import { Choice } from "@/components/ui/Choice";
 import { Sheet } from "@/components/ui/Sheet";
 import { Button, tapFeedback } from "@/components/ui/Button";
-import { DISTANCE_ICONS, INTENT_ICONS, SEEKING_ICONS, SpiceIcon } from "@/components/ui/icons";
-import { DISTANCE_HINTS, INTENT_HINTS, SPICE_HINTS, type SetupPrefs } from "./prefs";
+import { INTENT_ICONS, SEEKING_ICONS, SpiceIcon } from "@/components/ui/icons";
+import { INTENT_HINTS, SPICE_HINTS, type SetupPrefs } from "./prefs";
 
 const AGES = Array.from({ length: 82 }, (_, i) => i + 18);
 
@@ -18,9 +18,13 @@ export function MeetSheet({
   onClose,
   prefs,
   setPrefs,
+  place,
+  onPlace,
 }: {
   open: boolean;
   onClose: () => void;
+  place: string | null;
+  onPlace: () => void;
   prefs: SetupPrefs;
   setPrefs: (fn: (p: SetupPrefs) => SetupPrefs) => void;
 }) {
@@ -32,7 +36,7 @@ export function MeetSheet({
       open={open}
       onClose={onClose}
       title="Who do you want to talk to?"
-      subtitle="Pick a mood. Everything else is optional."
+      subtitle="Changes apply from your next pairing."
       icon={<SlidersHorizontal size={22} strokeWidth={1.75} />}
       footer={
         <Button size="lg" onClick={onClose}>
@@ -51,17 +55,24 @@ export function MeetSheet({
             options={INTENTS.map((i) => ({ value: i.value, label: i.label, hint: INTENT_HINTS[i.value], icon: INTENT_ICONS[i.value]({ size: 22 }) }))}
           />
         </Section>
-        <Section title="Distance" note="Closest people are paired first. Your exact location is never shown.">
-          <Choice
-            name="Distance"
-            columns={2}
-            value={prefs.maxKm}
-            onChange={(v) => set("maxKm", v)}
-            options={DISTANCES.map((d) => {
-              const I = DISTANCE_ICONS[d.value];
-              return { value: d.value, label: d.value ? `Within ${d.label}` : "Anywhere", hint: DISTANCE_HINTS[d.value], icon: <I size={22} strokeWidth={1.75} /> };
-            })}
-          />
+        <Section title="Where you are" note="We pair you with people closest to you first: your state, then your country, then further.">
+          <button
+            type="button"
+            onClick={() => {
+              tapFeedback();
+              onPlace();
+            }}
+            className="flex w-full items-center gap-3 rounded-2xl border border-line bg-surface px-4 py-3.5 text-left hover:border-line-strong"
+          >
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-cream text-ink-soft">
+              <MapPin size={20} strokeWidth={1.75} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[15px] font-semibold">{place ?? "Add where you are"}</span>
+              <span className="block text-[12px] text-muted">{place ? "Tap to change" : "Country and state, no GPS"}</span>
+            </span>
+            <ChevronRight size={18} className="shrink-0 text-muted" />
+          </button>
         </Section>
         <Section title="Question spice" note="You'll see each other's pick. The questions land in the middle.">
           <Choice

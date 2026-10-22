@@ -12,6 +12,7 @@ export type HourPair = {
   their_alias: string;
   their_age: number | null;
   their_gender: Gender | null;
+  their_place?: string | null;
   their_name: string | null;
   their_photo: string | null;
   my_vote: boolean | null;
@@ -36,6 +37,7 @@ export type PastPair = {
 
 export type MasqueradeHour = {
   enabled: boolean;
+  has_place?: boolean;
   server_now: string;
   hour_at: string;
   hour_open: boolean;
