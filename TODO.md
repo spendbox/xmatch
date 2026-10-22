@@ -29,7 +29,7 @@ Goal: a place to meet your people. Dating stays as one mood, not the headline.
 
 - [x] 1. Friendlier words: "You clicked!" instead of "It's a match!", "connection" instead of "match", "your people", no first-date talk on the landing page
 - [x] 2. Friendlier gifts: Fire, Respect, Jollof, Mic drop, Trophy added; Chocolate, Teddy bear and Bouquet retired (still show in old chats)
-- [x] 3. Home leads with mood: "Who do you want to talk to?", Friends first and the default for new people, Spicy hidden until turned on (18+), gender and age optional under "Who you meet"
+- [x] 3. Home leads with mood: "Who do you want to talk to?", Friends, Dating and Spicy side by side as equal moods, Friends the default for new people, gender and age optional under "Who you meet"
 - [ ] 4. Topic masquerades: pick a topic (Football, Afrobeats, Career, Faith, Gaming, Late-night talk) and get paired with someone into it
 - [ ] 5. Group masquerades (3–5 people) and game nights (Whot, Impostor)
 - [ ] 6. After unmasking: "Keep in touch" / "Add to your people" wording and flow

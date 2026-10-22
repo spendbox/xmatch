@@ -19,7 +19,7 @@ import { KeyCoin } from "@/components/keys/KeyIcon";
 import { GiftArt } from "@/components/keys/GiftArt";
 import { useWallet } from "@/components/keys/useWallet";
 import { Waiting } from "@/components/masquerade/Waiting";
-import { MeetSheet, useShowSpicy } from "./MeetSheet";
+import { MeetSheet } from "./MeetSheet";
 import { NotificationsPrompt } from "@/components/app/Notifications";
 import { HomeTabs } from "./HomeTabs";
 import { notify } from "@/lib/pushClient";
@@ -96,8 +96,6 @@ export function HomeScreen({
       })
       .eq("id", profile.id);
   }
-
-  const [showSpicy] = useShowSpicy(prefs.intent);
 
   async function pickIntent(v: SetupPrefs["intent"]) {
     if (v === prefs.intent) return;
@@ -214,7 +212,7 @@ export function HomeScreen({
 
         {/* Mood first */}
         <div role="radiogroup" aria-label="Mood" className="relative mt-3 flex gap-1 rounded-2xl bg-white/12 p-1 lg:mt-5">
-          {INTENTS.filter((i) => i.value !== "spicy" || showSpicy).map((i) => {
+          {INTENTS.map((i) => {
             const on = prefs.intent === i.value;
             return (
               <button

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import clsx from "clsx";
 import { Check, ChevronDown, SlidersHorizontal } from "lucide-react";
 import { DISTANCES, INTENTS, MAX_SEEK, SEEK_OPTIONS, SPICE_LEVELS, seekingLabel, seekingList, toSeeking } from "@/lib/constants";
@@ -11,32 +11,6 @@ import { DISTANCE_ICONS, INTENT_ICONS, SEEKING_ICONS, SpiceIcon } from "@/compon
 import { DISTANCE_HINTS, INTENT_HINTS, SPICE_HINTS, type SetupPrefs } from "./prefs";
 
 const AGES = Array.from({ length: 82 }, (_, i) => i + 18);
-
-/**
- * Spicy link-up is hidden until someone chooses to see it (18+). Remembered on this device,
- * and always shown if it's already their pick.
- */
-export function useShowSpicy(intent: string) {
-  const [on, setOn] = useState(false);
-  useEffect(() => {
-    const read = () => {
-      try {
-        setOn(localStorage.getItem("dp-show-spicy") === "1");
-      } catch {}
-    };
-    read();
-    window.addEventListener("dp:spicy", read);
-    return () => window.removeEventListener("dp:spicy", read);
-  }, []);
-  const set = useCallback((v: boolean) => {
-    try {
-      localStorage.setItem("dp-show-spicy", v ? "1" : "0");
-    } catch {}
-    setOn(v);
-    window.dispatchEvent(new Event("dp:spicy"));
-  }, []);
-  return [on || intent === "spicy", set] as const;
-}
 
 /** One pop-up with everything about who you'd like to meet. */
 export function MeetSheet({
@@ -51,10 +25,8 @@ export function MeetSheet({
   setPrefs: (fn: (p: SetupPrefs) => SetupPrefs) => void;
 }) {
   const set = <K extends keyof SetupPrefs>(k: K, v: SetupPrefs[K]) => setPrefs((p) => ({ ...p, [k]: v }));
-  const [showSpicy, setShowSpicy] = useShowSpicy(prefs.intent);
   const [whoOpen, setWhoOpen] = useState(false);
   const whoSet = prefs.seeking !== "anyone";
-  const moods = INTENTS.filter((i) => i.value !== "spicy" || showSpicy);
   return (
     <Sheet
       open={open}
@@ -76,19 +48,8 @@ export function MeetSheet({
             layout="row"
             value={prefs.intent}
             onChange={(v) => set("intent", v)}
-            options={moods.map((i) => ({ value: i.value, label: i.label, hint: INTENT_HINTS[i.value], icon: INTENT_ICONS[i.value]({ size: 22 }) }))}
+            options={INTENTS.map((i) => ({ value: i.value, label: i.label, hint: INTENT_HINTS[i.value], icon: INTENT_ICONS[i.value]({ size: 22 }) }))}
           />
-          <button
-            type="button"
-            onClick={() => {
-              tapFeedback();
-              if (showSpicy && prefs.intent === "spicy") set("intent", "friends");
-              setShowSpicy(!showSpicy);
-            }}
-            className="mt-2 text-[13px] font-semibold text-muted underline-offset-2 hover:text-ink hover:underline"
-          >
-            {showSpicy ? "Hide the 18+ Spicy option" : "Show the 18+ Spicy option"}
-          </button>
         </Section>
         <Section title="Distance" note="Closest people are paired first. Your exact location is never shown.">
           <Choice
