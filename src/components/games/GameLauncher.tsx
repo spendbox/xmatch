@@ -80,7 +80,7 @@ export function GameLauncher({
               style={{ background: g.card, boxShadow: `0 6px 0 ${g.edge}`, "--edge": g.edge } as React.CSSProperties}
             >
               <div className="relative h-[78px]">
-                <Art kind={g.kind} />
+                <GameArt kind={g.kind} />
                 {busy === g.kind && (
                   <span className="absolute inset-0 grid place-items-center">
                     <Spinner className="h-6 w-6" />
@@ -115,7 +115,8 @@ export function GameLauncher({
   );
 }
 
-function Art({ kind }: { kind: GameKind }) {
+/** The little picture of each game, as on its card */
+export function GameArt({ kind }: { kind: GameKind }) {
   if (kind === "truths")
     return (
       <>

@@ -40,6 +40,8 @@ export function MeetFab({ free, onOpen }: { free: boolean; onOpen: () => void })
   const [spot, setSpot] = useState<Spot | null>(null);
   const [drag, setDrag] = useState<{ x: number; y: number } | null>(null);
   const start = useRef<{ px: number; py: number; x: number; y: number; moved: boolean } | null>(null);
+  /** The last press was a drag, so the click that follows it isn't a tap */
+  const dragged = useRef(false);
   const btn = useRef<HTMLButtonElement>(null);
 
   const [, setSize] = useState(0);
@@ -71,6 +73,7 @@ export function MeetFab({ free, onOpen }: { free: boolean; onOpen: () => void })
       onPointerDown={(e) => {
         const r = btn.current!.getBoundingClientRect();
         btn.current!.setPointerCapture(e.pointerId);
+        dragged.current = false;
         start.current = { px: e.clientX, py: e.clientY, x: r.left, y: r.top, moved: false };
       }}
       onPointerMove={(e) => {
@@ -89,11 +92,8 @@ export function MeetFab({ free, onOpen }: { free: boolean; onOpen: () => void })
         const s = start.current;
         start.current = null;
         if (!s) return;
-        if (!s.moved) {
-          tapFeedback();
-          onOpen();
-          return;
-        }
+        if (!s.moved) return;
+        dragged.current = true;
         const x = drag?.x ?? s.x;
         const y = drag?.y ?? s.y;
         const h = window.innerHeight;
@@ -112,11 +112,13 @@ export function MeetFab({ free, onOpen }: { free: boolean; onOpen: () => void })
         start.current = null;
         setDrag(null);
       }}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onOpen();
+      onClick={() => {
+        if (dragged.current) {
+          dragged.current = false;
+          return;
         }
+        tapFeedback();
+        onOpen();
       }}
       className={clsx(
         "fixed z-40 grid touch-none place-items-center rounded-full text-white select-none",

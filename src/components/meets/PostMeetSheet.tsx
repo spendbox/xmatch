@@ -14,6 +14,7 @@ import { INTENT_ICONS } from "@/components/ui/icons";
 import { KeyCoin } from "@/components/keys/KeyIcon";
 import { usePrices } from "@/components/keys/usePrices";
 import type { SetupPrefs } from "@/components/home/prefs";
+import { GameArt } from "@/components/games/GameLauncher";
 import { MeetTile } from "./MeetCard";
 
 const TEXT_MAX = 140;
@@ -149,16 +150,19 @@ export function PostMeetSheet({
                     tapFeedback();
                     setGame(g.kind);
                   }}
-                  className={clsx("relative flex min-h-[120px] flex-col justify-end rounded-[22px] p-3.5 text-left text-white transition active:scale-[0.97]", on && "ring-[3px] ring-gold ring-offset-[3px] ring-offset-surface")}
+                  className={clsx("relative rounded-[22px] p-3 text-left text-white transition active:scale-[0.97]", on && "ring-[3px] ring-gold ring-offset-[3px] ring-offset-surface")}
                   style={{ background: g.card, boxShadow: `0 4px 0 ${g.edge}` }}
                 >
                   {on && (
-                    <span className="absolute top-2.5 right-2.5 grid h-6 w-6 animate-pop place-items-center rounded-full bg-gold text-ink">
+                    <span className="absolute top-2 right-2 z-10 grid h-6 w-6 animate-pop place-items-center rounded-full bg-gold text-ink shadow">
                       <Check size={14} strokeWidth={3} />
                     </span>
                   )}
-                  <span className="text-[15px] leading-tight font-extrabold">{g.title}</span>
-                  <span className="text-[12px] text-white/75">{g.short}</span>
+                  <span className="relative block h-[78px]" aria-hidden>
+                    <GameArt kind={g.kind} />
+                  </span>
+                  <span className="mt-2 block text-[15px] leading-tight font-extrabold">{g.title}</span>
+                  <span className="block text-[12px] text-white/75">{g.short}</span>
                 </button>
               );
             })}
