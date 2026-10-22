@@ -6,7 +6,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 
 const int = (n: unknown, min: number, max: number) => Math.max(min, Math.min(max, Math.round(Number(n) || 0)));
 
-export async function saveSetting(key: "reopen_cost" | "reveal_cost" | "free_reveals", value: number) {
+export async function saveSetting(key: "reopen_cost" | "reveal_cost" | "free_reveals" | "invite_reward", value: number) {
   await requireAdmin();
   const v = int(value, 0, 100000);
   const { error } = await createAdminClient().from("app_settings").upsert({ key, value: v, updated_at: new Date().toISOString() });

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import clsx from "clsx";
-import { ArrowLeft, ArrowRight, Camera, Check, Lightbulb, Mars, PenLine, Shapes, Smile, UserRound, Venus } from "lucide-react";
+import { ArrowLeft, ArrowRight, Camera, Check, Lightbulb, MapPin, Mars, PenLine, Shapes, Smile, UserRound, Venus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { uploadPhoto, deletePhoto } from "@/lib/photos";
 import { ageFromBirthdate } from "@/lib/constants";
@@ -14,6 +14,7 @@ import { Logo } from "@/components/ui/Logo";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { PhotoGrid } from "@/components/profile/PhotoGrid";
 import { InterestPicker, MAX_INTERESTS } from "@/components/profile/InterestPicker";
+import { PlacePicker } from "@/components/home/PlacePicker";
 
 const STEPS = [
   { title: "First, the basics", subtitle: "Only your age is shown while masked. The rest is revealed when you both unmask.", icon: UserRound },
@@ -46,6 +47,8 @@ export function Onboarding({ profile, demoStep, demoDone }: { profile: Profile; 
   const [photos, setPhotos] = useState<string[]>(profile.photos ?? []);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [place, setPlace] = useState<string | null>(profile.place_label ?? null);
+  const [placeOpen, setPlaceOpen] = useState(false);
 
   const birthdate = year && month && day ? `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}` : "";
   const age = ageFromBirthdate(birthdate || null);
@@ -58,6 +61,7 @@ export function Onboarding({ profile, demoStep, demoDone }: { profile: Profile; 
       if (!birthdate || age === null) return "Please add your birthday.";
       if (age < 18) return "You must be 18 or older to use Dashpad.";
       if (!gender) return "Please choose how you identify.";
+      if (!place) return "Tell us where you are.";
     }
     if (step === 1) {
       if (interests.length < 3) return "Pick at least 3 interests.";
@@ -81,7 +85,15 @@ export function Onboarding({ profile, demoStep, demoDone }: { profile: Profile; 
     setSaving(false);
     if (err) return setError("Couldn't save. Please check your connection and try again.");
     if (step < STEPS.length - 1) setStep(step + 1);
-    else setDone(true);
+    else {
+      // Came through a friend's invite link? Credit them (anonymously)
+      const ref = document.cookie.match(/(?:^|; )dp_ref=([^;]+)/)?.[1];
+      if (ref) {
+        await supabase.rpc("claim_invite", { p_code: ref });
+        document.cookie = "dp_ref=; max-age=0; path=/";
+      }
+      setDone(true);
+    }
   }
 
   async function addPhoto(file: File) {
@@ -172,6 +184,30 @@ export function Onboarding({ profile, demoStep, demoDone }: { profile: Profile; 
                     <Select label="Year" value={year} onChange={setYear} options={Array.from({ length: 82 }, (_, i) => ({ value: thisYear - 18 - i, label: String(thisYear - 18 - i) }))} />
                   </div>
                   <p className="mt-2 text-[13px] text-muted">We only ever show your age, never your birthday.</p>
+                </div>
+
+                <div>
+                  <Label>Where are you?</Label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      tapFeedback();
+                      setPlaceOpen(true);
+                    }}
+                    className="flex h-14 w-full items-center gap-3 rounded-2xl border border-line-strong bg-surface px-4 text-left transition hover:border-brand"
+                  >
+                    <MapPin size={19} strokeWidth={1.75} className="shrink-0 text-muted" />
+                    <span className={clsx("min-w-0 flex-1 truncate text-[16px]", place ? "text-ink" : "text-muted")}>{place ?? "Choose your country and state"}</span>
+                    <ArrowRight size={18} className="shrink-0 text-muted" />
+                  </button>
+                  <p className="mt-2 text-[13px] text-muted">We pair you with people near you first. No GPS, and only your state and country are shown.</p>
+                  <PlacePicker
+                    open={placeOpen}
+                    onClose={() => setPlaceOpen(false)}
+                    userId={profile.id}
+                    current={{ country: profile.place_country ?? null, region: profile.place_region ?? null }}
+                    onSaved={(p) => setPlace(p.label)}
+                  />
                 </div>
 
                 <div>

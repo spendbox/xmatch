@@ -136,7 +136,9 @@ function demoHour(kind: "live" | "next" | "off" | "clicked" = "live"): Masquerad
   return {
     enabled: kind !== "off", server_now: new Date(now).toISOString(), hour_at: h.toISOString(), hour_open: true, hour_ran: true, pairs_this_hour: 107,
     next_at: end,
-    current: kind === "clicked" ? { id: "s1", status: "matched", intent: "dating", ends_at: end, match_id: "m1", my_alias: "Velvet Fox", their_alias: "Golden Owl", their_age: 26, their_gender: "woman", their_name: "Ada", their_photo: photo("#e5484d", "#f2b33d", "A"), my_vote: true, they_voted: true, messages: 12, last_message: null, last_from_them: null } : kind === "live" ? { id: "s1", status: "active", intent: "dating", ends_at: end, match_id: null, my_alias: "Velvet Fox", their_alias: "Golden Owl", their_age: 26, their_gender: "woman", their_place: "Lagos, Nigeria", their_connections: 4, their_reply_seconds: 140, their_name: null, their_photo: null, my_vote: null, they_voted: false, messages: 6, last_message: "Wait, you're into Afrobeats too?", last_from_them: true } : null,
+    pulse: { all: 412, country: 230, region: 128, region_name: "Lagos" },
+    invite_reward: 10,
+    current: kind === "clicked" ? { id: "s1", status: "matched", intent: "dating", ends_at: end, match_id: "m1", my_alias: "Velvet Fox", their_alias: "Golden Owl", their_age: 26, their_gender: "woman", their_name: "Ada", their_photo: photo("#e5484d", "#f2b33d", "A"), my_vote: true, they_voted: true, messages: 12, last_message: null, last_from_them: null } : kind === "live" ? { id: "s1", status: "active", intent: "dating", ends_at: end, match_id: null, my_alias: "Velvet Fox", their_alias: "Golden Owl", their_age: 26, their_gender: "woman", their_place: "Oyo, Nigeria", their_connections: 4, their_reply_seconds: 140, their_tier: "country", their_name: null, their_photo: null, my_vote: null, they_voted: false, messages: 6, last_message: "Wait, you're into Afrobeats too?", last_from_them: true } : null,
     past: [
       { id: "p1", status: "lapsed", intent: "friends", hour_at: new Date(h.getTime() - 3 * 3600_000).toISOString(), reopened_at: null, their_alias: "Quiet Heron", their_age: 29, their_gender: "man", my_vote: true, last_message: "Haha same. Talk soon?" },
       { id: "p2", status: "active", intent: "dating", hour_at: new Date(h.getTime() - 26 * 3600_000).toISOString(), reopened_at: iso(3600), their_alias: "Wild Comet", their_age: 24, their_gender: "woman", my_vote: null, last_message: "You reopened the chat 👀" },
@@ -197,7 +199,7 @@ function ScreenBody({ screen }: { screen: string }) {
     case "people":
       return <div className="pb-24"><YourPeople matches={recent} myId="me" /><BottomNav /></div>;
     case "admin-prices":
-      return <AdminShell><PricesManager settings={{ reopen_cost: 10, reveal_cost: 1, free_reveals: 10 }}
+      return <AdminShell><PricesManager settings={{ reopen_cost: 10, reveal_cost: 1, free_reveals: 10, invite_reward: 10 }} invites={{ joined: 64, joined_7d: 12, buyers: 19, keys_paid: 410, top: [{ name: "Tolu", joined: 9, earned: 90 }, { name: "Kemi", joined: 6, earned: 40 }] }}
         gifts={[{ id: "fire", name: "Fire", emoji: "🔥", price: 5, sort: 1, retired: false }, { id: "rose", name: "Rose", emoji: "🌹", price: 5, sort: 2, retired: false }, { id: "jollof", name: "Jollof", emoji: "🍛", price: 15, sort: 5, retired: false }, { id: "teddy", name: "Teddy bear", emoji: "🧸", price: 30, sort: 91, retired: true }]}
         packs={[{ id: "p50", keys: 50, naira: 750, tag: null, sort: 1, active: true }, { id: "p150", keys: 150, naira: 2000, tag: "Popular", sort: 2, active: true }, { id: "p500", keys: 500, naira: 4500, tag: "Best value", sort: 3, active: true }]} /></AdminShell>;
     case "admin-masquerade": {

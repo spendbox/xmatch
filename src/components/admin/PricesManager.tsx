@@ -12,11 +12,12 @@ import { AdminTitle } from "./AdminShell";
 
 export type AdminGift = { id: string; name: string; emoji: string; price: number; sort: number; retired: boolean };
 export type AdminPack = { id: string; keys: number; naira: number; tag: string | null; sort: number; active: boolean };
-type Settings = { reopen_cost: number; reveal_cost: number; free_reveals: number };
+type Settings = { reopen_cost: number; reveal_cost: number; free_reveals: number; invite_reward: number };
+export type InviteStats = { joined: number; joined_7d: number; buyers: number; keys_paid: number; top: { name: string | null; joined: number; earned: number }[] };
 
 const input = "h-11 w-full rounded-xl border border-line-strong bg-surface px-3 text-[15px] outline-none focus:border-brand";
 
-export function PricesManager({ settings, gifts, packs }: { settings: Settings; gifts: AdminGift[]; packs: AdminPack[] }) {
+export function PricesManager({ settings, gifts, packs, invites = null }: { settings: Settings; gifts: AdminGift[]; packs: AdminPack[]; invites?: InviteStats | null }) {
   const router = useRouter();
   const [, start] = useTransition();
   const refresh = () => start(() => router.refresh());
@@ -33,6 +34,26 @@ export function PricesManager({ settings, gifts, packs }: { settings: Settings; 
           <SettingField k="free_reveals" label="Free reveals per event" hint="Default for new events" value={settings.free_reveals} keysIcon={false} />
         </div>
         <p className="mt-3 text-[12px] text-muted">Existing events keep their own reveal prices. Change them on the event itself.</p>
+      </section>
+
+      <section className="mt-6 rounded-3xl border border-line bg-surface p-5 shadow-card">
+        <h2 className="text-[16px] font-semibold">Invites</h2>
+        <p className="mt-1 text-[13px] text-muted">Members earn Keys every time a friend they invited buys Keys. Set it to 0 to pause rewards.</p>
+        <div className="mt-4 grid gap-3 lg:grid-cols-3">
+          <SettingField k="invite_reward" label="Reward per purchase" hint="Keys the inviter gets each time their friend buys any pack" value={settings.invite_reward} />
+          {invites && (
+            <div className="grid grid-cols-3 gap-2 rounded-2xl bg-cream p-4 text-center lg:col-span-2">
+              <div><p className="font-display text-[24px] font-semibold">{invites.joined}</p><p className="text-[12px] text-muted">joined by invite · {invites.joined_7d} this week</p></div>
+              <div><p className="font-display text-[24px] font-semibold">{invites.buyers}</p><p className="text-[12px] text-muted">of them bought Keys</p></div>
+              <div><p className="font-display text-[24px] font-semibold">{invites.keys_paid}</p><p className="text-[12px] text-muted">Keys paid as rewards</p></div>
+              {invites.top.length > 0 && (
+                <p className="col-span-3 mt-2 text-left text-[12px] text-muted">
+                  Top inviters: {invites.top.map((t) => `${t.name ?? "Someone"} (${t.joined})`).join(", ")}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
       </section>
 
       <section className="mt-6 rounded-3xl border border-line bg-surface p-5 shadow-card">

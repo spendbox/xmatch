@@ -3,12 +3,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
-import { BellRing, Handshake, MapPin, MessageCircle } from "lucide-react";
+import { BellRing, Gift, Handshake, MapPin, MessageCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { intentLabel } from "@/lib/constants";
 import { sexLabel } from "@/lib/eventSpace";
 import { clock, connectionsLabel, lagosHour, lagosTime, replyLabel, type MasqueradeHour } from "@/lib/hourly";
 import { usePushState } from "@/components/app/Notifications";
+import { useInvites, useShareInvite } from "@/components/profile/InviteCard";
 import { Toggle } from "@/components/ui/Toggle";
 import { tapFeedback } from "@/components/ui/Button";
 import { MaskIcon } from "@/components/ui/MaskIcon";
@@ -83,6 +84,8 @@ export function MasqueradeCard({
   const { hour, setHour, skew } = ctl;
   const [now, setNow] = useState<number | null>(null);
   const push = usePushState();
+  const invites = useInvites();
+  const { share, copied } = useShareInvite(invites);
 
   useEffect(() => {
     setNow(Date.now());
@@ -131,7 +134,11 @@ export function MasqueradeCard({
           <p className="text-[13px] text-white/75">
             {[cur.their_age, sexLabel(cur.their_gender), intentLabel(cur.intent)].filter(Boolean).join(" · ")}
           </p>
-          {cur.their_place && <p className="text-[12px] text-white/60">{cur.their_place}</p>}
+          {cur.their_place && (
+            <p className="text-[12px] text-white/60">
+              {cur.their_tier && cur.their_tier !== "state" ? `Nobody free nearby, so we found someone in ${cur.their_place}` : cur.their_place}
+            </p>
+          )}
           <div className="mt-3 flex justify-center gap-2 text-[11px] font-semibold">
             <span className="rounded-full bg-white/15 px-2.5 py-1">{connectionsLabel(cur.their_connections)}</span>
             <span className="rounded-full bg-white/15 px-2.5 py-1">{replyLabel(cur.their_reply_seconds)}</span>
@@ -189,6 +196,15 @@ export function MasqueradeCard({
           <p className="mt-1 font-display text-[56px] leading-none font-semibold tabular-nums lg:text-[72px]">
             {now ? clock(new Date(hour.next_at).getTime() - serverNow) : "··:··"}
           </p>
+          {hour.pulse && hour.pulse.all > 0 && (
+            <p className="mx-auto mt-3 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[12px] font-semibold">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#7dffb5] opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-[#7dffb5]" />
+              </span>
+              {pulseText(hour)}
+            </p>
+          )}
           <p className="mx-auto mt-3 max-w-xs text-[13px] leading-snug text-white/80">
             {cur?.status === "ended" || cur?.status === "lapsed"
               ? "This hour's chat is done. Someone new is coming."
@@ -199,6 +215,20 @@ export function MasqueradeCard({
                   : "We pair everyone on the hour."}
           </p>
         </div>
+      )}
+
+      {hour && enabled && !live && cur?.status !== "matched" && (
+        <button
+          type="button"
+          onClick={share}
+          className="relative mt-5 flex w-full items-center gap-2.5 rounded-2xl bg-white/12 px-4 py-3 text-left text-[13px] transition hover:bg-white/20"
+        >
+          <Gift size={17} className="shrink-0" />
+          <span className="min-w-0 flex-1">
+            <span className="font-semibold">{copied ? "Link copied!" : "While you wait: invite friends"}</span>
+            <span className="text-white/75"> · earn {hour.invite_reward ?? 10} Keys each time they buy Keys</span>
+          </span>
+        </button>
       )}
 
       {hour && (enabled || live) && push.state === "off" && (
@@ -246,4 +276,13 @@ function Face({ alias, small }: { alias: string; small?: boolean }) {
       <MaskIcon className={clsx("text-white", small ? "w-8" : "w-12")} eyes={nameColor(alias)} />
     </span>
   );
+}
+
+/** "128 people masking up in Lagos" */
+function pulseText(h: MasqueradeHour) {
+  const p = h.pulse!;
+  const when = h.hour_open ? "this hour" : "today";
+  if (p.region >= 3 && p.region_name) return `${p.region} people masking up in ${p.region_name} ${when}`;
+  if (p.country >= 3) return `${p.country} people masking up in your country ${when}`;
+  return `${p.all} ${p.all === 1 ? "person" : "people"} masking up ${when}`;
 }

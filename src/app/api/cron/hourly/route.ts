@@ -4,8 +4,8 @@ import { pushToUsers } from "@/lib/push";
 import { intentLabel } from "@/lib/constants";
 import type { Intent } from "@/lib/types";
 
-// Called at the top of every hour by a scheduled job in Supabase (see the database setup page),
-// with "Authorization: Bearer CRON_SECRET". Pairs everyone for the hour, then tells each new pair.
+// Called every 5 minutes by a scheduled job in Supabase (see the database setup page),
+// with "Authorization: Bearer CRON_SECRET". Pairs everyone at the top of the hour, tells each new pair, and nudges quiet chats.
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
@@ -38,7 +38,24 @@ async function handle(req: Request) {
     );
     sent += res.reduce((n, r) => n + r.sent, 0);
   }
-  return NextResponse.json({ ok: true, made, told: pairs.length, sent });
+  // Nudge whoever has gone quiet in a live chat (once per chat)
+  const { data: quiet } = await db.rpc("sessions_to_nudge");
+  const nudges = (quiet ?? []) as { session_id: string; user_id: string; other_alias: string; ends_at: string }[];
+  await Promise.all(
+    nudges.map((n) =>
+      pushToUsers(
+        [n.user_id],
+        {
+          title: `${n.other_alias} is waiting for you 👀`,
+          body: `Your masked chat ends at ${new Date(n.ends_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: "Africa/Lagos" })}. Say something before the hour is up.`,
+          url: `/masquerade/${n.session_id}`,
+          tag: `pair-${n.session_id}`,
+        },
+        { skipIfActive: true },
+      ),
+    ),
+  );
+  return NextResponse.json({ ok: true, made, told: pairs.length, sent, nudged: nudges.length });
 }
 
 export const GET = handle;

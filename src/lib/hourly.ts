@@ -15,6 +15,8 @@ export type HourPair = {
   their_place?: string | null;
   their_connections?: number;
   their_reply_seconds?: number | null;
+  /** How close they are: same state, country, continent, or anywhere */
+  their_tier?: "state" | "country" | "continent" | "world" | null;
   their_name: string | null;
   their_photo: string | null;
   my_vote: boolean | null;
@@ -46,6 +48,9 @@ export type MasqueradeHour = {
   hour_ran: boolean;
   pairs_this_hour: number;
   next_at: string;
+  /** People switched on and active today: everywhere, in your country, in your state */
+  pulse?: { all: number; country: number; region: number; region_name: string | null };
+  invite_reward?: number;
   current: HourPair | null;
   past: PastPair[];
 };
@@ -92,7 +97,7 @@ export function whenPaired(iso: string, now = Date.now()) {
 /** "Replies in minutes" etc., from someone's usual reply time */
 export function replyLabel(secs: number | null | undefined) {
   if (secs == null) return "New here";
-  if (secs < 5 * 60) return "Replies in minutes";
+  if (secs < 5 * 60) return "⚡ Replies in minutes";
   if (secs < 60 * 60) return "Replies within the hour";
   if (secs < 6 * 3600) return "Replies in a few hours";
   return "Slow to reply";

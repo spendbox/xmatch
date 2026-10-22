@@ -4052,3 +4052,341 @@ language sql stable security definer set search_path = public as $$
   )
 $$;
 revoke execute on function public.admin_masquerade_stats() from public, anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Invites, nudges for quiet chats, the live pulse, closest-first notes,
+-- and quick repliers getting paired first
+-- ---------------------------------------------------------------------------
+insert into public.app_settings (key, value) values ('invite_reward', 10) on conflict (key) do nothing;
+
+-- Invite codes and who invited whom are private: only these functions read them
+create table if not exists public.invite_codes (
+  user_id uuid primary key references public.profiles on delete cascade,
+  code text not null unique,
+  created_at timestamptz not null default now()
+);
+alter table public.invite_codes enable row level security;
+
+create table if not exists public.referrals (
+  invitee uuid primary key references public.profiles on delete cascade,
+  inviter uuid not null references public.profiles on delete cascade,
+  created_at timestamptz not null default now()
+);
+create index if not exists referrals_inviter on public.referrals (inviter);
+alter table public.referrals enable row level security;
+
+create table if not exists public.referral_rewards (
+  id bigint generated always as identity primary key,
+  inviter uuid not null references public.profiles on delete cascade,
+  invitee uuid references public.profiles on delete set null,
+  payment_ref text not null unique,
+  keys int not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists referral_rewards_inviter on public.referral_rewards (inviter);
+alter table public.referral_rewards enable row level security;
+
+-- Your invite link code (made the first time you ask) and how your invites are doing.
+-- Anonymous: you see Friend 1, Friend 2, never names.
+create or replace function public.my_invites() returns json
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  c text;
+begin
+  if uid is null then return null; end if;
+  select code into c from invite_codes where user_id = uid;
+  while c is null loop
+    c := upper(substr(md5(random()::text || clock_timestamp()::text || uid::text), 1, 7));
+    begin
+      if char_length(c) = 7 then
+        insert into invite_codes (user_id, code) values (uid, c);
+      else
+        c := null;
+      end if;
+    exception when unique_violation then c := null;
+    end;
+  end loop;
+  return json_build_object(
+    'code', c,
+    'reward', public.setting_int('invite_reward', 10),
+    'joined', (select count(*) from referrals where inviter = uid),
+    'bought', (select count(distinct invitee) from referral_rewards where inviter = uid),
+    'earned', coalesce((select sum(keys) from referral_rewards where inviter = uid), 0),
+    'friends', coalesce((select json_agg(json_build_object(
+        'n', t.n, 'joined_at', t.created_at, 'purchases', t.purchases, 'earned', t.earned) order by t.n desc)
+      from (select row_number() over (order by r.created_at) as n, r.created_at,
+              (select count(*) from referral_rewards w where w.invitee = r.invitee and w.inviter = uid) as purchases,
+              coalesce((select sum(keys) from referral_rewards w where w.invitee = r.invitee and w.inviter = uid), 0) as earned
+            from referrals r where r.inviter = uid) t), '[]'::json)
+  );
+end $$;
+
+-- New members who arrived through an invite link claim it once, within their first two weeks
+create or replace function public.claim_invite(p_code text) returns boolean
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  inv uuid;
+begin
+  if uid is null or p_code is null then return false; end if;
+  select user_id into inv from invite_codes where code = upper(btrim(p_code));
+  if inv is null or inv = uid then return false; end if;
+  if exists (select 1 from referrals where invitee = uid) then return false; end if;
+  if (select created_at from profiles where id = uid) < now() - interval '14 days' then return false; end if;
+  insert into referrals (invitee, inviter) values (uid, inv) on conflict do nothing;
+  return true;
+end $$;
+
+create or replace function public.complete_payment(p_reference text, p_amount_kobo int) returns text
+language plpgsql security definer set search_path = public as $$
+declare
+  p payments;
+  inv uuid;
+  reward int;
+begin
+  select * into p from payments where reference = p_reference for update;
+  if not found then return 'unknown'; end if;
+  if p.status = 'paid' then return 'already_paid'; end if;
+  if p_amount_kobo < p.amount_kobo then
+    update payments set status = 'failed' where reference = p_reference;
+    return 'amount_mismatch';
+  end if;
+  update payments set status = 'paid', paid_at = now() where reference = p_reference;
+  perform public.add_keys(p.user_id, p.keys, 'purchase', p_reference);
+  -- Whoever invited them earns Keys on every purchase
+  select inviter into inv from referrals where invitee = p.user_id;
+  reward := public.setting_int('invite_reward', 10);
+  if inv is not null and reward > 0 then
+    insert into referral_rewards (inviter, invitee, payment_ref, keys) values (inv, p.user_id, p_reference, reward)
+    on conflict (payment_ref) do nothing;
+    if found then perform public.add_keys(inv, reward, 'invite', p_reference); end if;
+  end if;
+  return 'paid';
+end $$;
+
+-- Admin: invite totals (only the server calls this)
+create or replace function public.admin_invite_stats() returns json
+language sql stable security definer set search_path = public as $$
+  select json_build_object(
+    'joined', (select count(*) from referrals),
+    'joined_7d', (select count(*) from referrals where created_at > now() - interval '7 days'),
+    'buyers', (select count(distinct invitee) from referral_rewards),
+    'keys_paid', coalesce((select sum(keys) from referral_rewards), 0),
+    'top', coalesce((select json_agg(t) from (
+        select p.display_name as name, count(*) as joined,
+          coalesce((select sum(keys) from referral_rewards w where w.inviter = r.inviter), 0) as earned
+        from referrals r join profiles p on p.id = r.inviter
+        group by r.inviter, p.display_name order by count(*) desc limit 5) t), '[]'::json)
+  )
+$$;
+revoke execute on function public.admin_invite_stats() from public, anon, authenticated;
+
+-- Nudge whoever has gone quiet in a live hourly chat (once each per chat; only the server calls this)
+alter table public.masquerade_sessions add column if not exists nudged_a timestamptz;
+alter table public.masquerade_sessions add column if not exists nudged_b timestamptz;
+
+create or replace function public.sessions_to_nudge() returns json
+language plpgsql security definer set search_path = public as $$
+declare
+  out json;
+begin
+  with live as (
+    select s.*,
+      (select max(created_at) from masquerade_messages m where m.session_id = s.id and m.sender_id = s.user_a and m.kind in ('text', 'gift')) as last_a,
+      (select max(created_at) from masquerade_messages m where m.session_id = s.id and m.sender_id = s.user_b and m.kind in ('text', 'gift')) as last_b
+    from masquerade_sessions s
+    where s.hour_at is not null and s.status = 'active' and s.reopened_at is null
+      and now() < s.ends_at - interval '5 minutes'
+      and s.started_at < now() - interval '10 minutes'
+  ), pick as (
+    select id, user_a as who, alias_b as other_alias, ends_at, 'a' as side from live
+    where nudged_a is null and (
+      (last_a is null and (last_b is null or last_b < now() - interval '10 minutes'))
+      or (last_b is not null and last_b > coalesce(last_a, '-infinity') and last_b < now() - interval '10 minutes'))
+    union all
+    select id, user_b, alias_a, ends_at, 'b' from live
+    where nudged_b is null and (
+      (last_b is null and (last_a is null or last_a < now() - interval '10 minutes'))
+      or (last_a is not null and last_a > coalesce(last_b, '-infinity') and last_a < now() - interval '10 minutes'))
+  ), mark_a as (
+    update masquerade_sessions s set nudged_a = now() from pick where pick.id = s.id and pick.side = 'a' returning s.id
+  ), mark_b as (
+    update masquerade_sessions s set nudged_b = now() from pick where pick.id = s.id and pick.side = 'b' returning s.id
+  )
+  select coalesce(json_agg(json_build_object('session_id', id, 'user_id', who, 'other_alias', other_alias, 'ends_at', ends_at)), '[]'::json)
+  into out from pick
+  where (select count(*) from mark_a) + (select count(*) from mark_b) >= 0;
+  return out;
+end $$;
+revoke execute on function public.sessions_to_nudge() from public, anon, authenticated;
+
+create or replace function public.run_hourly_pairing() returns int
+language plpgsql security definer set search_path = public as $$
+declare
+  h timestamptz := date_trunc('hour', now());
+  r record;
+  partner record;
+  sid uuid;
+  a1 text;
+  q text;
+  n int := 0;
+  lvl smallint;
+begin
+  -- Close chats from hours that have ended
+  for r in select id from masquerade_sessions
+           where hour_at is not null and status = 'active' and reopened_at is null and ends_at <= now() loop
+    perform public.finalize_masquerade(r.id);
+  end loop;
+
+  if not public.pairing_hour_open(h) then return 0; end if;
+  perform pg_advisory_xact_lock(515151);
+  if exists (select 1 from masquerade_hours where hour_at = h) then return 0; end if;
+  insert into masquerade_hours (hour_at) values (h);
+  -- Too late in the hour to start a fair chat: wait for the next one
+  if now() > h + interval '45 minutes' then
+    update masquerade_hours set note = 'late' where hour_at = h;
+    return 0;
+  end if;
+
+  drop table if exists pg_temp.hour_pool;
+  create temp table hour_pool on commit drop as
+    select p.id, p.gender, p.pref_intent, p.pref_seeking, p.pref_age_min, p.pref_age_max, p.pref_spice,
+      p.interests, public.age_years(p.birthdate) as age, p.place_country, p.place_region, p.place_continent,
+      coalesce(public.reply_seconds(p.id), 1800) as rs, random() as rnd
+    from profiles p
+    left join accounts_private a on a.user_id = p.id
+    where p.open_to_masquerade
+      and p.last_seen_at > now() - interval '24 hours'
+      and p.display_name is not null and p.birthdate is not null and p.gender is not null
+      and cardinality(p.photos) > 0
+      and a.banned_at is null;
+
+  update masquerade_hours set eligible = (select count(*) from hour_pool) where hour_at = h;
+
+  -- Quick repliers choose first, so they get the best fits
+  for r in select * from hour_pool order by rs, rnd loop
+    continue when not exists (select 1 from hour_pool where id = r.id);
+    select c.* into partner from hour_pool c
+    where c.id <> r.id
+      and c.pref_intent = r.pref_intent
+      and public.gender_fits(r.pref_seeking, c.gender) and public.gender_fits(c.pref_seeking, r.gender)
+      and c.age between r.pref_age_min and r.pref_age_max
+      and r.age between c.pref_age_min and c.pref_age_max
+      and not public.is_blocked(r.id, c.id)
+      and not public.already_matched(r.id, c.id)
+      -- New people every time (a pair that never talked can meet again)
+      and not exists (select 1 from masquerade_sessions s
+                      where s.hour_at is not null
+                        and ((s.user_a = r.id and s.user_b = c.id) or (s.user_a = c.id and s.user_b = r.id))
+                        and not (s.status = 'ended' and s.ended_reason = 'quiet'))
+    -- Closest first: same state, then same country, then same continent, then anywhere
+    order by (c.place_country = r.place_country and c.place_region = r.place_region) desc nulls last,
+      (c.place_country = r.place_country) desc nulls last,
+      (c.place_continent = r.place_continent) desc nulls last,
+      public.shared_count(r.interests, c.interests) desc,
+      (c.rs < 600) desc, c.rs, c.rnd
+    limit 1;
+    continue when not found;
+
+    a1 := public.random_alias();
+    lvl := round((r.pref_spice + partner.pref_spice) / 2.0)::smallint;
+    insert into masquerade_sessions (user_a, user_b, intent, spice_a, spice_b, spice_level, alias_a, alias_b, started_at, ends_at, hour_at)
+    values (r.id, partner.id, r.pref_intent, r.pref_spice, partner.pref_spice, lvl, a1, public.random_alias(a1), now(), h + interval '1 hour', h)
+    returning id into sid;
+    q := public.pick_icebreaker(sid, lvl, null);
+    if q is not null then
+      insert into masquerade_messages (session_id, kind, body) values (sid, 'icebreaker', q);
+    end if;
+    delete from hour_pool where id in (r.id, partner.id);
+    n := n + 1;
+  end loop;
+
+  update masquerade_hours set pairs = n where hour_at = h;
+  return n;
+end $$;
+
+create or replace function public.my_masquerade_hour() returns json
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  h timestamptz := date_trunc('hour', now());
+  me profiles;
+  cur masquerade_sessions;
+  i_a boolean;
+  op profiles;
+begin
+  if uid is null then return null; end if;
+  perform public.ensure_hourly_pairing();
+  select * into me from profiles where id = uid;
+  select * into cur from masquerade_sessions
+  where hour_at = h and (user_a = uid or user_b = uid)
+  order by started_at desc limit 1;
+  i_a := cur.user_a = uid;
+  if cur.id is not null then
+    select * into op from profiles where id = case when i_a then cur.user_b else cur.user_a end;
+  end if;
+
+  return json_build_object(
+    'enabled', me.open_to_masquerade,
+    'has_place', me.place_country is not null,
+    'server_now', now(),
+    'hour_at', h,
+    'hour_open', public.pairing_hour_open(h),
+    'hour_ran', exists (select 1 from masquerade_hours where hour_at = h),
+    'pairs_this_hour', coalesce((select pairs from masquerade_hours where hour_at = h), 0),
+    'next_at', public.next_pairing_at(now()),
+    'pulse', (select json_build_object(
+        'all', count(*),
+        'country', count(*) filter (where me.place_country is not null and p.place_country = me.place_country),
+        'region', count(*) filter (where me.place_region is not null and p.place_country = me.place_country and p.place_region = me.place_region),
+        'region_name', me.place_region)
+      from profiles p left join accounts_private a on a.user_id = p.id
+      where p.open_to_masquerade and p.id <> uid and p.last_seen_at > now() - interval '24 hours' and a.banned_at is null),
+    'invite_reward', public.setting_int('invite_reward', 10),
+    'current', case when cur.id is null then null else json_build_object(
+      'id', cur.id, 'status', cur.status, 'intent', cur.intent, 'ends_at', cur.ends_at, 'match_id', cur.match_id,
+      'my_alias', case when i_a then cur.alias_a else cur.alias_b end,
+      'their_alias', case when i_a then cur.alias_b else cur.alias_a end,
+      'their_age', public.age_years(op.birthdate), 'their_gender', op.gender, 'their_place', op.place_label,
+      'their_connections', (select count(*) from matches x where op.id in (x.user_a, x.user_b)),
+      'their_reply_seconds', public.reply_seconds(op.id),
+      'their_tier', case
+        when me.place_country is null or op.place_country is null then null
+        when op.place_country = me.place_country and op.place_region = me.place_region then 'state'
+        when op.place_country = me.place_country then 'country'
+        when op.place_continent = me.place_continent then 'continent'
+        else 'world' end,
+      'their_name', case when cur.status = 'matched' then op.display_name end,
+      'their_photo', case when cur.status = 'matched' then op.photos[1] end,
+      'my_vote', case when i_a then cur.unmask_a else cur.unmask_b end,
+      'they_voted', (case when i_a then cur.unmask_b else cur.unmask_a end) is not null,
+      'messages', (select count(*) from masquerade_messages m where m.session_id = cur.id and m.kind in ('text', 'gift')),
+      'last_message', (select body from masquerade_messages m where m.session_id = cur.id and m.kind = 'text' order by m.id desc limit 1),
+      'last_from_them', (select m.sender_id <> uid from masquerade_messages m where m.session_id = cur.id and m.kind = 'text' order by m.id desc limit 1)
+    ) end,
+    'past', coalesce((
+      select json_agg(row_to_json(t) order by t.sort_at desc) from (
+        select s.id, s.status, s.intent, s.hour_at, s.reopened_at, coalesce(s.reopened_at, s.started_at) as sort_at,
+          case when s.user_a = uid then s.alias_b else s.alias_a end as their_alias,
+          public.age_years(p.birthdate) as their_age, p.gender as their_gender,
+          case when s.user_a = uid then s.unmask_a else s.unmask_b end as my_vote,
+          (select body from masquerade_messages m where m.session_id = s.id and m.kind = 'text' order by m.id desc limit 1) as last_message
+        from masquerade_sessions s
+        join profiles p on p.id = case when s.user_a = uid then s.user_b else s.user_a end
+        where (s.user_a = uid or s.user_b = uid) and s.hour_at is not null
+          and (s.status = 'lapsed' or (s.status = 'active' and s.reopened_at is not null))
+          and not public.is_blocked(s.user_a, s.user_b)
+        order by coalesce(s.reopened_at, s.started_at) desc
+        limit 30
+      ) t), '[]'::json)
+  );
+end $$;
+
+-- Run the notify job every 5 minutes (new pairs and nudges). Skipped quietly if part 18 was not run.
+do $$
+begin
+  if exists (select 1 from pg_extension where extname = 'pg_cron') then
+    perform cron.alter_job(jobid, schedule := '*/5 * * * *') from cron.job where jobname = 'dashpad-hourly-notify';
+  end if;
+end $$;

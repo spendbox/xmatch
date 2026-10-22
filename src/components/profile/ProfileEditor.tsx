@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/client";
 import { uploadPhoto, deletePhoto } from "@/lib/photos";
 import { ageFromBirthdate, GENDERS } from "@/lib/constants";
 import { replyLabel } from "@/lib/hourly";
+import { InviteCard } from "./InviteCard";
 import { plural, word } from "@/lib/plural";
 import type { Profile } from "@/lib/types";
 import { logOut } from "@/app/(auth)/actions";
@@ -192,6 +193,8 @@ export function ProfileEditor({
             </div>
           </section>
 
+          <InviteCard />
+
           <section className="mt-3 flex items-center gap-4 rounded-3xl border border-line bg-surface p-4 shadow-card">
             <div className="relative grid h-14 w-14 shrink-0 place-items-center">
               <svg viewBox="0 0 52 52" className="absolute inset-0 -rotate-90">
@@ -282,7 +285,7 @@ export function ProfileEditor({
               <p className="mt-3 flex items-center justify-between text-[15px] font-semibold">
                 Who you meet <ChevronRight size={18} className="text-muted" />
               </p>
-              <p className="mt-0.5 text-[13px] leading-snug text-muted">Intent, spice, distance and who</p>
+              <p className="mt-0.5 text-[13px] leading-snug text-muted">Mood, spice, where you are and who</p>
             </Link>
           </div>
 
@@ -294,7 +297,7 @@ export function ProfileEditor({
             <KeyCoin size={48} className="relative" />
             <div className="relative flex-1">
               <p className="font-semibold">Keys</p>
-              <p className="text-[13px] text-ink/70">Gifts, +2 minutes and extra masquerades</p>
+              <p className="text-[13px] text-ink/70">Gifts, reopening past pairs and more</p>
             </div>
             <span className="relative inline-flex items-center gap-1 rounded-full bg-white/40 px-3 py-1.5 text-[13px] font-bold">
               Get Keys <ChevronRight size={15} />
