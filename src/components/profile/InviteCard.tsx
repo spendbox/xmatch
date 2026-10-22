@@ -67,7 +67,7 @@ export function InviteCard() {
         <div className="min-w-0 flex-1">
           <p className="text-[15px] font-semibold">Invite friends</p>
           <p className="text-[13px] leading-snug text-muted">
-            Earn <span className="font-semibold text-ink">{inv?.reward ?? 10} Keys</span> when a friend you invite makes their first purchase.
+            Get a one-time <span className="font-semibold text-ink">{inv?.reward ?? 10} Keys</span> for each friend you invite, once they make their first purchase.
           </p>
         </div>
       </div>

@@ -40,7 +40,7 @@ export function PricesManager({ settings, gifts, packs, invites = null }: { sett
         <h2 className="text-[16px] font-semibold">Invites</h2>
         <p className="mt-1 text-[13px] text-muted">Members earn Keys when a friend they invited makes their first purchase. Set it to 0 to pause rewards.</p>
         <div className="mt-4 grid gap-3 lg:grid-cols-3">
-          <SettingField k="invite_reward" label="Invite reward" hint="Keys the inviter gets when their friend buys Keys for the first time" value={settings.invite_reward} />
+          <SettingField k="invite_reward" label="Invite reward" hint="One-time Keys the inviter gets per friend, on that friend's first purchase only" value={settings.invite_reward} />
           {invites && (
             <div className="grid grid-cols-3 gap-2 rounded-2xl bg-cream p-4 text-center lg:col-span-2">
               <div><p className="font-display text-[24px] font-semibold">{invites.joined}</p><p className="text-[12px] text-muted">joined by invite · {invites.joined_7d} this week</p></div>
