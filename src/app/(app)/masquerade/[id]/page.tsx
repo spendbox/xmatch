@@ -14,7 +14,7 @@ export default async function RoomPage({ params }: { params: Promise<{ id: strin
   if (!state) notFound();
 
   const [{ data: messages }, { data: eventId }] = await Promise.all([
-    supabase.from("masquerade_messages").select("id, sender_id, kind, body, created_at, reply_to").eq("session_id", id).order("id"),
+    supabase.from("masquerade_messages").select("*").eq("session_id", id).order("id"),
     supabase.rpc("session_event", { p_session: id }),
   ]);
 

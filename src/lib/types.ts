@@ -58,7 +58,7 @@ export type MasqueradeState = {
   };
 };
 
-export type MessageKind = "text" | "icebreaker" | "image" | "video" | "audio" | "call" | "gift" | "system";
+export type MessageKind = "text" | "icebreaker" | "image" | "video" | "audio" | "call" | "gift" | "system" | "game";
 
 export type MediaMeta = {
   width?: number;
@@ -68,6 +68,17 @@ export type MediaMeta = {
   call?: "audio" | "video";
   seconds?: number;
   gift?: string;
+  /** Game result cards */
+  game?: string;
+  kind?: string;
+  a?: string;
+  b?: string;
+  sa?: number;
+  sb?: number;
+  winner?: string | null;
+  status?: string;
+  reason?: string | null;
+  by?: string | null;
 };
 
 export type ChatMessage = {

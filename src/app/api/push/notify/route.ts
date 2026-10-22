@@ -11,7 +11,7 @@ import type { Intent } from "@/lib/types";
  * send a message, start a call, say hi at an event, or keep an event chat.
  * We check it really was you, then notify the other person.
  */
-type Body = { kind?: string; matchId?: string; callId?: string; chatId?: string; answerId?: string; sessionId?: string };
+type Body = { kind?: string; matchId?: string; callId?: string; chatId?: string; answerId?: string; sessionId?: string; gameId?: string };
 
 const RECENT_MS = 60_000;
 const firstName = (n: string | null | undefined) => (n ?? "").split(" ")[0] || "Someone";
@@ -111,6 +111,39 @@ export async function POST(req: Request) {
       body: "They want to pick up where you left off. Still masked, until you both decide.",
       url: `/masquerade/${s.id}`,
       tag: `pair-${s.id}`,
+    });
+    return ok;
+  }
+
+  // You challenged someone to a game in a chat
+  if (b.kind === "game_invite" && b.gameId) {
+    const { data: g } = await db
+      .from("games")
+      .select("id, kind, player_a, player_b, status, session_id, match_id, created_at")
+      .eq("id", b.gameId)
+      .maybeSingle();
+    if (!g || g.player_a !== uid || g.status !== "invited" || Date.now() - new Date(g.created_at as string).getTime() > 30_000) return ok;
+    const title = ({ truths: "Two Truths & a Lie", tot: "This or That", c4: "Connect 4", words: "Word Hunt" } as Record<string, string>)[g.kind as string] ?? "a game";
+    let who = "Someone";
+    let url = "/home";
+    let icon: string | null = null;
+    if (g.session_id) {
+      const { data: s } = await db.from("masquerade_sessions").select("user_a, alias_a, alias_b").eq("id", g.session_id).single();
+      who = s ? (s.user_a === uid ? s.alias_a : s.alias_b) : who;
+      url = `/masquerade/${g.session_id}`;
+    } else {
+      const { data: me } = await db.from("profiles").select("display_name, photos").eq("id", uid).single();
+      who = firstName(me?.display_name);
+      icon = (me?.photos as string[] | null)?.[0] ?? null;
+      url = `/matches/${g.match_id}`;
+    }
+    await pushToUsers([g.player_b as string], {
+      title: `${who} challenged you 🎮`,
+      body: `${title}. You have 30 seconds to accept.`,
+      url,
+      tag: `game-${g.id}`,
+      icon,
+      requireInteraction: true,
     });
     return ok;
   }

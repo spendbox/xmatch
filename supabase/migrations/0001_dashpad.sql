@@ -894,11 +894,11 @@ alter table public.messages add constraint messages_content_check check (
   char_length(body) <= 2000 and (
     (kind = 'text' and (char_length(body) >= 1 or deleted_at is not null))
     or (kind in ('image', 'video', 'audio') and (media_path is not null or deleted_at is not null))
-    or kind in ('call', 'gift')
+    or kind in ('call', 'gift', 'game')
   )
 );
 alter table public.messages drop constraint if exists messages_kind_check;
-alter table public.messages add constraint messages_kind_check check (kind in ('text', 'image', 'video', 'audio', 'call', 'gift'));
+alter table public.messages add constraint messages_kind_check check (kind in ('text', 'image', 'video', 'audio', 'call', 'gift', 'game'));
 
 -- Replies in the masked chat too
 alter table public.masquerade_messages add column if not exists reply_to bigint references public.masquerade_messages (id) on delete set null;
@@ -1263,16 +1263,16 @@ insert into public.gifts (id, name, emoji, price, sort) values
 on conflict (id) do update set name = excluded.name, emoji = excluded.emoji, price = excluded.price, sort = excluded.sort;
 
 alter table public.masquerade_messages drop constraint if exists masquerade_messages_kind_check;
-alter table public.masquerade_messages add constraint masquerade_messages_kind_check check (kind in ('text', 'icebreaker', 'gift', 'system'));
+alter table public.masquerade_messages add constraint masquerade_messages_kind_check check (kind in ('text', 'icebreaker', 'gift', 'system', 'game'));
 
 alter table public.messages drop constraint if exists messages_kind_check;
-alter table public.messages add constraint messages_kind_check check (kind in ('text', 'image', 'video', 'audio', 'call', 'gift'));
+alter table public.messages add constraint messages_kind_check check (kind in ('text', 'image', 'video', 'audio', 'call', 'gift', 'game'));
 alter table public.messages drop constraint if exists messages_content_check;
 alter table public.messages add constraint messages_content_check check (
   char_length(body) <= 2000 and (
     (kind = 'text' and (char_length(body) >= 1 or deleted_at is not null))
     or (kind in ('image', 'video', 'audio') and (media_path is not null or deleted_at is not null))
-    or kind in ('call', 'gift')
+    or kind in ('call', 'gift', 'game')
   )
 );
 
@@ -4390,3 +4390,858 @@ begin
     perform cron.alter_job(jobid, schedule := '*/5 * * * *') from cron.job where jobname = 'dashpad-hourly-notify';
   end if;
 end $$;
+
+-- ---------------------------------------------------------------------------
+-- Part 22: Games in chats (Two Truths and a Lie, This or That, Connect 4, Word Hunt)
+-- Played in hourly masked chats, reopened pairs and chats with your people.
+-- Every move goes through the functions below, so the server checks the rules.
+-- ---------------------------------------------------------------------------
+create table if not exists public.games (
+  id uuid primary key default gen_random_uuid(),
+  kind text not null check (kind in ('truths', 'tot', 'c4', 'words')),
+  session_id uuid references public.masquerade_sessions on delete cascade,
+  match_id uuid references public.matches on delete cascade,
+  player_a uuid not null references public.profiles on delete cascade, -- the challenger
+  player_b uuid not null references public.profiles on delete cascade,
+  status text not null default 'invited' check (status in ('invited', 'active', 'done', 'declined', 'expired', 'cancelled')),
+  state jsonb not null default '{}'::jsonb, -- what both players may see
+  score_a int not null default 0,
+  score_b int not null default 0,
+  winner uuid,
+  ended_by uuid,
+  ended_reason text,
+  deadline_at timestamptz, -- when the current step runs out
+  created_at timestamptz not null default now(),
+  started_at timestamptz,
+  ended_at timestamptz,
+  rematch_of uuid references public.games on delete set null,
+  check ((session_id is null) <> (match_id is null))
+);
+create index if not exists games_session on public.games (session_id, created_at desc);
+create index if not exists games_match on public.games (match_id, created_at desc);
+create index if not exists games_created on public.games (created_at desc);
+create unique index if not exists games_one_live_session on public.games (session_id) where status in ('invited', 'active') and session_id is not null;
+create unique index if not exists games_one_live_match on public.games (match_id) where status in ('invited', 'active') and match_id is not null;
+
+-- Hidden parts of a game (your lie, your picks, your words) until it is time to show them
+create table if not exists public.game_secrets (
+  game_id uuid not null references public.games on delete cascade,
+  user_id uuid not null references public.profiles on delete cascade,
+  data jsonb not null default '{}'::jsonb,
+  primary key (game_id, user_id)
+);
+
+alter table public.games enable row level security;
+alter table public.game_secrets enable row level security;
+drop policy if exists "players read games" on public.games;
+create policy "players read games" on public.games for select
+  using (player_a = auth.uid() or player_b = auth.uid());
+
+do $$
+begin
+  alter publication supabase_realtime add table public.games;
+exception when duplicate_object then null;
+end $$;
+
+-- This or That questions and Two Truths idea chips (managed in Admin)
+create table if not exists public.tot_questions (
+  id serial primary key,
+  prompt text not null,
+  a text not null,
+  b text not null,
+  spice smallint not null default 0 check (spice between 0 and 3),
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  unique (a, b)
+);
+create table if not exists public.truth_ideas (
+  id serial primary key,
+  body text not null unique,
+  active boolean not null default true
+);
+alter table public.tot_questions enable row level security;
+alter table public.truth_ideas enable row level security;
+drop policy if exists "read tot questions" on public.tot_questions;
+create policy "read tot questions" on public.tot_questions for select using (auth.role() = 'authenticated');
+drop policy if exists "read truth ideas" on public.truth_ideas;
+create policy "read truth ideas" on public.truth_ideas for select using (auth.role() = 'authenticated' and active);
+
+insert into public.tot_questions (prompt, a, b, spice) values
+  ('Perfect Saturday night?', 'Owambe till 4am', 'Netflix and suya', 0),
+  ('Pick one forever', 'Jollof rice', 'Fried rice', 0),
+  ('Morning person or night owl?', 'Up with the sun', 'Up till 3am', 0),
+  ('Dream holiday', 'Beach in Zanzibar', 'Snow in Switzerland', 0),
+  ('Your phone is on', 'Loud', 'Silent', 0),
+  ('Better first date', 'Dinner', 'Arcade and games', 0),
+  ('Texting style', 'Long paragraphs', 'Voice notes', 0),
+  ('Which would you rather be', 'Famous', 'Rich and unknown', 0),
+  ('Afrobeats or Amapiano?', 'Afrobeats', 'Amapiano', 0),
+  ('Pick a drink', 'Chapman', 'Zobo', 0),
+  ('Weekend plan', 'Stay home', 'Go out', 0),
+  ('Pets', 'Dogs', 'Cats', 0),
+  ('Your money goes on', 'Food', 'Clothes', 0),
+  ('In a group chat you are', 'The one who replies first', 'The silent reader', 0),
+  ('Pick a superpower', 'Fly', 'Read minds', 0),
+  ('Rather live in', 'Lagos', 'Abuja', 0),
+  ('Breakfast', 'Akara and pap', 'Tea and bread', 0),
+  ('Movies', 'Nollywood', 'Hollywood', 0),
+  ('Rather have', 'More time', 'More money', 0),
+  ('When you travel', 'Plan everything', 'Go with the flow', 0),
+  ('Pick a season', 'Rainy season', 'Harmattan', 0),
+  ('Football or basketball?', 'Football', 'Basketball', 0),
+  ('Your vibe at a party', 'On the dance floor', 'By the food', 0),
+  ('Rather give up', 'Social media', 'Music', 0),
+  ('Pick a snack', 'Chin chin', 'Plantain chips', 0),
+  ('Calls or texts?', 'Calls', 'Texts', 0),
+  ('Rather be', 'Too early', 'Fashionably late', 0),
+  ('Pick a gift', 'Something handmade', 'Something expensive', 0),
+  ('Workout', 'Gym', 'Dance', 0),
+  ('Rather visit', 'The past', 'The future', 0),
+  ('Your playlist', 'Old school', 'Brand new hits', 0),
+  ('Pick a pepper level', 'Mild please', 'Make me cry', 0),
+  ('Who pays on a first date?', 'Whoever asked', 'Split it', 1),
+  ('Love language', 'Words', 'Touch', 1),
+  ('Rather date someone', 'Funny', 'Smart', 1),
+  ('First move', 'I make it', 'I wait for it', 1),
+  ('Ideal partner', 'Calm and quiet', 'Loud and fun', 1),
+  ('Rather get', 'Flowers', 'Food', 1),
+  ('Long distance?', 'I could do it', 'Never', 1),
+  ('Dating app bio', 'Short and sweet', 'Tell me everything', 1),
+  ('Red flag', 'Bad texter', 'Rude to waiters', 1),
+  ('Rather', 'Cuddle and movie', 'Night out dancing', 1),
+  ('Couple style', 'Matching outfits', 'Never matching', 1),
+  ('Jealous?', 'A little', 'Not at all', 1),
+  ('Rather have a partner who', 'Cooks for you', 'Plans surprises', 1),
+  ('Ex texts you', 'Reply', 'Leave on read', 1),
+  ('Rather kiss', 'In the rain', 'Under the stars', 2),
+  ('First kiss', 'First date', 'Wait a while', 2),
+  ('Lights', 'On', 'Off', 2),
+  ('Rather receive', 'A long massage', 'A slow dance', 2),
+  ('Flirting style', 'Bold', 'Shy', 2),
+  ('Rather be', 'The big spoon', 'The little spoon', 2),
+  ('Sexy outfit', 'Dressed up', 'Dressed down', 2),
+  ('Rather', 'Morning cuddles', 'Late night talks', 2),
+  ('Turn on', 'A great voice', 'A great smile', 2),
+  ('Rather', 'Slow burn', 'Instant spark', 3),
+  ('Rather', 'Text something spicy', 'Say it face to face', 3),
+  ('Rather', 'Plan the night', 'Be surprised', 3),
+  ('Rather', 'Bedroom', 'Anywhere but the bedroom', 3),
+  ('Rather', 'Take control', 'Be taken care of', 3)
+on conflict (a, b) do nothing;
+
+insert into public.truth_ideas (body) values
+  ('I have been to…'),
+  ('I can cook…'),
+  ('I once met…'),
+  ('My first job was…'),
+  ('I am scared of…'),
+  ('I have never…'),
+  ('I can speak…'),
+  ('As a kid I wanted to be…'),
+  ('I once won…'),
+  ('My hidden talent is…'),
+  ('I have broken…'),
+  ('I got lost in…'),
+  ('My weirdest food is…'),
+  ('I once cried at…'),
+  ('My most used app is…'),
+  ('I have a tattoo of…')
+on conflict (body) do nothing;
+
+-- Admin switches for each game (1 = on)
+insert into public.app_settings (key, value) values
+  ('game_truths', 1),
+  ('game_tot', 1),
+  ('game_c4', 1),
+  ('game_words', 1)
+on conflict (key) do nothing;
+
+-- Game results show in the chat as a small card
+alter table public.masquerade_messages add column if not exists media_meta jsonb;
+alter table public.masquerade_messages drop constraint if exists masquerade_messages_kind_check;
+alter table public.masquerade_messages add constraint masquerade_messages_kind_check check (kind in ('text', 'icebreaker', 'gift', 'system', 'game'));
+alter table public.messages drop constraint if exists messages_kind_check;
+alter table public.messages add constraint messages_kind_check check (kind in ('text', 'image', 'video', 'audio', 'call', 'gift', 'game'));
+alter table public.messages drop constraint if exists messages_content_check;
+alter table public.messages add constraint messages_content_check check (
+  char_length(body) <= 2000 and (
+    (kind = 'text' and (char_length(body) >= 1 or deleted_at is not null))
+    or (kind in ('image', 'video', 'audio') and (media_path is not null or deleted_at is not null))
+    or kind in ('call', 'gift', 'game')
+  )
+);
+
+-- Helpers --------------------------------------------------------------------
+create or replace function public.game_title(k text) returns text
+language sql immutable as $$
+  select case k when 'truths' then 'Two Truths & a Lie' when 'tot' then 'This or That'
+    when 'c4' then 'Connect 4' when 'words' then 'Word Hunt' else 'a game' end
+$$;
+
+-- A fresh Word Hunt board: 16 letters from classic letter dice
+create or replace function public.game_words_board() returns text
+language plpgsql volatile as $$
+declare
+  dice text[] := array['AAEEGN','ABBJOO','ACHOPS','AFFKPS','AOOTTW','CIMOTU','DEILRX','DELRVY',
+                       'DISTTY','EEGHNW','EEINSU','EHRTVW','EIOSST','ELRTTY','HIMNEU','HLNNRZ'];
+  d text;
+  out text := '';
+  vowels int;
+begin
+  loop
+    out := '';
+    for d in select x from unnest(dice) x order by random() loop
+      out := out || substr(d, 1 + floor(random() * 6)::int, 1);
+    end loop;
+    vowels := length(out) - length(translate(out, 'AEIOU', ''));
+    exit when vowels between 4 and 8;
+  end loop;
+  return out;
+end $$;
+
+-- Drop a disc in Connect 4. Board is 42 chars, top row first, 7 wide. Returns the row, or -1 when full.
+create or replace function public.game_c4_drop(board text, col int, who text, out new_board text, out r int)
+language plpgsql immutable as $$
+begin
+  new_board := board;
+  r := -1;
+  for rr in reverse 5..0 loop
+    if substr(board, rr * 7 + col + 1, 1) = '.' then
+      new_board := overlay(board placing who from rr * 7 + col + 1 for 1);
+      r := rr;
+      return;
+    end if;
+  end loop;
+end $$;
+
+-- The four (or more) in a row through a cell, as cell numbers, or empty
+create or replace function public.game_c4_line(board text, r int, c int) returns int[]
+language plpgsql immutable as $$
+declare
+  who text := substr(board, r * 7 + c + 1, 1);
+  dirs int[] := array[0,1, 1,0, 1,1, 1,-1];
+  dr int; dc int; i int; rr int; cc int;
+  line int[];
+begin
+  for i in 0..3 loop
+    dr := dirs[i * 2 + 1]; dc := dirs[i * 2 + 2];
+    line := array[r * 7 + c];
+    rr := r + dr; cc := c + dc;
+    while rr between 0 and 5 and cc between 0 and 6 and substr(board, rr * 7 + cc + 1, 1) = who loop
+      line := line || (rr * 7 + cc); rr := rr + dr; cc := cc + dc;
+    end loop;
+    rr := r - dr; cc := c - dc;
+    while rr between 0 and 5 and cc between 0 and 6 and substr(board, rr * 7 + cc + 1, 1) = who loop
+      line := line || (rr * 7 + cc); rr := rr - dr; cc := cc - dc;
+    end loop;
+    if array_length(line, 1) >= 4 then return line; end if;
+  end loop;
+  return '{}'::int[];
+end $$;
+
+-- Are both people in this chat, and is it open for games?
+create or replace function public.game_chat_ok(uid uuid, p_session uuid, p_match uuid, out other uuid)
+language plpgsql stable security definer set search_path = public as $$
+declare
+  s masquerade_sessions;
+  m matches;
+begin
+  other := null;
+  if p_session is not null then
+    select * into s from masquerade_sessions where id = p_session and (user_a = uid or user_b = uid);
+    if not found or s.hour_at is null or s.status <> 'active' or now() >= s.ends_at then return; end if;
+    other := case when s.user_a = uid then s.user_b else s.user_a end;
+  elsif p_match is not null then
+    select * into m from matches where id = p_match and (user_a = uid or user_b = uid);
+    if not found then return; end if;
+    other := case when m.user_a = uid then m.user_b else m.user_a end;
+  end if;
+  if other is not null and public.is_blocked(uid, other) then other := null; end if;
+end $$;
+
+-- Post the result card in the chat and close the game
+create or replace function public.game_finish(p_game uuid, p_reason text default null, p_by uuid default null) returns void
+language plpgsql security definer set search_path = public as $$
+declare
+  g games;
+  meta jsonb;
+  st text;
+begin
+  select * into g from games where id = p_game;
+  if not found or g.status <> 'active' then return; end if;
+  st := case when p_reason in ('left', 'timeout', 'closed') then 'cancelled' else 'done' end;
+  if st = 'done' and g.winner is null and g.kind <> 'tot' then
+    g.winner := case when g.score_a > g.score_b then g.player_a when g.score_b > g.score_a then g.player_b end;
+  end if;
+  update games set status = st, ended_at = now(), ended_reason = p_reason, ended_by = p_by,
+    winner = g.winner, deadline_at = null
+  where id = g.id;
+  if p_reason = 'closed' then return; end if;
+  meta := jsonb_build_object('game', g.id, 'kind', g.kind, 'a', g.player_a, 'b', g.player_b,
+    'sa', g.score_a, 'sb', g.score_b, 'winner', g.winner, 'status', st, 'reason', p_reason, 'by', p_by);
+  if g.session_id is not null then
+    insert into masquerade_messages (session_id, sender_id, kind, body, media_meta)
+    values (g.session_id, null, 'game', public.game_title(g.kind), meta);
+  else
+    insert into messages (match_id, sender_id, kind, body, media_meta)
+    values (g.match_id, null, 'game', public.game_title(g.kind), meta);
+    update matches set last_message_at = now() where id = g.match_id;
+  end if;
+end $$;
+
+-- Set up the first step of a game once both are in
+create or replace function public.game_begin(p_game uuid) returns void
+language plpgsql security definer set search_path = public as $$
+declare
+  g games;
+  lvl int := 1;
+  qs jsonb;
+  t timestamptz := now() + interval '4 seconds'; -- 3, 2, 1 countdown
+begin
+  select * into g from games where id = p_game;
+  if g.session_id is not null then
+    select spice_level into lvl from masquerade_sessions where id = g.session_id;
+  else
+    select case when intent = 'spicy' then 3 when intent = 'dating' then 2 else 1 end into lvl from matches where id = g.match_id;
+  end if;
+  if g.kind = 'tot' then
+    select coalesce(jsonb_agg(jsonb_build_object('id', q.id, 'q', q.prompt, 'a', q.a, 'b', q.b)), '[]'::jsonb) into qs
+    from (select * from tot_questions where active and spice <= coalesce(lvl, 1) order by random() limit 10) q;
+    update games set status = 'active', started_at = t, deadline_at = t + interval '8 seconds',
+      state = jsonb_build_object('qs', qs, 'i', 0, 'picks', '[]'::jsonb, 'alike', 0)
+    where id = g.id;
+  elsif g.kind = 'truths' then
+    update games set status = 'active', started_at = t, deadline_at = t + interval '90 seconds',
+      state = jsonb_build_object('phase', 'write')
+    where id = g.id;
+  elsif g.kind = 'c4' then
+    update games set status = 'active', started_at = t, deadline_at = t + interval '20 seconds',
+      state = jsonb_build_object('board', repeat('.', 42), 'turn', 'a', 'round', 1, 'wins', jsonb_build_object('a', 0, 'b', 0),
+        'starter', 'a', 'last', null, 'moves', 0, 'auto_a', 0, 'auto_b', 0)
+    where id = g.id;
+  else
+    update games set status = 'active', started_at = t, deadline_at = t + interval '80 seconds',
+      state = jsonb_build_object('board', public.game_words_board(), 'count_a', 0, 'count_b', 0)
+    where id = g.id;
+  end if;
+  insert into game_secrets (game_id, user_id) values (g.id, g.player_a), (g.id, g.player_b) on conflict do nothing;
+end $$;
+
+-- Starting and answering a challenge ---------------------------------------------
+create or replace function public.start_game(p_kind text, p_session uuid default null, p_match uuid default null, p_rematch uuid default null) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  other uuid;
+  live games;
+  gid uuid;
+begin
+  if uid is null then raise exception 'Please log in'; end if;
+  if p_kind not in ('truths', 'tot', 'c4', 'words') then raise exception 'Unknown game'; end if;
+  if public.setting_int('game_' || p_kind, 1) = 0 then raise exception 'This game is taking a break. Try another one.'; end if;
+  other := public.game_chat_ok(uid, p_session, p_match);
+  if other is null then raise exception 'Games are not available in this chat right now'; end if;
+
+  -- Clear out a challenge that ran out
+  update games set status = 'expired', ended_at = now()
+  where status = 'invited' and deadline_at < now()
+    and ((p_session is not null and session_id = p_session) or (p_match is not null and match_id = p_match));
+
+  select * into live from games where status in ('invited', 'active')
+    and ((p_session is not null and session_id = p_session) or (p_match is not null and match_id = p_match))
+  limit 1;
+  if found then
+    -- They already challenged you to the same game: just accept it
+    if live.status = 'invited' and live.player_b = uid and live.kind = p_kind then
+      perform public.respond_game(live.id, true);
+      return live.id;
+    end if;
+    raise exception 'Finish the game you’re in first';
+  end if;
+
+  if (select count(*) from games where player_a = uid and created_at > now() - interval '1 minute') >= 6 then
+    raise exception 'Slow down a little';
+  end if;
+
+  insert into games (kind, session_id, match_id, player_a, player_b, deadline_at, rematch_of)
+  values (p_kind, p_session, p_match, uid, other, now() + interval '30 seconds', p_rematch)
+  returning id into gid;
+  return gid;
+end $$;
+
+create or replace function public.respond_game(p_game uuid, p_accept boolean) returns void
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  g games;
+begin
+  select * into g from games where id = p_game and player_b = uid for update;
+  if not found then raise exception 'Game not found'; end if;
+  if g.status <> 'invited' then return; end if;
+  if g.deadline_at < now() - interval '2 seconds' then
+    update games set status = 'expired', ended_at = now() where id = g.id;
+    raise exception 'That challenge ran out';
+  end if;
+  if not p_accept then
+    update games set status = 'declined', ended_at = now(), deadline_at = null where id = g.id;
+    return;
+  end if;
+  if public.game_chat_ok(uid, g.session_id, g.match_id) is null then raise exception 'This chat has ended'; end if;
+  perform public.game_begin(g.id);
+end $$;
+
+-- Leave a game (or take back a challenge)
+create or replace function public.cancel_game(p_game uuid) returns void
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  g games;
+begin
+  select * into g from games where id = p_game and (player_a = uid or player_b = uid) for update;
+  if not found then return; end if;
+  if g.status = 'invited' then
+    update games set status = case when uid = g.player_a then 'cancelled' else 'declined' end, ended_at = now(), deadline_at = null where id = g.id;
+  elsif g.status = 'active' then
+    update games set winner = case when uid = g.player_a then g.player_b else g.player_a end where id = g.id;
+    perform public.game_finish(g.id, 'left', uid);
+  end if;
+end $$;
+
+-- This or That ---------------------------------------------------------------------
+-- Show the picks for the current question and move on
+create or replace function public.game_tot_reveal(p_game uuid) returns void
+language plpgsql security definer set search_path = public as $$
+declare
+  g games;
+  i int;
+  pa text; pb text;
+  same boolean;
+  n int;
+begin
+  select * into g from games where id = p_game;
+  i := (g.state->>'i')::int;
+  select data->'picks'->>(i::text) into pa from game_secrets where game_id = g.id and user_id = g.player_a;
+  select data->'picks'->>(i::text) into pb from game_secrets where game_id = g.id and user_id = g.player_b;
+  same := pa is not null and pa = pb;
+  n := jsonb_array_length(g.state->'qs');
+  g.state := jsonb_set(g.state, '{picks}', (g.state->'picks') || jsonb_build_array(jsonb_build_array(pa, pb)));
+  g.state := jsonb_set(g.state, '{i}', to_jsonb(i + 1));
+  g.state := jsonb_set(g.state, '{reveal_until}', to_jsonb(now() + interval '2500 milliseconds'));
+  if same then g.state := jsonb_set(g.state, '{alike}', to_jsonb((g.state->>'alike')::int + 1)); end if;
+  update games set state = g.state,
+    score_a = (g.state->>'alike')::int, score_b = (g.state->>'alike')::int,
+    deadline_at = now() + interval '10500 milliseconds'
+  where id = g.id;
+  if i + 1 >= n then
+    update games set deadline_at = null where id = g.id;
+    perform public.game_finish(g.id);
+  end if;
+end $$;
+
+create or replace function public.play_tot(p_game uuid, p_index int, p_pick text) returns void
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  g games;
+  other_pick text;
+begin
+  if p_pick not in ('a', 'b') then raise exception 'Pick this or that'; end if;
+  select * into g from games where id = p_game and (player_a = uid or player_b = uid) and kind = 'tot' for update;
+  if not found or g.status <> 'active' then return; end if;
+  if (g.state->>'i')::int <> p_index or now() < g.started_at then return; end if;
+  if now() < coalesce((g.state->>'reveal_until')::timestamptz, '-infinity') then return; end if;
+  update game_secrets set data = jsonb_set(case when data ? 'picks' then data else data || '{"picks":{}}'::jsonb end, array['picks', p_index::text], to_jsonb(p_pick))
+  where game_id = g.id and user_id = uid and not coalesce(data->'picks' ? p_index::text, false);
+  select data->'picks'->>(p_index::text) into other_pick from game_secrets
+  where game_id = g.id and user_id = case when uid = g.player_a then g.player_b else g.player_a end;
+  if other_pick is not null then perform public.game_tot_reveal(g.id); end if;
+end $$;
+
+-- Two Truths and a Lie -------------------------------------------------------------
+create or replace function public.submit_truths(p_game uuid, p_lines text[], p_lie int) returns void
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  g games;
+  me text;
+  la jsonb; lb jsonb;
+begin
+  select * into g from games where id = p_game and (player_a = uid or player_b = uid) and kind = 'truths' for update;
+  if not found or g.status <> 'active' or g.state->>'phase' <> 'write' then return; end if;
+  if coalesce(array_length(p_lines, 1), 0) <> 3 or p_lie not between 0 and 2 then raise exception 'Write three lines and pick the lie'; end if;
+  if exists (select 1 from unnest(p_lines) l where char_length(btrim(l)) not between 2 and 120) then
+    raise exception 'Each line needs a few words (up to 120 letters)';
+  end if;
+  me := case when uid = g.player_a then 'a' else 'b' end;
+  update game_secrets set data = data || jsonb_build_object('lines', to_jsonb(array(select btrim(l) from unnest(p_lines) l)), 'lie', p_lie)
+  where game_id = g.id and user_id = uid;
+  g.state := jsonb_set(g.state, array['ready_' || me], 'true'::jsonb);
+  update games set state = g.state where id = g.id;
+  if (g.state->>'ready_a')::boolean is true and (g.state->>'ready_b')::boolean is true then
+    select data->'lines' into la from game_secrets where game_id = g.id and user_id = g.player_a;
+    select data->'lines' into lb from game_secrets where game_id = g.id and user_id = g.player_b;
+    update games set state = state || jsonb_build_object('phase', 'guess', 'lines_a', la, 'lines_b', lb),
+      deadline_at = now() + interval '45 seconds'
+    where id = g.id;
+  end if;
+end $$;
+
+create or replace function public.game_truths_reveal(p_game uuid) returns void
+language plpgsql security definer set search_path = public as $$
+declare
+  g games;
+  lie_a int; lie_b int; ga int; gb int;
+begin
+  select * into g from games where id = p_game;
+  select (data->>'lie')::int, (data->>'guess')::int into lie_a, ga from game_secrets where game_id = g.id and user_id = g.player_a;
+  select (data->>'lie')::int, (data->>'guess')::int into lie_b, gb from game_secrets where game_id = g.id and user_id = g.player_b;
+  -- a guesses b’s lie, b guesses a’s lie
+  update games set
+    score_a = case when ga = lie_b then 1 else 0 end,
+    score_b = case when gb = lie_a then 1 else 0 end,
+    state = state || jsonb_build_object('phase', 'reveal', 'lie_a', lie_a, 'lie_b', lie_b, 'guess_a', ga, 'guess_b', gb)
+  where id = g.id;
+  perform public.game_finish(g.id);
+end $$;
+
+create or replace function public.guess_truth(p_game uuid, p_index int) returns void
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  g games;
+  me text;
+begin
+  select * into g from games where id = p_game and (player_a = uid or player_b = uid) and kind = 'truths' for update;
+  if not found or g.status <> 'active' or g.state->>'phase' <> 'guess' then return; end if;
+  if p_index not between 0 and 2 then return; end if;
+  me := case when uid = g.player_a then 'a' else 'b' end;
+  update game_secrets set data = data || jsonb_build_object('guess', p_index)
+  where game_id = g.id and user_id = uid and not (data ? 'guess');
+  update games set state = jsonb_set(state, array['guessed_' || me], 'true'::jsonb) where id = g.id returning * into g;
+  if (g.state->>'guessed_a')::boolean is true and (g.state->>'guessed_b')::boolean is true then
+    perform public.game_truths_reveal(g.id);
+  end if;
+end $$;
+
+-- Connect 4 ------------------------------------------------------------------------
+create or replace function public.game_c4_move(p_game uuid, p_col int, p_auto boolean) returns void
+language plpgsql security definer set search_path = public as $$
+declare
+  g games;
+  st jsonb;
+  who text;
+  board text;
+  r int;
+  line int[];
+  wins_a int; wins_b int;
+  rnd int;
+  starter text;
+  over boolean := false;
+  result text;
+begin
+  select * into g from games where id = p_game;
+  st := g.state;
+  who := st->>'turn';
+  select new_board, d.r into board, r from public.game_c4_drop(st->>'board', p_col, who) d;
+  if r < 0 then raise exception 'That column is full'; end if;
+  st := st || jsonb_build_object('board', board, 'last', r * 7 + p_col, 'moves', (st->>'moves')::int + 1,
+    'auto_' || who, case when p_auto then (st->>('auto_' || who))::int + 1 else 0 end);
+  line := public.game_c4_line(board, r, p_col);
+  wins_a := (st->'wins'->>'a')::int; wins_b := (st->'wins'->>'b')::int;
+  rnd := (st->>'round')::int;
+
+  if array_length(line, 1) >= 4 or position('.' in board) = 0 then
+    result := case when array_length(line, 1) >= 4 then who else 'draw' end;
+    if result = 'a' then wins_a := wins_a + 1; elsif result = 'b' then wins_b := wins_b + 1; end if;
+    over := wins_a >= 2 or wins_b >= 2 or rnd >= 3;
+    starter := case when st->>'starter' = 'a' then 'b' else 'a' end;
+    -- Keep the finished board on show for a moment, then start the next round
+    st := st || jsonb_build_object(
+      'prev', jsonb_build_object('board', board, 'line', to_jsonb(line), 'winner', result, 'round', rnd),
+      'wins', jsonb_build_object('a', wins_a, 'b', wins_b),
+      'pause_until', now() + interval '3 seconds');
+    if not over then
+      st := st || jsonb_build_object('board', repeat('.', 42), 'round', rnd + 1, 'starter', starter, 'turn', starter, 'last', null, 'moves', 0);
+    end if;
+    update games set state = st, score_a = wins_a, score_b = wins_b,
+      deadline_at = now() + interval '23 seconds'
+    where id = g.id;
+    if over then perform public.game_finish(g.id); end if;
+    return;
+  end if;
+
+  st := st || jsonb_build_object('turn', case when who = 'a' then 'b' else 'a' end);
+  update games set state = st, deadline_at = now() + interval '20 seconds' where id = g.id;
+end $$;
+
+create or replace function public.play_c4(p_game uuid, p_col int) returns void
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  g games;
+  me text;
+begin
+  select * into g from games where id = p_game and (player_a = uid or player_b = uid) and kind = 'c4' for update;
+  if not found or g.status <> 'active' then return; end if;
+  if p_col not between 0 and 6 then raise exception 'Pick a column'; end if;
+  me := case when uid = g.player_a then 'a' else 'b' end;
+  if g.state->>'turn' <> me then raise exception 'Wait for your turn'; end if;
+  if now() < g.started_at or now() < coalesce((g.state->>'pause_until')::timestamptz, '-infinity') then return; end if;
+  perform public.game_c4_move(g.id, p_col, false);
+end $$;
+
+-- Word Hunt ------------------------------------------------------------------------
+create or replace function public.word_points(n int) returns int
+language sql immutable as $$
+  select case when n <= 2 then 0 when n = 3 then 100 when n = 4 then 400 when n = 5 then 800 else 1400 + (n - 6) * 400 end
+$$;
+
+create or replace function public.submit_word(p_game uuid, p_word text, p_path int[]) returns int
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  g games;
+  w text := upper(btrim(p_word));
+  board text;
+  i int;
+  pts int;
+  me text;
+  got jsonb;
+begin
+  select * into g from games where id = p_game and (player_a = uid or player_b = uid) and kind = 'words' for update;
+  if not found or g.status <> 'active' then raise exception 'Time is up'; end if;
+  if now() < g.started_at or now() > g.deadline_at + interval '2 seconds' then raise exception 'Time is up'; end if;
+  if w !~ '^[A-Z]{3,16}$' or coalesce(array_length(p_path, 1), 0) <> length(w) then raise exception 'Not a word'; end if;
+  board := g.state->>'board';
+  if (select count(distinct x) from unnest(p_path) x) <> length(w) then raise exception 'Use each letter once'; end if;
+  for i in 1..length(w) loop
+    if p_path[i] not between 0 and 15 or substr(board, p_path[i] + 1, 1) <> substr(w, i, 1) then raise exception 'Not on the board'; end if;
+    if i > 1 and (abs(p_path[i] / 4 - p_path[i - 1] / 4) > 1 or abs(p_path[i] % 4 - p_path[i - 1] % 4) > 1) then
+      raise exception 'Letters must touch';
+    end if;
+  end loop;
+  select coalesce(data->'words', '[]'::jsonb) into got from game_secrets where game_id = g.id and user_id = uid;
+  if got ? w then raise exception 'Already found'; end if;
+  pts := public.word_points(length(w));
+  update game_secrets set data = data || jsonb_build_object('words', got || to_jsonb(w)) where game_id = g.id and user_id = uid;
+  me := case when uid = g.player_a then 'a' else 'b' end;
+  update games set
+    score_a = score_a + case when me = 'a' then pts else 0 end,
+    score_b = score_b + case when me = 'b' then pts else 0 end,
+    state = jsonb_set(state, array['count_' || me], to_jsonb(jsonb_array_length(got) + 1))
+  where id = g.id;
+  return pts;
+end $$;
+
+-- Timers: called by either player when a step runs out ------------------------------
+create or replace function public.game_tick(p_game uuid) returns void
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  g games;
+  who text;
+  col int;
+  free int[];
+begin
+  select * into g from games where id = p_game and (player_a = uid or player_b = uid) for update;
+  if not found then return; end if;
+  if g.status = 'invited' and g.deadline_at < now() then
+    update games set status = 'expired', ended_at = now(), deadline_at = null where id = g.id;
+    return;
+  end if;
+  if g.status <> 'active' then return; end if;
+  -- The chat closed (hour over, or someone let go)
+  if public.game_chat_ok(uid, g.session_id, g.match_id) is null then
+    perform public.game_finish(g.id, 'closed');
+    return;
+  end if;
+  if g.deadline_at is null or now() < g.deadline_at then return; end if;
+
+  if g.kind = 'tot' then
+    perform public.game_tot_reveal(g.id);
+  elsif g.kind = 'truths' then
+    if g.state->>'phase' = 'write' then
+      if (g.state->>'ready_a')::boolean is true or (g.state->>'ready_b')::boolean is true then
+        -- Only one wrote theirs in time: they win
+        update games set winner = case when (g.state->>'ready_a')::boolean is true then g.player_a else g.player_b end where id = g.id;
+      end if;
+      perform public.game_finish(g.id, 'timeout');
+    else
+      perform public.game_truths_reveal(g.id);
+    end if;
+  elsif g.kind = 'c4' then
+    who := g.state->>'turn';
+    -- Three missed turns in a row: that player loses
+    if (g.state->>('auto_' || who))::int >= 2 then
+      update games set winner = case when who = 'a' then g.player_b else g.player_a end where id = g.id;
+      perform public.game_finish(g.id, 'timeout', case when who = 'a' then g.player_a else g.player_b end);
+      return;
+    end if;
+    select array_agg(c) into free from generate_series(0, 6) c where substr(g.state->>'board', c + 1, 1) = '.';
+    col := free[1 + floor(random() * array_length(free, 1))::int];
+    perform public.game_c4_move(g.id, col, true);
+  elsif g.kind = 'words' then
+    if now() < g.deadline_at + interval '2 seconds' then return; end if;
+    update games set state = state || jsonb_build_object(
+      'words_a', (select coalesce(data->'words', '[]'::jsonb) from game_secrets where game_id = g.id and user_id = g.player_a),
+      'words_b', (select coalesce(data->'words', '[]'::jsonb) from game_secrets where game_id = g.id and user_id = g.player_b))
+    where id = g.id;
+    perform public.game_finish(g.id);
+  end if;
+end $$;
+
+-- What a player sees: the game, their own hidden parts, and your record in this chat
+create or replace function public.get_game(p_game uuid) returns json
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  g games;
+  mine jsonb;
+begin
+  select * into g from games where id = p_game and (player_a = uid or player_b = uid);
+  if not found then return null; end if;
+  select data into mine from game_secrets where game_id = g.id and user_id = uid;
+  return json_build_object(
+    'id', g.id, 'kind', g.kind, 'session_id', g.session_id, 'match_id', g.match_id,
+    'player_a', g.player_a, 'player_b', g.player_b, 'me', case when uid = g.player_a then 'a' else 'b' end,
+    'status', g.status, 'state', g.state, 'score_a', g.score_a, 'score_b', g.score_b, 'winner', g.winner,
+    'ended_by', g.ended_by, 'ended_reason', g.ended_reason,
+    'deadline_at', g.deadline_at, 'started_at', g.started_at, 'ended_at', g.ended_at, 'created_at', g.created_at,
+    'server_now', now(), 'mine', coalesce(mine, '{}'::jsonb),
+    'record', (
+      select json_build_object(
+        'played', count(*),
+        'won', count(*) filter (where x.winner = uid),
+        'lost', count(*) filter (where x.winner is not null and x.winner <> uid),
+        'alike', (select round(100.0 * y.score_a / greatest(1, jsonb_array_length(y.state->'qs'))) from games y
+                  where y.kind = 'tot' and y.status = 'done'
+                    and ((g.session_id is not null and y.session_id = g.session_id) or (g.match_id is not null and y.match_id = g.match_id))
+                  order by y.ended_at desc limit 1))
+      from games x where x.status = 'done'
+        and ((g.session_id is not null and x.session_id = g.session_id) or (g.match_id is not null and x.match_id = g.match_id)))
+  );
+end $$;
+
+-- The live (or just finished) game in a chat, if any
+create or replace function public.chat_game(p_session uuid default null, p_match uuid default null) returns json
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  gid uuid;
+begin
+  select id into gid from games
+  where (player_a = uid or player_b = uid)
+    and ((p_session is not null and session_id = p_session) or (p_match is not null and match_id = p_match))
+    and (status in ('invited', 'active') or ended_at > now() - interval '20 seconds')
+  order by created_at desc limit 1;
+  if gid is null then return null; end if;
+  return public.get_game(gid);
+end $$;
+
+-- Close any game left running when a masked chat ends or the hour runs out
+create or replace function public.games_close_with_chat() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare gid uuid;
+begin
+  if new.status <> old.status and new.status in ('matched', 'ended', 'lapsed') then
+    update games set status = 'expired', ended_at = now(), deadline_at = null where session_id = new.id and status = 'invited';
+    for gid in select id from games where session_id = new.id and status = 'active' loop
+      perform public.game_finish(gid, 'closed');
+    end loop;
+  end if;
+  return new;
+end $$;
+drop trigger if exists games_close_with_chat on public.masquerade_sessions;
+create trigger games_close_with_chat after update of status on public.masquerade_sessions
+  for each row execute function public.games_close_with_chat();
+
+-- Finishing a game counts as talking, and game cards move across when you unmask
+create or replace function public.finalize_masquerade(p_session uuid) returns void
+language plpgsql security definer set search_path = public as $$
+declare
+  s masquerade_sessions;
+  mid uuid;
+  talked boolean;
+begin
+  select * into s from masquerade_sessions where id = p_session for update;
+  if not found or s.status not in ('active', 'lapsed') then return; end if;
+
+  if s.unmask_a is true and s.unmask_b is true then
+    insert into matches (user_a, user_b, session_id, intent)
+    values (least(s.user_a, s.user_b), greatest(s.user_a, s.user_b), s.id, s.intent)
+    on conflict (user_a, user_b) do update set session_id = excluded.session_id
+    returning id into mid;
+
+    insert into messages (match_id, sender_id, kind, body, media_meta, created_at)
+    select mid, sender_id,
+      case when kind in ('gift', 'game') then kind else 'text' end,
+      case when kind = 'icebreaker' then '💬 ' || body else body end,
+      case when kind = 'gift' then jsonb_build_object('gift', body) when kind = 'game' then media_meta else null end,
+      created_at
+    from masquerade_messages where session_id = s.id and kind <> 'system' order by id;
+
+    update masquerade_sessions set status = 'matched', match_id = mid where id = s.id;
+    delete from masquerade_messages where session_id = s.id;
+    return;
+  end if;
+
+  if s.unmask_a is false or s.unmask_b is false then
+    update masquerade_sessions set status = 'ended', ended_reason = coalesce(ended_reason, 'declined') where id = s.id;
+    delete from masquerade_messages where session_id = s.id;
+    return;
+  end if;
+
+  -- Hourly pairs: when the hour is over
+  if s.hour_at is not null then
+    if s.status = 'active' and now() >= s.ends_at then
+      talked := (exists (select 1 from masquerade_messages m where m.session_id = s.id and m.kind in ('text', 'gift') and m.sender_id = s.user_a)
+             and exists (select 1 from masquerade_messages m where m.session_id = s.id and m.kind in ('text', 'gift') and m.sender_id = s.user_b))
+             or exists (select 1 from games g where g.session_id = s.id and g.status = 'done');
+      if talked then
+        update masquerade_sessions set status = 'lapsed' where id = s.id;
+      else
+        update masquerade_sessions set status = 'ended', ended_reason = 'quiet' where id = s.id;
+        delete from masquerade_messages where session_id = s.id;
+      end if;
+    end if;
+    return;
+  end if;
+
+  -- Event rounds: time ran out without both deciding
+  if now() > s.ends_at + interval '90 seconds' then
+    update masquerade_sessions set status = 'ended', ended_reason = coalesce(ended_reason, 'timeout') where id = s.id;
+    delete from masquerade_messages where session_id = s.id;
+  end if;
+end $$;
+
+-- Admin: game numbers for the last N days
+create or replace function public.admin_game_stats(p_days int default 7) returns json
+language sql stable security definer set search_path = public as $$
+  select json_build_object(
+    'kinds', coalesce((select json_agg(row_to_json(t) order by t.kind) from (
+      select kind,
+        count(*) as challenges,
+        count(*) filter (where status in ('active', 'done', 'cancelled') and started_at is not null) as started,
+        count(*) filter (where status = 'done') as finished,
+        count(*) filter (where status = 'declined') as declined,
+        count(*) filter (where status = 'expired') as expired,
+        count(*) filter (where rematch_of is not null) as rematches,
+        count(*) filter (where match_id is not null) as in_people_chats
+      from games where created_at > now() - make_interval(days => p_days)
+      group by kind) t), '[]'::json),
+    'pairs_with_games', (select count(distinct session_id) from games where status = 'done' and session_id is not null and created_at > now() - make_interval(days => p_days)),
+    'pairs_with_games_unmasked', (select count(distinct g.session_id) from games g join masquerade_sessions s on s.id = g.session_id
+        where g.status = 'done' and s.status = 'matched' and g.created_at > now() - make_interval(days => p_days)),
+    'pairs_total', (select count(*) from masquerade_sessions where hour_at is not null and started_at > now() - make_interval(days => p_days)),
+    'pairs_unmasked', (select count(*) from masquerade_sessions where hour_at is not null and status = 'matched' and started_at > now() - make_interval(days => p_days))
+  )
+$$;
+
+revoke all on function public.admin_game_stats(int) from public, anon, authenticated;
+revoke all on function public.game_finish(uuid, text, uuid) from public, anon, authenticated;
+revoke all on function public.game_begin(uuid) from public, anon, authenticated;
+revoke all on function public.game_tot_reveal(uuid) from public, anon, authenticated;
+revoke all on function public.game_truths_reveal(uuid) from public, anon, authenticated;
+revoke all on function public.game_c4_move(uuid, int, boolean) from public, anon, authenticated;
+revoke all on function public.game_chat_ok(uuid, uuid, uuid) from public, anon, authenticated;
+revoke all on function public.games_close_with_chat() from public, anon, authenticated;

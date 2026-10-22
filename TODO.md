@@ -32,6 +32,8 @@ Goal: a place to meet your people. Dating stays as one mood, not the headline.
 - [x] 3. Home leads with mood: "Who do you want to talk to?", Friends, Dating and Spicy side by side as equal moods, Friends the default for new people, gender and age optional under "Who you meet"
 - [ ] 4. Topic masquerades: pick a topic (Football, Afrobeats, Career, Faith, Gaming, Late-night talk) and get paired with someone into it
 - [ ] 5. Group masquerades (3–5 people) and game nights (Whot, Impostor)
+- [x] In-chat games: Two Truths & a Lie, This or That, Connect 4, Word Hunt (masked chats and chats with your people)
+- [ ] Later: Keys bets on games, paid This or That question packs
 - [ ] 6. After unmasking: "Keep in touch" / "Add to your people" wording and flow
 - [ ] 7. Profile as a "vibe card" (interests, current song, best Feed answers, smaller photos); less pink in celebrations; landing shows friends, events and the Feed
 - [ ] 8. Positioning: "anonymous social app"; list under Social (not Dating) in app stores and search descriptions

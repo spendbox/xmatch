@@ -25,6 +25,7 @@ import { ProfileSheet } from "./ProfileSheet";
 import { useKeyboardSafe } from "@/lib/useKeyboardSafe";
 import { isOnline, lastSeenText, usePresence } from "@/lib/usePresence";
 import { refreshMenuBadges } from "@/components/app/useMenuBadges";
+import { useGameHost } from "@/components/games/GameHost";
 
 export function MatchChat({
   matchId,
@@ -60,6 +61,13 @@ export function MatchChat({
   const [giftOpen, setGiftOpen] = useState(false);
   const { wallet, refresh: refreshWallet } = useWallet(myId);
   const nameOf = (id: string | null) => (id === myId ? "You" : other.display_name ?? "Them");
+  const lastFromThem = [...messages].reverse().find((m) => m.sender_id === other.id && m.kind === "text" && !m.deleted_at);
+  const games = useGameHost({
+    matchId,
+    names: { me: "You", them: (other.display_name ?? "Them").split(" ")[0] },
+    masked: false,
+    peek: lastFromThem?.body ?? null,
+  });
 
   // Opening the chat (and anything that arrives while it's open) counts as read
   useEffect(() => {
@@ -254,10 +262,12 @@ export function MatchChat({
           )}
           {messages.length === 0 && <p className="mt-3 text-[14px] text-muted">Say hi to {other.display_name} 👋</p>}
         </div>
-        <MessageList messages={messages} myId={myId} nameOf={nameOf} onReply={setReplyTo} onDelete={remove} showDates />
+        <MessageList messages={messages} myId={myId} nameOf={nameOf} onReply={setReplyTo} onDelete={remove} showDates onGameAgain={games.rematch} />
       </div>
 
+      {games.banner}
       <Composer
+        leading={games.button}
         onSend={send}
         onSendMedia={sendMedia}
         onSendVoice={sendVoice}
@@ -291,6 +301,7 @@ export function MatchChat({
       />
       {showProfile && <ProfileSheet profile={other} shared={shared} onClose={() => setShowProfile(false)} />}
       {reporting && <ReportSheet onClose={() => setReporting(false)} onReport={report} />}
+      {games.overlay}
     </div>
   );
 }

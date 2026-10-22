@@ -13,6 +13,7 @@ import { Sheet } from "@/components/ui/Sheet";
 import { Spinner, tapFeedback } from "@/components/ui/Button";
 import { AudioPlayer } from "./AudioPlayer";
 import { MediaViewer, type ViewerItem } from "./MediaViewer";
+import { GameCard } from "@/components/games/GameCard";
 import { useSignedUrl } from "./useSignedUrl";
 
 type Props = {
@@ -24,6 +25,8 @@ type Props = {
   onDelete?: (m: ChatMessage) => void;
   showDates?: boolean;
   footer?: React.ReactNode;
+  /** "Play again" on a game result card */
+  onGameAgain?: (kind: string) => void;
 };
 
 /** One-line description of a message, used in reply quotes. */
@@ -41,12 +44,14 @@ export function snippet(m: ChatMessage | undefined) {
       return "📞 Call";
     case "gift":
       return `Gift · ${giftById(m.media_meta?.gift ?? m.body)?.name ?? "Surprise"}`;
+    case "game":
+      return `🎮 ${m.body}`;
     default:
       return m.body.replace(/^💬 /, "");
   }
 }
 
-export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDates, footer }: Props) {
+export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDates, footer, onGameAgain }: Props) {
   // Times use the phone's own clock and time zone, so wait until we're on the phone
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -153,6 +158,15 @@ export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDat
                   {mounted && <p className={clsx("relative mt-0.5 text-[11px]", mine ? "text-white/75" : "text-muted")}>{time(m.created_at)}</p>}
                 </div>
               </div>
+            </div>
+          );
+        }
+
+        if (m.kind === "game") {
+          return (
+            <div key={m.id}>
+              {dateLine}
+              <GameCard m={m} myId={myId} nameOf={nameOf} onAgain={onGameAgain} />
             </div>
           );
         }

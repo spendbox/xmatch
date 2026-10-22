@@ -25,6 +25,7 @@ import { DecisionSheet } from "./DecisionSheet";
 import { Outcome } from "./Outcome";
 import { ReportSheet } from "./ReportSheet";
 import { useKeyboardSafe } from "@/lib/useKeyboardSafe";
+import { useGameHost } from "@/components/games/GameHost";
 
 const TOTAL = MASQUERADE_MINUTES * 60;
 
@@ -186,6 +187,18 @@ export function MasqueradeRoom({
     await refresh();
   }
 
+  // Games: hourly and reopened pairs, while the chat is open
+  const lastFromThem = [...messages].reverse().find((m) => m.sender_id && m.sender_id !== state.me.id && m.kind === "text");
+  const games = useGameHost({
+    sessionId: state.id,
+    names: { me: state.me.alias, them: state.them.alias },
+    masked: true,
+    disabled: !state.hourly || state.status !== "active" || remaining <= 0,
+    offline: !!demo,
+    peek: lastFromThem?.body ?? null,
+    unmask: state.hourly ? { onUnmask: () => void vote(true), done: state.me.vote === true } : null,
+  });
+
   if (state.status !== "active" && state.status !== "lapsed") return <Outcome state={state} eventId={eventId} />;
 
   const them = state.them;
@@ -311,6 +324,7 @@ export function MasqueradeRoom({
           myId={state.me.id}
           nameOf={(id) => (id === state.me.id ? "You" : state.them.alias)}
           onReply={setReplyTo}
+          onGameAgain={state.hourly && chatting ? games.rematch : undefined}
         />
       </div>
 
@@ -375,13 +389,17 @@ export function MasqueradeRoom({
         </div>
       )}
 
+      {state.hourly && chatting && games.banner}
       {chatting ? (
         <Composer
           onSend={send}
+          placeholder={state.hourly ? "Message" : undefined}
           replyTo={replyTo}
           replyName={replyTo ? (replyTo.sender_id === state.me.id ? "yourself" : replyTo.sender_id ? state.them.alias : "the icebreaker") : undefined}
           onCancelReply={() => setReplyTo(null)}
           leading={
+            <>
+            {state.hourly && games.button}
             <button
               type="button"
               onClick={nextQuestion}
@@ -391,6 +409,7 @@ export function MasqueradeRoom({
             >
               <Dices size={20} />
             </button>
+            </>
           }
           trailingExtra={
             <button
@@ -423,6 +442,7 @@ export function MasqueradeRoom({
       />
       {timeUp && !state.hourly && <DecisionSheet state={state} voting={voting} onVote={vote} />}
       {reporting && <ReportSheet onClose={() => setReporting(false)} onReport={report} />}
+      {state.hourly && games.overlay}
     </div>
 
     {/* About them — side panel on computers */}

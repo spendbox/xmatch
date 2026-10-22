@@ -4,8 +4,17 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { GIFTS, REOPEN_COST, type Gift } from "@/lib/keys";
 
-export type Prices = { reopen_cost: number; reveal_cost: number; free_reveals: number };
-const DEFAULTS: Prices = { reopen_cost: REOPEN_COST, reveal_cost: 1, free_reveals: 10 };
+export type Prices = {
+  reopen_cost: number;
+  reveal_cost: number;
+  free_reveals: number;
+  /** Game switches (1 = on) */
+  game_truths: number;
+  game_tot: number;
+  game_c4: number;
+  game_words: number;
+};
+const DEFAULTS: Prices = { reopen_cost: REOPEN_COST, reveal_cost: 1, free_reveals: 10, game_truths: 1, game_tot: 1, game_c4: 1, game_words: 1 };
 
 // Prices are set by the admin in the database. Loaded once per visit and shared.
 let pricesCache: Promise<Prices> | null = null;

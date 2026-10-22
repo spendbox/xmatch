@@ -38,6 +38,8 @@ import { MasqueradeHealth } from "@/components/admin/MasqueradeHealth";
 import { FeedChat } from "@/components/feed/FeedChat";
 import { PromptManager } from "@/components/admin/PromptManager";
 import { PromptAnswers } from "@/components/admin/PromptAnswers";
+import { GameDemo } from "./GameDemos";
+import { GamesManager } from "@/components/admin/GamesManager";
 import type { Feed, FeedAnswer, FeedGift } from "@/lib/feed";
 import type { MasqueradeHour } from "@/lib/hourly";
 import type { ChatMessage, MasqueradeState, Profile } from "@/lib/types";
@@ -178,7 +180,38 @@ export function PreviewScreen({ screen }: { screen: string }) {
 }
 
 function ScreenBody({ screen }: { screen: string }) {
+  if (screen.startsWith("game-")) return <GameDemo screen={screen} />;
   switch (screen) {
+    case "room-games":
+      return (
+        <MasqueradeRoom
+          initial={{ ...session(), hourly: true, status: "active", ends_at: new Date(now + 41 * 60_000).toISOString() }}
+          initialMessages={[
+            ...msgs,
+            { id: 8, sender_id: null, kind: "game", body: "Connect 4", created_at: iso(30), media_meta: { kind: "c4", a: "me", b: "ada", sa: 2, sb: 1, winner: "me", status: "done" } },
+            { id: 9, sender_id: "ada", body: "Rematch. Right now 😤", created_at: iso(20) },
+            { id: 10, sender_id: null, kind: "game", body: "This or That", created_at: iso(10), media_meta: { kind: "tot", a: "ada", b: "me", sa: 8, sb: 8, winner: null, status: "done" } },
+          ]}
+          demo={{ remaining: 41 * 60 + 12 }}
+        />
+      );
+    case "admin-games":
+      return (
+        <AdminShell>
+          <GamesManager
+            on={{ truths: true, tot: true, c4: true, words: false }}
+            questions={[
+              { id: 1, prompt: "Perfect Saturday night?", a: "Owambe till 4am", b: "Netflix and suya", spice: 0, active: true },
+              { id: 2, prompt: "Pick one forever", a: "Jollof rice", b: "Fried rice", spice: 0, active: true },
+              { id: 3, prompt: "First move", a: "I make it", b: "I wait for it", spice: 1, active: true },
+              { id: 4, prompt: "Rather kiss", a: "In the rain", b: "Under the stars", spice: 2, active: false },
+            ]}
+            ideas={[{ id: 1, body: "I have been to…", active: true }, { id: 2, body: "I can cook…", active: true }, { id: 3, body: "I have a tattoo of…", active: false }]}
+            week={{ kinds: [{ kind: "tot", challenges: 412, started: 350, finished: 331, declined: 40, expired: 22, rematches: 96, in_people_chats: 60 }, { kind: "c4", challenges: 280, started: 230, finished: 201, declined: 30, expired: 20, rematches: 88, in_people_chats: 51 }, { kind: "truths", challenges: 150, started: 120, finished: 101, declined: 18, expired: 12, rematches: 20, in_people_chats: 14 }, { kind: "words", challenges: 190, started: 160, finished: 152, declined: 20, expired: 10, rematches: 55, in_people_chats: 33 }], pairs_with_games: 620, pairs_with_games_unmasked: 205, pairs_total: 4120, pairs_unmasked: 830 }}
+            today={{ kinds: [{ kind: "tot", challenges: 61, started: 0, finished: 0, declined: 0, expired: 0, rematches: 0, in_people_chats: 0 }], pairs_with_games: 0, pairs_with_games_unmasked: 0, pairs_total: 0, pairs_unmasked: 0 }}
+          />
+        </AdminShell>
+      );
     case "onboarding-2":
       return <Onboarding profile={{ ...me, bio: "", interests: ["Music", "Travel"] }} demoStep={1} />;
     case "onboarding-3":

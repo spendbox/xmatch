@@ -144,8 +144,9 @@ export function Composer({
         </div>
       ) : (
         <form onSubmit={submit} className="flex items-end gap-2 px-3 pt-3">
-          {leading}
-          {trailingExtra}
+          {/* Extra buttons tuck away while you type, so the message box has room */}
+          {!hasText && leading}
+          {!hasText && trailingExtra}
           {onSendMedia && (
             <button
               type="button"
