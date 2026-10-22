@@ -166,7 +166,7 @@ export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDat
           return (
             <div key={m.id}>
               {dateLine}
-              <GameCard m={m} myId={myId} nameOf={nameOf} onAgain={onGameAgain} />
+              <GameCard m={m} myId={myId} nameOf={nameOf} onAgain={onGameAgain} onReply={onReply} />
             </div>
           );
         }

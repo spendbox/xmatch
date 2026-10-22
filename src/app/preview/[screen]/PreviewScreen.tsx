@@ -190,7 +190,8 @@ function ScreenBody({ screen }: { screen: string }) {
             ...msgs,
             { id: 8, sender_id: null, kind: "game", body: "Connect 4", created_at: iso(30), media_meta: { kind: "c4", a: "me", b: "ada", sa: 2, sb: 1, winner: "me", status: "done" } },
             { id: 9, sender_id: "ada", body: "Rematch. Right now 😤", created_at: iso(20) },
-            { id: 10, sender_id: null, kind: "game", body: "This or That", created_at: iso(10), media_meta: { kind: "tot", a: "ada", b: "me", sa: 8, sb: 8, winner: null, status: "done" } },
+            { id: 10, sender_id: null, kind: "game", body: "This or That", created_at: iso(10), media_meta: { kind: "tot", a: "ada", b: "me", sa: 8, sb: 8, winner: null, status: "done", detail: { qs: [{ q: "Pick one forever", a: "Jollof rice", b: "Fried rice" }, { q: "Perfect Saturday night?", a: "Owambe till 4am", b: "Netflix and suya" }, { q: "Pets", a: "Dogs", b: "Cats" }, { q: "Calls or texts?", a: "Calls", b: "Texts" }], picks: [["a", "a"], ["a", "b"], ["b", "b"], ["b", "a"]] } } as never },
+            { id: 11, sender_id: null, kind: "game", body: "Two Truths & a Lie", created_at: iso(5), media_meta: { kind: "truths", a: "me", b: "ada", sa: 1, sb: 0, winner: "me", status: "done", detail: { lines_a: ["I speak French", "I hate rice", "I met Davido"], lines_b: ["I once ate 3 plates of jollof at a wedding", "I have a twin brother", "I learnt to code from YouTube"], lie_a: 2, lie_b: 1, guess_a: 1, guess_b: 0 } } as never },
           ]}
           demo={{ remaining: 41 * 60 + 12 }}
         />

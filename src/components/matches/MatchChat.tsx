@@ -272,7 +272,7 @@ export function MatchChat({
         onSendMedia={sendMedia}
         onSendVoice={sendVoice}
         replyTo={replyTo}
-        replyName={replyTo ? nameOf(replyTo.sender_id) : undefined}
+        replyName={replyTo ? (replyTo.kind === "game" ? "the game" : nameOf(replyTo.sender_id)) : undefined}
         onCancelReply={() => setReplyTo(null)}
         onGift={() => {
           refreshWallet();

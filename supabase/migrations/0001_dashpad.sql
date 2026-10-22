@@ -5245,3 +5245,64 @@ revoke all on function public.game_truths_reveal(uuid) from public, anon, authen
 revoke all on function public.game_c4_move(uuid, int, boolean) from public, anon, authenticated;
 revoke all on function public.game_chat_ok(uuid, uuid, uuid) from public, anon, authenticated;
 revoke all on function public.games_close_with_chat() from public, anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Part 23: Game result cards in chats show the answers
+-- Two Truths: everyone’s three lines, the lies and the guesses.
+-- This or That: every question with both picks.
+-- ---------------------------------------------------------------------------
+create or replace function public.game_detail(g games) returns jsonb
+language sql stable as $$
+  select case g.kind
+    when 'truths' then jsonb_strip_nulls(jsonb_build_object(
+      'lines_a', g.state->'lines_a', 'lines_b', g.state->'lines_b',
+      'lie_a', g.state->'lie_a', 'lie_b', g.state->'lie_b',
+      'guess_a', g.state->'guess_a', 'guess_b', g.state->'guess_b'))
+    when 'tot' then jsonb_build_object(
+      'qs', coalesce((select jsonb_agg(jsonb_build_object('q', q->>'q', 'a', q->>'a', 'b', q->>'b')) from jsonb_array_elements(g.state->'qs') q), '[]'::jsonb),
+      'picks', coalesce(g.state->'picks', '[]'::jsonb))
+    else null end
+$$;
+
+create or replace function public.game_finish(p_game uuid, p_reason text default null, p_by uuid default null) returns void
+language plpgsql security definer set search_path = public as $$
+declare
+  g games;
+  meta jsonb;
+  st text;
+begin
+  select * into g from games where id = p_game;
+  if not found or g.status <> 'active' then return; end if;
+  st := case when p_reason in ('left', 'timeout', 'closed') then 'cancelled' else 'done' end;
+  if st = 'done' and g.winner is null and g.kind <> 'tot' then
+    g.winner := case when g.score_a > g.score_b then g.player_a when g.score_b > g.score_a then g.player_b end;
+  end if;
+  update games set status = st, ended_at = now(), ended_reason = p_reason, ended_by = p_by,
+    winner = g.winner, deadline_at = null
+  where id = g.id;
+  if p_reason = 'closed' then return; end if;
+  meta := jsonb_build_object('game', g.id, 'kind', g.kind, 'a', g.player_a, 'b', g.player_b,
+    'sa', g.score_a, 'sb', g.score_b, 'winner', g.winner, 'status', st, 'reason', p_reason, 'by', p_by);
+  if st = 'done' and public.game_detail(g) is not null then
+    meta := meta || jsonb_build_object('detail', public.game_detail(g));
+  end if;
+  if g.session_id is not null then
+    insert into masquerade_messages (session_id, sender_id, kind, body, media_meta)
+    values (g.session_id, null, 'game', public.game_title(g.kind), meta);
+  else
+    insert into messages (match_id, sender_id, kind, body, media_meta)
+    values (g.match_id, null, 'game', public.game_title(g.kind), meta);
+    update matches set last_message_at = now() where id = g.match_id;
+  end if;
+end $$;
+revoke all on function public.game_finish(uuid, text, uuid) from public, anon, authenticated;
+
+-- Add the answers to cards from games already played
+update public.masquerade_messages m set media_meta = m.media_meta || jsonb_build_object('detail', public.game_detail(g))
+from public.games g
+where m.kind = 'game' and g.id = (m.media_meta->>'game')::uuid and g.status = 'done'
+  and g.kind in ('truths', 'tot') and not (m.media_meta ? 'detail');
+update public.messages m set media_meta = m.media_meta || jsonb_build_object('detail', public.game_detail(g))
+from public.games g
+where m.kind = 'game' and g.id = (m.media_meta->>'game')::uuid and g.status = 'done'
+  and g.kind in ('truths', 'tot') and not (m.media_meta ? 'detail');

@@ -395,7 +395,7 @@ export function MasqueradeRoom({
           onSend={send}
           placeholder={state.hourly ? "Message" : undefined}
           replyTo={replyTo}
-          replyName={replyTo ? (replyTo.sender_id === state.me.id ? "yourself" : replyTo.sender_id ? state.them.alias : "the icebreaker") : undefined}
+          replyName={replyTo ? (replyTo.sender_id === state.me.id ? "yourself" : replyTo.sender_id ? state.them.alias : replyTo.kind === "game" ? "the game" : "the icebreaker") : undefined}
           onCancelReply={() => setReplyTo(null)}
           leading={
             <>
