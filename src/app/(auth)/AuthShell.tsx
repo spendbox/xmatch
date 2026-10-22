@@ -76,7 +76,7 @@ function BrandPanel() {
         </h2>
         <ul className="mt-10 space-y-4 text-[17px]">
           {[
-            { icon: <Clock3 size={20} />, text: "Five minutes of masked conversation" },
+            { icon: <Clock3 size={20} />, text: "A new masked pair every hour" },
             { icon: <EyeOff size={20} />, text: "No names or photos until you both unmask" },
             { icon: <Handshake size={20} />, text: "If it's not mutual, the chat disappears" },
           ].map((f) => (

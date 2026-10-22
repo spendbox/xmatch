@@ -11,7 +11,7 @@ import type { Intent } from "@/lib/types";
  * send a message, start a call, say hi at an event, or keep an event chat.
  * We check it really was you, then notify the other person.
  */
-type Body = { kind?: string; matchId?: string; callId?: string; chatId?: string; answerId?: string };
+type Body = { kind?: string; matchId?: string; callId?: string; chatId?: string; answerId?: string; sessionId?: string };
 
 const RECENT_MS = 60_000;
 const firstName = (n: string | null | undefined) => (n ?? "").split(" ")[0] || "Someone";
@@ -81,6 +81,21 @@ export async function POST(req: Request) {
         }),
       ),
     );
+    return ok;
+  }
+
+  // Someone paid to reopen a past masked pair: tell the other person
+  if (b.kind === "masquerade_reopen" && b.sessionId) {
+    const { data: s } = await db.from("masquerade_sessions").select("id, user_a, user_b, alias_a, alias_b, reopened_by, status").eq("id", b.sessionId).maybeSingle();
+    if (!s || s.reopened_by !== uid || s.status !== "active") return ok;
+    const other = s.user_a === uid ? s.user_b : s.user_a;
+    const alias = s.user_a === uid ? s.alias_a : s.alias_b;
+    await pushToUsers([other as string], {
+      title: `${alias} reopened your chat 🎭`,
+      body: "They want to pick up where you left off. Still masked, until you both decide.",
+      url: `/masquerade/${s.id}`,
+      tag: `pair-${s.id}`,
+    });
     return ok;
   }
 

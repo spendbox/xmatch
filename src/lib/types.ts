@@ -23,7 +23,12 @@ export type Profile = {
 
 export type MasqueradeState = {
   id: string;
-  status: "active" | "matched" | "ended";
+  /** lapsed = an hourly pair whose hour ended with no decision (kept as a past pair) */
+  status: "active" | "matched" | "ended" | "lapsed";
+  /** Paired on the hour (not an event round) */
+  hourly?: boolean;
+  /** Reopened with Keys: open until both decide */
+  reopened?: boolean;
   ended_reason: string | null;
   intent: Intent;
   spice_level: number;

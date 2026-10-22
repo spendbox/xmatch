@@ -24,6 +24,9 @@ export function Outcome({ state, eventId }: { state: MasqueradeState; eventId?: 
   } else if (state.me.vote === false) {
     title = "You stayed masked";
     body = "Not every chat clicks. On to the next one.";
+  } else if (reason === "quiet") {
+    title = "The hour ended";
+    body = "Neither of you said much, so the chat closed. You might be paired again another time.";
   } else if (reason === "timeout" && state.me.vote === null) {
     title = "Time ran out";
     body = "Nobody chose in time, so the chat ended.";
@@ -46,7 +49,7 @@ export function Outcome({ state, eventId }: { state: MasqueradeState; eventId?: 
           </ButtonLink>
         ) : (
           <ButtonLink href="/home" size="lg" variant="gold">
-            <RotateCcw size={18} /> Find someone new
+            <RotateCcw size={18} /> {state.hourly ? "Back home · new pair next hour" : "Find someone new"}
           </ButtonLink>
         )}
       </div>

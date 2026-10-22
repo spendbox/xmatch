@@ -35,6 +35,7 @@ import { FeedChat } from "@/components/feed/FeedChat";
 import { PromptManager } from "@/components/admin/PromptManager";
 import { PromptAnswers } from "@/components/admin/PromptAnswers";
 import type { Feed, FeedAnswer, FeedGift } from "@/lib/feed";
+import type { MasqueradeHour } from "@/lib/hourly";
 import type { ChatMessage, MasqueradeState, Profile } from "@/lib/types";
 
 const photo = (a: string, b: string, letter: string) =>
@@ -105,7 +106,7 @@ const recent = [
   { id: "m3", created_at: iso(3000), last_message_at: iso(200), intent: "spicy" as const, other_id: "z", display_name: "Zara", photos: [photo("#5b3fd9", "#e5484d", "Z")], age: 29, last_message: null, last_sender: null },
 ];
 
-const APP_SCREENS = ["events-empty", "event-spotlight", "event-spotlight-live", "events", "event-upcoming", "event-live", "event-waiting", "event-ended", "home", "matches", "wallet", "profile", "rich-chat", "extend", "chat", "desktop-matches", "gifts", "feed", "feed-locked", "feed-chat", "feed-gifts"];
+const APP_SCREENS = ["events-empty", "event-spotlight", "event-spotlight-live", "events", "event-upcoming", "event-live", "event-waiting", "event-ended", "home", "matches", "wallet", "profile", "rich-chat", "extend", "chat", "desktop-matches", "gifts", "home-next", "home-off", "feed", "feed-locked", "feed-chat", "feed-gifts"];
 
 function ev(over: Partial<DashpadEvent> = {}): DashpadEvent {
   return {
@@ -124,6 +125,20 @@ const adminNights: AdminNight[] = [
   { id: "e3", title: "Spicy Saturday", description: "", theme: "rose", intent: "spicy", starts_at: new Date(now + 6 * 86400_000).toISOString(), ends_at: new Date(now + 6 * 86400_000 + 5400_000).toISOString(), age_min: 25, age_max: 40, entry_keys: 30, max_attendees: null, status: "published", going_count: 312, rounds: 0, unmasks: 0, keys_collected: 9360, question_count: 12 },
   { id: "e4", title: "Valentine's Masquerade", description: "", theme: "rose", intent: "dating", starts_at: new Date(now - 9 * 86400_000).toISOString(), ends_at: new Date(now - 9 * 86400_000 + 7200_000).toISOString(), age_min: 21, age_max: 45, entry_keys: 25, max_attendees: null, status: "published", going_count: 2210, rounds: 8420, unmasks: 1930, keys_collected: 55250, question_count: 15 },
 ];
+
+function demoHour(kind: "live" | "next" | "off" = "live"): MasqueradeHour {
+  const h = new Date(now); h.setUTCMinutes(0, 0, 0);
+  const end = new Date(h.getTime() + 3600_000).toISOString();
+  return {
+    enabled: kind !== "off", server_now: new Date(now).toISOString(), hour_at: h.toISOString(), hour_open: true, hour_ran: true, pairs_this_hour: 107,
+    next_at: end,
+    current: kind === "live" ? { id: "s1", status: "active", intent: "dating", ends_at: end, match_id: null, my_alias: "Velvet Fox", their_alias: "Golden Owl", their_age: 26, their_gender: "woman", their_name: null, their_photo: null, my_vote: null, they_voted: false, messages: 6, last_message: "Wait, you're into Afrobeats too?", last_from_them: true } : null,
+    past: [
+      { id: "p1", status: "lapsed", intent: "friends", hour_at: new Date(h.getTime() - 3 * 3600_000).toISOString(), reopened_at: null, their_alias: "Quiet Heron", their_age: 29, their_gender: "man", my_vote: true, last_message: "Haha same. Talk soon?" },
+      { id: "p2", status: "active", intent: "dating", hour_at: new Date(h.getTime() - 26 * 3600_000).toISOString(), reopened_at: iso(3600), their_alias: "Wild Comet", their_age: 24, their_gender: "woman", my_vote: null, last_message: "You reopened the chat 👀" },
+    ],
+  };
+}
 
 const fa = (id: string, alias: string, body: string, over: Partial<FeedAnswer> = {}): FeedAnswer => ({
   id, alias, body, created_at: iso(1800), age: 26, gender: "woman", mine: false, reactions: {}, my_reaction: null, gifts: 0, chat_id: null, can_chat: true, matched: false, ...over,
@@ -173,10 +188,27 @@ function ScreenBody({ screen }: { screen: string }) {
           <BottomNav />
         </div>
       );
+    case "home-next":
+    case "home-off":
+      return (
+        <div className="pb-24">
+          <HomeScreen hour={demoHour(screen === "home-off" ? "off" : "next")} profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} stats={{ online: 214, week_chats: 12, week_unmasks: 5, gifts_received: 3 }} matches={recent} />
+          <BottomNav />
+        </div>
+      );
+    case "room-hourly":
+    case "room-lapsed":
+      return (
+        <MasqueradeRoom
+          initial={{ ...session(), hourly: true, status: screen === "room-lapsed" ? "lapsed" : "active", ends_at: new Date(now + 41 * 60_000).toISOString() }}
+          initialMessages={msgs}
+          demo={{ remaining: screen === "room-lapsed" ? 0 : 41 * 60 + 12 }}
+        />
+      );
     case "home":
       return (
         <div className="pb-24">
-          <HomeScreen prompt={{ id: "p1", body: feedPrompt.body, answered: false, answers: 128 }} profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} stats={{ online: 214, week_chats: 12, week_unmasks: 5, gifts_received: 3 }} matches={recent} />
+          <HomeScreen hour={demoHour()} profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} stats={{ online: 214, week_chats: 12, week_unmasks: 5, gifts_received: 3 }} matches={recent} />
           <BottomNav />
         </div>
       );
@@ -186,7 +218,7 @@ function ScreenBody({ screen }: { screen: string }) {
     case "sheet-spice":
     case "sheet-distance":
     case "sheet-seeking":
-      return <HomeScreen profile={me} wallet={{ balance: 3, passes: 0, free_left: 0, next_free_at: new Date(now + 3 * 3600_000 + 12 * 60_000).toISOString() }} stats={null} matches={[]} demoSheet={screen === "sheet-keys" ? "keys" : "meet"} />;
+      return <HomeScreen profile={me} wallet={{ balance: 3, passes: 0, free_left: 0, next_free_at: new Date(now + 3 * 3600_000 + 12 * 60_000).toISOString() }} stats={null} matches={[]} hour={demoHour("next")} demoSheet="meet" />;
     case "buttons":
       return (
         <div className="mx-auto max-w-md space-y-3 p-5 pt-16">
@@ -197,7 +229,7 @@ function ScreenBody({ screen }: { screen: string }) {
         </div>
       );
     case "waiting":
-      return <HomeScreen profile={me} wallet={null} stats={null} matches={[]} demoWaiting />;
+      return <HomeScreen profile={me} wallet={null} stats={null} matches={[]} hour={demoHour("next")} />;
     case "chat":
       return <MasqueradeRoom initial={session()} initialMessages={msgs} demo={{ remaining: 121 }} />;
     case "decide":

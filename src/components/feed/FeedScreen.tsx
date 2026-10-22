@@ -30,7 +30,6 @@ import { useWallet } from "@/components/keys/useWallet";
 import { refreshMenuBadges } from "@/components/app/useMenuBadges";
 import { MaskAvatar } from "./MaskAvatar";
 import { GiftsSheet } from "./GiftsSheet";
-import { HomeTabs } from "@/components/home/HomeTabs";
 
 const PAGE = 30;
 
@@ -197,7 +196,6 @@ export function FeedScreen({
 
   return (
     <main className="mx-auto max-w-md px-5 pt-5 lg:max-w-2xl lg:px-10 lg:pt-10">
-      <HomeTabs className="mb-4" />
       <header className="flex items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-[34px] leading-tight font-semibold tracking-tight">Feed</h1>

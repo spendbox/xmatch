@@ -5,6 +5,8 @@ export const FREE_MASQUERADES_PER_DAY = 5;
 export const EXTRA_MASQUERADE_COST = 5;
 export const EXTEND_COST = 10;
 export const EXTEND_MINUTES = 2;
+/** Keys to reopen a past masked pair (also set in the database) */
+export const REOPEN_COST = 10;
 
 export type KeyPack = { id: string; keys: number; naira: number; tag?: string };
 

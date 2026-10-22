@@ -43,9 +43,9 @@ const MODES = [
 ] as const;
 
 const STEPS = [
-  { icon: <MaskLineIcon size={20} />, title: "Put on your mask", body: "Choose your vibe in a few taps." },
-  { icon: <Clock3 size={20} strokeWidth={1.75} />, title: "Chat for 5 minutes", body: "No names, no photos. Just energy." },
-  { icon: <Handshake size={20} strokeWidth={1.75} />, title: "Unmask together", body: "Both say yes? You're connected. If not, the chat vanishes." },
+  { icon: <MaskLineIcon size={20} />, title: "Switch on Masquerade", body: "Pick your vibe in a few taps." },
+  { icon: <Clock3 size={20} strokeWidth={1.75} />, title: "Meet someone new every hour", body: "A fresh masked pair on the hour, 6am to 2am. No names, no photos. Just energy." },
+  { icon: <Handshake size={20} strokeWidth={1.75} />, title: "Unmask together", body: "Both unmask? You're connected. Talked but didn't decide? Pick it up later." },
 ];
 
 export default function Landing() {
@@ -225,7 +225,7 @@ export default function Landing() {
                 <MaskIcon className="w-11 text-white" eyes="#1c1828" />
               </span>
               <h2 className="mt-5 font-display text-[30px] leading-tight font-semibold lg:text-[52px]">Your vibe is waiting.</h2>
-              <p className="mx-auto mt-2 max-w-xs text-[15px] text-white/70">Five minutes could change your whole week.</p>
+              <p className="mx-auto mt-2 max-w-xs text-[15px] text-white/70">One hour could change your whole week.</p>
               <ButtonLink href="/login" variant="gold" size="lg" className="mt-6 lg:w-auto lg:px-12" loadingText="Opening…">
                 Put on your mask
               </ButtonLink>

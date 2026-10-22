@@ -3,12 +3,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Flag, Gift, LogOut, MoreVertical, Dices, Timer, X } from "lucide-react";
+import { ArrowLeft, Flag, Gift, Handshake, LogOut, MoreVertical, Dices, RotateCcw, Timer, X } from "lucide-react";
 import { Spinner } from "@/components/ui/Button";
 import { KeyCoin } from "@/components/keys/KeyIcon";
 import { GiftSheet, keysError } from "@/components/keys/GiftSheet";
 import { useWallet } from "@/components/keys/useWallet";
-import { EXTEND_COST } from "@/lib/keys";
+import { EXTEND_COST, REOPEN_COST } from "@/lib/keys";
+import { notify } from "@/lib/pushClient";
 import { createClient } from "@/lib/supabase/client";
 import { distanceLabel, GENDERS, intentLabel, MASQUERADE_MINUTES, spiceLabel } from "@/lib/constants";
 import type { ChatMessage, MasqueradeState } from "@/lib/types";
@@ -49,6 +50,7 @@ export function MasqueradeRoom({
   const [giftOpen, setGiftOpen] = useState(false);
   const [extending, setExtending] = useState(false);
   const [keysNote, setKeysNote] = useState<string | null>(null);
+  const [reopening, setReopening] = useState(false);
   const { wallet, refresh: refreshWallet } = useWallet(demo ? null : initial.me.id);
 
   async function extend() {
@@ -63,8 +65,13 @@ export function MasqueradeRoom({
   // Keep our clock in step with the server's so both timers match
   const offset = useRef(new Date(initial.server_now).getTime() - Date.now());
   const remainingNow = useCallback(
-    () => (demo ? demo.remaining : (new Date(state.ends_at).getTime() - (Date.now() + offset.current)) / 1000),
-    [state.ends_at, demo],
+    () =>
+      demo
+        ? demo.remaining
+        : state.reopened
+          ? Infinity // open until you both decide
+          : (new Date(state.ends_at).getTime() - (Date.now() + offset.current)) / 1000,
+    [state.ends_at, state.reopened, demo],
   );
   const [remaining, setRemaining] = useState(remainingNow);
 
@@ -138,7 +145,14 @@ export function MasqueradeRoom({
 
   async function leave() {
     setMenu(false);
-    if (!confirm("Leave this masquerade? The chat will be deleted.")) return;
+    if (
+      !confirm(
+        state.hourly
+          ? `Let go of ${state.them.alias}? The chat closes for both of you. You'll get someone new next hour.`
+          : "Leave this masquerade? The chat will be deleted.",
+      )
+    )
+      return;
     await supabase.rpc("vote_unmask", { p_session: state.id, p_unmask: false });
     router.replace("/home");
   }
@@ -153,11 +167,24 @@ export function MasqueradeRoom({
     await supabase.rpc("next_icebreaker", { p_session: state.id });
   }
 
-  if (state.status !== "active") return <Outcome state={state} eventId={eventId} />;
+  async function reopen() {
+    setReopening(true);
+    setKeysNote(null);
+    const { error } = await supabase.rpc("reopen_masquerade", { p_session: state.id });
+    setReopening(false);
+    if (error) return setKeysNote(keysError(error.message));
+    notify({ kind: "masquerade_reopen", sessionId: state.id });
+    refreshWallet();
+    await refresh();
+  }
+
+  if (state.status !== "active" && state.status !== "lapsed") return <Outcome state={state} eventId={eventId} />;
 
   const them = state.them;
   const gender = GENDERS.find((g) => g.value === them.gender)?.label;
-  const chatting = !timeUp;
+  const lapsed = state.status === "lapsed";
+  const chatting = !lapsed && !timeUp;
+  const total = state.hourly ? 3600 : TOTAL;
 
   return (
     <div ref={shell} className="fixed inset-x-0 top-0 z-20 flex h-dvh overflow-hidden lg:static">
@@ -165,6 +192,11 @@ export function MasqueradeRoom({
       {/* Header */}
       <header className="z-10 border-b border-line bg-surface">
         <div className="flex items-center gap-3 px-4 py-3">
+          {state.hourly && (
+            <Link href="/home" className="-ml-2 grid h-10 w-8 shrink-0 place-items-center rounded-full hover:bg-ink/5" aria-label="Back home">
+              <ArrowLeft size={22} />
+            </Link>
+          )}
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-ink text-white">
             <MaskIcon className="w-7" eyes="#1c1828" />
           </span>
@@ -174,7 +206,13 @@ export function MasqueradeRoom({
               {[them.age, gender, distanceLabel(them.distance_km) ?? intentLabel(state.intent)].join(" · ")}
             </p>
           </div>
-          <TimerRing remaining={remaining} total={TOTAL} />
+          {lapsed ? (
+            <span className="shrink-0 rounded-full bg-cream px-2.5 py-1 text-[12px] font-semibold text-muted">Hour over</span>
+          ) : state.reopened ? (
+            <span className="shrink-0 rounded-full bg-mint-soft px-2.5 py-1 text-[12px] font-semibold text-mint">Reopened</span>
+          ) : (
+            <TimerRing remaining={remaining} total={total} />
+          )}
           <div className="relative">
             <button onClick={() => setMenu((m) => !m)} className="grid h-10 w-10 place-items-center rounded-full text-muted hover:bg-ink/5" aria-label="More options">
               {menu ? <X size={20} /> : <MoreVertical size={20} />}
@@ -182,7 +220,7 @@ export function MasqueradeRoom({
             {menu && (
               <div className="absolute top-11 right-0 w-48 overflow-hidden rounded-2xl border border-line bg-surface shadow-lift animate-fade-up">
                 <button onClick={leave} className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-[15px] hover:bg-cream">
-                  <LogOut size={18} /> Leave chat
+                  <LogOut size={18} /> {state.hourly ? "Let go" : "Leave chat"}
                 </button>
                 <button onClick={() => { setMenu(false); setReporting(true); }} className="flex w-full items-center gap-3 border-t border-line px-4 py-3.5 text-left text-[15px] text-chili hover:bg-chili-soft">
                   <Flag size={18} /> Report
@@ -209,6 +247,36 @@ export function MasqueradeRoom({
         </div>
       </header>
 
+      {/* Hourly pairs can unmask any time */}
+      {state.hourly && !lapsed && (
+        <div className="flex items-center gap-3 border-b border-line bg-brand-soft/60 px-4 py-2.5">
+          <Handshake size={18} className="shrink-0 text-brand" />
+          <p className="min-w-0 flex-1 text-[13px] leading-snug">
+            {state.me.vote === true ? (
+              <>
+                <span className="font-semibold text-ink">You chose to unmask.</span>{" "}
+                <span className="text-muted">If {them.alias} does too, you&apos;re connected.</span>
+              </>
+            ) : (
+              <>
+                <span className="font-semibold text-ink">Feeling the vibe?</span>{" "}
+                <span className="text-muted">{them.has_voted ? `${them.alias} has made a choice.` : "Unmask whenever you're ready."}</span>
+              </>
+            )}
+          </p>
+          {state.me.vote !== true && (
+            <button
+              type="button"
+              onClick={() => vote(true)}
+              disabled={voting}
+              className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-brand px-3.5 text-[13px] font-semibold text-white transition active:scale-95 disabled:opacity-60"
+            >
+              <MaskIcon className="w-5" eyes="#5b3fd9" /> Unmask
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Messages */}
       <div data-chat-scroll className="flex-1 overflow-y-auto overscroll-contain">
         <p className="px-6 pt-5 text-center text-[13px] leading-relaxed text-muted">
@@ -228,7 +296,7 @@ export function MasqueradeRoom({
         />
       </div>
 
-      {chatting && remaining <= 90 && !demo?.hideExtend && (
+      {chatting && !state.hourly && remaining <= 90 && !demo?.hideExtend && (
         <div className="flex animate-fade-up items-center gap-3 border-t border-line bg-mint-soft/60 px-4 py-2.5">
           <Timer size={18} className="shrink-0 text-mint" />
           <p className="min-w-0 flex-1 text-[13px] leading-snug">
@@ -250,6 +318,42 @@ export function MasqueradeRoom({
           <p className="flex-1 font-medium text-[#8a5a00]">{keysNote}</p>
           <Link href="/wallet" target="_blank" className="shrink-0 font-semibold text-brand">Get Keys</Link>
           <button onClick={() => setKeysNote(null)} aria-label="Dismiss" className="text-muted"><X size={16} /></button>
+        </div>
+      )}
+
+      {lapsed && (
+        <div className="animate-fade-up border-t border-line bg-surface px-5 pt-4 pb-safe">
+          <p className="text-center text-[15px] font-semibold">The hour ran out before you both decided</p>
+          <p className="mx-auto mt-1 max-w-sm text-center text-[13px] leading-snug text-muted">
+            {state.me.vote === true
+              ? `You unmasked. If ${them.alias} unmasks too, you're connected.`
+              : `Unmask now, and if ${them.alias} does too, you're connected. Or reopen the chat to keep talking.`}
+          </p>
+          <div className="mt-3 grid grid-cols-2 gap-2.5 pb-2">
+            {state.me.vote !== true ? (
+              <button
+                type="button"
+                onClick={() => vote(true)}
+                disabled={voting}
+                className="inline-flex h-12 items-center justify-center gap-1.5 rounded-2xl bg-brand text-[15px] font-semibold text-white disabled:opacity-60"
+              >
+                <Handshake size={18} /> Unmask
+              </button>
+            ) : (
+              <span className="inline-flex h-12 items-center justify-center rounded-2xl bg-mint-soft text-[14px] font-semibold text-mint">Unmasked ✓</span>
+            )}
+            <button
+              type="button"
+              onClick={reopen}
+              disabled={reopening}
+              className="inline-flex h-12 items-center justify-center gap-1.5 rounded-2xl border border-gold/50 bg-gold-soft text-[15px] font-semibold text-[#8a5a00] disabled:opacity-60"
+            >
+              {reopening ? <Spinner className="h-4 w-4" /> : <RotateCcw size={17} />} Reopen · <KeyCoin size={16} /> {REOPEN_COST}
+            </button>
+          </div>
+          <button type="button" onClick={leave} className="mx-auto mb-2 block text-[13px] font-semibold text-muted hover:text-chili">
+            Let go
+          </button>
         </div>
       )}
 
@@ -299,7 +403,7 @@ export function MasqueradeRoom({
           return null;
         }}
       />
-      {timeUp && <DecisionSheet state={state} voting={voting} onVote={vote} />}
+      {timeUp && !state.hourly && <DecisionSheet state={state} voting={voting} onVote={vote} />}
       {reporting && <ReportSheet onClose={() => setReporting(false)} onReport={report} />}
     </div>
 
@@ -313,10 +417,14 @@ export function MasqueradeRoom({
         <p className="text-[14px] text-muted">
           {[them.age, gender, distanceLabel(them.distance_km)].filter(Boolean).join(" · ")}
         </p>
-        <div className="mt-5">
-          <TimerRing remaining={remaining} total={TOTAL} />
-        </div>
-        <p className="mt-1 text-[12px] text-muted">until you both decide</p>
+        {!lapsed && !state.reopened && (
+          <>
+            <div className="mt-5">
+              <TimerRing remaining={remaining} total={total} />
+            </div>
+            <p className="mt-1 text-[12px] text-muted">{state.hourly ? "left this hour" : "until you both decide"}</p>
+          </>
+        )}
       </div>
 
       <h3 className="mt-8 mb-2 text-[12px] font-semibold tracking-wide text-muted uppercase">Here for</h3>

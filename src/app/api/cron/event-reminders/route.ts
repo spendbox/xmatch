@@ -16,7 +16,8 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Not allowed" }, { status: 401 });
   }
   const db = createAdminClient();
-  const prompt = await pushDailyPrompt(db).catch(() => ({ sent: 0, skipped: "error" }));
+  // The Feed is hidden for now, so no morning prompt notification
+  const prompt = { sent: 0, skipped: "feed hidden" };
   if (!process.env.RESEND_API_KEY) return NextResponse.json({ error: "RESEND_API_KEY is not set", prompt }, { status: 500 });
 
   const now = Date.now();
@@ -54,6 +55,7 @@ export async function GET(req: Request) {
   return NextResponse.json({ ok: true, prompt, report });
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 /** Morning nudge: today's Feed prompt is up. Goes to everyone with notifications on, once per prompt. */
 async function pushDailyPrompt(db: ReturnType<typeof createAdminClient>) {
   const today = lagosDay(new Date());

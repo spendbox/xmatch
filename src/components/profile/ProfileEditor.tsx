@@ -237,11 +237,11 @@ export function ProfileEditor({
                 <span className={clsx("grid h-11 w-11 shrink-0 place-items-center rounded-[14px] transition", open ? "bg-brand text-white" : "bg-[#e6f0fd] text-[#2f6fd1]")}>
                   <BellRing size={20} strokeWidth={1.75} />
                 </span>
-                <Toggle checked={open} onChange={toggleOpen} label="Open to Masquerade" />
+                <Toggle checked={open} onChange={toggleOpen} label="Masquerade pairing" />
               </div>
-              <p className="mt-3 text-[15px] font-semibold">Open to Masquerade</p>
+              <p className="mt-3 text-[15px] font-semibold">Masquerade</p>
               <p className="mt-0.5 text-[13px] leading-snug text-muted">
-                {open ? "On · you get pop-ups when someone is looking" : "Off · no pop-up invites"}
+                {open ? "On · a new masked pair every hour" : "Off · you won't be paired"}
               </p>
             </div>
             <Link
@@ -468,7 +468,7 @@ export function ProfileEditor({
           </div>
         }
       >
-        <p className="text-[14px] text-muted">You won&apos;t get Masquerade pop-ups or call alerts while you&apos;re logged out.</p>
+        <p className="text-[14px] text-muted">You won&apos;t get pairing or call alerts while you&apos;re logged out.</p>
       </Sheet>
 
       {/* Delete */}

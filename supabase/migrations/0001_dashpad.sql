@@ -3113,3 +3113,391 @@ end $$;
 
 -- New members start on Friends (people can still pick Dating or Spicy)
 alter table public.profiles alter column pref_intent set default 'friends';
+
+-- ---------------------------------------------------------------------------
+-- Hourly Masquerade: everyone with Masquerade turned on (and active in the last
+-- day) is paired with someone new at the top of every hour, 6am to 2am Lagos time.
+-- A pair chats masked until the hour ends. Both unmask: connected. One lets go:
+-- the chat closes. Nobody decided but they talked: the chat is kept as a past
+-- pair (either can unmask later, or pay Keys to reopen it until both decide).
+-- Nobody talked: it quietly closes and they can be paired again another time.
+-- ---------------------------------------------------------------------------
+alter table public.masquerade_sessions add column if not exists hour_at timestamptz;
+alter table public.masquerade_sessions add column if not exists reopened_at timestamptz;
+alter table public.masquerade_sessions add column if not exists reopened_by uuid references public.profiles on delete set null;
+alter table public.masquerade_sessions add column if not exists notified_at timestamptz;
+create index if not exists masquerade_sessions_hour on public.masquerade_sessions (hour_at);
+alter table public.masquerade_sessions drop constraint if exists masquerade_sessions_status_check;
+alter table public.masquerade_sessions add constraint masquerade_sessions_status_check
+  check (status in ('active', 'matched', 'ended', 'lapsed'));
+
+-- Each hour that has been paired (so it only happens once)
+create table if not exists public.masquerade_hours (
+  hour_at timestamptz primary key,
+  ran_at timestamptz not null default now(),
+  pairs int not null default 0
+);
+alter table public.masquerade_hours enable row level security;
+
+-- Pairing runs at 6am to 1am (the 1am pair ends at 2am). Nigeria is always UTC+1.
+create or replace function public.pairing_hour_open(h timestamptz) returns boolean
+language sql stable as $$
+  select extract(hour from h at time zone 'Africa/Lagos') not in (2, 3, 4, 5)
+$$;
+
+create or replace function public.next_pairing_at(ts timestamptz default now()) returns timestamptz
+language plpgsql stable as $$
+declare h timestamptz := date_trunc('hour', ts) + interval '1 hour';
+begin
+  while not public.pairing_hour_open(h) loop
+    h := h + interval '1 hour';
+  end loop;
+  return h;
+end $$;
+
+-- Only event rounds count as a busy chat now (hourly pairs and reopened chats run alongside)
+create or replace function public.my_active_session(uid uuid) returns uuid
+language sql stable security definer set search_path = public as $$
+  select id from masquerade_sessions
+  where status = 'active' and (user_a = uid or user_b = uid) and hour_at is null
+  order by started_at desc limit 1
+$$;
+
+-- Decides what happens to a chat once both chose, someone let go, or time ran out
+create or replace function public.finalize_masquerade(p_session uuid) returns void
+language plpgsql security definer set search_path = public as $$
+declare
+  s masquerade_sessions;
+  mid uuid;
+  talked boolean;
+begin
+  select * into s from masquerade_sessions where id = p_session for update;
+  if not found or s.status not in ('active', 'lapsed') then return; end if;
+
+  if s.unmask_a is true and s.unmask_b is true then
+    insert into matches (user_a, user_b, session_id, intent)
+    values (least(s.user_a, s.user_b), greatest(s.user_a, s.user_b), s.id, s.intent)
+    on conflict (user_a, user_b) do update set session_id = excluded.session_id
+    returning id into mid;
+
+    insert into messages (match_id, sender_id, kind, body, media_meta, created_at)
+    select mid, sender_id,
+      case when kind = 'gift' then 'gift' else 'text' end,
+      case when kind = 'icebreaker' then '💬 ' || body else body end,
+      case when kind = 'gift' then jsonb_build_object('gift', body) else null end,
+      created_at
+    from masquerade_messages where session_id = s.id and kind <> 'system' order by id;
+
+    update masquerade_sessions set status = 'matched', match_id = mid where id = s.id;
+    delete from masquerade_messages where session_id = s.id;
+    return;
+  end if;
+
+  if s.unmask_a is false or s.unmask_b is false then
+    update masquerade_sessions set status = 'ended', ended_reason = coalesce(ended_reason, 'declined') where id = s.id;
+    delete from masquerade_messages where session_id = s.id;
+    return;
+  end if;
+
+  -- Hourly pairs: when the hour is over
+  if s.hour_at is not null then
+    if s.status = 'active' and now() >= s.ends_at then
+      talked := exists (select 1 from masquerade_messages m where m.session_id = s.id and m.kind in ('text', 'gift') and m.sender_id = s.user_a)
+            and exists (select 1 from masquerade_messages m where m.session_id = s.id and m.kind in ('text', 'gift') and m.sender_id = s.user_b);
+      if talked then
+        update masquerade_sessions set status = 'lapsed' where id = s.id;
+      else
+        update masquerade_sessions set status = 'ended', ended_reason = 'quiet' where id = s.id;
+        delete from masquerade_messages where session_id = s.id;
+      end if;
+    end if;
+    return;
+  end if;
+
+  -- Event rounds: time ran out without both deciding
+  if now() > s.ends_at + interval '90 seconds' then
+    update masquerade_sessions set status = 'ended', ended_reason = coalesce(ended_reason, 'timeout') where id = s.id;
+    delete from masquerade_messages where session_id = s.id;
+  end if;
+end $$;
+
+-- Unmask or let go. Hourly pairs can decide any time (and later, for past pairs).
+create or replace function public.vote_unmask(p_session uuid, p_unmask boolean) returns void
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  s masquerade_sessions;
+begin
+  select * into s from masquerade_sessions where id = p_session and (user_a = uid or user_b = uid);
+  if not found then raise exception 'Chat not found'; end if;
+  if s.status not in ('active', 'lapsed') then return; end if;
+  if p_unmask and s.hour_at is null and now() < s.ends_at - interval '2 seconds' then
+    raise exception 'You can unmask when the timer ends';
+  end if;
+  if uid = s.user_a then
+    update masquerade_sessions set unmask_a = p_unmask,
+      ended_reason = case when not p_unmask and now() < s.ends_at then 'left' else ended_reason end
+    where id = p_session;
+  else
+    update masquerade_sessions set unmask_b = p_unmask,
+      ended_reason = case when not p_unmask and now() < s.ends_at then 'left' else ended_reason end
+    where id = p_session;
+  end if;
+  perform public.finalize_masquerade(p_session);
+end $$;
+
+-- Pairs everyone for this hour. Safe to call any number of times: it only pairs once per hour.
+-- Returns how many pairs were made just now.
+create or replace function public.run_hourly_pairing() returns int
+language plpgsql security definer set search_path = public as $$
+declare
+  h timestamptz := date_trunc('hour', now());
+  r record;
+  partner record;
+  sid uuid;
+  a1 text;
+  q text;
+  n int := 0;
+  lvl smallint;
+begin
+  -- Close chats from hours that have ended
+  for r in select id from masquerade_sessions
+           where hour_at is not null and status = 'active' and reopened_at is null and ends_at <= now() loop
+    perform public.finalize_masquerade(r.id);
+  end loop;
+
+  if not public.pairing_hour_open(h) then return 0; end if;
+  perform pg_advisory_xact_lock(515151);
+  if exists (select 1 from masquerade_hours where hour_at = h) then return 0; end if;
+  insert into masquerade_hours (hour_at) values (h);
+  -- Too late in the hour to start a fair chat: wait for the next one
+  if now() > h + interval '45 minutes' then return 0; end if;
+
+  drop table if exists pg_temp.hour_pool;
+  create temp table hour_pool on commit drop as
+    select p.id, p.gender, p.pref_intent, p.pref_seeking, p.pref_age_min, p.pref_age_max, p.pref_spice,
+      p.pref_max_km, p.interests, public.age_years(p.birthdate) as age, a.lat, a.lng, random() as rnd
+    from profiles p
+    left join accounts_private a on a.user_id = p.id
+    where p.open_to_masquerade
+      and p.last_seen_at > now() - interval '24 hours'
+      and p.display_name is not null and p.birthdate is not null and p.gender is not null
+      and cardinality(p.photos) > 0
+      and a.banned_at is null;
+
+  for r in select * from hour_pool order by rnd loop
+    continue when not exists (select 1 from hour_pool where id = r.id);
+    select c.* into partner from hour_pool c
+    where c.id <> r.id
+      and c.pref_intent = r.pref_intent
+      and public.gender_fits(r.pref_seeking, c.gender) and public.gender_fits(c.pref_seeking, r.gender)
+      and c.age between r.pref_age_min and r.pref_age_max
+      and r.age between c.pref_age_min and c.pref_age_max
+      and public.within_km(public.distance_km(r.lat, r.lng, c.lat, c.lng), r.pref_max_km)
+      and public.within_km(public.distance_km(r.lat, r.lng, c.lat, c.lng), c.pref_max_km)
+      and not public.is_blocked(r.id, c.id)
+      and not public.already_matched(r.id, c.id)
+      -- New people every time (a pair that never talked can meet again)
+      and not exists (select 1 from masquerade_sessions s
+                      where s.hour_at is not null
+                        and ((s.user_a = r.id and s.user_b = c.id) or (s.user_a = c.id and s.user_b = r.id))
+                        and not (s.status = 'ended' and s.ended_reason = 'quiet'))
+    order by public.shared_count(r.interests, c.interests) desc,
+      floor(public.distance_km(r.lat, r.lng, c.lat, c.lng) / 10) nulls last, c.rnd
+    limit 1;
+    continue when not found;
+
+    a1 := public.random_alias();
+    lvl := round((r.pref_spice + partner.pref_spice) / 2.0)::smallint;
+    insert into masquerade_sessions (user_a, user_b, intent, spice_a, spice_b, spice_level, alias_a, alias_b, started_at, ends_at, hour_at)
+    values (r.id, partner.id, r.pref_intent, r.pref_spice, partner.pref_spice, lvl, a1, public.random_alias(a1), now(), h + interval '1 hour', h)
+    returning id into sid;
+    q := public.pick_icebreaker(sid, lvl, null);
+    if q is not null then
+      insert into masquerade_messages (session_id, kind, body) values (sid, 'icebreaker', q);
+    end if;
+    delete from hour_pool where id in (r.id, partner.id);
+    n := n + 1;
+  end loop;
+
+  update masquerade_hours set pairs = n where hour_at = h;
+  return n;
+end $$;
+revoke execute on function public.run_hourly_pairing() from public, anon, authenticated;
+
+-- The app calls this when opened, so pairing happens on time even if the scheduled job is late
+create or replace function public.ensure_hourly_pairing() returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null then return; end if;
+  if public.pairing_hour_open(date_trunc('hour', now()))
+     and exists (select 1 from masquerade_hours where hour_at = date_trunc('hour', now())) then
+    return;
+  end if;
+  perform public.run_hourly_pairing();
+end $$;
+
+-- Pairs made this hour that have not been told yet (for notifications; only the server calls this)
+create or replace function public.hourly_pairs_to_notify() returns json
+language sql security definer set search_path = public as $$
+  with t as (
+    update masquerade_sessions set notified_at = now()
+    where hour_at = date_trunc('hour', now()) and status = 'active' and notified_at is null
+    returning id, user_a, user_b, alias_a, alias_b, ends_at, intent
+  )
+  select coalesce(json_agg(row_to_json(t)), '[]'::json) from t
+$$;
+revoke execute on function public.hourly_pairs_to_notify() from public, anon, authenticated;
+
+-- Pay Keys to reopen a past pair. It stays open until you both decide.
+create or replace function public.reopen_masquerade(p_session uuid) returns int
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  s masquerade_sessions;
+  bal int;
+begin
+  select * into s from masquerade_sessions where id = p_session and (user_a = uid or user_b = uid) for update;
+  if not found then raise exception 'Chat not found'; end if;
+  if s.status <> 'lapsed' then raise exception 'This chat can’t be reopened'; end if;
+  if public.is_blocked(s.user_a, s.user_b) then raise exception 'Not available'; end if;
+  bal := public.spend_keys(uid, 10, 'reopen', s.id::text);
+  update masquerade_sessions set status = 'active', reopened_at = now(), reopened_by = uid, ends_at = 'infinity'
+  where id = s.id;
+  insert into masquerade_messages (session_id, kind, body)
+  values (s.id, 'system', (case when s.user_a = uid then s.alias_a else s.alias_b end) || ' reopened the chat');
+  return bal;
+end $$;
+
+-- Everything the Masquerade card on Home needs
+create or replace function public.my_masquerade_hour() returns json
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  h timestamptz := date_trunc('hour', now());
+  me profiles;
+  cur masquerade_sessions;
+  i_a boolean;
+  op profiles;
+begin
+  if uid is null then return null; end if;
+  perform public.ensure_hourly_pairing();
+  select * into me from profiles where id = uid;
+  select * into cur from masquerade_sessions
+  where hour_at = h and (user_a = uid or user_b = uid)
+  order by started_at desc limit 1;
+  i_a := cur.user_a = uid;
+  if cur.id is not null then
+    select * into op from profiles where id = case when i_a then cur.user_b else cur.user_a end;
+  end if;
+
+  return json_build_object(
+    'enabled', me.open_to_masquerade,
+    'server_now', now(),
+    'hour_at', h,
+    'hour_open', public.pairing_hour_open(h),
+    'hour_ran', exists (select 1 from masquerade_hours where hour_at = h),
+    'pairs_this_hour', coalesce((select pairs from masquerade_hours where hour_at = h), 0),
+    'next_at', public.next_pairing_at(now()),
+    'current', case when cur.id is null then null else json_build_object(
+      'id', cur.id, 'status', cur.status, 'intent', cur.intent, 'ends_at', cur.ends_at, 'match_id', cur.match_id,
+      'my_alias', case when i_a then cur.alias_a else cur.alias_b end,
+      'their_alias', case when i_a then cur.alias_b else cur.alias_a end,
+      'their_age', public.age_years(op.birthdate), 'their_gender', op.gender,
+      'their_name', case when cur.status = 'matched' then op.display_name end,
+      'their_photo', case when cur.status = 'matched' then op.photos[1] end,
+      'my_vote', case when i_a then cur.unmask_a else cur.unmask_b end,
+      'they_voted', (case when i_a then cur.unmask_b else cur.unmask_a end) is not null,
+      'messages', (select count(*) from masquerade_messages m where m.session_id = cur.id and m.kind in ('text', 'gift')),
+      'last_message', (select body from masquerade_messages m where m.session_id = cur.id and m.kind = 'text' order by m.id desc limit 1),
+      'last_from_them', (select m.sender_id <> uid from masquerade_messages m where m.session_id = cur.id and m.kind = 'text' order by m.id desc limit 1)
+    ) end,
+    'past', coalesce((
+      select json_agg(row_to_json(t) order by t.sort_at desc) from (
+        select s.id, s.status, s.intent, s.hour_at, s.reopened_at, coalesce(s.reopened_at, s.started_at) as sort_at,
+          case when s.user_a = uid then s.alias_b else s.alias_a end as their_alias,
+          public.age_years(p.birthdate) as their_age, p.gender as their_gender,
+          case when s.user_a = uid then s.unmask_a else s.unmask_b end as my_vote,
+          (select body from masquerade_messages m where m.session_id = s.id and m.kind = 'text' order by m.id desc limit 1) as last_message
+        from masquerade_sessions s
+        join profiles p on p.id = case when s.user_a = uid then s.user_b else s.user_a end
+        where (s.user_a = uid or s.user_b = uid) and s.hour_at is not null
+          and (s.status = 'lapsed' or (s.status = 'active' and s.reopened_at is not null))
+          and not public.is_blocked(s.user_a, s.user_b)
+        order by coalesce(s.reopened_at, s.started_at) desc
+        limit 30
+      ) t), '[]'::json)
+  );
+end $$;
+
+-- The chat itself: also says whether it is an hourly pair or a reopened one
+create or replace function public.get_masquerade(p_session uuid) returns json
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  s masquerade_sessions;
+  other uuid;
+  op profiles;
+  my_loc accounts_private;
+  mp profiles;
+  their_loc accounts_private;
+  i_am_a boolean;
+begin
+  select * into s from masquerade_sessions where id = p_session and (user_a = uid or user_b = uid);
+  if not found then return null; end if;
+  if s.status = 'active' and (
+       (s.hour_at is not null and now() >= s.ends_at)
+       or (s.hour_at is null and now() > s.ends_at + interval '90 seconds')) then
+    perform public.finalize_masquerade(p_session);
+    select * into s from masquerade_sessions where id = p_session;
+  end if;
+
+  i_am_a := s.user_a = uid;
+  other := case when i_am_a then s.user_b else s.user_a end;
+  select * into op from profiles where id = other;
+  select * into my_loc from accounts_private where user_id = uid;
+  select * into mp from profiles where id = uid;
+  select * into their_loc from accounts_private where user_id = other;
+
+  return json_build_object(
+    'id', s.id,
+    'status', s.status,
+    'ended_reason', s.ended_reason,
+    'intent', s.intent,
+    'spice_level', s.spice_level,
+    'started_at', s.started_at,
+    'ends_at', s.ends_at,
+    'server_now', now(),
+    'match_id', s.match_id,
+    'hourly', s.hour_at is not null,
+    'reopened', s.reopened_at is not null,
+    'me', json_build_object(
+      'id', uid,
+      'alias', case when i_am_a then s.alias_a else s.alias_b end,
+      'spice', case when i_am_a then s.spice_a else s.spice_b end,
+      'vote', case when i_am_a then s.unmask_a else s.unmask_b end
+    ),
+    'them', json_build_object(
+      'alias', case when i_am_a then s.alias_b else s.alias_a end,
+      'spice', case when i_am_a then s.spice_b else s.spice_a end,
+      'age', public.age_years(op.birthdate),
+      'gender', op.gender,
+      'interests', op.interests,
+      'shared_interests', array(select unnest(op.interests) intersect select unnest(mp.interests)),
+      'distance_km', ceil(public.distance_km(my_loc.lat, my_loc.lng, their_loc.lat, their_loc.lng))::int,
+      'has_voted', (case when i_am_a then s.unmask_b else s.unmask_a end) is not null,
+      -- Only revealed after you both unmask
+      'profile', case when s.status = 'matched' then json_build_object(
+        'id', op.id, 'display_name', op.display_name, 'bio', op.bio, 'photos', op.photos
+      ) else null end
+    )
+  );
+end $$;
+
+-- Keep your rough location fresh for distance pairing (about 1 km, never shown exactly)
+create or replace function public.save_location(p_lat double precision, p_lng double precision) returns void
+language sql security definer set search_path = public as $$
+  update accounts_private set lat = round(p_lat::numeric, 2)::double precision, lng = round(p_lng::numeric, 2)::double precision,
+    location_at = now()
+  where user_id = auth.uid() and p_lat between -90 and 90 and p_lng between -180 and 180
+$$;

@@ -48,6 +48,7 @@ export function NotificationsPanel({ push }: { push: ReturnType<typeof usePushSt
 
   const what = (
     <ul className="space-y-1.5 text-[14px] text-ink-soft">
+      <li>• Your new masked pair, every hour</li>
       <li>• New messages and gifts from your people</li>
       <li>• Incoming voice and video calls</li>
       <li>• Someone saying hi at an event, and new connections from events</li>

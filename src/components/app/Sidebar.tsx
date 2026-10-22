@@ -3,13 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
-import { CalendarDays, MessageCircle, Newspaper, PanelLeftClose, PanelLeftOpen, UserRound } from "lucide-react";
+import { CalendarDays, MessageCircle, PanelLeftClose, PanelLeftOpen, UserRound } from "lucide-react";
 import { MaskIcon } from "@/components/ui/MaskIcon";
-import { MaskLineIcon } from "@/components/ui/icons";
 import { Avatar } from "@/components/ui/Avatar";
 import { KeyCoin } from "@/components/keys/KeyIcon";
 import { useWallet } from "@/components/keys/useWallet";
-import { FREE_MASQUERADES_PER_DAY } from "@/lib/keys";
 import type { MenuBadges } from "./useMenuBadges";
 import { badgeFor } from "./badges";
 
@@ -21,12 +19,6 @@ const items = [
   { href: "/matches", label: "Chats", icon: () => <MessageCircle size={21} /> },
   { href: "/wallet", label: "Keys", icon: () => <KeyCoin size={22} /> },
   { href: "/profile", label: "Profile", icon: () => <UserRound size={21} /> },
-];
-
-/** The two parts of Home, shown under it in the menu */
-const homeParts = [
-  { href: "/home", label: "Masquerade", icon: <MaskLineIcon size={17} /> },
-  { href: "/feed", label: "Feed", icon: <Newspaper size={17} /> },
 ];
 
 export function isActive(path: string, href: string) {
@@ -108,29 +100,6 @@ export function Sidebar({ user, badges }: { user: ChromeUser; badges?: MenuBadge
                 </span>
               )}
             </Link>
-            {home && (
-              <div className={clsx("mt-1 mb-2 ml-[26px] space-y-0.5 border-l-2 border-line pl-3", hideWhenFolded)}>
-                {homeParts.map((sub) => {
-                  const subOn = path === sub.href || path.startsWith(sub.href + "/") || (sub.href === "/home" && path.startsWith("/masquerade"));
-                  const b = sub.href === "/feed" ? badgeFor("/feed", badges) : null;
-                  return (
-                    <Link
-                      key={sub.href}
-                      href={sub.href}
-                      aria-current={subOn ? "page" : undefined}
-                      className={clsx(
-                        "flex h-10 items-center gap-2.5 rounded-xl px-3 text-[14px] font-semibold whitespace-nowrap transition",
-                        subOn ? "bg-brand-soft text-brand" : "text-muted hover:bg-cream hover:text-ink",
-                      )}
-                    >
-                      {sub.icon}
-                      {sub.label}
-                      {b && <span className="ml-auto grid h-5 min-w-5 place-items-center rounded-full bg-chili px-1.5 text-[11px] font-bold text-white">{b}</span>}
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
             </div>
           );
         })}
@@ -145,10 +114,8 @@ export function Sidebar({ user, badges }: { user: ChromeUser; badges?: MenuBadge
       >
         <span aria-hidden className="absolute -top-8 -right-8 h-24 w-24 rounded-full bg-white/10" />
         <MaskIcon className="relative w-9 animate-float text-white" eyes="#6d4ff0" />
-        <p className="relative mt-2 text-[15px] font-semibold">Ready to mask up?</p>
-        <p className="relative text-[12px] text-white/75">
-          {wallet ? `${wallet.free_left} of ${FREE_MASQUERADES_PER_DAY} free left today` : "5 minutes, both masked"}
-        </p>
+        <p className="relative mt-2 text-[15px] font-semibold">Masquerade</p>
+        <p className="relative text-[12px] text-white/75">A new masked pair every hour</p>
       </Link>
 
       <div className="mt-auto flex items-center gap-3 rounded-2xl p-2 collapsed:flex-col collapsed:p-0">

@@ -8,10 +8,10 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://dashpad.site"),
   title: { default: "Dashpad — Your world, your people", template: "%s · Dashpad" },
   description:
-    "Dashpad is dating for personality. Chat masked for 5 minutes. Unmask only if you both say yes.",
+    "Dashpad pairs you with someone new every hour. Chat masked, and unmask only if you both say yes.",
   openGraph: {
     title: "Dashpad",
-    description: "Chat masked for 5 minutes. Unmask only if you both say yes.",
+    description: "A new masked pair every hour. Unmask only if you both say yes.",
     url: "https://dashpad.site",
     siteName: "Dashpad",
     type: "website",

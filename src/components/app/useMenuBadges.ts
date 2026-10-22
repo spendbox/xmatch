@@ -30,12 +30,11 @@ export function useMenuBadges(userId: string): MenuBadges {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const refresh = useCallback(async () => {
-    const [chats, eventChats, event, feedChats, feed] = await Promise.all([
+    const [chats, eventChats, event, feedChats] = await Promise.all([
       supabase.rpc("unread_chats"),
       supabase.rpc("unread_event_chats"),
       supabase.rpc("next_event"),
       supabase.rpc("unread_feed_chats"),
-      supabase.rpc("feed_status"),
     ]);
     const ev = event.data as { i_am_going?: boolean; starts_at?: string; ends_at?: string } | null;
     const now = Date.now();
@@ -43,12 +42,12 @@ export function useMenuBadges(userId: string): MenuBadges {
       !!ev?.i_am_going && !!ev.starts_at && !!ev.ends_at && new Date(ev.starts_at).getTime() <= now && new Date(ev.ends_at).getTime() > now;
     const num = (x: unknown) => (typeof x === "number" ? x : 0);
     const n = num(chats.data) + num(eventChats.data) + num(feedChats.data);
-    const f = feed.data as { prompt: { answered: boolean } | null; gifts_unseen: number } | null;
     setBadges((b) => ({
       chats: chats.error && eventChats.error ? b.chats : n,
       eventLive,
-      feedNew: !!f?.prompt && !f.prompt.answered,
-      feedGifts: f?.gifts_unseen ?? 0,
+      // The Feed is hidden for now
+      feedNew: false,
+      feedGifts: 0,
     }));
   }, [supabase]);
 

@@ -4,7 +4,6 @@ import { registerWorker, refreshSubscription } from "@/lib/pushClient";
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { BottomNav } from "./BottomNav";
-import { InviteListener } from "./InviteListener";
 import { Sidebar, type ChromeUser } from "./Sidebar";
 import { useHeartbeat } from "./useHeartbeat";
 import { MenuBadgesContext, useMenuBadges } from "./useMenuBadges";
@@ -30,7 +29,6 @@ export function AppChrome({ user, children }: { user: ChromeUser; children: Reac
         <div className={(fullScreen ? "" : "pb-24 ") + "lg:pb-0 lg:pl-[var(--sidebar-w)] lg:transition-[padding] lg:duration-300"}>{children}</div>
         </MenuBadgesContext.Provider>
         {!fullScreen && <BottomNav badges={badges} />}
-        {!path.startsWith("/masquerade/") && <InviteListener userId={user.id} />}
       </EventMediaProvider>
     </CallProvider>
   );

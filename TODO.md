@@ -37,6 +37,7 @@ Goal: a place to meet your people. Dating stays as one mood, not the headline.
 - [ ] 8. Positioning: "anonymous social app"; list under Social (not Dating) in app stores and search descriptions
 
 ## Before ~20,000–50,000 daily users
+- [ ] Hourly pairing compares people one by one in the database. Fine for a few thousand per hour; past that, pair by city/mood in batches
 - [ ] Switch live chat updates from database-change events to Realtime "broadcast" (much lighter at scale)
 - [ ] Split masquerade matching by city or intent (it currently queues all matching through one lock)
 - [ ] Add a database read replica for heavy reads (event walls, lists)
