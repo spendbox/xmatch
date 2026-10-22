@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
-import { CalendarDays, ChevronRight, Sparkles } from "lucide-react";
+import { CalendarDays, ChevronRight, Newspaper } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { sexLabel } from "@/lib/eventSpace";
 import { BlurPhoto } from "@/components/events/space/common";
@@ -132,7 +132,7 @@ export function LiveFeedChats({ compact, divided, userId }: { compact?: boolean;
   return (
     <section className={divided ? "border-b border-line py-5" : compact ? "mt-5" : "mt-6"}>
       <h2 className="mb-3 flex items-center gap-2 text-[15px] font-semibold">
-        <Sparkles size={16} className="text-brand" /> From the Feed
+        <Newspaper size={16} className="text-brand" /> From the Feed
       </h2>
       <ul className="space-y-2.5">
         {chats.map((c) => {

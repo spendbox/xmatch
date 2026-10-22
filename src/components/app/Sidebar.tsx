@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
-import { CalendarDays, MessageCircle, PanelLeftClose, PanelLeftOpen, Sparkles, UserRound } from "lucide-react";
+import { CalendarDays, MessageCircle, Newspaper, PanelLeftClose, PanelLeftOpen, UserRound } from "lucide-react";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { Avatar } from "@/components/ui/Avatar";
 import { KeyCoin } from "@/components/keys/KeyIcon";
@@ -16,7 +16,7 @@ export type ChromeUser = { id: string; name: string; photo?: string | null };
 
 const items = [
   { href: "/home", label: "Home", icon: (on: boolean) => <MaskIcon className="w-[22px]" eyes={on ? "#5b3fd9" : "#faf7f2"} /> },
-  { href: "/feed", label: "Feed", icon: () => <Sparkles size={21} /> },
+  { href: "/feed", label: "Feed", icon: () => <Newspaper size={21} /> },
   { href: "/events", label: "Events", icon: () => <CalendarDays size={21} /> },
   { href: "/matches", label: "Chats", icon: () => <MessageCircle size={21} /> },
   { href: "/wallet", label: "Keys", icon: () => <KeyCoin size={22} /> },

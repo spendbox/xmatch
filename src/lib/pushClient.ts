@@ -88,7 +88,7 @@ export async function refreshSubscription() {
 
 /** Tell the server to notify the other person about something you just did. Fire and forget. */
 export function notify(body: {
-  kind: "message" | "call" | "event_message" | "event_match" | "feed_message" | "feed_match" | "feed_gift";
+  kind: "message" | "call" | "event_message" | "event_match" | "feed_message" | "feed_match" | "feed_gift" | "masquerade_wait";
   matchId?: string;
   callId?: string;
   chatId?: string;

@@ -1,7 +1,7 @@
 "use client";
 
 import { plural, word } from "@/lib/plural";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
 import { BellRing, ChevronRight, Gift, MapPin, SlidersHorizontal, Sparkles, Timer, Users } from "lucide-react";
@@ -21,6 +21,7 @@ import { useWallet } from "@/components/keys/useWallet";
 import { Waiting } from "@/components/masquerade/Waiting";
 import { MeetSheet } from "./MeetSheet";
 import { NotificationsPrompt } from "@/components/app/Notifications";
+import { notify } from "@/lib/pushClient";
 import { EventCard } from "@/components/events/EventCard";
 import type { DashpadEvent } from "@/lib/events";
 import { prefsFromProfile, type SetupPrefs } from "./prefs";
@@ -65,6 +66,19 @@ export function HomeScreen({
     setNow(Date.now());
     const t = setInterval(() => setNow(Date.now()), 30_000);
     return () => clearInterval(t);
+  }, []);
+
+  // Tapped a "someone's masking up" notification: mask up straight away
+  const autoStarted = useRef(false);
+  useEffect(() => {
+    if (autoStarted.current || typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("mask") !== "1") return;
+    autoStarted.current = true;
+    url.searchParams.delete("mask");
+    window.history.replaceState(null, "", url.pathname + url.search);
+    start();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function savePrefs(extra: Record<string, unknown> = {}) {
@@ -117,6 +131,8 @@ export function HomeScreen({
     else {
       setStarting(null);
       setWaiting(true);
+      // Nobody free right now: let people who are open to Masquerade (but away) know
+      notify({ kind: "masquerade_wait" });
     }
   }
 
@@ -207,7 +223,7 @@ export function HomeScreen({
           <BellRing size={16} className="shrink-0" />
           <p className="min-w-0 flex-1 text-[13px] leading-tight">
             <span className="font-semibold">Open to Masquerade</span>
-            <span className="hidden text-white/75 sm:inline"> · pop-ups when someone&apos;s looking</span>
+            <span className="hidden text-white/75 sm:inline"> · alerts when someone&apos;s looking, even when you&apos;re away</span>
           </p>
           <Toggle checked={open} onChange={toggleOpen} label="Open to Masquerade" />
         </div>

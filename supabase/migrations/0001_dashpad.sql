@@ -2967,3 +2967,75 @@ revoke execute on function public.admin_prompts() from public, anon, authenticat
 revoke execute on function public.admin_prompt_answers(uuid) from public, anon, authenticated;
 revoke execute on function public.tidy_feed_chats() from public, anon;
 revoke execute on function public.feed_person(public.feed_chats, uuid, uuid) from public, anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Offline Masquerade alerts: when someone masks up and nobody online fits,
+-- notify people who are open to Masquerade but away from the app.
+-- Each person gets at most one alert every 2 hours and 4 a day.
+-- ---------------------------------------------------------------------------
+create table if not exists public.masquerade_alerts (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references public.profiles on delete cascade,
+  from_user uuid references public.profiles on delete cascade,
+  distance_km int,
+  sent_at timestamptz not null default now()
+);
+create index if not exists masquerade_alerts_user on public.masquerade_alerts (user_id, sent_at desc);
+create index if not exists masquerade_alerts_from on public.masquerade_alerts (from_user, sent_at desc);
+alter table public.masquerade_alerts enable row level security;
+
+-- Picks who to alert for someone now waiting, records it, and returns them (only the server calls this)
+create or replace function public.masquerade_alert_targets(p_from uuid, p_limit int default 10) returns json
+language plpgsql security definer set search_path = public as $$
+declare
+  q masquerade_queue;
+  me profiles;
+  my_age int;
+  picked json;
+begin
+  select * into q from masquerade_queue where user_id = p_from and created_at > now() - interval '2 minutes';
+  if not found then return null; end if;
+  -- One round of alerts per person every 10 minutes, however often they start and cancel
+  if exists (select 1 from masquerade_alerts where from_user = p_from and sent_at > now() - interval '10 minutes') then
+    return null;
+  end if;
+  select * into me from profiles where id = p_from;
+  my_age := public.age_years(me.birthdate);
+
+  with cand as (
+    select p.id, ceil(public.distance_km(q.lat, q.lng, a.lat, a.lng))::int as km, p.last_seen_at
+    from profiles p
+    left join accounts_private a on a.user_id = p.id
+    where p.open_to_masquerade
+      and p.id <> p_from
+      and p.last_seen_at <= now() - interval '2 minutes'
+      and p.last_seen_at > now() - interval '21 days'
+      and a.banned_at is null
+      and p.pref_intent = q.intent
+      and p.birthdate is not null and p.gender is not null
+      and public.gender_fits(q.seeking, p.gender)
+      and public.gender_fits(p.pref_seeking, me.gender)
+      and public.age_years(p.birthdate) between q.age_min and q.age_max
+      and my_age between p.pref_age_min and p.pref_age_max
+      and public.within_km(public.distance_km(q.lat, q.lng, a.lat, a.lng), q.max_km)
+      and public.within_km(public.distance_km(q.lat, q.lng, a.lat, a.lng), p.pref_max_km)
+      and exists (select 1 from push_subscriptions s where s.user_id = p.id)
+      and not exists (select 1 from masquerade_alerts x where x.user_id = p.id and x.sent_at > now() - interval '2 hours')
+      and (select count(*) from masquerade_alerts x where x.user_id = p.id and x.sent_at > now() - interval '24 hours') < 4
+      and not exists (select 1 from masquerade_queue w where w.user_id = p.id)
+      and public.my_active_session(p.id) is null
+      and not public.is_blocked(p_from, p.id)
+      and not public.already_matched(p_from, p.id)
+    -- People who were around most recently are the likeliest to come back
+    order by p.last_seen_at desc, floor(public.distance_km(q.lat, q.lng, a.lat, a.lng) / 10) nulls last
+    limit greatest(1, least(p_limit, 25))
+  ), ins as (
+    insert into masquerade_alerts (user_id, from_user, distance_km)
+    select id, p_from, km from cand
+    returning user_id, distance_km
+  )
+  select coalesce(json_agg(json_build_object('user_id', user_id, 'distance_km', distance_km)), '[]'::json) into picked from ins;
+
+  return json_build_object('from_age', my_age, 'from_gender', me.gender, 'intent', q.intent, 'targets', picked);
+end $$;
+revoke execute on function public.masquerade_alert_targets(uuid, int) from public, anon, authenticated;

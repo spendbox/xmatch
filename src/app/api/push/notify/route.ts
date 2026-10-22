@@ -3,6 +3,8 @@ import { getAuth } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/server";
 import { pushToUsers } from "@/lib/push";
 import { GIFTS } from "@/lib/keys";
+import { intentLabel } from "@/lib/constants";
+import type { Intent } from "@/lib/types";
 
 /**
  * Called by the app right after you do something the other person should hear about:
@@ -59,6 +61,25 @@ export async function POST(req: Request) {
         icon: (me?.photos as string[] | null)?.[0] ?? null,
       },
       { skipIfActive: true },
+    );
+    return ok;
+  }
+
+  // You masked up and nobody online fits: alert people who are open to Masquerade but away
+  if (b.kind === "masquerade_wait") {
+    const { data } = await db.rpc("masquerade_alert_targets", { p_from: uid, p_limit: 10 });
+    const r = data as { from_age: number | null; from_gender: string | null; intent: Intent; targets: { user_id: string; distance_km: number | null }[] } | null;
+    if (!r?.targets?.length) return ok;
+    const sex = r.from_gender === "woman" ? "female" : r.from_gender === "man" ? "male" : "person";
+    await Promise.all(
+      r.targets.map((t) =>
+        pushToUsers([t.user_id], {
+          title: "Someone's masking up for you 🎭",
+          body: `A ${r.from_age ? `${r.from_age}-year-old ` : ""}${sex}${t.distance_km !== null ? `, ${t.distance_km <= 1 ? "under 1 km" : `${t.distance_km} km`} away,` : ""} wants a masked chat (${intentLabel(r.intent)}). Tap to mask up.`,
+          url: "/home?mask=1",
+          tag: "masquerade-alert",
+        }),
+      ),
     );
     return ok;
   }

@@ -3,14 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
-import { CalendarDays, MessageCircle, Sparkles, UserRound } from "lucide-react";
+import { CalendarDays, MessageCircle, Newspaper, UserRound } from "lucide-react";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import type { MenuBadges } from "./useMenuBadges";
 import { badgeFor } from "./badges";
 
 const tabs = [
   { href: "/home", label: "Home", icon: (on: boolean) => <MaskIcon className="w-6" eyes={on ? "#efebfd" : "#ffffff"} /> },
-  { href: "/feed", label: "Feed", icon: () => <Sparkles size={22} /> },
+  { href: "/feed", label: "Feed", icon: () => <Newspaper size={22} /> },
   { href: "/events", label: "Events", icon: () => <CalendarDays size={22} /> },
   { href: "/matches", label: "Chats", icon: () => <MessageCircle size={22} /> },
   { href: "/profile", label: "Profile", icon: () => <UserRound size={22} /> },
