@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -12,6 +12,10 @@ export type MenuBadges = {
   /** Gifts on your answers you haven't seen */
   feedGifts: number;
 };
+
+/** The same badges, for parts of a page (e.g. the Home tabs) */
+export const MenuBadgesContext = createContext<MenuBadges | undefined>(undefined);
+export const useMenuBadgesContext = () => useContext(MenuBadgesContext);
 
 /** Tell the menu to re-check (e.g. after a chat was opened and read). */
 export function refreshMenuBadges() {

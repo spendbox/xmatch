@@ -21,6 +21,7 @@ import { useWallet } from "@/components/keys/useWallet";
 import { Waiting } from "@/components/masquerade/Waiting";
 import { MeetSheet } from "./MeetSheet";
 import { NotificationsPrompt } from "@/components/app/Notifications";
+import { HomeTabs } from "./HomeTabs";
 import { notify } from "@/lib/pushClient";
 import { EventCard } from "@/components/events/EventCard";
 import type { DashpadEvent } from "@/lib/events";
@@ -161,6 +162,7 @@ export function HomeScreen({
 
   return (
     <main className="mx-auto max-w-md px-5 pt-5 lg:max-w-6xl lg:px-10 lg:pt-10">
+      <HomeTabs className="mb-4" />
       {/* Top bar */}
       <header className="flex items-center gap-3">
         <Link href="/profile" aria-label="Your profile" className="lg:hidden">

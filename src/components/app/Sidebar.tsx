@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import { CalendarDays, MessageCircle, Newspaper, PanelLeftClose, PanelLeftOpen, UserRound } from "lucide-react";
 import { MaskIcon } from "@/components/ui/MaskIcon";
+import { MaskLineIcon } from "@/components/ui/icons";
 import { Avatar } from "@/components/ui/Avatar";
 import { KeyCoin } from "@/components/keys/KeyIcon";
 import { useWallet } from "@/components/keys/useWallet";
@@ -16,15 +17,20 @@ export type ChromeUser = { id: string; name: string; photo?: string | null };
 
 const items = [
   { href: "/home", label: "Home", icon: (on: boolean) => <MaskIcon className="w-[22px]" eyes={on ? "#5b3fd9" : "#faf7f2"} /> },
-  { href: "/feed", label: "Feed", icon: () => <Newspaper size={21} /> },
   { href: "/events", label: "Events", icon: () => <CalendarDays size={21} /> },
   { href: "/matches", label: "Chats", icon: () => <MessageCircle size={21} /> },
   { href: "/wallet", label: "Keys", icon: () => <KeyCoin size={22} /> },
   { href: "/profile", label: "Profile", icon: () => <UserRound size={21} /> },
 ];
 
+/** The two parts of Home, shown under it in the menu */
+const homeParts = [
+  { href: "/home", label: "Masquerade", icon: <MaskLineIcon size={17} /> },
+  { href: "/feed", label: "Feed", icon: <Newspaper size={17} /> },
+];
+
 export function isActive(path: string, href: string) {
-  return path === href || path.startsWith(href + "/") || (href === "/home" && path.startsWith("/masquerade"));
+  return path === href || path.startsWith(href + "/") || (href === "/home" && (path.startsWith("/masquerade") || path.startsWith("/feed")));
 }
 
 function toggleCollapsed() {
@@ -67,9 +73,10 @@ export function Sidebar({ user, badges }: { user: ChromeUser; badges?: MenuBadge
       <nav className="mt-8 space-y-1" aria-label="Main">
         {items.map((it) => {
           const on = isActive(path, it.href);
+          const home = it.href === "/home";
           return (
+            <div key={it.href}>
             <Link
-              key={it.href}
               href={it.href}
               title={it.label}
               className={clsx(
@@ -84,7 +91,7 @@ export function Sidebar({ user, badges }: { user: ChromeUser; badges?: MenuBadge
                 )}
               </span>
               <span className={hideWhenFolded}>{it.label}</span>
-              {badgeFor(it.href, badges) !== null && (
+              {!home && badgeFor(it.href, badges) !== null && (
                 <span
                   className={clsx(
                     "ml-auto grid h-5 min-w-5 place-items-center rounded-full px-1.5 text-[11px] font-bold",
@@ -101,6 +108,30 @@ export function Sidebar({ user, badges }: { user: ChromeUser; badges?: MenuBadge
                 </span>
               )}
             </Link>
+            {home && (
+              <div className={clsx("mt-1 mb-2 ml-[26px] space-y-0.5 border-l-2 border-line pl-3", hideWhenFolded)}>
+                {homeParts.map((sub) => {
+                  const subOn = path === sub.href || path.startsWith(sub.href + "/") || (sub.href === "/home" && path.startsWith("/masquerade"));
+                  const b = sub.href === "/feed" ? badgeFor("/feed", badges) : null;
+                  return (
+                    <Link
+                      key={sub.href}
+                      href={sub.href}
+                      aria-current={subOn ? "page" : undefined}
+                      className={clsx(
+                        "flex h-10 items-center gap-2.5 rounded-xl px-3 text-[14px] font-semibold whitespace-nowrap transition",
+                        subOn ? "bg-brand-soft text-brand" : "text-muted hover:bg-cream hover:text-ink",
+                      )}
+                    >
+                      {sub.icon}
+                      {sub.label}
+                      {b && <span className="ml-auto grid h-5 min-w-5 place-items-center rounded-full bg-chili px-1.5 text-[11px] font-bold text-white">{b}</span>}
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+            </div>
           );
         })}
       </nav>

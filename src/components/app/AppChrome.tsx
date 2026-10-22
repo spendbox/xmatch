@@ -7,7 +7,7 @@ import { BottomNav } from "./BottomNav";
 import { InviteListener } from "./InviteListener";
 import { Sidebar, type ChromeUser } from "./Sidebar";
 import { useHeartbeat } from "./useHeartbeat";
-import { useMenuBadges } from "./useMenuBadges";
+import { MenuBadgesContext, useMenuBadges } from "./useMenuBadges";
 import { CallProvider } from "@/components/calls/CallProvider";
 import { EventMediaProvider } from "@/components/events/media/EventMediaProvider";
 
@@ -26,7 +26,9 @@ export function AppChrome({ user, children }: { user: ChromeUser; children: Reac
     <CallProvider userId={user.id}>
       <EventMediaProvider userId={user.id}>
         <Sidebar user={user} badges={badges} />
+        <MenuBadgesContext.Provider value={badges}>
         <div className={(fullScreen ? "" : "pb-24 ") + "lg:pb-0 lg:pl-[var(--sidebar-w)] lg:transition-[padding] lg:duration-300"}>{children}</div>
+        </MenuBadgesContext.Provider>
         {!fullScreen && <BottomNav badges={badges} />}
         {!path.startsWith("/masquerade/") && <InviteListener userId={user.id} />}
       </EventMediaProvider>
