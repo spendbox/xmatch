@@ -4,7 +4,8 @@ import { plural, word } from "@/lib/plural";
 import { useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
-import { SENDABLE_GIFTS as GIFTS, type Gift } from "@/lib/keys";
+import { SENDABLE_GIFTS, type Gift } from "@/lib/keys";
+import { useGifts } from "./usePrices";
 import { Sheet } from "@/components/ui/Sheet";
 import { Button, tapFeedback } from "@/components/ui/Button";
 import { KeyCoin } from "./KeyIcon";
@@ -25,7 +26,10 @@ export function GiftSheet({
   onSend: (gift: Gift) => Promise<string | null>; // returns an error message, or null
   subtitle?: string;
 }) {
-  const [picked, setPicked] = useState<Gift>(GIFTS[0]);
+  const all = useGifts();
+  const GIFTS = all.filter((g) => !g.retired);
+  const [pickedId, setPickedId] = useState<string>(SENDABLE_GIFTS[0].id);
+  const picked = GIFTS.find((g) => g.id === pickedId) ?? GIFTS[0];
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const short = balance !== null && balance < picked.price;
@@ -75,7 +79,7 @@ export function GiftSheet({
               type="button"
               onClick={() => {
                 tapFeedback();
-                setPicked(g);
+                setPickedId(g.id);
               }}
               className={clsx(
                 "flex flex-col items-center gap-1 rounded-2xl border py-3 transition active:scale-95",

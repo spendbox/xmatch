@@ -1,7 +1,7 @@
 import { getAuth } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/server";
 import { verifyPayment } from "@/lib/paystack";
-import type { Wallet } from "@/lib/keys";
+import type { KeyPack, Wallet } from "@/lib/keys";
 import { WalletScreen, type KeyTx } from "@/components/keys/WalletScreen";
 
 export const metadata = { title: "Keys" };
@@ -25,10 +25,11 @@ export default async function WalletPage({ searchParams }: { searchParams: Promi
     }
   }
 
-  const [{ data: wallet }, { data: history }] = await Promise.all([
+  const [{ data: wallet }, { data: history }, { data: packs }] = await Promise.all([
     supabase.rpc("my_wallet"),
     supabase.from("key_transactions").select("id, amount, reason, created_at").order("id", { ascending: false }).limit(30),
+    supabase.from("key_packs").select("id, keys, naira, tag").eq("active", true).order("sort"),
   ]);
 
-  return <WalletScreen userId={user!.id} wallet={wallet as Wallet} history={(history ?? []) as KeyTx[]} result={result} />;
+  return <WalletScreen userId={user!.id} wallet={wallet as Wallet} history={(history ?? []) as KeyTx[]} result={result} packs={packs?.length ? (packs as KeyPack[]).map((p) => ({ ...p, tag: p.tag ?? undefined })) : undefined} />;
 }

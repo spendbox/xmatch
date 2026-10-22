@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { notify } from "@/lib/pushClient";
 import { intentLabel } from "@/lib/constants";
 import { sexLabel } from "@/lib/eventSpace";
-import { REOPEN_COST } from "@/lib/keys";
+import { usePrices } from "@/components/keys/usePrices";
 import { whenPaired, type PastPair } from "@/lib/hourly";
 import { Sheet } from "@/components/ui/Sheet";
 import { Button } from "@/components/ui/Button";
@@ -23,6 +23,7 @@ export function PastPairs({ pairs, balance, onChanged }: { pairs: PastPair[]; ba
   const [pick, setPick] = useState<PastPair | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { reopen_cost: REOPEN_COST } = usePrices();
   if (!pairs.length) return null;
   const now = Date.now();
 

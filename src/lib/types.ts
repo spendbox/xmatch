@@ -51,6 +51,8 @@ export type MasqueradeState = {
     /** "Lagos, Nigeria" */
     place?: string | null;
     same_place?: boolean | null;
+    connections?: number;
+    reply_seconds?: number | null;
     has_voted: boolean;
     profile: { id: string; display_name: string; bio: string; photos: string[] } | null;
   };

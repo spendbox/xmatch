@@ -138,6 +138,7 @@ export function PersonSheet({
       </div>
       {error && <p className="mt-3 rounded-xl bg-chili-soft px-4 py-2.5 text-center text-[14px] font-medium text-chili">{error}</p>}
       <p className="mt-3 pb-1 text-center text-[12px] leading-snug text-muted">
+        {!person.photo && <span className="mb-1 block font-semibold text-ink-soft">They won&apos;t be told if you reveal their photo.</span>}
         You don&apos;t need to reveal to chat. Photos stay blurred until each person chooses to reveal.
       </p>
     </Sheet>

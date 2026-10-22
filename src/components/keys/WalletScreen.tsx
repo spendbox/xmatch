@@ -2,12 +2,12 @@
 
 import { useEffect, useState, useTransition } from "react";
 import clsx from "clsx";
-import { ArrowLeft, Check, CircleAlert, Clock3, Gift, ShieldCheck, Timer } from "lucide-react";
+import { ArrowLeft, Check, CircleAlert, Clock3, Eye, Gift, RotateCcw, ShieldCheck } from "lucide-react";
 import Link from "next/link";
-import { KEY_PACKS, EXTEND_COST, EXTRA_MASQUERADE_COST, FREE_MASQUERADES_PER_DAY, naira, type Wallet } from "@/lib/keys";
+import { KEY_PACKS, naira, type KeyPack, type Wallet } from "@/lib/keys";
+import { usePrices } from "./usePrices";
 import { buyKeys } from "@/app/(app)/wallet/actions";
 import { Button, tapFeedback } from "@/components/ui/Button";
-import { MaskLineIcon } from "@/components/ui/icons";
 import { KeyCoin } from "./KeyIcon";
 import { useWallet } from "./useWallet";
 
@@ -18,6 +18,10 @@ const REASONS: Record<string, string> = {
   gift: "Sent a gift",
   extend: "Added 2 minutes",
   extra_masquerade: "Extra masquerade",
+  reopen: "Reopened a past pair",
+  reveal: "Revealed a photo",
+  feed_gift: "Sent a gift",
+  feed_chat: "Started a chat",
   refund: "Refund",
   event: "Masquerade Night entry",
 };
@@ -27,19 +31,22 @@ export function WalletScreen({
   wallet: initial,
   history,
   result,
+  packs = KEY_PACKS,
 }: {
+  packs?: KeyPack[];
   userId: string;
   wallet: Wallet;
   history: KeyTx[];
   result: "paid" | "pending" | "failed" | null;
 }) {
   const { wallet } = useWallet(userId, initial);
-  const [pack, setPack] = useState(KEY_PACKS[1].id);
+  const [pack, setPack] = useState((packs[1] ?? packs[0])?.id);
+  const prices = usePrices();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
-  const chosen = KEY_PACKS.find((p) => p.id === pack)!;
+  const chosen = packs.find((p) => p.id === pack) ?? packs[0];
 
   function buy() {
     setError(null);
@@ -87,15 +94,14 @@ export function WalletScreen({
           <KeyCoin size={42} className="animate-float" /> {wallet?.balance ?? 0}
         </p>
         <p className="relative mt-3 text-[13px] font-medium text-ink/70">
-          {wallet ? `${wallet.free_left} of ${FREE_MASQUERADES_PER_DAY} free masquerades left today` : ""}
-          {wallet?.passes ? ` · ${wallet.passes} extra saved` : ""}
+          Hourly pairing is always free
         </p>
       </section>
 
       {/* Packs */}
       <h2 className="mt-7 mb-3 text-[15px] font-semibold">Get Keys</h2>
       <div className="grid grid-cols-3 gap-2.5">
-        {KEY_PACKS.map((p) => {
+        {packs.map((p) => {
           const on = p.id === pack;
           return (
             <button
@@ -136,14 +142,9 @@ export function WalletScreen({
       {/* What Keys do */}
       <h2 className="mt-8 mb-3 text-[15px] font-semibold lg:mt-0">What you can do with Keys</h2>
       <div className="space-y-2.5">
-        <Use icon={<Gift size={20} strokeWidth={1.75} />} tone="bg-chili-soft text-chili" title="Send gifts" body="Roses, cocktails, crowns and more, from 5 Keys." />
-        <Use icon={<Timer size={20} strokeWidth={1.75} />} tone="bg-mint-soft text-mint" title={`+2 minutes · ${EXTEND_COST} Keys`} body="Chat going well? Add 2 minutes for both of you." />
-        <Use
-          icon={<MaskLineIcon size={20} />}
-          tone="bg-brand-soft text-brand"
-          title={`Extra masquerades · ${EXTRA_MASQUERADE_COST} Keys`}
-          body={`Your first ${FREE_MASQUERADES_PER_DAY} every day are free.`}
-        />
+        <Use icon={<Gift size={20} strokeWidth={1.75} />} tone="bg-chili-soft text-chili" title="Send gifts" body="Fire, jollof, crowns and more. A fun way to stand out." />
+        <Use icon={<RotateCcw size={20} strokeWidth={1.75} />} tone="bg-brand-soft text-brand" title={`Reopen a past pair · ${prices.reopen_cost} Keys`} body="The hour ran out? Pick the chat back up until you both decide." />
+        <Use icon={<Eye size={20} strokeWidth={1.75} />} tone="bg-mint-soft text-mint" title="Reveal photos at events" body="See someone's photo before you chat. They won't be told." />
       </div>
 
       {/* History */}

@@ -8,8 +8,10 @@ import { Spinner } from "@/components/ui/Button";
 import { KeyCoin } from "@/components/keys/KeyIcon";
 import { GiftSheet, keysError } from "@/components/keys/GiftSheet";
 import { useWallet } from "@/components/keys/useWallet";
-import { EXTEND_COST, REOPEN_COST } from "@/lib/keys";
+import { EXTEND_COST } from "@/lib/keys";
 import { notify } from "@/lib/pushClient";
+import { connectionsLabel, replyLabel } from "@/lib/hourly";
+import { usePrices } from "@/components/keys/usePrices";
 import { createClient } from "@/lib/supabase/client";
 import { distanceLabel, GENDERS, intentLabel, MASQUERADE_MINUTES, spiceLabel } from "@/lib/constants";
 import type { ChatMessage, MasqueradeState } from "@/lib/types";
@@ -51,6 +53,7 @@ export function MasqueradeRoom({
   const [extending, setExtending] = useState(false);
   const [keysNote, setKeysNote] = useState<string | null>(null);
   const [reopening, setReopening] = useState(false);
+  const prices = usePrices();
   const { wallet, refresh: refreshWallet } = useWallet(demo ? null : initial.me.id);
 
   async function extend() {
@@ -139,7 +142,12 @@ export function MasqueradeRoom({
     setVoting(true);
     setState((s) => ({ ...s, me: { ...s.me, vote: unmask } }));
     await supabase.rpc("vote_unmask", { p_session: state.id, p_unmask: unmask });
-    await refresh();
+    const { data } = await supabase.rpc("get_masquerade", { p_session: initial.id });
+    if (data) {
+      setState(data as MasqueradeState);
+      // You were the second to unmask: tell the other person they clicked
+      if (unmask && (data as MasqueradeState).status === "matched") notify({ kind: "masquerade_match", sessionId: initial.id });
+    }
     setVoting(false);
   }
 
@@ -232,6 +240,8 @@ export function MasqueradeRoom({
 
         {/* What we know so far (shown in the side panel on computers) */}
         <div className="flex items-center gap-2 overflow-x-auto px-4 pb-3 no-scrollbar lg:hidden">
+          <Tag strong>{connectionsLabel(them.connections)}</Tag>
+          <Tag>{replyLabel(them.reply_seconds)}</Tag>
           <Tag>
             You <Chilis level={state.me.spice} />
           </Tag>
@@ -264,6 +274,14 @@ export function MasqueradeRoom({
               </>
             )}
           </p>
+          <button
+            type="button"
+            onClick={leave}
+            className="inline-flex h-9 shrink-0 items-center rounded-full px-2.5 text-[13px] font-semibold text-muted hover:bg-ink/5 hover:text-chili"
+            title="Stay masked and end this chat"
+          >
+            End
+          </button>
           {state.me.vote !== true && (
             <button
               type="button"
@@ -348,7 +366,7 @@ export function MasqueradeRoom({
               disabled={reopening}
               className="inline-flex h-12 items-center justify-center gap-1.5 rounded-2xl border border-gold/50 bg-gold-soft text-[15px] font-semibold text-[#8a5a00] disabled:opacity-60"
             >
-              {reopening ? <Spinner className="h-4 w-4" /> : <RotateCcw size={17} />} Reopen · <KeyCoin size={16} /> {REOPEN_COST}
+              {reopening ? <Spinner className="h-4 w-4" /> : <RotateCcw size={17} />} Reopen · <KeyCoin size={16} /> {prices.reopen_cost}
             </button>
           </div>
           <button type="button" onClick={leave} className="mx-auto mb-2 block text-[13px] font-semibold text-muted hover:text-chili">
@@ -427,7 +445,18 @@ export function MasqueradeRoom({
         )}
       </div>
 
-      <h3 className="mt-8 mb-2 text-[12px] font-semibold tracking-wide text-muted uppercase">Here for</h3>
+      <div className="mt-6 grid grid-cols-2 gap-2 text-center">
+        <div className="rounded-2xl bg-cream p-3">
+          <p className="text-[15px] font-semibold">{them.connections ?? 0}</p>
+          <p className="text-[11px] text-muted">{(them.connections ?? 0) === 1 ? "connection" : "connections"}</p>
+        </div>
+        <div className="rounded-2xl bg-cream p-3">
+          <p className="text-[13px] leading-tight font-semibold">{replyLabel(them.reply_seconds)}</p>
+          <p className="text-[11px] text-muted">reply speed</p>
+        </div>
+      </div>
+
+      <h3 className="mt-6 mb-2 text-[12px] font-semibold tracking-wide text-muted uppercase">Here for</h3>
       <p className="text-[15px] font-semibold">{intentLabel(state.intent)}</p>
 
       <h3 className="mt-6 mb-2 text-[12px] font-semibold tracking-wide text-muted uppercase">Question spice</h3>

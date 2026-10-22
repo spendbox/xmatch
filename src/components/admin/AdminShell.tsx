@@ -4,16 +4,18 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import { useEffect, useState } from "react";
-import { CalendarDays, ExternalLink, LayoutDashboard, LogOut, Menu, MessageCircleQuestion, Sparkles, Users, X } from "lucide-react";
+import { Activity, CalendarDays, ExternalLink, LayoutDashboard, LogOut, Menu, MessageCircleQuestion, Sparkles, Tag, Users, X } from "lucide-react";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { adminLogout } from "@/app/admin/actions";
 
 const NAV = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
   { href: "/admin/members", label: "Members", icon: Users },
+  { href: "/admin/masquerade", label: "Masquerade", icon: Activity },
   { href: "/admin/nights", label: "Events", icon: CalendarDays },
   { href: "/admin/prompts", label: "Daily prompts", icon: Sparkles },
   { href: "/admin/icebreakers", label: "Icebreakers", icon: MessageCircleQuestion },
+  { href: "/admin/prices", label: "Prices", icon: Tag },
 ];
 
 export function AdminShell({ children }: { children: React.ReactNode }) {

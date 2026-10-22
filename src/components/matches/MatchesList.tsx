@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
-import { MessageCircle, Shapes } from "lucide-react";
+import { MessageCircle, Shapes, Users } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { ButtonLink } from "@/components/ui/Button";
 import { MaskIcon } from "@/components/ui/MaskIcon";
@@ -43,11 +43,12 @@ export function MatchesList({
           <h1 className="font-display text-[34px] leading-tight font-semibold tracking-tight">Chats</h1>
           <p className="mt-1 text-[15px] text-muted">People you vibe with.</p>
         </div>
-        {matches.length > 0 && (
-          <span className="mb-1 inline-flex h-9 items-center gap-1.5 rounded-full bg-brand-soft px-3.5 text-[14px] font-semibold text-brand">
-            <MessageCircle size={15} /> {matches.length}
-          </span>
-        )}
+        <Link
+          href="/matches/people"
+          className="mb-1 inline-flex h-9 items-center gap-1.5 rounded-full bg-brand-soft px-3.5 text-[14px] font-semibold text-brand transition hover:bg-brand/15"
+        >
+          <Users size={15} /> Your people · {matches.length}
+        </Link>
       </header>
 
       {matches.length === 0 ? (

@@ -9,13 +9,15 @@ import { KEY_PACKS } from "@/lib/keys";
 export async function buyKeys(packId: string): Promise<{ error: string } | void> {
   const { user } = await getAuth();
   if (!user) redirect("/login");
-  const pack = KEY_PACKS.find((p) => p.id === packId);
-  if (!pack) return { error: "Please choose a pack." };
   if (!process.env.PAYSTACK_SECRET_KEY || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     return { error: "Payments aren't set up yet. Please try again later." };
   }
-
   const admin = createAdminClient();
+  // Prices come from the database (Admin → Prices); fall back to the built-in packs
+  const { data: row } = await admin.from("key_packs").select("id, keys, naira, active").eq("id", packId).maybeSingle();
+  const pack = row ? (row.active ? (row as { id: string; keys: number; naira: number }) : null) : KEY_PACKS.find((p) => p.id === packId);
+  if (!pack) return { error: "Please choose a pack." };
+
   let email = user.email;
   if (!email) email = (await admin.auth.admin.getUserById(user.id)).data.user?.email ?? null;
   if (!email) return { error: "We couldn't find your email address." };

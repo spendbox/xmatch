@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
-import { Handshake, MapPin, MessageCircle } from "lucide-react";
+import { BellRing, Handshake, MapPin, MessageCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { intentLabel } from "@/lib/constants";
 import { sexLabel } from "@/lib/eventSpace";
-import { clock, lagosHour, lagosTime, type MasqueradeHour } from "@/lib/hourly";
+import { clock, connectionsLabel, lagosHour, lagosTime, replyLabel, type MasqueradeHour } from "@/lib/hourly";
+import { usePushState } from "@/components/app/Notifications";
 import { Toggle } from "@/components/ui/Toggle";
 import { tapFeedback } from "@/components/ui/Button";
 import { MaskIcon } from "@/components/ui/MaskIcon";
@@ -81,6 +82,7 @@ export function MasqueradeCard({
   const supabase = useMemo(() => createClient(), []);
   const { hour, setHour, skew } = ctl;
   const [now, setNow] = useState<number | null>(null);
+  const push = usePushState();
 
   useEffect(() => {
     setNow(Date.now());
@@ -130,6 +132,10 @@ export function MasqueradeCard({
             {[cur.their_age, sexLabel(cur.their_gender), intentLabel(cur.intent)].filter(Boolean).join(" · ")}
           </p>
           {cur.their_place && <p className="text-[12px] text-white/60">{cur.their_place}</p>}
+          <div className="mt-3 flex justify-center gap-2 text-[11px] font-semibold">
+            <span className="rounded-full bg-white/15 px-2.5 py-1">{connectionsLabel(cur.their_connections)}</span>
+            <span className="rounded-full bg-white/15 px-2.5 py-1">{replyLabel(cur.their_reply_seconds)}</span>
+          </div>
 
           <p className="mx-auto mt-4 max-w-xs text-[13px] leading-snug text-white/90">
             {cur.my_vote === true
@@ -151,15 +157,22 @@ export function MasqueradeCard({
           </Link>
         </div>
       ) : cur?.status === "matched" ? (
-        <div className="relative mt-5 text-center">
-          <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-white text-brand">
-            <Handshake size={26} />
-          </span>
-          <p className="mt-3 font-display text-[26px] leading-tight font-semibold">You clicked with {cur.their_name ?? cur.their_alias}!</p>
-          <p className="mt-1 text-[13px] text-white/75">Next pair at {lagosTime(hour.next_at)}</p>
+        <div className="relative mt-4 flex items-center gap-3 rounded-2xl bg-white/12 p-3">
+          {cur.their_photo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={cur.their_photo} alt="" className="h-14 w-14 shrink-0 rounded-full object-cover ring-2 ring-white/40" />
+          ) : (
+            <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-white text-brand">
+              <Handshake size={24} />
+            </span>
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="text-[16px] font-semibold">You clicked!</p>
+            <p className="truncate text-[13px] text-white/85">With {cur.their_name ?? cur.their_alias} · next pair {lagosTime(hour.next_at)}</p>
+          </div>
           {cur.match_id && (
-            <Link href={`/matches/${cur.match_id}`} className="mt-5 flex h-12 items-center justify-center gap-2 rounded-2xl bg-white text-[15px] font-semibold text-brand">
-              <MessageCircle size={18} /> Say hello
+            <Link href={`/matches/${cur.match_id}`} className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-gold px-4 text-[14px] font-semibold text-ink">
+              <MessageCircle size={16} /> Chat
             </Link>
           )}
         </div>
@@ -186,6 +199,21 @@ export function MasqueradeCard({
                   : "We pair everyone on the hour."}
           </p>
         </div>
+      )}
+
+      {hour && (enabled || live) && push.state === "off" && (
+        <button
+          type="button"
+          onClick={() => push.turnOn()}
+          disabled={push.busy}
+          className="relative mt-5 flex w-full items-center gap-2.5 rounded-2xl bg-white/12 px-4 py-3 text-left text-[13px] transition hover:bg-white/20"
+        >
+          <BellRing size={17} className="shrink-0" />
+          <span className="min-w-0 flex-1">
+            <span className="font-semibold">{push.busy ? "Turning on…" : "Turn on notifications"}</span>
+            <span className="text-white/75"> · know the moment your pair arrives</span>
+          </span>
+        </button>
       )}
 
       {hour && !hasPlace && (enabled || live) && (

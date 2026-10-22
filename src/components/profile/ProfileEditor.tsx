@@ -8,6 +8,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { uploadPhoto, deletePhoto } from "@/lib/photos";
 import { ageFromBirthdate, GENDERS } from "@/lib/constants";
+import { replyLabel } from "@/lib/hourly";
 import { plural, word } from "@/lib/plural";
 import type { Profile } from "@/lib/types";
 import { logOut } from "@/app/(auth)/actions";
@@ -48,10 +49,16 @@ export function ProfileEditor({
   profile,
   email,
   matchCount = 0,
+  week = null,
+  replySeconds = null,
 }: {
   profile: Profile;
   email: string;
   matchCount?: number;
+  /** Your last 7 days */
+  week?: { week_chats: number; week_unmasks: number; gifts_received: number } | null;
+  /** Your usual reply time (others see this while you're masked) */
+  replySeconds?: number | null;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const push = usePushState();
@@ -159,9 +166,29 @@ export function ProfileEditor({
               <p className="mt-1.5 text-[14px] text-white/75">{gender}</p>
               <div className="mt-4 grid grid-cols-3 gap-2">
                 <Stat icon={<Cake size={16} />} value={age != null ? String(age) : "–"} label={age === 1 ? "year" : "years"} />
-                <Stat icon={<MessageCircle size={16} />} value={matchCount.toLocaleString()} label={word(matchCount, "match", "matches")} />
+                <Stat icon={<MessageCircle size={16} />} value={matchCount.toLocaleString()} label={word(matchCount, "connection")} />
                 <Stat icon={<Shapes size={16} />} value={String(interests.length)} label={word(interests.length, "interest")} />
               </div>
+            </div>
+          </section>
+
+          {/* Your week */}
+          <section className="mt-3 rounded-3xl border border-line bg-surface px-2 py-3 shadow-card">
+            <div className="flex items-center justify-between px-3 pb-2">
+              <p className="text-[11px] font-semibold tracking-wide text-muted uppercase">Your week</p>
+              <p className="text-[11px] font-semibold text-brand">{replyLabel(replySeconds)}</p>
+            </div>
+            <div className="grid grid-cols-3 divide-x divide-line text-center">
+              {[
+                [week?.week_chats ?? 0, `masked ${word(week?.week_chats ?? 0, "chat")}`],
+                [week?.week_unmasks ?? 0, word(week?.week_unmasks ?? 0, "unmask")],
+                [week?.gifts_received ?? 0, word(week?.gifts_received ?? 0, "gift")],
+              ].map(([v, l]) => (
+                <div key={String(l)} className="px-1">
+                  <p className="font-display text-[22px] leading-tight font-semibold text-brand">{v}</p>
+                  <p className="truncate text-[11px] text-muted">{l}</p>
+                </div>
+              ))}
             </div>
           </section>
 

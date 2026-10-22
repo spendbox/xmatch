@@ -32,6 +32,9 @@ import { Button } from "@/components/ui/Button";
 import { InterestPicker } from "@/components/profile/InterestPicker";
 import { FeedScreen } from "@/components/feed/FeedScreen";
 import { PlacePicker } from "@/components/home/PlacePicker";
+import { YourPeople } from "@/components/matches/YourPeople";
+import { PricesManager } from "@/components/admin/PricesManager";
+import { MasqueradeHealth } from "@/components/admin/MasqueradeHealth";
 import { FeedChat } from "@/components/feed/FeedChat";
 import { PromptManager } from "@/components/admin/PromptManager";
 import { PromptAnswers } from "@/components/admin/PromptAnswers";
@@ -107,7 +110,7 @@ const recent = [
   { id: "m3", created_at: iso(3000), last_message_at: iso(200), intent: "spicy" as const, other_id: "z", display_name: "Zara", photos: [photo("#5b3fd9", "#e5484d", "Z")], age: 29, last_message: null, last_sender: null },
 ];
 
-const APP_SCREENS = ["events-empty", "event-spotlight", "event-spotlight-live", "events", "event-upcoming", "event-live", "event-waiting", "event-ended", "home", "matches", "wallet", "profile", "rich-chat", "extend", "chat", "desktop-matches", "gifts", "home-next", "home-off", "feed", "feed-locked", "feed-chat", "feed-gifts"];
+const APP_SCREENS = ["events-empty", "event-spotlight", "event-spotlight-live", "events", "event-upcoming", "event-live", "event-waiting", "event-ended", "home", "matches", "wallet", "profile", "rich-chat", "extend", "chat", "desktop-matches", "gifts", "home-next", "home-off", "home-clicked", "people", "feed", "feed-locked", "feed-chat", "feed-gifts"];
 
 function ev(over: Partial<DashpadEvent> = {}): DashpadEvent {
   return {
@@ -127,13 +130,13 @@ const adminNights: AdminNight[] = [
   { id: "e4", title: "Valentine's Masquerade", description: "", theme: "rose", intent: "dating", starts_at: new Date(now - 9 * 86400_000).toISOString(), ends_at: new Date(now - 9 * 86400_000 + 7200_000).toISOString(), age_min: 21, age_max: 45, entry_keys: 25, max_attendees: null, status: "published", going_count: 2210, rounds: 8420, unmasks: 1930, keys_collected: 55250, question_count: 15 },
 ];
 
-function demoHour(kind: "live" | "next" | "off" = "live"): MasqueradeHour {
+function demoHour(kind: "live" | "next" | "off" | "clicked" = "live"): MasqueradeHour {
   const h = new Date(now); h.setUTCMinutes(0, 0, 0);
   const end = new Date(h.getTime() + 3600_000).toISOString();
   return {
     enabled: kind !== "off", server_now: new Date(now).toISOString(), hour_at: h.toISOString(), hour_open: true, hour_ran: true, pairs_this_hour: 107,
     next_at: end,
-    current: kind === "live" ? { id: "s1", status: "active", intent: "dating", ends_at: end, match_id: null, my_alias: "Velvet Fox", their_alias: "Golden Owl", their_age: 26, their_gender: "woman", their_place: "Lagos, Nigeria", their_name: null, their_photo: null, my_vote: null, they_voted: false, messages: 6, last_message: "Wait, you're into Afrobeats too?", last_from_them: true } : null,
+    current: kind === "clicked" ? { id: "s1", status: "matched", intent: "dating", ends_at: end, match_id: "m1", my_alias: "Velvet Fox", their_alias: "Golden Owl", their_age: 26, their_gender: "woman", their_name: "Ada", their_photo: photo("#e5484d", "#f2b33d", "A"), my_vote: true, they_voted: true, messages: 12, last_message: null, last_from_them: null } : kind === "live" ? { id: "s1", status: "active", intent: "dating", ends_at: end, match_id: null, my_alias: "Velvet Fox", their_alias: "Golden Owl", their_age: 26, their_gender: "woman", their_place: "Lagos, Nigeria", their_connections: 4, their_reply_seconds: 140, their_name: null, their_photo: null, my_vote: null, they_voted: false, messages: 6, last_message: "Wait, you're into Afrobeats too?", last_from_them: true } : null,
     past: [
       { id: "p1", status: "lapsed", intent: "friends", hour_at: new Date(h.getTime() - 3 * 3600_000).toISOString(), reopened_at: null, their_alias: "Quiet Heron", their_age: 29, their_gender: "man", my_vote: true, last_message: "Haha same. Talk soon?" },
       { id: "p2", status: "active", intent: "dating", hour_at: new Date(h.getTime() - 26 * 3600_000).toISOString(), reopened_at: iso(3600), their_alias: "Wild Comet", their_age: 24, their_gender: "woman", my_vote: null, last_message: "You reopened the chat 👀" },
@@ -191,6 +194,25 @@ function ScreenBody({ screen }: { screen: string }) {
       );
     case "place":
       return <PlacePicker open onClose={() => {}} userId="me" current={{ country: "NG", region: "Lagos" }} onSaved={() => {}} />;
+    case "people":
+      return <div className="pb-24"><YourPeople matches={recent} myId="me" /><BottomNav /></div>;
+    case "admin-prices":
+      return <AdminShell><PricesManager settings={{ reopen_cost: 10, reveal_cost: 1, free_reveals: 10 }}
+        gifts={[{ id: "fire", name: "Fire", emoji: "🔥", price: 5, sort: 1, retired: false }, { id: "rose", name: "Rose", emoji: "🌹", price: 5, sort: 2, retired: false }, { id: "jollof", name: "Jollof", emoji: "🍛", price: 15, sort: 5, retired: false }, { id: "teddy", name: "Teddy bear", emoji: "🧸", price: 30, sort: 91, retired: true }]}
+        packs={[{ id: "p50", keys: 50, naira: 750, tag: null, sort: 1, active: true }, { id: "p150", keys: 150, naira: 2000, tag: "Popular", sort: 2, active: true }, { id: "p500", keys: 500, naira: 4500, tag: "Best value", sort: 3, active: true }]} /></AdminShell>;
+    case "admin-masquerade": {
+      const base = new Date(now); base.setUTCMinutes(0, 0, 0);
+      const hours = Array.from({ length: 48 }, (_, i) => {
+        const t = new Date(base.getTime() - i * 3600_000);
+        const lh = (t.getUTCHours() + 1) % 24;
+        const open = ![2, 3, 4, 5].includes(lh);
+        const pairs = open ? 20 + ((i * 7) % 30) : 0;
+        return { hour_at: t.toISOString(), open, ran_at: open && i !== 9 ? t.toISOString() : null, eligible: open ? pairs * 2 + 3 : null, note: i === 14 ? "late" : null, pairs: i === 14 ? 0 : pairs, clicked: Math.round(pairs * 0.2), undecided: Math.round(pairs * 0.3), reopened: Math.round(pairs * 0.05), quiet: Math.round(pairs * 0.25), let_go: Math.round(pairs * 0.2), live: i === 0 ? pairs : 0, not_notified: 0 };
+      });
+      return <AdminShell><MasqueradeHealth stats={{ now: new Date(now).toISOString(), hours, switched_on: 1840, eligible_now: 960, no_place: 212, week: { pairs: 4120, clicked: 830, quiet: 1010, reopened: 190 }, by_mood: { friends: 1500, dating: 1900, spicy: 720 } }} /></AdminShell>;
+    }
+    case "home-clicked":
+      return <div className="pb-24"><HomeScreen hour={demoHour("clicked")} profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} /><BottomNav /></div>;
     case "home-next":
     case "home-off":
       return (

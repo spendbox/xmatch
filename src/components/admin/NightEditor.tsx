@@ -37,11 +37,14 @@ const lengthLabel = (d: number) => (d < 60 ? `${d} minutes` : d % 60 ? `${Math.f
 
 export function NightEditor({
   night,
+  defaults,
   questions = [],
   media = [],
   room = [],
 }: {
   night?: AdminNight;
+  /** Prices from Admin → Prices, used for new events */
+  defaults?: Partial<EventSettings>;
   questions?: string[];
   media?: AdminMedia[];
   room?: AdminRoomMessage[];
@@ -67,7 +70,7 @@ export function NightEditor({
     maxAttendees: night?.max_attendees ?? 0,
     questions: questions.join("\n"),
   }));
-  const [s, setS] = useState<Required<EventSettings>>(() => ({ ...SETTING_DEFAULTS, ...(night?.settings ?? {}) }));
+  const [s, setS] = useState<Required<EventSettings>>(() => ({ ...SETTING_DEFAULTS, ...(night ? {} : defaults ?? {}), ...(night?.settings ?? {}) }));
 
   // Local time only exists in the browser
   useEffect(() => {

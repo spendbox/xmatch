@@ -84,6 +84,22 @@ export async function POST(req: Request) {
     return ok;
   }
 
+  // You were the second to unmask an hourly pair: tell the other person you clicked
+  if (b.kind === "masquerade_match" && b.sessionId) {
+    const { data: s } = await db.from("masquerade_sessions").select("id, user_a, user_b, status, match_id").eq("id", b.sessionId).maybeSingle();
+    if (!s || (s.user_a !== uid && s.user_b !== uid) || s.status !== "matched" || !s.match_id) return ok;
+    const other = s.user_a === uid ? s.user_b : s.user_a;
+    const { data: me } = await db.from("profiles").select("display_name, photos").eq("id", uid).single();
+    await pushToUsers([other as string], {
+      title: "You clicked! 🎭",
+      body: `You and ${firstName(me?.display_name)} both unmasked. Say hello.`,
+      url: `/matches/${s.match_id}`,
+      tag: `match-${s.match_id}`,
+      icon: (me?.photos as string[] | null)?.[0] ?? null,
+    });
+    return ok;
+  }
+
   // Someone paid to reopen a past masked pair: tell the other person
   if (b.kind === "masquerade_reopen" && b.sessionId) {
     const { data: s } = await db.from("masquerade_sessions").select("id, user_a, user_b, alias_a, alias_b, reopened_by, status").eq("id", b.sessionId).maybeSingle();

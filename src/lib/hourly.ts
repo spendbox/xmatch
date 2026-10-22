@@ -13,6 +13,8 @@ export type HourPair = {
   their_age: number | null;
   their_gender: Gender | null;
   their_place?: string | null;
+  their_connections?: number;
+  their_reply_seconds?: number | null;
   their_name: string | null;
   their_photo: string | null;
   my_vote: boolean | null;
@@ -85,4 +87,19 @@ export function whenPaired(iso: string, now = Date.now()) {
         ? "Yesterday"
         : new Date(iso).toLocaleDateString("en-NG", { weekday: "short", timeZone: "Africa/Lagos" });
   return `${label}, ${lagosHour(iso)}`;
+}
+
+/** "Replies in minutes" etc., from someone's usual reply time */
+export function replyLabel(secs: number | null | undefined) {
+  if (secs == null) return "New here";
+  if (secs < 5 * 60) return "Replies in minutes";
+  if (secs < 60 * 60) return "Replies within the hour";
+  if (secs < 6 * 3600) return "Replies in a few hours";
+  return "Slow to reply";
+}
+
+/** "3 connections" */
+export function connectionsLabel(n: number | null | undefined) {
+  const c = n ?? 0;
+  return c === 1 ? "1 connection" : `${c} connections`;
 }
