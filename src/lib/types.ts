@@ -32,6 +32,20 @@ export type MasqueradeState = {
   hourly?: boolean;
   /** Reopened with Keys: open until both decide */
   reopened?: boolean;
+  /** Opened from a meet (hourly is also true: decide any time) */
+  meet?: {
+    id: string;
+    kind: "game" | "text";
+    game: string | null;
+    /** You posted it */
+    mine: boolean;
+    /** A game meet whose game in this chat hasn't been played yet */
+    turn_pending: boolean;
+    /** Game meets: people ahead of you in line (people waiting, if it's yours) */
+    ahead: number | null;
+    /** Your meet: your game is happening in another of its chats */
+    live_chat: { id: string; alias: string; status: "invited" | "active" } | null;
+  } | null;
   ended_reason: string | null;
   intent: Intent;
   spice_level: number;
@@ -58,7 +72,7 @@ export type MasqueradeState = {
   };
 };
 
-export type MessageKind = "text" | "icebreaker" | "image" | "video" | "audio" | "call" | "gift" | "system" | "game";
+export type MessageKind = "text" | "icebreaker" | "image" | "video" | "audio" | "call" | "gift" | "system" | "game" | "meet";
 
 export type MediaMeta = {
   width?: number;
@@ -79,6 +93,8 @@ export type MediaMeta = {
   status?: string;
   reason?: string | null;
   by?: string | null;
+  /** The meet a masked chat was opened from: who posted it */
+  alias?: string;
 };
 
 export type ChatMessage = {

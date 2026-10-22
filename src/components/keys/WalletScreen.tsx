@@ -24,6 +24,7 @@ const REASONS: Record<string, string> = {
   feed_chat: "Started a chat",
   refund: "Refund",
   event: "Masquerade Night entry",
+  meet: "Posted a meet",
 };
 
 export function WalletScreen({
