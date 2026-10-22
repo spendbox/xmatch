@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Flag, Gift, Handshake, LogOut, MoreVertical, Dices, RotateCcw, Timer, X } from "lucide-react";
+import { ArrowLeft, Flag, Gamepad2, Gift, Handshake, LogOut, MoreVertical, Dices, RotateCcw, Timer, X } from "lucide-react";
 import { Spinner } from "@/components/ui/Button";
 import { KeyCoin } from "@/components/keys/KeyIcon";
 import { GiftSheet, keysError } from "@/components/keys/GiftSheet";
@@ -26,6 +26,7 @@ import { Outcome } from "./Outcome";
 import { ReportSheet } from "./ReportSheet";
 import { useKeyboardSafe } from "@/lib/useKeyboardSafe";
 import { useGameHost } from "@/components/games/GameHost";
+import { gameInfo } from "@/lib/games";
 
 const TOTAL = MASQUERADE_MINUTES * 60;
 
@@ -156,14 +157,16 @@ export function MasqueradeRoom({
     setMenu(false);
     if (
       !confirm(
-        state.hourly
-          ? `Let go of ${state.them.alias}? The chat closes for both of you. You'll get someone new next hour.`
-          : "Leave this masquerade? The chat will be deleted.",
+        state.meet
+          ? `Let go of ${state.them.alias}? The chat closes for both of you.`
+          : state.hourly
+            ? `Let go of ${state.them.alias}? The chat closes for both of you. You'll get someone new next hour.`
+            : "Leave this masquerade? The chat will be deleted.",
       )
     )
       return;
     await supabase.rpc("vote_unmask", { p_session: state.id, p_unmask: false });
-    router.replace("/home");
+    router.replace(state.meet ? "/meet" : "/home");
   }
 
   async function report(reason: string) {
@@ -187,25 +190,33 @@ export function MasqueradeRoom({
     await refresh();
   }
 
-  // Games: hourly and reopened pairs, while the chat is open
+  // Games: hourly and reopened pairs and meet chats, while the chat is open.
+  // In a game meet the first game comes from the line, so the game button waits for it.
+  const meet = state.meet ?? null;
   const lastFromThem = [...messages].reverse().find((m) => m.sender_id && m.sender_id !== state.me.id && m.kind === "text");
   const games = useGameHost({
     sessionId: state.id,
     names: { me: state.me.alias, them: state.them.alias },
     masked: true,
     disabled: !state.hourly || state.status !== "active" || remaining <= 0,
+    noLauncher: !!meet?.turn_pending,
     offline: !!demo,
     peek: lastFromThem?.body ?? null,
     unmask: state.hourly ? { onUnmask: () => void vote(true), done: state.me.vote === true } : null,
   });
 
   if (state.status !== "active" && state.status !== "lapsed") return <Outcome state={state} eventId={eventId} />;
+  const back = meet ? "/meet" : "/home";
 
   const them = state.them;
   const gender = GENDERS.find((g) => g.value === them.gender)?.label;
   const lapsed = state.status === "lapsed";
   const chatting = !lapsed && !timeUp;
-  const total = state.hourly ? 3600 : TOTAL;
+  const total = meet
+    ? Math.max(60, (new Date(state.ends_at).getTime() - new Date(state.started_at).getTime()) / 1000)
+    : state.hourly
+      ? 3600
+      : TOTAL;
 
   return (
     <div ref={shell} className="fixed inset-x-0 top-0 z-20 flex h-dvh overflow-hidden lg:static">
@@ -214,7 +225,7 @@ export function MasqueradeRoom({
       <header className="z-10 border-b border-line bg-surface">
         <div className="flex items-center gap-3 px-4 py-3">
           {state.hourly && (
-            <Link href="/home" className="-ml-2 grid h-10 w-8 shrink-0 place-items-center rounded-full hover:bg-ink/5" aria-label="Back home">
+            <Link href={back} className="-ml-2 grid h-10 w-8 shrink-0 place-items-center rounded-full hover:bg-ink/5" aria-label={meet ? "Back to Meet" : "Back home"}>
               <ArrowLeft size={22} />
             </Link>
           )}
@@ -228,7 +239,7 @@ export function MasqueradeRoom({
             </p>
           </div>
           {lapsed ? (
-            <span className="shrink-0 rounded-full bg-cream px-2.5 py-1 text-[12px] font-semibold text-muted">Hour over</span>
+            <span className="shrink-0 rounded-full bg-cream px-2.5 py-1 text-[12px] font-semibold text-muted">{meet ? "Meet over" : "Hour over"}</span>
           ) : state.reopened ? (
             <span className="shrink-0 rounded-full bg-mint-soft px-2.5 py-1 text-[12px] font-semibold text-mint">Reopened</span>
           ) : (
@@ -355,7 +366,7 @@ export function MasqueradeRoom({
 
       {lapsed && (
         <div className="animate-fade-up border-t border-line bg-surface px-5 pt-4 pb-safe">
-          <p className="text-center text-[15px] font-semibold">The hour ran out before you both decided</p>
+          <p className="text-center text-[15px] font-semibold">{meet ? "The meet ended" : "The hour ran out"} before you both decided</p>
           <p className="mx-auto mt-1 max-w-sm text-center text-[13px] leading-snug text-muted">
             {state.me.vote === true
               ? `You unmasked. If ${them.alias} unmasks too, you're connected.`
@@ -389,6 +400,7 @@ export function MasqueradeRoom({
         </div>
       )}
 
+      {meet && chatting && !(games.game && (games.game.status === "invited" || games.game.status === "active")) && <MeetLine meet={meet} them={them.alias} />}
       {state.hourly && chatting && games.banner}
       {chatting ? (
         <Composer
@@ -460,7 +472,7 @@ export function MasqueradeRoom({
             <div className="mt-5">
               <TimerRing remaining={remaining} total={total} />
             </div>
-            <p className="mt-1 text-[12px] text-muted">{state.hourly ? "left this hour" : "until you both decide"}</p>
+            <p className="mt-1 text-[12px] text-muted">{meet ? "left in this meet" : state.hourly ? "left this hour" : "until you both decide"}</p>
           </>
         )}
       </div>
@@ -524,4 +536,52 @@ function Tag({ children, strong }: { children: React.ReactNode; strong?: boolean
 function formatList(items: string[]) {
   if (items.length <= 1) return items.join("");
   return items.slice(0, -1).join(", ") + " & " + items[items.length - 1];
+}
+
+/** Game meets: where you are in the line, or (on your own meet) where your game is happening */
+function MeetLine({ meet, them }: { meet: NonNullable<MasqueradeState["meet"]>; them: string }) {
+  if (meet.kind !== "game") return null;
+  const title = gameInfo(meet.game ?? undefined).title;
+  let text: React.ReactNode = null;
+  let action: React.ReactNode = null;
+  if (meet.mine && meet.live_chat) {
+    text =
+      meet.live_chat.status === "active" ? (
+        <>
+          <b className="text-white">You&apos;re playing {meet.live_chat.alias}.</b> {them} is waiting their turn.
+        </>
+      ) : (
+        <>
+          <b className="text-white">{meet.live_chat.alias}</b> is ready to play {title}.
+        </>
+      );
+    action = (
+      <Link href={`/masquerade/${meet.live_chat.id}`} className="h-9 shrink-0 rounded-full px-3.5 text-[13px] leading-9 font-bold gm-gold">
+        Go
+      </Link>
+    );
+  } else if (meet.mine && meet.turn_pending) {
+    text = (
+      <>
+        <b className="text-white">{them} is in line</b> to play {title}. You&apos;ll get their challenge when it&apos;s their turn.
+      </>
+    );
+  } else if (!meet.mine && meet.turn_pending) {
+    text = (
+      <>
+        <b className="text-white">You&apos;re in line to play {title}.</b>{" "}
+        {meet.ahead ? `${meet.ahead} ahead of you. ` : "You're next. "}Chat while you wait.
+      </>
+    );
+  }
+  if (!text) return null;
+  return (
+    <div className="flex animate-fade-up items-center gap-3 px-4 py-2.5 text-white" style={{ background: "linear-gradient(90deg, #2b1d73, #1a1240)" }}>
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/12">
+        <Gamepad2 size={17} className="text-gold" />
+      </span>
+      <p className="min-w-0 flex-1 text-[13px] leading-snug text-white/80">{text}</p>
+      {action}
+    </div>
+  );
 }

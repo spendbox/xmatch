@@ -12,7 +12,15 @@ import { AdminTitle } from "./AdminShell";
 
 export type AdminGift = { id: string; name: string; emoji: string; price: number; sort: number; retired: boolean };
 export type AdminPack = { id: string; keys: number; naira: number; tag: string | null; sort: number; active: boolean };
-type Settings = { reopen_cost: number; reveal_cost: number; free_reveals: number; invite_reward: number };
+type Settings = {
+  reopen_cost: number;
+  reveal_cost: number;
+  free_reveals: number;
+  invite_reward: number;
+  meet_cost: number;
+  meet_free_posts: number;
+  meet_hours: number;
+};
 export type InviteStats = { joined: number; joined_7d: number; buyers: number; keys_paid: number; top: { name: string | null; joined: number; earned: number }[] };
 
 const input = "h-11 w-full rounded-xl border border-line-strong bg-surface px-3 text-[15px] outline-none focus:border-brand";
@@ -34,6 +42,16 @@ export function PricesManager({ settings, gifts, packs, invites = null }: { sett
           <SettingField k="free_reveals" label="Free reveals per event" hint="Default for new events" value={settings.free_reveals} keysIcon={false} />
         </div>
         <p className="mt-3 text-[12px] text-muted">Existing events keep their own reveal prices. Change them on the event itself.</p>
+      </section>
+
+      <section className="mt-6 rounded-3xl border border-line bg-surface p-5 shadow-card">
+        <h2 className="text-[16px] font-semibold">Meets</h2>
+        <p className="mt-1 text-[13px] text-muted">Posts on Home and Meet. People who meet someone from a post always join free. Keys aren&apos;t refunded.</p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <SettingField k="meet_cost" label="Post a meet" hint="Keys per post after the free ones" value={settings.meet_cost} />
+          <SettingField k="meet_free_posts" label="Free posts per person" hint="Before they start paying" value={settings.meet_free_posts} keysIcon={false} />
+          <SettingField k="meet_hours" label="How long a meet stays up" hint="In hours (1 to 48)" value={settings.meet_hours} keysIcon={false} />
+        </div>
       </section>
 
       <section className="mt-6 rounded-3xl border border-line bg-surface p-5 shadow-card">

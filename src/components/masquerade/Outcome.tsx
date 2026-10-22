@@ -25,7 +25,7 @@ export function Outcome({ state, eventId }: { state: MasqueradeState; eventId?: 
     title = "You stayed masked";
     body = "Not every chat clicks. On to the next one.";
   } else if (reason === "quiet") {
-    title = "The hour ended";
+    title = state.meet ? "The meet ended" : "The hour ended";
     body = "Neither of you said much, so the chat closed. You might be paired again another time.";
   } else if (reason === "timeout" && state.me.vote === null) {
     title = "Time ran out";
@@ -46,6 +46,10 @@ export function Outcome({ state, eventId }: { state: MasqueradeState; eventId?: 
         {eventId ? (
           <ButtonLink href={`/events/${eventId}?next=1`} size="lg" variant="gold">
             <RotateCcw size={18} /> Next round
+          </ButtonLink>
+        ) : state.meet ? (
+          <ButtonLink href="/meet" size="lg" variant="gold">
+            <RotateCcw size={18} /> Back to Meet
           </ButtonLink>
         ) : (
           <ButtonLink href="/home" size="lg" variant="gold">

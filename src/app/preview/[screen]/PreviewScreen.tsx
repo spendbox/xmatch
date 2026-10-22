@@ -43,6 +43,8 @@ import { GamesManager } from "@/components/admin/GamesManager";
 import type { Feed, FeedAnswer, FeedGift } from "@/lib/feed";
 import type { MasqueradeHour } from "@/lib/hourly";
 import type { ChatMessage, MasqueradeState, Profile } from "@/lib/types";
+import type { Meet, MeetChat, MeetList } from "@/lib/meets";
+import { MeetScreen } from "@/components/meets/MeetScreen";
 
 const photo = (a: string, b: string, letter: string) =>
   "data:image/svg+xml;utf8," +
@@ -112,7 +114,7 @@ const recent = [
   { id: "m3", created_at: iso(3000), last_message_at: iso(200), intent: "spicy" as const, other_id: "z", display_name: "Zara", photos: [photo("#5b3fd9", "#e5484d", "Z")], age: 29, last_message: null, last_sender: null },
 ];
 
-const APP_SCREENS = ["events-empty", "event-spotlight", "event-spotlight-live", "events", "event-upcoming", "event-live", "event-waiting", "event-ended", "home", "matches", "wallet", "profile", "rich-chat", "extend", "chat", "desktop-matches", "gifts", "home-next", "home-off", "home-clicked", "people", "feed", "feed-locked", "feed-chat", "feed-gifts"];
+const APP_SCREENS = ["events-empty", "event-spotlight", "event-spotlight-live", "events", "event-upcoming", "event-live", "event-waiting", "event-ended", "home", "matches", "wallet", "profile", "rich-chat", "extend", "chat", "desktop-matches", "gifts", "home-next", "home-off", "home-clicked", "people", "feed", "feed-locked", "feed-chat", "feed-gifts", "meet", "meet-events", "meet-post"];
 
 function ev(over: Partial<DashpadEvent> = {}): DashpadEvent {
   return {
@@ -166,6 +168,28 @@ const feedDemo: Feed = {
 const feedGifts: FeedGift[] = [
   { id: 1, gift_id: "rose", created_at: iso(900), seen_at: null, answer_body: feedDemo.my_answer!.body, prompt_body: feedPrompt.body, from_id: "t", from_name: "Tunde", from_photo: photo("#5b3fd9", "#f2b33d", "T"), from_age: 29, from_gender: "man", chat_id: null, can_chat: true, match_id: null },
   { id: 2, gift_id: "teddy", created_at: iso(7200), seen_at: null, answer_body: feedDemo.my_answer!.body, prompt_body: feedPrompt.body, from_id: "d", from_name: "David", from_photo: photo("#1f9d6b", "#e5484d", "D"), from_age: 31, from_gender: "man", chat_id: "c9", can_chat: true, match_id: null },
+];
+
+const meet = (over: Partial<Meet>): Meet => ({
+  id: Math.random().toString(36).slice(2), kind: "game", game: "c4", body: "", alias: "Velvet Fox", created_at: iso(20),
+  ends_at: new Date(now + 2 * 3600_000).toISOString(), mine: false, age: 26, gender: "woman", session_id: null, people: 3, waiting: null, ...over,
+});
+const demoMeets: MeetList = {
+  server_now: new Date(now).toISOString(),
+  cost: 0,
+  hours: 3,
+  mine: null,
+  posts: [
+    meet({ alias: "Velvet Fox", body: "Nobody has beaten me this week" }),
+    meet({ alias: "Golden Heron", kind: "text", game: null, body: "Best small chops spot in Lekki? Wrong answers only", ends_at: new Date(now + 100 * 60_000).toISOString() }),
+    meet({ alias: "Misty Owl", game: "words", body: "Words are my thing", ends_at: new Date(now + 40 * 60_000).toISOString(), session_id: "s1" }),
+    meet({ alias: "Lucky Swan", kind: "text", game: null, body: "Jollof: party or home-made? Defend your answer", ends_at: new Date(now + 150 * 60_000).toISOString() }),
+  ],
+};
+const demoMeetChats: MeetChat[] = [
+  { id: "c1", status: "active", ends_at: new Date(now + 2 * 3600_000).toISOString(), mine: true, kind: "game", game: "c4", post: "", their_alias: "Quiet Lynx", my_vote: null, game_status: "invited", in_line: true, last_message: "Ready when you are" },
+  { id: "c2", status: "active", ends_at: new Date(now + 2 * 3600_000).toISOString(), mine: true, kind: "game", game: "c4", post: "", their_alias: "Bold Comet", my_vote: null, game_status: null, in_line: true, last_message: null },
+  { id: "c3", status: "active", ends_at: new Date(now + 100 * 60_000).toISOString(), mine: false, kind: "text", game: null, post: "Best small chops spot in Lekki?", their_alias: "Golden Heron", my_vote: null, game_status: null, in_line: false, last_message: "Okay that one made me laugh 😂" },
 ];
 
 export function PreviewScreen({ screen }: { screen: string }) {
@@ -233,7 +257,7 @@ function ScreenBody({ screen }: { screen: string }) {
     case "people":
       return <div className="pb-24"><YourPeople matches={recent} myId="me" /><BottomNav /></div>;
     case "admin-prices":
-      return <AdminShell><PricesManager settings={{ reopen_cost: 10, reveal_cost: 1, free_reveals: 10, invite_reward: 10 }} invites={{ joined: 64, joined_7d: 12, buyers: 19, keys_paid: 410, top: [{ name: "Tolu", joined: 9, earned: 90 }, { name: "Kemi", joined: 6, earned: 40 }] }}
+      return <AdminShell><PricesManager settings={{ reopen_cost: 10, reveal_cost: 1, free_reveals: 10, invite_reward: 10, meet_cost: 10, meet_free_posts: 1, meet_hours: 3 }} invites={{ joined: 64, joined_7d: 12, buyers: 19, keys_paid: 410, top: [{ name: "Tolu", joined: 9, earned: 90 }, { name: "Kemi", joined: 6, earned: 40 }] }}
         gifts={[{ id: "fire", name: "Fire", emoji: "🔥", price: 5, sort: 1, retired: false }, { id: "rose", name: "Rose", emoji: "🌹", price: 5, sort: 2, retired: false }, { id: "jollof", name: "Jollof", emoji: "🍛", price: 15, sort: 5, retired: false }, { id: "teddy", name: "Teddy bear", emoji: "🧸", price: 30, sort: 91, retired: true }]}
         packs={[{ id: "p50", keys: 50, naira: 750, tag: null, sort: 1, active: true }, { id: "p150", keys: 150, naira: 2000, tag: "Popular", sort: 2, active: true }, { id: "p500", keys: 500, naira: 4500, tag: "Best value", sort: 3, active: true }]} /></AdminShell>;
     case "admin-masquerade": {
@@ -266,10 +290,46 @@ function ScreenBody({ screen }: { screen: string }) {
           demo={{ remaining: screen === "room-lapsed" ? 0 : 41 * 60 + 12 }}
         />
       );
+    case "meet":
+    case "meet-events":
+      return (
+        <div className="pb-24">
+          <MeetScreen
+            initial={{ ...demoMeets, mine: meet({ mine: true, alias: "Secret Panther", body: "Bet you can't beat me", people: 3, waiting: 2, ends_at: new Date(now + 168 * 60_000).toISOString() }) }}
+            initialChats={demoMeetChats}
+            events={[]}
+            tab={screen === "meet" ? "meets" : "events"}
+          />
+          <BottomNav />
+        </div>
+      );
+    case "meet-post":
+      return <HomeScreen profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} hour={demoHour()} meets={demoMeets} demoSheet="post" />;
+    case "room-meet":
+    case "room-meet-mine":
+      return (
+        <MasqueradeRoom
+          initial={{
+            ...session(),
+            hourly: true,
+            ends_at: new Date(now + 2 * 3600_000).toISOString(),
+            started_at: new Date(now - 3600_000).toISOString(),
+            meet: {
+              id: "m1", kind: "game", game: "c4", mine: screen === "room-meet-mine", turn_pending: true, ahead: screen === "room-meet-mine" ? 2 : 1,
+              live_chat: screen === "room-meet-mine" ? { id: "c1", alias: "Quiet Lynx", status: "invited" } : null,
+            },
+          }}
+          initialMessages={[
+            { id: 1, sender_id: null, kind: "meet", body: "Nobody has beaten me this week", media_meta: { kind: "game", game: "c4", alias: "Velvet Fox" }, created_at: iso(30) },
+            ...msgs.slice(1, 4),
+          ]}
+          demo={{ remaining: 2 * 3600 }}
+        />
+      );
     case "home":
       return (
         <div className="pb-24">
-          <HomeScreen hour={demoHour()} profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} stats={{ online: 214, week_chats: 12, week_unmasks: 5, gifts_received: 3 }} matches={recent} />
+          <HomeScreen meets={demoMeets} hour={demoHour()} profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} stats={{ online: 214, week_chats: 12, week_unmasks: 5, gifts_received: 3 }} matches={recent} />
           <BottomNav />
         </div>
       );

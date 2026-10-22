@@ -5,17 +5,24 @@ import { KindIcon } from "./kind";
 import { eventPhase, type DashpadEvent } from "@/lib/events";
 import { EventCard, useNow } from "./EventCard";
 
-export function EventsScreen({ events }: { events: DashpadEvent[] }) {
+export function EventsScreen({ events, embedded }: { events: DashpadEvent[]; /** Shown as a tab of the Meet page */ embedded?: boolean }) {
   const now = useNow(30_000);
   const phase = (e: DashpadEvent) => (now ? eventPhase(e, now) : "upcoming");
   const live = events.filter((e) => phase(e) === "live");
   const upcoming = events.filter((e) => phase(e) === "upcoming");
   const past = events.filter((e) => phase(e) === "ended" || phase(e) === "cancelled");
 
+  const Wrap = embedded ? "div" : "main";
   return (
-    <main className="mx-auto max-w-md px-5 pt-6 lg:max-w-6xl lg:px-10 lg:pt-10">
-      <h1 className="font-display text-[34px] leading-tight font-semibold tracking-tight lg:text-[40px]">Events</h1>
-      <p className="mt-1 text-[15px] text-muted">Themed nights to meet people — masked rounds, photo walls and listening parties.</p>
+    <Wrap className={embedded ? undefined : "mx-auto max-w-md px-5 pt-6 lg:max-w-6xl lg:px-10 lg:pt-10"}>
+      {embedded ? (
+        <p className="mt-5 text-[15px] text-muted">Themed nights to meet people — masked rounds, photo walls and listening parties.</p>
+      ) : (
+        <>
+          <h1 className="font-display text-[34px] leading-tight font-semibold tracking-tight lg:text-[40px]">Events</h1>
+          <p className="mt-1 text-[15px] text-muted">Themed nights to meet people — masked rounds, photo walls and listening parties.</p>
+        </>
+      )}
 
       {live.length > 0 && <Section title="Live now" events={live} />}
       {upcoming.length > 0 && <Section title="Coming up" events={upcoming} />}
@@ -27,7 +34,7 @@ export function EventsScreen({ events }: { events: DashpadEvent[] }) {
           <div className="mt-5 lg:mt-0">
             <h2 className="text-[20px] font-semibold">Nothing on the calendar yet</h2>
             <p className="mt-1.5 max-w-md text-[15px] text-muted">
-              New events show up here first. When one you&apos;re going to starts, you&apos;ll see a <span className="font-semibold text-ink">Live</span> badge on Events.
+              New events show up here first. When one you&apos;re going to starts, you&apos;ll see a <span className="font-semibold text-ink">Live</span> badge on Meet.
             </p>
           </div>
         </div>
@@ -63,8 +70,8 @@ export function EventsScreen({ events }: { events: DashpadEvent[] }) {
       </section>
 
       {past.length > 0 && <Section title="Recently" events={past} />}
-      <div className="h-6" />
-    </main>
+      {!embedded && <div className="h-6" />}
+    </Wrap>
   );
 }
 

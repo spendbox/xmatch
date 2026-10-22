@@ -3,14 +3,15 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
-import { CalendarDays, MessageCircle, UserRound } from "lucide-react";
+import { MessageCircle, UserRound, UsersRound } from "lucide-react";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import type { MenuBadges } from "./useMenuBadges";
 import { badgeFor } from "./badges";
+import { isActive } from "./Sidebar";
 
 const tabs = [
   { href: "/home", label: "Home", icon: (on: boolean) => <MaskIcon className="w-6" eyes={on ? "#efebfd" : "#ffffff"} /> },
-  { href: "/events", label: "Events", icon: () => <CalendarDays size={22} /> },
+  { href: "/meet", label: "Meet", icon: () => <UsersRound size={22} /> },
   { href: "/matches", label: "Chats", icon: () => <MessageCircle size={22} /> },
   { href: "/profile", label: "Profile", icon: () => <UserRound size={22} /> },
 ];
@@ -21,7 +22,7 @@ export function BottomNav({ badges }: { badges?: MenuBadges }) {
     <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden">
       <ul className="mx-auto grid h-16 max-w-md grid-cols-4">
         {tabs.map((t) => {
-          const on = path === t.href || path.startsWith(t.href + "/") || (t.href === "/home" && (path.startsWith("/masquerade") || path.startsWith("/feed")));
+          const on = isActive(path, t.href);
           return (
             <li key={t.href}>
               <Link
