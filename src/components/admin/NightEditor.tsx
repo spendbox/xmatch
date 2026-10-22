@@ -24,7 +24,7 @@ import { EventMediaList } from "./EventMediaList";
 import { EmailAttendeesCard, LiveRoomCard } from "./EventLiveTools";
 import { uploadEventFile } from "./eventUpload";
 
-const DURATIONS = [30, 45, 60, 90, 120, 180, 240];
+const DURATIONS = [30, 45, 60, 90, 120, 180, 240, 360, 480, 720, 1080, 1440];
 const SLOW_MODES = [0, 5, 10, 30, 60];
 
 function toLocalInput(iso: string) {

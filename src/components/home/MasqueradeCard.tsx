@@ -226,7 +226,7 @@ export function MasqueradeCard({
           <Gift size={17} className="shrink-0" />
           <span className="min-w-0 flex-1">
             <span className="font-semibold">{copied ? "Link copied!" : "While you wait: invite friends"}</span>
-            <span className="text-white/75"> · one-time {hour.invite_reward ?? 10} Keys when a friend makes their first purchase</span>
+            <span className="text-white/75"> · {hour.invite_reward ?? 10} Keys when your friend makes their first purchase</span>
           </span>
         </button>
       )}

@@ -180,7 +180,7 @@ export async function saveNight(input: NightInput): Promise<{ id?: string; error
   if (title.length < 3) return { error: "Give the event a title." };
   const start = new Date(input.starts_at);
   if (Number.isNaN(start.getTime())) return { error: "Pick a date and start time." };
-  const minutes = Math.min(Math.max(Math.round(input.duration_min) || 60, 15), 360);
+  const minutes = Math.min(Math.max(Math.round(input.duration_min) || 60, 15), 24 * 60); // up to 24 hours
   if (input.age_min < 18 || input.age_max < input.age_min) return { error: "Check the age range (18+)." };
   const stream = (input.stream_url ?? "").trim();
   if (stream && !isHttp(stream)) return { error: "The live stream or video link must start with https://" };
