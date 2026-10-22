@@ -69,7 +69,7 @@ export function MeetSheet({
             </span>
             <span className="min-w-0 flex-1">
               <span className="block truncate text-[15px] font-semibold">{place ?? "Add where you are"}</span>
-              <span className="block text-[12px] text-muted">{place ? "Tap to change" : "Country and state, no GPS"}</span>
+              <span className="block text-[12px] text-muted">{place ? "Tap to change" : "Country and state"}</span>
             </span>
             <ChevronRight size={18} className="shrink-0 text-muted" />
           </button>
