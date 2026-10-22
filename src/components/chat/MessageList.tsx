@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import {
-  Ban, Clock3, Copy, Timer, CornerUpLeft, MessageCircleQuestion, Phone, PhoneIncoming, PhoneMissed, PhoneOutgoing, Play, Reply, Trash2, Video,
+  Ban, Clock3, Copy, Gamepad2, MessageCircle, Timer, CornerUpLeft, MessageCircleQuestion, Phone, PhoneIncoming, PhoneMissed, PhoneOutgoing, Play, Reply, Trash2, Video,
 } from "lucide-react";
 import type { ChatMessage } from "@/lib/types";
 import { formatDuration } from "@/lib/chatMedia";
@@ -14,6 +14,7 @@ import { Spinner, tapFeedback } from "@/components/ui/Button";
 import { AudioPlayer } from "./AudioPlayer";
 import { MediaViewer, type ViewerItem } from "./MediaViewer";
 import { GameCard } from "@/components/games/GameCard";
+import { gameInfo } from "@/lib/games";
 import { useSignedUrl } from "./useSignedUrl";
 
 type Props = {
@@ -167,6 +168,23 @@ export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDat
             <div key={m.id}>
               {dateLine}
               <GameCard m={m} myId={myId} nameOf={nameOf} onAgain={onGameAgain} onReply={onReply} />
+            </div>
+          );
+        }
+
+        if (m.kind === "meet") {
+          const g = m.media_meta?.kind === "game" && m.media_meta.game ? gameInfo(m.media_meta.game) : null;
+          return (
+            <div key={m.id}>
+              {dateLine}
+              <div className="my-2 flex justify-center animate-fade-up" data-msg={m.id}>
+                <div className="max-w-[88%] rounded-2xl border border-brand/20 bg-brand-soft px-4 py-3 text-center">
+                  <p className="mb-1 inline-flex items-center gap-1 text-[11px] font-bold tracking-wide text-brand-ink uppercase">
+                    {g ? <Gamepad2 size={13} /> : <MessageCircle size={13} />} {m.media_meta?.alias ? `${m.media_meta.alias}’s` : "The"} {g ? `${g.title} challenge` : "post"}
+                  </p>
+                  {(!g || m.body !== g.title) && <p className="text-[15px] font-medium leading-snug text-ink">{m.body}</p>}
+                </div>
+              </div>
             </div>
           );
         }

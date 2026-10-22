@@ -19,7 +19,7 @@ export function TimerRing({ remaining, total }: { remaining: number; total: numb
         />
       </svg>
       <span className={clsx("text-[12px] font-bold tabular-nums", low ? "text-chili" : "text-ink")}>
-        {mm}:{ss}
+        {mm >= 60 ? `${Math.floor(mm / 60)}h${String(mm % 60).padStart(2, "0")}` : `${mm}:${ss}`}
       </span>
     </div>
   );

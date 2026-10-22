@@ -115,6 +115,21 @@ export async function POST(req: Request) {
     return ok;
   }
 
+  // You tapped Meet on someone's post: tell them (still masked)
+  if (b.kind === "meet_join" && b.sessionId) {
+    const { data: s } = await db.from("masquerade_sessions").select("id, user_a, user_b, alias_b, meet_id, started_at").eq("id", b.sessionId).maybeSingle();
+    if (!s || s.user_b !== uid || !s.meet_id || Date.now() - new Date(s.started_at as string).getTime() > RECENT_MS) return ok;
+    const { data: m } = await db.from("meet_posts").select("kind, game").eq("id", s.meet_id).single();
+    const title = ({ truths: "Two Truths & a Lie", tot: "This or That", c4: "Connect 4", words: "Word Hunt" } as Record<string, string>)[(m?.game as string) ?? ""];
+    await pushToUsers([s.user_a as string], {
+      title: `${s.alias_b} wants to meet you 🎭`,
+      body: m?.kind === "game" && title ? `They're in line to play ${title}. Still masked, until you both decide.` : "They opened a masked chat from your post. Say hi.",
+      url: `/masquerade/${s.id}`,
+      tag: `meet-${s.id}`,
+    });
+    return ok;
+  }
+
   // You challenged someone to a game in a chat
   if (b.kind === "game_invite" && b.gameId) {
     const { data: g } = await db

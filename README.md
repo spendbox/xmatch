@@ -18,6 +18,7 @@ Live at **dashpad.site** · Built with Next.js (hosted on Vercel) and Supabase (
 - Matches list and chat: replies (swipe or press and hold), photos & videos, voice notes, delete for everyone, voice & video calls
 - Report & unmatch, leave any time
 - **Masquerade Nights**: themed hours of 5-minute masked rounds, someone new each round, set up from the admin dashboard
+- **Meets**: a floating **+** button on Home (drag it anywhere) posts a game challenge or a line of text for 3 hours. Only people whose Masquerade settings fit yours, and yours fit theirs, see it (on Home and the **Meet** page, which also holds Events). Tapping Meet opens a masked chat; on game posts people wait their turn and play one at a time. Both unmask → it's a match. The first post is free, then 10 Keys (no refunds). Price, free posts and length are set in admin → Prices.
 - **Keys** (in-app currency) bought with **Paystack**: gifts, +2 minutes in a masked chat, and extra masquerades after 5 free a day
 
 ## Setting it up (one time)

@@ -21,6 +21,7 @@ export function useGameHost({
   offline,
   peek,
   unmask,
+  noLauncher,
 }: {
   sessionId?: string | null;
   matchId?: string | null;
@@ -31,6 +32,8 @@ export function useGameHost({
   offline?: boolean;
   peek?: string | null;
   unmask?: { onUnmask: () => void; done: boolean } | null;
+  /** Games can't be started from this chat yet (a game meet waiting for its turn) */
+  noLauncher?: boolean;
 }) {
   const { game, actions, clear } = useChatGame({ sessionId, matchId, disabled: disabled || offline });
   const [launcher, setLauncher] = useState(false);
@@ -54,16 +57,17 @@ export function useGameHost({
   }, [game, clear]);
 
   const startGame = async (k: GameKind) => actions.start(k);
+  const live = !!game && (game.status === "active" || game.status === "invited");
 
   const button = (
     <button
       type="button"
       onClick={() => {
         tapFeedback();
-        if (game && (game.status === "active" || game.status === "invited")) setOpen(true);
+        if (live) setOpen(true);
         else setLauncher(true);
       }}
-      disabled={disabled}
+      disabled={disabled || (noLauncher && !live)}
       className="relative grid h-12 w-12 shrink-0 place-items-center rounded-full bg-brand-soft text-brand transition active:scale-95 disabled:opacity-50"
       aria-label="Play a game"
       title="Play a game"

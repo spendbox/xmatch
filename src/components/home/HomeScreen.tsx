@@ -20,6 +20,13 @@ import { PlacePicker } from "./PlacePicker";
 import { intentLabel } from "@/lib/constants";
 import { INTENT_ICONS } from "@/components/ui/icons";
 import { prefsFromProfile, type SetupPrefs } from "./prefs";
+import type { MeetList } from "@/lib/meets";
+import { useNow } from "@/components/events/EventCard";
+import { MeetCard } from "@/components/meets/MeetCard";
+import { MeetFab } from "@/components/meets/MeetFab";
+import { PostMeetSheet } from "@/components/meets/PostMeetSheet";
+import { YourMeet } from "@/components/meets/YourMeet";
+import { useMeets } from "@/components/meets/useMeets";
 
 export type HomeStats = { online: number; week_chats: number; week_unmasks: number; gifts_received: number };
 
@@ -28,6 +35,7 @@ export function HomeScreen({
   wallet: initialWallet,
   nextEvent = null,
   hour: initialHour = null,
+  meets: initialMeets = null,
   demoSheet,
 }: {
   profile: Profile;
@@ -37,10 +45,14 @@ export function HomeScreen({
   matches?: MatchSummary[];
   nextEvent?: DashpadEvent | null;
   hour?: MasqueradeHour | null;
-  demoSheet?: "meet";
+  meets?: MeetList | null;
+  demoSheet?: "meet" | "post";
 }) {
   const supabase = useMemo(() => createClient(), []);
-  const { wallet } = useWallet(profile.id, initialWallet);
+  const { wallet, refresh: refreshWallet } = useWallet(profile.id, initialWallet);
+  const { list: meets, refresh: refreshMeets } = useMeets(initialMeets);
+  const [postOpen, setPostOpen] = useState(demoSheet === "post");
+  const now = useNow(30_000);
   const [prefs, setPrefs] = useState<SetupPrefs>(() => prefsFromProfile(profile));
   const [meetOpen, setMeetOpen] = useState(demoSheet === "meet");
   const [greeting, setGreeting] = useState("Hello");
@@ -115,12 +127,29 @@ export function HomeScreen({
         <div className="mt-7 lg:mt-0 lg:mb-7">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-[15px] font-semibold">Upcoming events</h2>
-            <Link href="/events" className="inline-flex items-center gap-0.5 text-[13px] font-semibold text-brand">
+            <Link href="/meet?tab=events" className="inline-flex items-center gap-0.5 text-[13px] font-semibold text-brand">
               All events <ChevronRight size={16} />
             </Link>
           </div>
           <EventCard event={nextEvent} compact />
         </div>
+      )}
+
+      {meets && (meets.mine || meets.posts.length > 0) && (
+        <section className="mt-7 lg:mt-0 lg:mb-7">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-[15px] font-semibold">Meets for you</h2>
+            <Link href="/meet" className="inline-flex items-center gap-0.5 text-[13px] font-semibold text-brand">
+              View more <ChevronRight size={16} />
+            </Link>
+          </div>
+          <div className="grid gap-3">
+            {meets.mine && <YourMeet meet={meets.mine} now={now} href="/meet" />}
+            {meets.posts.slice(0, 3).map((m) => (
+              <MeetCard key={m.id} meet={m} now={now} />
+            ))}
+          </div>
+        </section>
       )}
 
       </div>
@@ -137,6 +166,25 @@ export function HomeScreen({
         setPrefs={setPrefs}
         place={place.label}
         onPlace={() => setPlaceOpen(true)}
+      />
+
+      <MeetFab free={meets?.cost === 0} onOpen={() => setPostOpen(true)} />
+      <PostMeetSheet
+        open={postOpen}
+        onClose={() => setPostOpen(false)}
+        prefs={prefs}
+        place={place.label}
+        cost={meets?.cost ?? 0}
+        hours={meets?.hours ?? 3}
+        onEditSettings={() => {
+          setPostOpen(false);
+          setMeetOpen(true);
+        }}
+        onPosted={() => {
+          setPostOpen(false);
+          refreshMeets();
+          refreshWallet();
+        }}
       />
 
       <PlacePicker
