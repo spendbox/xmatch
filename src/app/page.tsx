@@ -80,10 +80,10 @@ export default function Landing() {
         {/* Hero */}
         <section className="pt-4 text-center lg:pt-0 lg:text-left">
           <h1 className="mt-4 animate-fade-up font-display text-[44px] leading-[1.02] font-semibold tracking-tight [animation-delay:80ms] md:text-[56px] lg:text-[68px]">
-            Match on{" "}
+            Your world,{" "}
             <span className="relative inline-block">
-              <em className="bg-gradient-to-r from-brand via-[#c2306b] to-[#e8962a] bg-clip-text pr-1 text-transparent">Vibes</em>
-              <svg aria-hidden viewBox="0 0 120 12" className="absolute -bottom-1 left-0 w-full text-gold" preserveAspectRatio="none">
+              <em className="bg-gradient-to-r from-brand via-[#c2306b] to-[#e8962a] bg-clip-text pr-1 text-transparent">your people</em>
+              <svg aria-hidden viewBox="0 0 120 12" className="absolute -bottom-[0.26em] left-0 h-[0.16em] w-full text-gold" preserveAspectRatio="none">
                 <path d="M2 9c30-6 80-8 116-3" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
               </svg>
             </span>

@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Dashpad",
     short_name: "Dashpad",
-    description: "Match on vibes. Chat masked for five minutes, then unmask if you both say yes.",
+    description: "Your world, your people. Chat masked for five minutes, then unmask if you both say yes.",
     start_url: "/home",
     scope: "/",
     display: "standalone",

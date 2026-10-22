@@ -6,7 +6,7 @@ import { NavProgress } from "@/components/ui/NavProgress";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://dashpad.site"),
-  title: { default: "Dashpad — Meet the person before the picture", template: "%s · Dashpad" },
+  title: { default: "Dashpad — Your world, your people", template: "%s · Dashpad" },
   description:
     "Dashpad is dating for personality. Chat masked for 5 minutes. Unmask only if you both say yes.",
   openGraph: {
