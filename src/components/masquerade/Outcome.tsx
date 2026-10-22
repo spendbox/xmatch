@@ -10,11 +10,11 @@ export function Outcome({ state, eventId }: { state: MasqueradeState; eventId?: 
 
   const alias = state.them.alias;
   const reason = state.ended_reason;
-  let title = "No match this time";
+  let title = "Not this time";
   let body = `${alias} chose to stay masked. That's okay — the right person is out there.`;
   if (reason === "reported") {
     title = "Chat ended";
-    body = "Thanks for letting us know. You won't be matched with this person again.";
+    body = "Thanks for letting us know. You won't be paired with this person again.";
   } else if (reason === "left" && state.me.vote === false) {
     title = "You left the chat";
     body = "No worries. Your mask is ready whenever you are.";
@@ -59,7 +59,7 @@ function Reveal({ state, eventId }: { state: MasqueradeState; eventId?: string |
   const photo = p.photos?.[0];
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col px-5 pt-8 pb-8 lg:justify-center">
-      <p className="text-center text-sm font-semibold tracking-wide text-brand uppercase">It&apos;s a match</p>
+      <p className="text-center text-sm font-semibold tracking-wide text-brand uppercase">You clicked</p>
       <h1 className="mt-1 text-center font-display text-[32px] leading-tight font-semibold">
         Meet {p.display_name}
       </h1>

@@ -406,7 +406,7 @@ export function ProfileEditor({
         open={panel === "interests"}
         onClose={close}
         title="Interests"
-        subtitle={`${draftInterests.length} of ${MAX_INTERESTS} · shown while masked, shared ones help you match`}
+        subtitle={`${draftInterests.length} of ${MAX_INTERESTS} · shown while masked, shared ones help you connect`}
         icon={<Shapes size={22} strokeWidth={1.75} />}
         footer={
           <>
@@ -476,7 +476,7 @@ export function ProfileEditor({
         open={panel === "delete"}
         onClose={close}
         title="Delete your account?"
-        subtitle="This permanently removes your profile, photos, matches, messages and Keys. It can't be undone."
+        subtitle="This permanently removes your profile, photos, connections, messages and Keys. It can't be undone."
         icon={<Trash2 size={22} strokeWidth={1.75} className="text-chili" />}
         footer={
           <div className="space-y-2">
@@ -504,7 +504,7 @@ export function ProfileEditor({
         <ProfileSheet
           profile={{ ...profile, display_name: name, bio, interests, photos }}
           onClose={() => setPreview(false)}
-          note="This is how you look to a match after you both unmask."
+          note="This is how you look to someone after you both unmask."
         />
       )}
     </main>

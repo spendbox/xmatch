@@ -155,7 +155,7 @@ export function MatchChat({
   }
 
   function callThem(kind: "audio" | "video") {
-    startCall(matchId, kind, { name: other.display_name ?? "Your match", photo: other.photos?.[0] });
+    startCall(matchId, kind, { name: other.display_name ?? "Your connection", photo: other.photos?.[0] });
   }
 
   async function report(reason: string) {
@@ -211,17 +211,17 @@ export function MatchChat({
               <button
                 onClick={async () => {
                   setMenu(false);
-                  if (!confirm(`Unmatch ${other.display_name}? Your conversation will be deleted for both of you.`)) return;
+                  if (!confirm(`Remove ${other.display_name}? Your conversation will be deleted for both of you.`)) return;
                   await supabase.rpc("unmatch", { p_match: matchId });
                   router.replace("/matches");
                   router.refresh();
                 }}
                 className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-[15px] hover:bg-cream"
               >
-                <UserX size={18} /> Unmatch
+                <UserX size={18} /> Remove connection
               </button>
               <button onClick={() => { setMenu(false); setReporting(true); }} className="flex w-full items-center gap-3 border-t border-line px-4 py-3.5 text-left text-[15px] text-chili hover:bg-chili-soft">
-                <Flag size={18} /> Report & unmatch
+                <Flag size={18} /> Report & remove
               </button>
             </div>
           )}

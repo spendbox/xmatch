@@ -109,7 +109,7 @@ export const totalReactions = (r: FeedAnswer["reactions"]) => Object.values(r).r
 export function feedError(msg?: string | null) {
   if (!msg) return "Something went wrong. Please try again.";
   if (msg.includes("NOT_ENOUGH_KEYS")) return "You don't have enough Keys for that.";
-  if (msg.includes("ALREADY_MATCHED")) return "You're already matched with this person. Find them in Chats.";
+  if (msg.includes("ALREADY_MATCHED")) return "You're already connected with this person. Find them in Chats.";
   if (msg.includes("TOO_MANY_CHATS")) return "You've started a lot of chats today. Try again tomorrow.";
   if (msg.includes("closed")) return "Today's prompt has closed. A new one is up.";
   if (msg.includes("Not available")) return "This person isn't available to chat.";

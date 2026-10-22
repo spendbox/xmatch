@@ -74,7 +74,7 @@ export function Waiting({ prefs, userId, onCancel }: { prefs: SetupPrefs; userId
         </span>
       </div>
 
-      <h1 className="mt-8 font-display text-[28px] leading-tight font-semibold">Finding your masked match…</h1>
+      <h1 className="mt-8 font-display text-[28px] leading-tight font-semibold">Finding someone to talk to…</h1>
       <p className="mt-2 text-[15px] text-muted tabular-nums">
         Looking for {mm}:{ss}
       </p>
@@ -92,7 +92,7 @@ export function Waiting({ prefs, userId, onCancel }: { prefs: SetupPrefs; userId
       </div>
 
       <p key={tip} className="mt-10 max-w-xs rounded-2xl bg-surface px-5 py-4 text-[15px] leading-relaxed text-ink-soft shadow-card animate-fade-up">
-        {seconds > 60 ? "It's a little quiet right now. Stay here — we'll match you as soon as someone joins." : tip}
+        {seconds > 60 ? "It's a little quiet right now. Stay here — we'll pair you as soon as someone joins." : tip}
       </p>
 
       <div className="mt-auto w-full pt-10 pb-4">

@@ -4,7 +4,7 @@ import { plural, word } from "@/lib/plural";
 import { useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
-import { GIFTS, type Gift } from "@/lib/keys";
+import { SENDABLE_GIFTS as GIFTS, type Gift } from "@/lib/keys";
 import { Sheet } from "@/components/ui/Sheet";
 import { Button, tapFeedback } from "@/components/ui/Button";
 import { KeyCoin } from "./KeyIcon";
@@ -16,7 +16,7 @@ export function GiftSheet({
   balance,
   toName,
   onSend,
-  subtitle = "Gifts pop up in the chat. A sweet way to stand out.",
+  subtitle = "Gifts pop up in the chat. A fun way to stand out.",
 }: {
   open: boolean;
   onClose: () => void;

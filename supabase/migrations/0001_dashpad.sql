@@ -3039,3 +3039,77 @@ begin
   return json_build_object('from_age', my_age, 'from_gender', me.gender, 'intent', q.intent, 'targets', picked);
 end $$;
 revoke execute on function public.masquerade_alert_targets(uuid, int) from public, anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Friendlier gifts and Friends as the default mood.
+-- New gifts: Fire, Respect, Jollof, Mic drop, Trophy. Chocolate, Teddy bear
+-- and Bouquet are retired: they still show in old chats but can no longer be sent.
+-- ---------------------------------------------------------------------------
+alter table public.gifts add column if not exists retired boolean not null default false;
+insert into public.gifts (id, name, emoji, price, sort, retired) values
+  ('fire', 'Fire', '🔥', 5, 1, false),
+  ('rose', 'Rose', '🌹', 5, 2, false),
+  ('clap', 'Respect', '👏', 10, 3, false),
+  ('coffee', 'Coffee', '☕', 10, 4, false),
+  ('jollof', 'Jollof', '🍛', 15, 5, false),
+  ('cocktail', 'Drinks on me', '🍸', 20, 6, false),
+  ('mic', 'Mic drop', '🎤', 30, 7, false),
+  ('trophy', 'Trophy', '🏆', 40, 8, false),
+  ('crown', 'Crown', '👑', 60, 9, false),
+  ('diamond', 'Diamond', '💎', 100, 10, false),
+  ('chocolate', 'Chocolate', '🍫', 15, 90, true),
+  ('teddy', 'Teddy bear', '🧸', 30, 91, true),
+  ('bouquet', 'Bouquet', '💐', 40, 92, true)
+on conflict (id) do update set name = excluded.name, emoji = excluded.emoji, price = excluded.price,
+  sort = excluded.sort, retired = excluded.retired;
+
+create or replace function public.send_gift(p_gift text, p_match uuid default null, p_session uuid default null) returns int
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  g gifts;
+  bal int;
+begin
+  select * into g from gifts where id = p_gift and not retired;
+  if not found then raise exception 'Unknown gift'; end if;
+  if p_match is not null then
+    if not exists (select 1 from matches where id = p_match and (user_a = uid or user_b = uid)) then raise exception 'Not your match'; end if;
+    bal := public.spend_keys(uid, g.price, 'gift', g.id);
+    insert into messages (match_id, sender_id, kind, body, media_meta)
+    values (p_match, uid, 'gift', g.id, jsonb_build_object('gift', g.id));
+  elsif p_session is not null then
+    if not exists (select 1 from masquerade_sessions where id = p_session and (user_a = uid or user_b = uid)
+                   and status = 'active' and now() < ends_at) then
+      raise exception 'This chat has ended';
+    end if;
+    bal := public.spend_keys(uid, g.price, 'gift', g.id);
+    insert into masquerade_messages (session_id, sender_id, kind, body) values (p_session, uid, 'gift', g.id);
+  else
+    raise exception 'Choose who to send it to';
+  end if;
+  return bal;
+end $$;
+
+create or replace function public.gift_answer(p_answer uuid, p_gift text) returns int
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  a prompt_answers;
+  g gifts;
+  bal int;
+begin
+  if uid is null then raise exception 'Please log in'; end if;
+  select * into a from prompt_answers where id = p_answer and hidden_at is null;
+  if not found then raise exception 'Not available'; end if;
+  if a.user_id = uid then raise exception 'That’s your own answer'; end if;
+  if public.is_blocked(uid, a.user_id) then raise exception 'Not available'; end if;
+  select * into g from gifts where id = p_gift and not retired;
+  if not found then raise exception 'Unknown gift'; end if;
+  bal := public.spend_keys(uid, g.price, 'feed_gift', g.id);
+  insert into prompt_gifts (answer_id, from_user, to_user, gift_id, answer_body, prompt_body)
+  values (a.id, uid, a.user_id, g.id, a.body, (select body from prompts where id = a.prompt_id));
+  return bal;
+end $$;
+
+-- New members start on Friends (people can still pick Dating or Spicy)
+alter table public.profiles alter column pref_intent set default 'friends';

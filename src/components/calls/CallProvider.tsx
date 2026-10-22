@@ -365,7 +365,7 @@ export function CallProvider({ userId, children }: { userId: string; children: R
           matchId: row.match_id,
           kind: row.kind,
           role: "callee",
-          peer: { name: who?.display_name ?? "Your match", photo: who?.photos?.[0] },
+          peer: { name: who?.display_name ?? "Your connection", photo: who?.photos?.[0] },
           status: "incoming",
         };
         callRef.current = c;

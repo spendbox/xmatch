@@ -142,7 +142,7 @@ export async function POST(req: Request) {
       db.from("masquerade_events").select("title").eq("id", c.event_id).single(),
     ]);
     await pushToUsers([other as string], {
-      title: "It's a match!",
+      title: "You clicked!",
       body: `You and ${firstName(me?.display_name)} both kept your chat from ${e?.title ?? "the event"}. Say hello.`,
       url: `/matches/${c.match_id}`,
       tag: `match-${c.match_id}`,
@@ -194,7 +194,7 @@ export async function POST(req: Request) {
     const other = c.user_a === uid ? c.user_b : c.user_a;
     const { data: me } = await db.from("profiles").select("display_name, photos").eq("id", uid).single();
     await pushToUsers([other as string], {
-      title: "It's a match!",
+      title: "You clicked!",
       body: `You and ${firstName(me?.display_name)} both kept your chat from the Feed. Masks off, say hello.`,
       url: `/matches/${c.match_id}`,
       tag: `match-${c.match_id}`,

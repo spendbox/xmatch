@@ -1,8 +1,9 @@
 "use client";
 
+import { useCallback, useEffect, useState } from "react";
 import clsx from "clsx";
 import { Check, ChevronDown, SlidersHorizontal } from "lucide-react";
-import { DISTANCES, INTENTS, MAX_SEEK, SEEK_OPTIONS, SPICE_LEVELS, seekingList, toSeeking } from "@/lib/constants";
+import { DISTANCES, INTENTS, MAX_SEEK, SEEK_OPTIONS, SPICE_LEVELS, seekingLabel, seekingList, toSeeking } from "@/lib/constants";
 import { Choice } from "@/components/ui/Choice";
 import { Sheet } from "@/components/ui/Sheet";
 import { Button, tapFeedback } from "@/components/ui/Button";
@@ -10,6 +11,32 @@ import { DISTANCE_ICONS, INTENT_ICONS, SEEKING_ICONS, SpiceIcon } from "@/compon
 import { DISTANCE_HINTS, INTENT_HINTS, SPICE_HINTS, type SetupPrefs } from "./prefs";
 
 const AGES = Array.from({ length: 82 }, (_, i) => i + 18);
+
+/**
+ * Spicy link-up is hidden until someone chooses to see it (18+). Remembered on this device,
+ * and always shown if it's already their pick.
+ */
+export function useShowSpicy(intent: string) {
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    const read = () => {
+      try {
+        setOn(localStorage.getItem("dp-show-spicy") === "1");
+      } catch {}
+    };
+    read();
+    window.addEventListener("dp:spicy", read);
+    return () => window.removeEventListener("dp:spicy", read);
+  }, []);
+  const set = useCallback((v: boolean) => {
+    try {
+      localStorage.setItem("dp-show-spicy", v ? "1" : "0");
+    } catch {}
+    setOn(v);
+    window.dispatchEvent(new Event("dp:spicy"));
+  }, []);
+  return [on || intent === "spicy", set] as const;
+}
 
 /** One pop-up with everything about who you'd like to meet. */
 export function MeetSheet({
@@ -24,12 +51,16 @@ export function MeetSheet({
   setPrefs: (fn: (p: SetupPrefs) => SetupPrefs) => void;
 }) {
   const set = <K extends keyof SetupPrefs>(k: K, v: SetupPrefs[K]) => setPrefs((p) => ({ ...p, [k]: v }));
+  const [showSpicy, setShowSpicy] = useShowSpicy(prefs.intent);
+  const [whoOpen, setWhoOpen] = useState(false);
+  const whoSet = prefs.seeking !== "anyone";
+  const moods = INTENTS.filter((i) => i.value !== "spicy" || showSpicy);
   return (
     <Sheet
       open={open}
       onClose={onClose}
-      title="Who you'd like to meet"
-      subtitle="We'll only pair you with people who fit, both ways."
+      title="Who do you want to talk to?"
+      subtitle="Pick a mood. Everything else is optional."
       icon={<SlidersHorizontal size={22} strokeWidth={1.75} />}
       footer={
         <Button size="lg" onClick={onClose}>
@@ -38,44 +69,28 @@ export function MeetSheet({
       }
     >
       <div className="space-y-6">
-        <Section title="I'm here for">
+        <Section title="I'm in the mood for">
           <Choice
-            name="I'm here for"
+            name="I'm in the mood for"
             columns={1}
             layout="row"
             value={prefs.intent}
             onChange={(v) => set("intent", v)}
-            options={INTENTS.map((i) => ({ value: i.value, label: i.label, hint: INTENT_HINTS[i.value], icon: INTENT_ICONS[i.value]({ size: 22 }) }))}
+            options={moods.map((i) => ({ value: i.value, label: i.label, hint: INTENT_HINTS[i.value], icon: INTENT_ICONS[i.value]({ size: 22 }) }))}
           />
+          <button
+            type="button"
+            onClick={() => {
+              tapFeedback();
+              if (showSpicy && prefs.intent === "spicy") set("intent", "friends");
+              setShowSpicy(!showSpicy);
+            }}
+            className="mt-2 text-[13px] font-semibold text-muted underline-offset-2 hover:text-ink hover:underline"
+          >
+            {showSpicy ? "Hide the 18+ Spicy option" : "Show the 18+ Spicy option"}
+          </button>
         </Section>
-        <Section title="I'd like to meet" note={`Pick up to ${MAX_SEEK}, or Anyone`}>
-          <SeekPicker value={prefs.seeking} onChange={(v) => set("seeking", v)} />
-        </Section>
-        <Section title="Aged">
-          <div className="grid grid-cols-2 gap-2.5">
-            <AgeSelect label="From" value={prefs.ageMin} onChange={(v) => setPrefs((p) => ({ ...p, ageMin: v, ageMax: Math.max(v, p.ageMax) }))} />
-            <AgeSelect label="To" value={prefs.ageMax} onChange={(v) => setPrefs((p) => ({ ...p, ageMax: v, ageMin: Math.min(v, p.ageMin) }))} />
-          </div>
-          <div className="mt-2.5 flex flex-wrap gap-2">
-            {[[18, 24], [21, 30], [25, 35], [30, 45], [40, 60]].map(([a, b]) => {
-              const on = prefs.ageMin === a && prefs.ageMax === b;
-              return (
-                <button
-                  key={a}
-                  type="button"
-                  onClick={() => {
-                    tapFeedback();
-                    setPrefs((p) => ({ ...p, ageMin: a, ageMax: b }));
-                  }}
-                  className={clsx("h-9 rounded-full border px-3.5 text-[13px] font-semibold transition active:scale-95", on ? "border-brand bg-brand text-white" : "border-line-strong text-ink-soft")}
-                >
-                  {a}–{b}
-                </button>
-              );
-            })}
-          </div>
-        </Section>
-        <Section title="Distance" note="Closest people are matched first. Your exact location is never shown.">
+        <Section title="Distance" note="Closest people are paired first. Your exact location is never shown.">
           <Choice
             name="Distance"
             columns={2}
@@ -97,6 +112,58 @@ export function MeetSheet({
             options={SPICE_LEVELS.map((s) => ({ value: s.value, label: s.label, hint: SPICE_HINTS[s.value], icon: <SpiceIcon level={s.value} size={22} /> }))}
           />
         </Section>
+
+        {/* Gender and age: optional, Anyone by default */}
+        <section className="rounded-2xl border border-line">
+          <button
+            type="button"
+            onClick={() => {
+              tapFeedback();
+              setWhoOpen((o) => !o);
+            }}
+            aria-expanded={whoOpen || whoSet}
+            className="flex w-full items-center gap-3 px-4 py-3.5 text-left"
+          >
+            <span className="min-w-0 flex-1">
+              <span className="block text-[14px] font-semibold">Who you meet</span>
+              <span className="block text-[12px] text-muted">
+                {seekingLabel(prefs.seeking)} · {prefs.ageMin}–{prefs.ageMax} · optional
+              </span>
+            </span>
+            <ChevronDown size={18} className={clsx("shrink-0 text-muted transition", (whoOpen || whoSet) && "rotate-180")} />
+          </button>
+          {(whoOpen || whoSet) && (
+            <div className="space-y-5 border-t border-line px-4 pt-4 pb-4">
+              <Section title="I'd like to meet" note={`Pick up to ${MAX_SEEK}, or Anyone`}>
+                <SeekPicker value={prefs.seeking} onChange={(v) => set("seeking", v)} />
+              </Section>
+              <Section title="Aged">
+                <div className="grid grid-cols-2 gap-2.5">
+                  <AgeSelect label="From" value={prefs.ageMin} onChange={(v) => setPrefs((p) => ({ ...p, ageMin: v, ageMax: Math.max(v, p.ageMax) }))} />
+                  <AgeSelect label="To" value={prefs.ageMax} onChange={(v) => setPrefs((p) => ({ ...p, ageMax: v, ageMin: Math.min(v, p.ageMin) }))} />
+                </div>
+                <div className="mt-2.5 flex flex-wrap gap-2">
+                  {[[18, 24], [21, 30], [25, 35], [30, 45], [40, 60]].map(([a, b]) => {
+                    const on = prefs.ageMin === a && prefs.ageMax === b;
+                    return (
+                      <button
+                        key={a}
+                        type="button"
+                        onClick={() => {
+                          tapFeedback();
+                          setPrefs((p) => ({ ...p, ageMin: a, ageMax: b }));
+                        }}
+                        className={clsx("h-9 rounded-full border px-3.5 text-[13px] font-semibold transition active:scale-95", on ? "border-brand bg-brand text-white" : "border-line-strong text-ink-soft")}
+                      >
+                        {a}–{b}
+                      </button>
+                    );
+                  })}
+                </div>
+              </Section>
+            </div>
+          )}
+        </section>
       </div>
     </Sheet>
   );

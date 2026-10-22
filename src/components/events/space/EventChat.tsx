@@ -154,7 +154,7 @@ export function EventChat({ chat, myId, myInterests }: { chat: EventChatDetail; 
       return;
     }
     setMyKeep(true);
-    setToast(`Kept. If ${name} keeps it too, it's a match.`);
+    setToast(`Kept. If ${name} keeps it too, you're connected.`);
   }
 
   async function reveal() {
@@ -206,7 +206,7 @@ export function EventChat({ chat, myId, myInterests }: { chat: EventChatDetail; 
         )}
         {open && phase !== "ended" && (
           <button
-            onClick={() => (myKeep ? setToast(`You kept this chat. If ${name} keeps it too, it's a match.`) : vote(true))}
+            onClick={() => (myKeep ? setToast(`You kept this chat. If ${name} keeps it too, you're connected.`) : vote(true))}
             disabled={!!voting}
             className={clsx(
               "inline-flex h-9 shrink-0 items-center gap-1 rounded-full px-3 text-[13px] font-semibold transition active:scale-95 disabled:opacity-60",
@@ -268,13 +268,13 @@ export function EventChat({ chat, myId, myInterests }: { chat: EventChatDetail; 
           <ButtonLink href={`/events/${e.id}`} variant="secondary" size="lg">Back to the event</ButtonLink>
         </EndCard>
       ) : status === "matched" ? (
-        <EndCard icon={<Handshake size={22} />} title="It's a match!" body="Your conversation has moved to Chats.">
+        <EndCard icon={<Handshake size={22} />} title="You clicked!" body="Your conversation has moved to Chats.">
           {matchId && <ButtonLink href={`/matches/${matchId}`} size="lg">Open your chat</ButtonLink>}
         </EndCard>
       ) : phase === "ended" ? (
         canDecide ? (
           myKeep ? (
-            <EndCard icon={<Clock3 size={22} />} title={`Waiting for ${other.name || "them"}`} body={`You kept this chat. If ${name} keeps it too, it's a match. They have until ${byTime}.`}>
+            <EndCard icon={<Clock3 size={22} />} title={`Waiting for ${other.name || "them"}`} body={`You kept this chat. If ${name} keeps it too, you're connected. They have until ${byTime}.`}>
               <button onClick={() => vote(false)} disabled={!!voting} className="text-[13px] font-semibold text-muted underline-offset-2 hover:text-chili hover:underline">
                 Let go instead
               </button>
@@ -283,7 +283,7 @@ export function EventChat({ chat, myId, myInterests }: { chat: EventChatDetail; 
             <EndCard
               icon={<Handshake size={22} />}
               title={`Keep chatting with ${other.name || "them"}?`}
-              body={chat.their_keep_set ? `${other.name || "They"} has made their choice. Now it's yours.` : "If you both keep it, it's a match and the chat moves to your Chats."}
+              body={chat.their_keep_set ? `${other.name || "They"} has made their choice. Now it's yours.` : "If you both keep it, you're connected and the chat moves to your Chats."}
             >
               <div className="grid grid-cols-2 gap-2.5">
                 <Button variant="secondary" size="lg" onClick={() => vote(false)} loading={voting === "go"} disabled={!!voting}>
@@ -340,7 +340,7 @@ function EndCard({ icon, title, body, children }: { icon: React.ReactNode; title
 
 function Celebration({ name, matchId, eventId, onClose }: { name: string; matchId: string | null; eventId: string; onClose: () => void }) {
   return (
-    <div role="dialog" aria-modal="true" aria-label="It's a match" className="fixed inset-0 z-[70] grid animate-fade-in place-items-center overflow-hidden bg-gradient-to-br from-brand via-[#8f3fd9] to-[#c2306b] p-6 text-white">
+    <div role="dialog" aria-modal="true" aria-label="You clicked" className="fixed inset-0 z-[70] grid animate-fade-in place-items-center overflow-hidden bg-gradient-to-br from-brand via-[#8f3fd9] to-[#c2306b] p-6 text-white">
       <div aria-hidden className="pointer-events-none absolute inset-0">
         {Array.from({ length: 14 }).map((_, i) => (
           <span
@@ -356,7 +356,7 @@ function Celebration({ name, matchId, eventId, onClose }: { name: string; matchI
         <span className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-white/20">
           <MaskIcon className="w-11 text-white" eyes="#8f3fd9" />
         </span>
-        <h2 className="mt-5 font-display text-[40px] leading-none font-semibold">It&apos;s a match!</h2>
+        <h2 className="mt-5 font-display text-[40px] leading-none font-semibold">You clicked!</h2>
         <p className="mt-3 text-[16px] text-white/85">You and {name} both kept the chat. Your messages are waiting in Chats.</p>
         <div className="mt-7 grid gap-2.5">
           {matchId && (

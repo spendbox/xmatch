@@ -19,7 +19,7 @@ import { KeyCoin } from "@/components/keys/KeyIcon";
 import { GiftArt } from "@/components/keys/GiftArt";
 import { useWallet } from "@/components/keys/useWallet";
 import { Waiting } from "@/components/masquerade/Waiting";
-import { MeetSheet } from "./MeetSheet";
+import { MeetSheet, useShowSpicy } from "./MeetSheet";
 import { NotificationsPrompt } from "@/components/app/Notifications";
 import { HomeTabs } from "./HomeTabs";
 import { notify } from "@/lib/pushClient";
@@ -97,6 +97,17 @@ export function HomeScreen({
       .eq("id", profile.id);
   }
 
+  const [showSpicy] = useShowSpicy(prefs.intent);
+
+  async function pickIntent(v: SetupPrefs["intent"]) {
+    if (v === prefs.intent) return;
+    tapFeedback();
+    const before = prefs.intent;
+    setPrefs((p) => ({ ...p, intent: v }));
+    const { error: err } = await supabase.from("profiles").update({ pref_intent: v }).eq("id", profile.id);
+    if (err) setPrefs((p) => ({ ...p, intent: before }));
+  }
+
   async function toggleOpen(v: boolean) {
     tapFeedback();
     setOpen(v);
@@ -152,7 +163,6 @@ export function HomeScreen({
 
   if (waiting) return <Waiting prefs={prefs} userId={profile.id} onCancel={() => { setWaiting(false); refresh(); }} />;
 
-  const intent = INTENTS.find((i) => i.value === prefs.intent)!;
   const distance = DISTANCES.find((d) => d.value === prefs.maxKm) ?? DISTANCES[1];
   const freeLeft = wallet?.free_left ?? FREE_MASQUERADES_PER_DAY;
   const balance = wallet?.balance ?? 0;
@@ -199,10 +209,33 @@ export function HomeScreen({
             <MaskIcon className="w-7 text-white lg:w-12" eyes="#6d4ff0" />
           </span>
         </div>
-        <h1 className="relative -mt-1 font-display text-[24px] leading-tight font-semibold lg:mt-4 lg:text-[44px]">Ready to mask up?</h1>
-        <p className="relative mt-1 hidden text-[15px] text-white/80 lg:block">Five minutes with someone new, both masked. Unmask only if you both say yes.</p>
+        <h1 className="relative -mt-1 font-display text-[24px] leading-tight font-semibold lg:mt-4 lg:text-[44px]">Who do you want to talk to?</h1>
+        <p className="relative mt-1 hidden text-[15px] text-white/80 lg:block">Five minutes with someone new, both masked. Reveal only if you both want to.</p>
 
-        {/* Summary of choices: one tap opens the settings */}
+        {/* Mood first */}
+        <div role="radiogroup" aria-label="Mood" className="relative mt-3 flex gap-1 rounded-2xl bg-white/12 p-1 lg:mt-5">
+          {INTENTS.filter((i) => i.value !== "spicy" || showSpicy).map((i) => {
+            const on = prefs.intent === i.value;
+            return (
+              <button
+                key={i.value}
+                type="button"
+                role="radio"
+                aria-checked={on}
+                onClick={() => pickIntent(i.value)}
+                className={clsx(
+                  "flex h-10 flex-1 items-center justify-center gap-1.5 rounded-xl text-[13px] font-semibold transition active:scale-[0.97] lg:text-[14px]",
+                  on ? "bg-white text-brand shadow-card" : "text-white/85 hover:bg-white/10",
+                )}
+              >
+                {INTENT_ICONS[i.value]({ size: 15 })}
+                {i.value === "spicy" ? "Spicy" : i.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* The rest of your choices: one tap opens the settings */}
         <button
           type="button"
           onClick={() => {
@@ -212,8 +245,7 @@ export function HomeScreen({
           className="relative mt-3 flex w-full flex-wrap items-center gap-1.5 text-left text-[12px] lg:mt-5 lg:gap-2 lg:text-[13px]"
           aria-label="Change who you meet"
         >
-          <Chip icon={INTENT_ICONS[prefs.intent]({ size: 13 })} text={intent.label} />
-          <Chip icon={<Users size={13} />} text={`${seekingLabel(prefs.seeking)} · ${prefs.ageMin}–${prefs.ageMax}`} />
+          {prefs.seeking !== "anyone" && <Chip icon={<Users size={13} />} text={`${seekingLabel(prefs.seeking)} · ${prefs.ageMin}–${prefs.ageMax}`} />}
           <Chip icon={<MapPin size={13} />} text={distance.value ? distance.label : "Anywhere"} />
           <Chip icon={<SpiceIcon level={prefs.spice} size={13} />} text={SPICE_LEVELS[prefs.spice].label} />
           <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1.5 font-semibold text-brand">
@@ -322,7 +354,7 @@ export function HomeScreen({
             cost={`from ${GIFTS[0].price}`}
             extra={
               <span className="hidden items-center gap-1 sm:flex">
-                {["rose", "teddy", "diamond"].map((id) => (
+                {["fire", "jollof", "crown"].map((id) => (
                   <GiftArt key={id} id={id} size={20} />
                 ))}
               </span>
@@ -367,7 +399,7 @@ export function HomeScreen({
       {matches.length > 0 && (
         <>
           <div className="mt-7 mb-3 flex items-center justify-between">
-            <h2 className="text-[15px] font-semibold">Recent matches</h2>
+            <h2 className="text-[15px] font-semibold">Your people</h2>
             <Link href="/matches" className="inline-flex items-center gap-0.5 text-[13px] font-semibold text-brand">
               See all <ChevronRight size={16} />
             </Link>

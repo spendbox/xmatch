@@ -8,6 +8,100 @@ export function GiftArt({ id, size = 48, className }: { id: string; size?: numbe
   const common = { width: size, height: size, viewBox: "0 0 64 64", className, "aria-hidden": true } as const;
 
   switch (id) {
+    case "fire":
+      return (
+        <svg {...common}>
+          <defs>
+            <linearGradient id={g("flame")} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor="#ffb02e" />
+              <stop offset=".6" stopColor="#ff6a2b" />
+              <stop offset="1" stopColor="#e5484d" />
+            </linearGradient>
+            <linearGradient id={g("core")} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor="#fff3b0" />
+              <stop offset="1" stopColor="#ffc93d" />
+            </linearGradient>
+          </defs>
+          <path d="M32 4c3 10 15 16 15 31 0 12-7 22-15 22S17 47 17 35c0-8 4-12 7-16 1 5 3 8 6 9-2-9 0-17 2-24Z" fill={url("flame")} />
+          <path d="M32 30c2 6 8 9 8 16 0 6-4 10-8 10s-8-4-8-10c0-4 2-6 4-8 1 3 2 4 4 5-1-5-1-9 0-13Z" fill={url("core")} />
+          <path d="M23 26c-2 3-3 6-3 10" stroke="#fff" strokeWidth="2" strokeLinecap="round" fill="none" opacity=".45" />
+        </svg>
+      );
+    case "clap":
+      return (
+        <svg {...common}>
+          <defs>
+            <linearGradient id={g("hand")} x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stopColor="#ffd27a" />
+              <stop offset="1" stopColor="#f2a33d" />
+            </linearGradient>
+          </defs>
+          <path d="M24 56c-8-3-13-10-13-19l1-14c0-2 3-3 4-1l3 9 1-19c0-2 3-3 4-1l2 15 2-19c0-2 3-2 4 0l1 19 3-15c1-2 4-1 4 1l-1 17c3-3 6-5 8-4 2 1 1 3 0 5l-8 12c-3 6-8 13-15 14Z" fill={url("hand")} />
+          <path d="M22 38c2-2 5-2 7 0" stroke="#c97a1a" strokeWidth="1.8" fill="none" strokeLinecap="round" opacity=".6" />
+          <path d="M48 10l2-5M54 16l5-2M44 6l-1-4" stroke="#5b3fd9" strokeWidth="2.6" strokeLinecap="round" />
+          <path d="M8 14l-3-3M12 9l-1-4" stroke="#e5484d" strokeWidth="2.4" strokeLinecap="round" />
+        </svg>
+      );
+    case "jollof":
+      return (
+        <svg {...common}>
+          <defs>
+            <linearGradient id={g("rice")} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor="#ff8a3d" />
+              <stop offset="1" stopColor="#e0531f" />
+            </linearGradient>
+            <linearGradient id={g("plate")} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor="#ffffff" />
+              <stop offset="1" stopColor="#e7e1f5" />
+            </linearGradient>
+          </defs>
+          <path d="M14 22c2-4 6-5 8-3M32 16c2-4 6-4 7-1M44 21c2-3 5-3 6 0" stroke="#c9c2dc" strokeWidth="2" fill="none" strokeLinecap="round" />
+          <ellipse cx="32" cy="42" rx="27" ry="12" fill={url("plate")} />
+          <ellipse cx="32" cy="40" rx="21" ry="8" fill="#efeaf9" />
+          <path d="M13 39c0-9 9-15 19-15s19 6 19 15c-5 3-12 4-19 4s-14-1-19-4Z" fill={url("rice")} />
+          <circle cx="24" cy="32" r="1.6" fill="#ffd27a" />
+          <circle cx="31" cy="29" r="1.6" fill="#ffd27a" />
+          <circle cx="38" cy="33" r="1.6" fill="#ffd27a" />
+          <circle cx="28" cy="36" r="1.4" fill="#ffd27a" />
+          <path d="M40 30c3-2 7-1 8 2-3 2-6 2-8-2Z" fill="#1f9d6b" />
+          <path d="M18 34c2-1 4-1 5 1" stroke="#1f9d6b" strokeWidth="2" strokeLinecap="round" fill="none" />
+        </svg>
+      );
+    case "mic":
+      return (
+        <svg {...common}>
+          <defs>
+            <linearGradient id={g("head")} x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stopColor="#d8ccff" />
+              <stop offset="1" stopColor="#7a5cf0" />
+            </linearGradient>
+          </defs>
+          <path d="M33 30 14 52c-2 2 1 5 3 3l22-19" fill="#2b2540" />
+          <path d="M17 49l3 3" stroke="#5b3fd9" strokeWidth="2" strokeLinecap="round" />
+          <circle cx="40" cy="22" r="13" fill={url("head")} />
+          <path d="M31 17c4-4 10-5 15-2M30 24c5-6 13-8 19-4M33 31c5-5 11-7 16-5" stroke="#5b3fd9" strokeWidth="1.4" fill="none" opacity=".55" />
+          <circle cx="35" cy="16" r="3" fill="#fff" opacity=".7" />
+          <path d="M56 40l2 5M50 46l-1 5M58 52l4 1" stroke="#f2b33d" strokeWidth="2.6" strokeLinecap="round" />
+        </svg>
+      );
+    case "trophy":
+      return (
+        <svg {...common}>
+          <defs>
+            <linearGradient id={g("cup")} x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stopColor="#ffe08a" />
+              <stop offset="1" stopColor="#e09a1a" />
+            </linearGradient>
+          </defs>
+          <path d="M18 12H8c0 10 5 16 12 17M46 12h10c0 10-5 16-12 17" stroke="#e0a42a" strokeWidth="4" fill="none" strokeLinecap="round" />
+          <path d="M17 8h30v12c0 10-7 17-15 17S17 30 17 20V8Z" fill={url("cup")} />
+          <rect x="28" y="36" width="8" height="9" fill="#e0a42a" />
+          <rect x="20" y="45" width="24" height="10" rx="3" fill="#5b3fd9" />
+          <rect x="25" y="48" width="14" height="3" rx="1.5" fill="#f2b33d" />
+          <path d="M23 13v8c0 4 2 7 5 9" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" fill="none" opacity=".55" />
+          <path d="M32 15l1.6 3.3 3.6.5-2.6 2.5.6 3.6-3.2-1.7-3.2 1.7.6-3.6-2.6-2.5 3.6-.5L32 15Z" fill="#fff" opacity=".9" />
+        </svg>
+      );
     case "rose":
       return (
         <svg {...common}>

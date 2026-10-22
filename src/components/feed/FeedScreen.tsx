@@ -349,7 +349,7 @@ export function FeedScreen({
         open={!!chatFor}
         onClose={() => setChatFor(null)}
         title={`Chat with ${chatFor?.alias ?? "them"}?`}
-        subtitle="You both stay masked. The chat lasts 24 hours, then you each choose: keep it and match, or let it go."
+        subtitle="You both stay masked. The chat lasts 24 hours, then you each choose: keep it and stay connected, or let it go."
         icon={<MessageCircle size={22} />}
         footer={
           <div className="space-y-2">

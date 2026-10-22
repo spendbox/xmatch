@@ -48,9 +48,9 @@ export function NotificationsPanel({ push }: { push: ReturnType<typeof usePushSt
 
   const what = (
     <ul className="space-y-1.5 text-[14px] text-ink-soft">
-      <li>• New messages and gifts from your matches</li>
+      <li>• New messages and gifts from your people</li>
       <li>• Incoming voice and video calls</li>
-      <li>• Someone saying hi at an event, and new matches from events</li>
+      <li>• Someone saying hi at an event, and new connections from events</li>
       <li>• Reminders and news for events you&apos;re going to</li>
     </ul>
   );

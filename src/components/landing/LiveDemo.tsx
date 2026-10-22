@@ -10,10 +10,10 @@ type Line = { who: "them" | "me"; text: string } | { who: "q"; text: string } | 
 
 // What the little demo chat shows, one step at a time
 const SCRIPT: Line[] = [
-  { who: "q", text: "What's your idea of a perfect first date?" },
+  { who: "q", text: "What song is on repeat for you right now?" },
   { who: "typing" },
-  { who: "them", text: "Street food, then a long walk with no plan 😄" },
-  { who: "me", text: "Okay that's literally my dream date" },
+  { who: "them", text: "Rema. The whole new album, no skips 😄" },
+  { who: "me", text: "Okay you have taste. Same!" },
   { who: "typing" },
   { who: "them", text: "Wait… you're into Afrobeats too?" },
   { who: "me", text: "Since day one 🔥" },
@@ -53,7 +53,7 @@ export function LiveDemo() {
           </span>
           <div className="min-w-0 flex-1 text-left">
             <p className="text-[14px] font-semibold">{matched ? "Ada, 26" : "Velvet Owl"}</p>
-            <p className="text-[12px] text-muted">{matched ? "Unmasked just now" : "3 km away · Dating"}</p>
+            <p className="text-[12px] text-muted">{matched ? "Unmasked just now" : "3 km away · Friends"}</p>
           </div>
           <span className={clsx("rounded-full px-2.5 py-1 text-[12px] font-bold tabular-nums", deciding ? "bg-chili-soft text-chili" : "bg-cream text-ink")}>
             {timer}

@@ -13,7 +13,7 @@ export function ReportSheet({ onClose, onReport }: { onClose: () => void; onRepo
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/45 sm:items-center sm:p-6" role="dialog" aria-modal="true" onClick={onClose}>
       <div className="w-full max-w-md rounded-t-[32px] bg-surface px-6 pt-6 pb-safe shadow-lift animate-fade-up sm:rounded-[32px] sm:p-8" onClick={(e) => e.stopPropagation()}>
         <h2 className="text-xl font-semibold">Report this person</h2>
-        <p className="mt-1 text-[14px] text-muted">The chat will end and you won&apos;t be matched again. They won&apos;t know it was you.</p>
+        <p className="mt-1 text-[14px] text-muted">The chat will end and you won&apos;t be paired again. They won&apos;t know it was you.</p>
         <div className="mt-5 space-y-2">
           {REASONS.map((r) => (
             <button key={r} type="button" onClick={() => setReason(r)}

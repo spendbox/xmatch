@@ -493,7 +493,7 @@ export function EventSpace({
                 text={`Your first ${plural(s.free_reveals, "reveal")} are free${s.reveal_cost > 0 ? `, then ${plural(s.reveal_cost, "Key")} each` : ""}.`}
               />
               <Li icon={<MessageCircle size={16} />} text={`Say hi to up to ${plural(s.max_chats, "person", "people")} — no reveal needed. Chats last until the end.`} />
-              <Li icon={<Handshake size={16} />} text="Afterwards you both choose: keep the chat and it's a match, or let it go." />
+              <Li icon={<Handshake size={16} />} text="Afterwards you both choose: keep the chat and stay connected, or let it go." />
             </ul>
           </div>
         </aside>

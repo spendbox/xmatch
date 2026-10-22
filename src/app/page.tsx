@@ -20,7 +20,7 @@ const VIBE_SIGNALS = [
     icon: <InterestIcon name="Music" size={22} />,
     tone: "bg-[#fde8f1] text-[#c2306b]",
     title: "Shared interests",
-    body: "People into the same things as you are matched with you first.",
+    body: "People into the same things as you are paired with you first.",
   },
   {
     icon: <ChiliIcon size={22} />,
@@ -32,20 +32,20 @@ const VIBE_SIGNALS = [
     icon: <MapPin size={22} strokeWidth={1.75} />,
     tone: "bg-mint-soft text-mint",
     title: "Close by",
-    body: "The nearest good match comes first, so meeting up is easy.",
+    body: "People near you come first, so meeting up is easy.",
   },
 ];
 
 const MODES = [
   { key: "friends", title: "Friends", body: "New people to laugh, eat and explore with.", tone: "from-[#efebfd] to-[#f7f5ff] text-brand" },
-  { key: "dating", title: "Dating", body: "Real chemistry before you see a single photo.", tone: "from-[#fde8f1] to-[#fff5f9] text-[#c2306b]" },
+  { key: "dating", title: "Dating", body: "Real conversation before you see a single photo.", tone: "from-[#fde8f1] to-[#fff5f9] text-[#c2306b]" },
   { key: "spicy", title: "Spicy link-up", body: "Flirty, bold and fun — if you both feel it.", tone: "from-[#fdecec] to-[#fff6f4] text-chili" },
 ] as const;
 
 const STEPS = [
   { icon: <MaskLineIcon size={20} />, title: "Put on your mask", body: "Choose your vibe in a few taps." },
   { icon: <Clock3 size={20} strokeWidth={1.75} />, title: "Chat for 5 minutes", body: "No names, no photos. Just energy." },
-  { icon: <Handshake size={20} strokeWidth={1.75} />, title: "Unmask together", body: "Both say yes? It's a match. If not, the chat vanishes." },
+  { icon: <Handshake size={20} strokeWidth={1.75} />, title: "Unmask together", body: "Both say yes? You're connected. If not, the chat vanishes." },
 ];
 
 export default function Landing() {
@@ -130,7 +130,7 @@ export default function Landing() {
         <section id="how" className="mt-16 scroll-mt-8 lg:mt-24">
           <Reveal>
             <p className="text-[13px] font-semibold tracking-wide text-brand uppercase">Vibe matching</p>
-            <h2 className="mt-1 font-display text-[30px] leading-tight font-semibold lg:text-[44px]">How we find your person</h2>
+            <h2 className="mt-1 font-display text-[30px] leading-tight font-semibold lg:text-[44px]">How we find your people</h2>
           </Reveal>
           <div className="mt-6 grid grid-cols-2 gap-3 lg:mt-10 lg:grid-cols-4 lg:gap-5">
             {VIBE_SIGNALS.map((v, i) => (
@@ -173,7 +173,7 @@ export default function Landing() {
           <div>
             <Reveal>
               <p className="text-[13px] font-semibold tracking-wide text-brand uppercase">The Masquerade</p>
-              <h2 className="mt-1 font-display text-[30px] leading-tight font-semibold lg:text-[44px]">Three steps to a real spark</h2>
+              <h2 className="mt-1 font-display text-[30px] leading-tight font-semibold lg:text-[44px]">Three steps to a real conversation</h2>
             </Reveal>
             <ol className="relative mt-6 space-y-5 before:absolute before:top-3 before:bottom-3 before:left-[21px] before:w-0.5 before:bg-gradient-to-b before:from-brand before:to-gold lg:mt-10 lg:space-y-8">
               {STEPS.map((s, i) => (

@@ -86,8 +86,8 @@ const KINDS = [
     kind: "masquerade",
     title: "Masquerade Night",
     tone: "bg-brand-soft text-brand",
-    body: "We pair you with someone new, masked, for 5 minutes at a time. Both unmask and it's a match.",
-    points: ["Matched for you", "5-minute rounds", "Someone new each round"],
+    body: "We pair you with someone new, masked, for 5 minutes at a time. Both unmask and you're connected.",
+    points: ["Paired for you", "5-minute rounds", "Someone new each round"],
   },
   {
     kind: "spotlight",

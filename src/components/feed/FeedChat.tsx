@@ -143,7 +143,7 @@ export function FeedChat({ chat, myId }: { chat: FeedChatDetail; myId: string })
       return;
     }
     setMyKeep(true);
-    setToast(`Kept. If ${name} keeps it too, it's a match.`);
+    setToast(`Kept. If ${name} keeps it too, you're connected.`);
   }
 
   const byTime = new Date(decideBy).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" });
@@ -168,7 +168,7 @@ export function FeedChat({ chat, myId }: { chat: FeedChatDetail; myId: string })
         </div>
         {open && live && (
           <button
-            onClick={() => (myKeep ? setToast(`You kept this chat. If ${name} keeps it too, it's a match.`) : vote(true))}
+            onClick={() => (myKeep ? setToast(`You kept this chat. If ${name} keeps it too, you're connected.`) : vote(true))}
             disabled={!!voting}
             className={clsx(
               "inline-flex h-9 shrink-0 items-center gap-1 rounded-full px-3 text-[13px] font-semibold transition active:scale-95 disabled:opacity-60",
@@ -197,7 +197,7 @@ export function FeedChat({ chat, myId }: { chat: FeedChatDetail; myId: string })
       {lastHour && open && (
         <div className="flex animate-fade-up items-center gap-3 border-b border-gold/40 bg-gold-soft px-4 py-2.5">
           <AlarmClock size={18} className="shrink-0 text-[#9a6a0c]" />
-          <p className="min-w-0 flex-1 text-[13px] leading-snug font-semibold text-ink">Less than an hour left. Keep it if you want to match.</p>
+          <p className="min-w-0 flex-1 text-[13px] leading-snug font-semibold text-ink">Less than an hour left. Keep it if you want to stay in touch.</p>
           {!myKeep && (
             <button onClick={() => vote(true)} disabled={!!voting} className="shrink-0 rounded-full bg-ink px-3 py-1.5 text-[12px] font-semibold text-white">
               Keep
@@ -216,7 +216,7 @@ export function FeedChat({ chat, myId }: { chat: FeedChatDetail; myId: string })
             </p>
           )}
           <p className="mt-3 border-t border-line pt-3 text-[13px] leading-snug text-muted">
-            You&apos;re {chat.me.masked ? <b className="text-ink">{chat.me.name}</b> : "yourself"} here. This chat lasts 24 hours. Keep it to match: if you both
+            You&apos;re {chat.me.masked ? <b className="text-ink">{chat.me.name}</b> : "yourself"} here. This chat lasts 24 hours. Keep it to stay in touch: if you both
             keep it, you see each other and it moves to Chats.
           </p>
         </div>
@@ -228,13 +228,13 @@ export function FeedChat({ chat, myId }: { chat: FeedChatDetail; myId: string })
           <ButtonLink href="/feed" variant="secondary" size="lg">Back to the feed</ButtonLink>
         </EndCard>
       ) : status === "matched" ? (
-        <EndCard icon={<Handshake size={22} />} title="It's a match!" body="Your conversation has moved to Chats.">
+        <EndCard icon={<Handshake size={22} />} title="You clicked!" body="Your conversation has moved to Chats.">
           {matchId && <ButtonLink href={`/matches/${matchId}`} size="lg">Open your chat</ButtonLink>}
         </EndCard>
       ) : !live ? (
         canDecide ? (
           myKeep ? (
-            <EndCard icon={<Clock3 size={22} />} title={`Waiting for ${name}`} body={`You kept this chat. If ${name} keeps it too, it's a match. They have until ${byTime}.`}>
+            <EndCard icon={<Clock3 size={22} />} title={`Waiting for ${name}`} body={`You kept this chat. If ${name} keeps it too, you're connected. They have until ${byTime}.`}>
               <button onClick={() => vote(false)} disabled={!!voting} className="text-[13px] font-semibold text-muted underline-offset-2 hover:text-chili hover:underline">
                 Let go instead
               </button>
@@ -243,7 +243,7 @@ export function FeedChat({ chat, myId }: { chat: FeedChatDetail; myId: string })
             <EndCard
               icon={<Handshake size={22} />}
               title={`Keep chatting with ${name}?`}
-              body={chat.their_keep_set ? `${other.name || "They"} has made their choice. Now it's yours.` : "If you both keep it, it's a match and the chat moves to your Chats."}
+              body={chat.their_keep_set ? `${other.name || "They"} has made their choice. Now it's yours.` : "If you both keep it, you're connected and the chat moves to your Chats."}
             >
               <div className="grid grid-cols-2 gap-2.5">
                 <Button variant="secondary" size="lg" onClick={() => vote(false)} loading={voting === "go"} disabled={!!voting}>
@@ -271,12 +271,12 @@ export function FeedChat({ chat, myId }: { chat: FeedChatDetail; myId: string })
       )}
 
       {celebrate && (
-        <div role="dialog" aria-modal="true" aria-label="It's a match" className="fixed inset-0 z-[70] grid animate-fade-in place-items-center bg-gradient-to-br from-brand via-[#8f3fd9] to-[#c2306b] p-6 text-white">
+        <div role="dialog" aria-modal="true" aria-label="You clicked" className="fixed inset-0 z-[70] grid animate-fade-in place-items-center bg-gradient-to-br from-brand via-[#8f3fd9] to-[#c2306b] p-6 text-white">
           <div className="w-full max-w-sm animate-pop text-center">
             <span className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-white/20">
               <MaskIcon className="w-11 text-white" eyes="#8f3fd9" />
             </span>
-            <h2 className="mt-5 font-display text-[40px] leading-none font-semibold">It&apos;s a match!</h2>
+            <h2 className="mt-5 font-display text-[40px] leading-none font-semibold">You clicked!</h2>
             <p className="mt-3 text-[16px] text-white/85">You and {name} both kept the chat. The masks are off, and your messages are waiting in Chats.</p>
             <div className="mt-7 grid gap-2.5">
               {matchId && (

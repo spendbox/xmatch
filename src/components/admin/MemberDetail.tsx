@@ -318,7 +318,7 @@ export function MemberDetail({ id, info }: { id: string; info: MemberInfo }) {
         open={deleteOpen}
         onClose={() => setDeleteOpen(false)}
         title={`Delete ${name}'s account?`}
-        subtitle="Their profile, photos, matches, messages and Keys are removed for good. This can't be undone."
+        subtitle="Their profile, photos, connections, messages and Keys are removed for good. This can't be undone."
         icon={<Trash2 size={22} className="text-chili" />}
         footer={
           <div className="space-y-2">

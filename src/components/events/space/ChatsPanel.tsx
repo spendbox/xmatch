@@ -56,7 +56,7 @@ export function ChatsPanel({
           {canDecide ? (
             <>
               <p className="font-semibold">Keep the chats you&apos;d like to continue</p>
-              <p className="mt-0.5">If you both keep a chat, it becomes a match and moves to your Chats. Decide by {byTime}.</p>
+              <p className="mt-0.5">If you both keep a chat, you're connected and it moves to your Chats. Decide by {byTime}.</p>
             </>
           ) : (
             <p>Choices are closed. Chats you both kept are in your Chats.</p>
@@ -130,7 +130,7 @@ function Status({ c, count }: { c: EventChatSummary; count: number }) {
   if (c.status === "matched")
     return (
       <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-mint-soft px-2.5 py-1 text-[12px] font-semibold text-mint">
-        <Handshake size={13} /> Matched
+        <Handshake size={13} /> Connected
       </span>
     );
   if (count > 0)

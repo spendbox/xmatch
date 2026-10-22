@@ -24,6 +24,18 @@ Build (about 1 day):
 - [ ] One-off script to copy existing photos from Supabase and update profile links (or let old ones phase out)
 - [ ] Later: private chat photos/videos/voice notes to a private R2 bucket with signed links
 
+## Make Dashpad feel social, not just dating
+Goal: a place to meet your people. Dating stays as one mood, not the headline.
+
+- [x] 1. Friendlier words: "You clicked!" instead of "It's a match!", "connection" instead of "match", "your people", no first-date talk on the landing page
+- [x] 2. Friendlier gifts: Fire, Respect, Jollof, Mic drop, Trophy added; Chocolate, Teddy bear and Bouquet retired (still show in old chats)
+- [x] 3. Home leads with mood: "Who do you want to talk to?", Friends first and the default for new people, Spicy hidden until turned on (18+), gender and age optional under "Who you meet"
+- [ ] 4. Topic masquerades: pick a topic (Football, Afrobeats, Career, Faith, Gaming, Late-night talk) and get paired with someone into it
+- [ ] 5. Group masquerades (3–5 people) and game nights (Whot, Impostor)
+- [ ] 6. After unmasking: "Keep in touch" / "Add to your people" wording and flow
+- [ ] 7. Profile as a "vibe card" (interests, current song, best Feed answers, smaller photos); less pink in celebrations; landing shows friends, events and the Feed
+- [ ] 8. Positioning: "anonymous social app"; list under Social (not Dating) in app stores and search descriptions
+
 ## Before ~20,000–50,000 daily users
 - [ ] Switch live chat updates from database-change events to Realtime "broadcast" (much lighter at scale)
 - [ ] Split masquerade matching by city or intent (it currently queues all matching through one lock)

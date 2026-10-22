@@ -14,18 +14,27 @@ export const KEY_PACKS: KeyPack[] = [
   { id: "p500", keys: 500, naira: 4500, tag: "Best value" },
 ];
 
-export type Gift = { id: string; name: string; emoji: string; price: number };
+export type Gift = { id: string; name: string; emoji: string; price: number; retired?: boolean };
 
+// Fun, friendly gifts first. Retired ones still show in old chats but can't be sent.
 export const GIFTS: Gift[] = [
+  { id: "fire", name: "Fire", emoji: "🔥", price: 5 },
   { id: "rose", name: "Rose", emoji: "🌹", price: 5 },
-  { id: "coffee", name: "Coffee date", emoji: "☕", price: 10 },
-  { id: "chocolate", name: "Chocolate", emoji: "🍫", price: 15 },
-  { id: "cocktail", name: "Cocktail", emoji: "🍸", price: 20 },
-  { id: "teddy", name: "Teddy bear", emoji: "🧸", price: 30 },
-  { id: "bouquet", name: "Bouquet", emoji: "💐", price: 40 },
+  { id: "clap", name: "Respect", emoji: "👏", price: 10 },
+  { id: "coffee", name: "Coffee", emoji: "☕", price: 10 },
+  { id: "jollof", name: "Jollof", emoji: "🍛", price: 15 },
+  { id: "cocktail", name: "Drinks on me", emoji: "🍸", price: 20 },
+  { id: "mic", name: "Mic drop", emoji: "🎤", price: 30 },
+  { id: "trophy", name: "Trophy", emoji: "🏆", price: 40 },
   { id: "crown", name: "Crown", emoji: "👑", price: 60 },
   { id: "diamond", name: "Diamond", emoji: "💎", price: 100 },
+  { id: "chocolate", name: "Chocolate", emoji: "🍫", price: 15, retired: true },
+  { id: "teddy", name: "Teddy bear", emoji: "🧸", price: 30, retired: true },
+  { id: "bouquet", name: "Bouquet", emoji: "💐", price: 40, retired: true },
 ];
+
+/** The gifts people can send now */
+export const SENDABLE_GIFTS = GIFTS.filter((g) => !g.retired);
 
 export const giftById = (id: string) => GIFTS.find((g) => g.id === id);
 
