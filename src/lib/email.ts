@@ -51,7 +51,7 @@ export function resetEmail(link: string, name?: string | null) {
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#ffffff;border-radius:24px;overflow:hidden">
   <tr><td style="background:#5b3fd9;padding:28px 32px;color:#ffffff">
     <div style="font-size:22px;font-weight:700;letter-spacing:-0.3px">Dashpad</div>
-    <div style="font-size:14px;opacity:.8;margin-top:4px">Match on vibes.</div>
+    <div style="font-size:14px;opacity:.8;margin-top:4px">Your world, your people.</div>
   </td></tr>
   <tr><td style="padding:32px">
     <h1 style="margin:0 0 12px;font-size:22px">Reset your password</h1>
@@ -79,7 +79,7 @@ export function eventEmail(e: { heading: string; message: string; title: string;
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#ffffff;border-radius:24px;overflow:hidden">
   <tr><td style="background:#5b3fd9;padding:28px 32px;color:#ffffff">
     <div style="font-size:22px;font-weight:700;letter-spacing:-0.3px">Dashpad</div>
-    <div style="font-size:14px;opacity:.8;margin-top:4px">Match on vibes.</div>
+    <div style="font-size:14px;opacity:.8;margin-top:4px">Your world, your people.</div>
   </td></tr>
   <tr><td style="padding:32px">
     <h1 style="margin:0 0 12px;font-size:22px">${esc(e.heading)}</h1>
