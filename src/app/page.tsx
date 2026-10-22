@@ -3,6 +3,7 @@ import { ButtonLink } from "@/components/ui/Button";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { ChiliIcon, INTENT_ICONS, InterestIcon, MaskLineIcon } from "@/components/ui/icons";
 import { LiveDemo } from "@/components/landing/LiveDemo";
+import { Globe } from "@/components/landing/Globe";
 import { Reveal } from "@/components/landing/Reveal";
 import { ScrollToTop } from "@/components/landing/ScrollToTop";
 import { INTEREST_OPTIONS } from "@/lib/constants";
@@ -89,7 +90,7 @@ export default function Landing() {
             </span>
           </h1>
           <p className="mx-auto mt-5 max-w-[22rem] animate-fade-up text-[17px] leading-relaxed text-muted [animation-delay:160ms] lg:mx-0 lg:max-w-md lg:text-[19px]">
-            Talk anonymously with a mask on for 5 minutes. If the vibe checks, the masks come off.
+            Chat anonymously with anyone. If you both vibe, you can choose to reveal who you are.
           </p>
           <div className="mt-7 flex animate-fade-up flex-col gap-3 [animation-delay:240ms] lg:mt-9 lg:items-start">
             <ButtonLink href="/login" size="lg" loadingText="Opening…" className="lg:w-auto lg:px-10">
@@ -99,9 +100,9 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* Live demo */}
-        <section className="mt-10 animate-fade-up [animation-delay:320ms] lg:mt-0">
-          <LiveDemo />
+        {/* Spinning Earth */}
+        <section className="mt-8 animate-fade-up [animation-delay:320ms] lg:mt-0" aria-label="People on Dashpad around the world">
+          <Globe />
         </section>
         </div>
       </div>
@@ -167,27 +168,35 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* Steps */}
-        <section className="mt-16 lg:mt-24">
-          <Reveal>
-            <p className="text-[13px] font-semibold tracking-wide text-brand uppercase">The Masquerade</p>
-            <h2 className="mt-1 font-display text-[30px] leading-tight font-semibold lg:text-[44px]">Three steps to a real spark</h2>
+        {/* Steps, with the masked chat playing beside them */}
+        <section className="mt-16 lg:mt-24 lg:grid lg:grid-cols-2 lg:items-center lg:gap-16">
+          <div>
+            <Reveal>
+              <p className="text-[13px] font-semibold tracking-wide text-brand uppercase">The Masquerade</p>
+              <h2 className="mt-1 font-display text-[30px] leading-tight font-semibold lg:text-[44px]">Three steps to a real spark</h2>
+            </Reveal>
+            <ol className="relative mt-6 space-y-5 before:absolute before:top-3 before:bottom-3 before:left-[21px] before:w-0.5 before:bg-gradient-to-b before:from-brand before:to-gold lg:mt-10 lg:space-y-8">
+              {STEPS.map((s, i) => (
+                <Reveal key={s.title} delay={i * 100}>
+                  <li className="relative flex gap-4 lg:gap-5">
+                    <span className="relative z-10 grid h-11 w-11 shrink-0 place-items-center rounded-full bg-brand text-white ring-4 ring-cream">
+                      {s.icon}
+                    </span>
+                    <div className="pt-1">
+                      <p className="text-[16px] font-semibold lg:text-[18px]">{s.title}</p>
+                      <p className="mt-0.5 text-[14px] leading-relaxed text-muted lg:text-[15px]">{s.body}</p>
+                    </div>
+                  </li>
+                </Reveal>
+              ))}
+            </ol>
+          </div>
+          <Reveal delay={150}>
+            <div className="mt-10 lg:mt-0">
+              <p className="mb-3 text-center text-[13px] font-semibold tracking-wide text-muted uppercase lg:hidden">See it in action</p>
+              <LiveDemo />
+            </div>
           </Reveal>
-          <ol className="relative mt-6 space-y-5 before:absolute before:top-3 before:bottom-3 before:left-[21px] before:w-0.5 before:bg-gradient-to-b before:from-brand before:to-gold lg:mt-10 lg:grid lg:grid-cols-3 lg:gap-6 lg:space-y-0 lg:before:top-[21px] lg:before:right-[16%] lg:before:bottom-auto lg:before:left-[8%] lg:before:h-0.5 lg:before:w-auto lg:before:bg-gradient-to-r">
-            {STEPS.map((s, i) => (
-              <Reveal key={s.title} delay={i * 100}>
-                <li className="relative flex gap-4 lg:flex-col lg:gap-5">
-                  <span className="relative z-10 grid h-11 w-11 shrink-0 place-items-center rounded-full bg-brand text-white ring-4 ring-cream">
-                    {s.icon}
-                  </span>
-                  <div className="pt-1">
-                    <p className="text-[16px] font-semibold">{s.title}</p>
-                    <p className="mt-0.5 text-[14px] leading-relaxed text-muted">{s.body}</p>
-                  </div>
-                </li>
-              </Reveal>
-            ))}
-          </ol>
         </section>
 
         {/* Safety */}
