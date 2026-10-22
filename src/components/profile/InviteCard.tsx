@@ -67,7 +67,7 @@ export function InviteCard() {
         <div className="min-w-0 flex-1">
           <p className="text-[15px] font-semibold">Invite friends</p>
           <p className="text-[13px] leading-snug text-muted">
-            Earn <span className="font-semibold text-ink">{inv?.reward ?? 10} Keys</span> every time a friend you invite buys Keys.
+            Earn <span className="font-semibold text-ink">{inv?.reward ?? 10} Keys</span> when a friend you invite makes their first purchase.
           </p>
         </div>
       </div>
@@ -120,7 +120,7 @@ export function InviteCard() {
                     <span className="text-muted">
                       {" "}
                       · joined {new Date(f.joined_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                      {f.purchases ? ` · bought ${f.purchases}×` : " · hasn't bought yet"}
+                      {f.purchases ? " · bought Keys" : " · hasn't bought yet"}
                     </span>
                   </span>
                   {f.earned > 0 && (

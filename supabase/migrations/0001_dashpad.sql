@@ -4054,7 +4054,7 @@ $$;
 revoke execute on function public.admin_masquerade_stats() from public, anon, authenticated;
 
 -- ---------------------------------------------------------------------------
--- Invites, nudges for quiet chats, the live pulse, closest-first notes,
+-- Invites (inviter earns Keys on a friend’s first purchase), nudges for quiet chats, the live pulse, closest-first notes,
 -- and quick repliers getting paired first
 -- ---------------------------------------------------------------------------
 insert into public.app_settings (key, value) values ('invite_reward', 10) on conflict (key) do nothing;
@@ -4154,10 +4154,10 @@ begin
   end if;
   update payments set status = 'paid', paid_at = now() where reference = p_reference;
   perform public.add_keys(p.user_id, p.keys, 'purchase', p_reference);
-  -- Whoever invited them earns Keys on every purchase
+  -- Whoever invited them earns Keys on their first purchase only
   select inviter into inv from referrals where invitee = p.user_id;
   reward := public.setting_int('invite_reward', 10);
-  if inv is not null and reward > 0 then
+  if inv is not null and reward > 0 and not exists (select 1 from referral_rewards where invitee = p.user_id) then
     insert into referral_rewards (inviter, invitee, payment_ref, keys) values (inv, p.user_id, p_reference, reward)
     on conflict (payment_ref) do nothing;
     if found then perform public.add_keys(inv, reward, 'invite', p_reference); end if;
