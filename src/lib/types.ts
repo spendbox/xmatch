@@ -92,6 +92,8 @@ export type MediaMeta = {
   height?: number;
   duration?: number; // seconds
   mime?: string;
+  /** Slow reveals: a tiny blurry preview the other person can see before it clears */
+  preview?: string;
   call?: "audio" | "video";
   seconds?: number;
   gift?: string;
@@ -120,6 +122,9 @@ export type ChatMessage = {
   media_meta?: MediaMeta | null;
   reply_to?: number | null;
   deleted_at?: string | null;
+  /** A slow reveal photo or video: blurred for the other person until you've both chatted (or they pay) */
+  slow?: boolean;
+  slow_paid_at?: string | null;
   /** Only on the sender's screen while a file is still uploading */
   local_url?: string;
   pending?: boolean;

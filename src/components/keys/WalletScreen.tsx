@@ -29,6 +29,8 @@ const REASONS: Record<string, string> = {
   explore_message: "Messaged someone from Explore",
   ghost: "Ghost mode (30 days)",
   setup: "Getting set up",
+  gift_received: "Received a gift",
+  slow_reveal: "Saw a slow reveal early",
 };
 
 export function WalletScreen({

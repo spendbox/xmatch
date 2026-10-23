@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import {
-  Ban, Clock3, Copy, Gamepad2, MessageCircle, Timer, CornerUpLeft, MessageCircleQuestion, Phone, PhoneIncoming, PhoneMissed, PhoneOutgoing, Play, Reply, Trash2, Video,
+  Ban, Clock3, Copy, Gamepad2, Hourglass, MessageCircle, Timer, CornerUpLeft, MessageCircleQuestion, Phone, PhoneIncoming, PhoneMissed, PhoneOutgoing, Play, Reply, Trash2, Video,
 } from "lucide-react";
 import type { ChatMessage } from "@/lib/types";
 import { formatDuration } from "@/lib/chatMedia";
@@ -17,6 +17,7 @@ import { GameCard } from "@/components/games/GameCard";
 import { gameInfo } from "@/lib/games";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { useSignedUrl } from "./useSignedUrl";
+import { KeyCoin } from "@/components/keys/KeyIcon";
 
 type Props = {
   messages: ChatMessage[];
@@ -29,7 +30,12 @@ type Props = {
   footer?: React.ReactNode;
   /** "Play again" on a game result card */
   onGameAgain?: (kind: string) => void;
+  /** Slow reveals: what clearing one now costs, and doing it */
+  slow?: { cost: number; onReveal: (m: ChatMessage) => Promise<void> | void };
 };
+
+/** A slow reveal clears fully after 5 messages from each of you */
+export const SLOW_EACH = 5;
 
 /** One-line description of a message, used in reply quotes. */
 export function snippet(m: ChatMessage | undefined) {
@@ -37,9 +43,9 @@ export function snippet(m: ChatMessage | undefined) {
   if (m.deleted_at) return "Message deleted";
   switch (m.kind) {
     case "image":
-      return "📷 Photo" + (m.body ? ` · ${m.body}` : "");
+      return (m.slow ? "⏳ Slow reveal photo" : "📷 Photo") + (m.body ? ` · ${m.body}` : "");
     case "video":
-      return "🎬 Video" + (m.body ? ` · ${m.body}` : "");
+      return (m.slow ? "⏳ Slow reveal video" : "🎬 Video") + (m.body ? ` · ${m.body}` : "");
     case "audio":
       return `🎤 Voice note · ${formatDuration(m.media_meta?.duration)}`;
     case "call":
@@ -53,7 +59,24 @@ export function snippet(m: ChatMessage | undefined) {
   }
 }
 
-export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDates, footer, onGameAgain }: Props) {
+export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDates, footer, onGameAgain, slow }: Props) {
+  // How far each slow reveal has cleared: messages after it from each person, up to 5 each (0 to 10)
+  const slowProgress = useMemo(() => {
+    const out = new Map<number, number>();
+    messages.forEach((m, i) => {
+      if (!m.slow || m.id < 0) return;
+      let a = 0;
+      let b = 0;
+      for (let j = i + 1; j < messages.length && (a < SLOW_EACH || b < SLOW_EACH); j++) {
+        const x = messages[j];
+        if (x.id < 0 || x.deleted_at || x.kind === "call" || !x.sender_id) continue;
+        if (x.sender_id === m.sender_id) a = Math.min(SLOW_EACH, a + 1);
+        else b = Math.min(SLOW_EACH, b + 1);
+      }
+      out.set(m.id, a + b);
+    });
+    return out;
+  }, [messages]);
   // Times use the phone's own clock and time zone, so wait until we're on the phone
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -257,6 +280,7 @@ export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDat
                   onQuote={() => m.reply_to && jumpTo(m.reply_to)}
                   onOpen={setViewer}
                   tail={lastOfGroup}
+                  slow={m.slow ? { progress: slowProgress.get(m.id) ?? 0, cost: slow?.cost ?? 10, onReveal: slow?.onReveal } : undefined}
                 />
                 {lastOfGroup && (
                   <span className="mt-1 flex items-center gap-1 px-1 text-[11px] text-muted">
@@ -426,7 +450,9 @@ function Bubble({
   onQuote,
   onOpen,
   tail,
+  slow,
 }: {
+  slow?: { progress: number; cost: number; onReveal?: (m: ChatMessage) => Promise<void> | void };
   m: ChatMessage;
   mine: boolean;
   flash: boolean;
@@ -437,6 +463,8 @@ function Bubble({
   tail: boolean;
 }) {
   const media = m.kind === "image" || m.kind === "video";
+  // Someone else's slow reveal that hasn't cleared yet
+  const locked = !!slow && media && !mine && !m.slow_paid_at && slow.progress < SLOW_EACH * 2 && !m.local_url;
   const shell = clsx(
     "max-w-[80%] overflow-hidden break-words transition-shadow duration-500 lg:max-w-[62%]",
     mine ? "bg-brand text-white" : "bg-surface text-ink shadow-card",
@@ -469,8 +497,24 @@ function Bubble({
         </button>
       ) : null}
 
-      {m.kind === "image" && <ImageContent m={m} onOpen={onOpen} />}
-      {m.kind === "video" && <VideoContent m={m} onOpen={onOpen} />}
+      {locked ? (
+        <SlowLocked m={m} progress={slow!.progress} cost={slow!.cost} onReveal={slow!.onReveal} />
+      ) : (
+        <>
+          {m.kind === "image" && <ImageContent m={m} onOpen={onOpen} />}
+          {m.kind === "video" && <VideoContent m={m} onOpen={onOpen} />}
+        </>
+      )}
+      {slow && media && !locked && (
+        <p className={clsx("flex items-center gap-1 px-3 pt-1.5 text-[11.5px] font-semibold", m.body ? "" : "pb-1.5", mine ? "text-white/80" : "text-[#9a6a0c]")}>
+          <Hourglass size={12} />
+          {!mine
+            ? "Slow reveal · revealed"
+            : m.slow_paid_at || slow.progress >= SLOW_EACH * 2
+              ? "Slow reveal · they can see it now"
+              : `Slow reveal · ${slow.progress * 10}% clear for them`}
+        </p>
+      )}
       {m.kind === "audio" && (
         <div className="px-3 py-2">
           <AudioPlayer path={m.media_path} localUrl={m.local_url} duration={m.media_meta?.duration} mine={mine} seed={Math.abs(m.id)} />
@@ -503,6 +547,65 @@ function ImageContent({ m, onOpen }: { m: ChatMessage; onOpen: (v: ViewerItem) =
         </span>
       )}
     </button>
+  );
+}
+
+/** Their slow reveal, still blurred: clears a little with every message you swap, or all at once for Keys */
+function SlowLocked({ m, progress, cost, onReveal }: { m: ChatMessage; progress: number; cost: number; onReveal?: (m: ChatMessage) => Promise<void> | void }) {
+  const p = m.media_meta?.preview;
+  const signed = useSignedUrl(p && !/^(data:|blob:|https?:)/.test(p) ? p : null);
+  const url = p && /^(data:|blob:|https?:)/.test(p) ? p : signed;
+  const [sure, setSure] = useState(false);
+  const [paying, setPaying] = useState(false);
+  useEffect(() => {
+    if (!sure) return;
+    const t = setTimeout(() => setSure(false), 3500);
+    return () => clearTimeout(t);
+  }, [sure]);
+  const w = m.media_meta?.width;
+  const h = m.media_meta?.height;
+  const ratio = m.kind === "video" ? 0.8 : w && h ? Math.min(Math.max(w / h, 0.6), 1.6) : 0.8;
+  const blur = 18 - progress * 1.3;
+  const video = m.kind === "video";
+  return (
+    <div className="relative block w-[240px] max-w-full overflow-hidden rounded-[16px] bg-[#2a2140]" style={{ aspectRatio: ratio }}>
+      {url && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={url} alt="" className="absolute inset-0 h-full w-full scale-125 object-cover transition-[filter] duration-700" style={{ filter: `blur(${blur}px) saturate(1.2)` }} />
+      )}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/60" />
+      <span className="absolute top-2 left-2 inline-flex items-center gap-1 rounded-full bg-black/45 px-2.5 py-1 text-[11.5px] font-bold text-white backdrop-blur">
+        <Hourglass size={12} /> Slow reveal {video ? "video" : "photo"}
+      </span>
+      <div className="absolute inset-x-0 bottom-0 p-2.5">
+        <p className="text-[12.5px] leading-snug font-semibold text-white drop-shadow">Clears a little with every message you swap</p>
+        <div className="mt-1.5 flex gap-[3px]" aria-label={`${progress * 10}% clear`}>
+          {Array.from({ length: SLOW_EACH * 2 }, (_, k) => (
+            <span key={k} className={clsx("h-1.5 flex-1 rounded-full transition-colors duration-500", k < progress ? "bg-gold" : "bg-white/30")} />
+          ))}
+        </div>
+        {onReveal && (
+          <button
+            type="button"
+            disabled={paying}
+            onClick={async () => {
+              tapFeedback();
+              if (!sure) return setSure(true);
+              setPaying(true);
+              await onReveal(m);
+              setPaying(false);
+              setSure(false);
+            }}
+            className={clsx(
+              "mt-2 flex h-9 w-full items-center justify-center gap-1.5 rounded-full text-[13px] font-bold transition active:scale-95",
+              sure ? "bg-gold text-ink" : "bg-white text-ink",
+            )}
+          >
+            {paying ? <Spinner className="h-4 w-4" /> : sure ? <>Tap again to pay <KeyCoin size={16} /> {cost}</> : <>See it now · <KeyCoin size={16} /> {cost}</>}
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
 

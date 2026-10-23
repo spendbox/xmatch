@@ -34,6 +34,7 @@ export function MatchChat({
   shared = [],
   matchedAt,
   intent = "dating",
+  slowCost = 10,
 }: {
   matchId: string;
   myId: string;
@@ -42,6 +43,8 @@ export function MatchChat({
   shared?: string[];
   matchedAt?: string;
   intent?: Intent;
+  /** Keys to clear a slow reveal straight away */
+  slowCost?: number;
 }) {
   const shell = useKeyboardSafe<HTMLDivElement>();
   const { seen, now } = usePresence([other.id]);
@@ -103,7 +106,7 @@ export function MatchChat({
     return () => clearTimeout(t);
   }, [toast]);
 
-  const COLUMNS = "id, sender_id, kind, body, created_at, media_path, media_meta, reply_to, deleted_at";
+  const COLUMNS = "id, sender_id, kind, body, created_at, media_path, media_meta, reply_to, deleted_at, slow, slow_paid_at";
 
   /** Shows the message straight away, then swaps in the saved one. */
   async function deliver(temp: ChatMessage, save: () => Promise<Record<string, unknown>>) {
@@ -137,13 +140,21 @@ export function MatchChat({
     await deliver(draft("text", text), async () => ({ kind: "text", body: text }));
   }
 
-  async function sendMedia(file: File, kind: MediaKind, caption: string) {
+  async function sendMedia(file: File, kind: MediaKind, caption: string, slow: boolean) {
     const localUrl = URL.createObjectURL(file);
     const info = kind === "video" ? await readMediaInfo(localUrl, "video") : {};
-    await deliver(draft(kind, caption, { local_url: localUrl, media_meta: info }), async () => {
-      const up = await uploadChatMedia(supabase, matchId, file, kind);
-      return { kind, body: caption, media_path: up.path, media_meta: { ...info, ...up.meta } };
+    await deliver(draft(kind, caption, { local_url: localUrl, media_meta: info, slow }), async () => {
+      const up = await uploadChatMedia(supabase, matchId, file, kind, slow);
+      return { kind, body: caption, media_path: up.path, media_meta: { ...info, ...up.meta }, slow };
     });
+  }
+
+  // Can't wait for a slow reveal: pay to see it now
+  async function revealSlow(m: ChatMessage) {
+    const { error } = await supabase.rpc("reveal_slow", { p_message: m.id });
+    if (error) return setToast(keysError(error.message));
+    setMessages((l) => l.map((x) => (x.id === m.id ? { ...x, slow_paid_at: new Date().toISOString() } : x)));
+    refreshWallet();
   }
 
   async function sendVoice(blob: Blob, seconds: number) {
@@ -259,7 +270,7 @@ export function MatchChat({
           )}
           {messages.length === 0 && <p className="mt-3 text-[14px] text-muted">Say hi to {other.display_name} 👋</p>}
         </div>
-        <MessageList messages={messages} myId={myId} nameOf={nameOf} onReply={setReplyTo} onDelete={remove} showDates onGameAgain={games.rematch} />
+        <MessageList messages={messages} myId={myId} nameOf={nameOf} onReply={setReplyTo} onDelete={remove} showDates onGameAgain={games.rematch} slow={{ cost: slowCost, onReveal: revealSlow }} />
       </div>
 
       {games.banner}
@@ -267,7 +278,7 @@ export function MatchChat({
         plusDot={games.live}
         actions={[
           ...(games.canPlay ? [{ key: "game", label: games.live ? "Back to game" : "Play a game", icon: <Gamepad2 size={24} strokeWidth={1.75} />, tone: "bg-brand-soft text-brand", onClick: games.play }] : []),
-          { key: "ice", label: "New icebreaker", icon: <Dices size={24} strokeWidth={1.75} />, tone: "bg-gold-soft text-[#9a6a0c]", onClick: () => void supabase.rpc("match_icebreaker", { p_match: matchId }) },
+          { key: "ice", label: "Icebreaker", icon: <Dices size={24} strokeWidth={1.75} />, tone: "bg-gold-soft text-[#9a6a0c]", onClick: () => void supabase.rpc("match_icebreaker", { p_match: matchId }) },
         ]}
         onSend={send}
         onSendMedia={sendMedia}

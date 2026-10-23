@@ -2,11 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
-import { Camera, Gift, Images, Mic, Plus, SendHorizontal, Trash2, X } from "lucide-react";
+import { Camera, Gift, Hourglass, Images, Mic, Plus, SendHorizontal, Trash2, X } from "lucide-react";
 import type { ChatMessage } from "@/lib/types";
 import { MAX_MEDIA_BYTES, formatDuration } from "@/lib/chatMedia";
 import { Sheet } from "@/components/ui/Sheet";
 import { Button, tapFeedback } from "@/components/ui/Button";
+import { Toggle } from "@/components/ui/Toggle";
 import { snippet } from "./MessageList";
 import { useVoiceRecorder } from "./useVoiceRecorder";
 
@@ -21,7 +22,7 @@ export type ComposerAction = { key: string; label: string; icon: React.ReactNode
 type Props = {
   onSend: (text: string) => Promise<void> | void;
   /** Turn on photo/video sending */
-  onSendMedia?: (file: File, kind: MediaKind, caption: string) => Promise<void> | void;
+  onSendMedia?: (file: File, kind: MediaKind, caption: string, slow: boolean) => Promise<void> | void;
   /** Turn on voice notes */
   onSendVoice?: (blob: Blob, seconds: number) => Promise<void> | void;
   replyTo?: ChatMessage | null;
@@ -53,6 +54,7 @@ export function Composer({
   const [attachOpen, setAttachOpen] = useState(false);
   const [picked, setPicked] = useState<{ file: File; url: string; kind: MediaKind } | null>(null);
   const [caption, setCaption] = useState("");
+  const [slow, setSlow] = useState(false);
   const [sending, setSending] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
   const area = useRef<HTMLTextAreaElement>(null);
@@ -116,6 +118,7 @@ export function Composer({
     if (!kind) return setFileError("You can send photos and videos.");
     if (file.size > MAX_MEDIA_BYTES) return setFileError("That file is over 50 MB. Try a shorter video.");
     setCaption("");
+    setSlow(false);
     setPicked({ file, kind, url: URL.createObjectURL(file) });
   }
 
@@ -126,7 +129,7 @@ export function Composer({
     const c = caption.trim();
     setPicked(null);
     setSending(false);
-    await onSendMedia(p.file, p.kind, c);
+    await onSendMedia(p.file, p.kind, c, slow);
   }
 
   async function finishVoice() {
@@ -316,14 +319,33 @@ export function Composer({
         }
       >
         {picked && (
-          <div className="overflow-hidden rounded-2xl bg-ink">
-            {picked.kind === "image" ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={picked.url} alt="Preview" className="max-h-[50dvh] w-full object-contain" />
-            ) : (
-              <video src={picked.url} controls playsInline className="max-h-[50dvh] w-full" />
-            )}
-          </div>
+          <>
+            <div className="relative overflow-hidden rounded-2xl bg-ink">
+              {picked.kind === "image" ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={picked.url} alt="Preview" className={clsx("max-h-[44dvh] w-full object-contain transition duration-300", slow && "scale-110 blur-xl")} />
+              ) : (
+                <video src={picked.url} controls={!slow} playsInline className={clsx("max-h-[44dvh] w-full transition duration-300", slow && "scale-110 blur-xl")} />
+              )}
+              {slow && (
+                <span className="absolute inset-0 grid place-items-center">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-black/55 px-3.5 py-2 text-[13px] font-semibold text-white backdrop-blur">
+                    <Hourglass size={15} /> How they&apos;ll see it at first
+                  </span>
+                </span>
+              )}
+            </div>
+            <label className="mt-3 flex cursor-pointer items-center gap-3 rounded-2xl border border-line bg-cream px-4 py-3">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gold-soft text-[#9a6a0c]">
+                <Hourglass size={19} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[15px] font-semibold">Slow reveal</span>
+                <span className="block text-[12.5px] leading-snug text-muted">Starts blurred and clears a little with every message you swap</span>
+              </span>
+              <Toggle checked={slow} onChange={setSlow} label="Slow reveal" />
+            </label>
+          </>
         )}
       </Sheet>
     </div>
