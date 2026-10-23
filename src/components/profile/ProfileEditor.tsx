@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { showMediaHelp } from "@/lib/mediaPermission";
+import { GhostMode } from "./GhostMode";
 import clsx from "clsx";
 import {
   AtSign, BellOff, BellRing, Cake, ChevronRight, Eye, FileText, ImagePlus, MessageCircle, LogOut, Mic, PenLine, Shapes, ShieldCheck, SlidersHorizontal, Trash2,
@@ -321,6 +322,8 @@ export function ProfileEditor({
             </span>
             <ChevronRight size={18} className="shrink-0 text-muted" />
           </button>
+
+          <GhostMode on={!!profile.ghost_on} until={profile.ghost_until ?? null} />
 
           <button
             type="button"
