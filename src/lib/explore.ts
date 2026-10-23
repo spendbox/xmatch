@@ -41,4 +41,8 @@ export type ExploreProfile = {
   shared_interests: string[];
   message_cost: number;
   photos_cost: number;
+  /** Their "things about me" */
+  things?: { p: string; a: string }[];
+  /** Words you both used in your things */
+  shared_words?: string[];
 };

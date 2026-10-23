@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Sticky } from "@/components/ui/Sticky";
 import { PeopleForYou } from "./PeopleForYou";
+import { GettingStarted } from "./GettingStarted";
+import type { Thing } from "@/lib/things";
 import type { ExploreList } from "@/lib/explore";
 import { ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -44,6 +46,7 @@ export function HomeScreen({
   meets: initialMeets = null,
   demoSheet,
   demoPeople,
+  demoSetup,
 }: {
   profile: Profile;
   wallet: Wallet | null;
@@ -57,6 +60,7 @@ export function HomeScreen({
   demoSheet?: "meet" | "post";
   /** Design previews: the people grid */
   demoPeople?: ExploreList;
+  demoSetup?: { place: boolean; push: boolean; things: number; claimed: boolean; reward: number };
 }) {
   const supabase = useMemo(() => createClient(), []);
   const { wallet, refresh: refreshWallet } = useWallet(profile.id, initialWallet);
@@ -131,7 +135,15 @@ export function HomeScreen({
 
       <div className="lg:mt-8 lg:grid lg:grid-cols-12 lg:items-start lg:gap-8">
       <div className="mt-5 lg:sticky lg:top-24 lg:col-span-7 lg:mt-0">
-        <MasqueradeCard userId={profile.id} ctl={ctl} hasPlace={!!place.country} onPlace={() => setPlaceOpen(true)} onSettings={() => setMeetOpen(true)} />
+        <MasqueradeCard userId={profile.id} ctl={ctl} onSettings={() => setMeetOpen(true)} />
+
+        <GettingStarted
+          hasPlace={!!place.country}
+          onPlace={() => setPlaceOpen(true)}
+          things={(profile.things as Thing[] | undefined) ?? []}
+          onKeys={refreshWallet}
+          demo={demoSetup}
+        />
 
         <PeopleForYou userId={profile.id} demo={demoPeople} />
       </div>

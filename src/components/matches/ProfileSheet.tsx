@@ -5,6 +5,7 @@ import clsx from "clsx";
 import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, Quote, X } from "lucide-react";
 import { GENDERS } from "@/lib/constants";
+import { promptOf } from "@/lib/things";
 import type { Profile } from "@/lib/types";
 import { InterestIcon } from "@/components/ui/icons";
 
@@ -135,6 +136,22 @@ export function ProfileSheet({
             <section className="rounded-3xl bg-surface p-5 shadow-card">
               <Quote size={20} className="text-brand" />
               <p className="mt-2 text-[16px] leading-relaxed text-ink-soft">{profile.bio}</p>
+            </section>
+          )}
+          {(profile.things?.length ?? 0) > 0 && (
+            <section className="rounded-3xl bg-surface p-5 shadow-card">
+              <h3 className="mb-3 text-[13px] font-semibold tracking-wide text-muted uppercase">Things about {profile.display_name?.split(" ")[0] ?? "them"}</h3>
+              <div className="grid grid-cols-2 gap-2.5">
+                {profile.things!.map((t, i) => {
+                  const p = promptOf(t.p);
+                  return (
+                    <div key={i} className="relative overflow-hidden rounded-2xl p-3 text-white" style={{ background: p.tone }}>
+                      <p className="text-[11px] leading-tight font-semibold text-white/80">{p.text}</p>
+                      <p className="mt-1 text-[14px] leading-snug font-bold">{t.a}</p>
+                    </div>
+                  );
+                })}
+              </div>
             </section>
           )}
           {profile.interests?.length > 0 && (

@@ -76,7 +76,8 @@ export function ExploreProfileSheet({
   }
 
   const hidden = p.photo_count - p.photos.length;
-  const profile = { id: p.id, display_name: p.name, gender: p.gender, bio: p.bio, interests: p.interests, photos: p.photos } as Profile;
+  const profile = { id: p.id, display_name: p.name, gender: p.gender, bio: p.bio, interests: p.interests, photos: p.photos, things: p.things ?? [] } as Profile;
+  const both = p.shared_words?.length ? `You both mentioned ${listOf(p.shared_words)}` : null;
 
   return (
     <ProfileSheet
@@ -84,7 +85,7 @@ export function ExploreProfileSheet({
       blur={!p.photos_unlocked}
       shared={p.shared_interests}
       onClose={onClose}
-      note={[p.online ? "Online now" : null, p.place].filter(Boolean).join(" · ") || undefined}
+      note={[p.online ? "Online now" : null, p.place, both].filter(Boolean).join(" · ") || undefined}
       extra={
         !p.photos_unlocked ? (
           <section className="flex items-center gap-3 rounded-3xl bg-surface p-4 shadow-card">
@@ -124,3 +125,5 @@ export function ExploreProfileSheet({
     />
   );
 }
+
+const listOf = (w: string[]) => (w.length < 2 ? w[0] : `${w.slice(0, -1).join(", ")} and ${w[w.length - 1]}`);

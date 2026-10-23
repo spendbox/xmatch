@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { GAMES } from "@/lib/games";
 import { Chilis } from "@/components/ui/Spice";
+import { promptOf } from "@/lib/things";
 import { addIdeas, addQuestions, setGameOn, setIdea, setQuestion } from "@/app/admin/(panel)/games/actions";
 import { AdminTitle } from "./AdminShell";
 
@@ -20,18 +21,23 @@ export type GameStats = {
 
 const pct = (a: number, b: number) => (b > 0 ? `${Math.round((100 * a) / b)}%` : "–");
 
+export type ThingIdea = { prompt: string; answer: string; people: number };
+
 export function GamesManager({
   on,
   questions,
   ideas,
   week,
   today,
+  thingIdeas = [],
 }: {
   on: Record<string, boolean>;
   questions: TotRow[];
   ideas: IdeaRow[];
   week: GameStats | null;
   today: GameStats | null;
+  /** The most common "things about me" answers */
+  thingIdeas?: ThingIdea[];
 }) {
   const router = useRouter();
   const [, start] = useTransition();
@@ -124,6 +130,30 @@ export function GamesManager({
         <p className="mt-1 text-[13px] text-muted">
           Each game picks 10 at random, up to the pair&apos;s question spice. Connections get up to 1 chili if they met as friends, 2 for dating and 3 for spicy.
         </p>
+        {thingIdeas.length > 0 && (
+          <div className="mt-4 rounded-2xl border border-line p-4">
+            <p className="text-[13px] font-semibold">Ideas from what members say about themselves</p>
+            <p className="mt-0.5 text-[12px] text-muted">The most common answers on their &ldquo;things about me&rdquo; cards. Tap one to start a question with it, then add the other choice.</p>
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {thingIdeas.map((t) => (
+                <button
+                  key={`${t.prompt}-${t.answer}`}
+                  type="button"
+                  onClick={() => {
+                    const q = promptOf(t.prompt).text.replace(/…$/, "").trim();
+                    setQText((x) => `${x ? `${x.trimEnd()}\n` : ""}${q}? | ${t.answer} | `);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-cream px-3 py-1.5 text-[12px] font-semibold text-ink-soft hover:bg-brand-soft"
+                  title={promptOf(t.prompt).text}
+                >
+                  {t.answer}
+                  <span className="rounded-full bg-surface px-1.5 text-[11px] text-muted">{t.people}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="mt-4 rounded-2xl bg-cream p-4">
           <p className="text-[13px] font-semibold">Add questions, one per line</p>
           <textarea
