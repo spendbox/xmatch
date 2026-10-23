@@ -7,13 +7,11 @@ import type { Game, GameActions } from "@/lib/games";
 import { replay, type ChessState } from "@/lib/boardgames/chess";
 import { Player, useTicker, type Names } from "./parts";
 import { useMove } from "./useMove";
+import { ChessPiece, type PieceType } from "./ChessPieces";
 
 const LIGHT = "#dfe6f2";
 const DARK = "#5c6f94";
 const WHITE = "#f7f3ea";
-const BLACK = "#1c1828";
-// Text-style chess symbols (the ︎ stops phones drawing them as emoji)
-const GLYPH: Record<string, string> = { k: "♚", q: "♛", r: "♜", b: "♝", n: "♞", p: "♟" };
 const NAMES: Record<string, string> = { k: "king", q: "queen", r: "rook", b: "bishop", n: "knight", p: "pawn" };
 const FILES = "abcdefgh";
 
@@ -71,7 +69,7 @@ export function ChessGame({ game, names, act }: { game: Game; names: Names; act:
         <div className="font-display text-[15px] font-bold text-white/70 tabular-nums">Move {Math.floor((st.san?.length ?? 0) / 2) + 1}</div>
         <Player right name={names.them} color={them === "a" ? WHITE : "#8a93a8"} active={st.turn === them} sub={sub(them)} />
       </div>
-      <Taken pieces={st.taken?.[them] ?? ""} color={me === "a" ? WHITE : BLACK} label={`${names.them} took`} className="mt-3" />
+      <Taken pieces={st.taken?.[them] ?? ""} color={myColor} label={`${names.them} took`} className="mt-3" />
 
       <div className="relative mt-2 rounded-[18px] p-1.5" style={{ background: "linear-gradient(180deg,#2b3650,#1a2233)", boxShadow: "0 10px 0 #0f1420, 0 30px 60px -20px rgba(75,93,128,0.7)" }}>
         <div className="grid grid-cols-8 overflow-hidden rounded-[12px]">
@@ -94,19 +92,7 @@ export function ChessGame({ game, names, act }: { game: Game; names: Names; act:
                     background: kingInCheck === sq ? "#e5484d" : sel === sq ? "#f2b33d" : isLast ? (light ? "#f6e7a8" : "#b39a4c") : light ? LIGHT : DARK,
                   }}
                 >
-                  {p && (
-                    <span
-                      className="text-[clamp(22px,8.4vw,38px)] leading-none select-none"
-                      style={{
-                        fontFamily: '"Segoe UI Symbol", "Noto Sans Symbols 2", "Apple Symbols", serif',
-                        color: p.color === "w" ? WHITE : BLACK,
-                        textShadow: p.color === "w" ? "0 0 1px #1c1828, 0 1px 0 #1c1828, 0 -1px 0 #1c1828, 1px 0 0 #1c1828, -1px 0 0 #1c1828" : "0 1px 0 rgba(255,255,255,0.35)",
-                      }}
-                    >
-                      {GLYPH[p.type]}
-                      {"︎"}
-                    </span>
-                  )}
+                  {p && <ChessPiece type={p.type} color={p.color} className="h-[88%] w-[88%]" />}
                   {isTarget && (
                     <span className={clsx("absolute rounded-full", p ? "inset-1 border-[3px] border-white/80" : "h-3 w-3 bg-[#1c1828]/40")} />
                   )}
@@ -123,9 +109,8 @@ export function ChessGame({ game, names, act }: { game: Game; names: Names; act:
               <p className="mb-2 text-center text-[13px] font-bold">Turn your pawn into</p>
               <div className="flex gap-2">
                 {(["q", "r", "b", "n"] as const).map((k) => (
-                  <button key={k} type="button" onClick={() => promote(k)} aria-label={NAMES[k]} className="grid h-14 w-14 place-items-center rounded-2xl bg-cream text-[34px]">
-                    {GLYPH[k]}
-                    {"︎"}
+                  <button key={k} type="button" onClick={() => promote(k)} aria-label={NAMES[k]} className="grid h-14 w-14 place-items-center rounded-2xl bg-cream">
+                    <ChessPiece type={k} color={myColor} className="h-11 w-11" />
                   </button>
                 ))}
               </div>
@@ -133,7 +118,7 @@ export function ChessGame({ game, names, act }: { game: Game; names: Names; act:
           </div>
         )}
       </div>
-      <Taken pieces={st.taken?.[me] ?? ""} color={me === "a" ? BLACK : WHITE} label="You took" className="mt-2" />
+      <Taken pieces={st.taken?.[me] ?? ""} color={myColor === "w" ? "b" : "w"} label="You took" className="mt-2" />
 
       <p className={clsx("mt-3 text-center text-[13px]", note ? "font-semibold text-[#ffb4b4]" : "text-white/75")}>
         {note ??
@@ -153,13 +138,15 @@ export function ChessGame({ game, names, act }: { game: Game; names: Names; act:
   );
 }
 
-function Taken({ pieces, color, label, className }: { pieces: string; color: string; label: string; className?: string }) {
+function Taken({ pieces, color, label, className }: { pieces: string; color: "w" | "b"; label: string; className?: string }) {
   if (!pieces) return <div className={clsx("h-5", className)} />;
   return (
     <p className={clsx("flex h-5 items-center gap-1 text-[11px] font-bold text-white/55", className)}>
       {label}
-      <span className="text-[16px] leading-none" style={{ color, textShadow: "0 0 1px #000" }}>
-        {[...pieces].map((p) => GLYPH[p] + "︎").join("")}
+      <span className="flex">
+        {[...pieces].map((p, k) => (
+          <ChessPiece key={k} type={p as PieceType} color={color} className="-mx-0.5 h-5 w-5" />
+        ))}
       </span>
     </p>
   );

@@ -1,8 +1,10 @@
 /**
- * Checkers (draughts) on an 8×8 board, standard rules: men move and capture
- * forward, kings move one square any diagonal way, captures are compulsory,
- * keep jumping while you can, reaching the far row makes a king (and ends the turn).
- * Board: 64 characters, row 0 at the top. "a"/"b" men, "A"/"B" kings, "." empty.
+ * Checkers (draughts) on an 8×8 board: men move and capture forward one square,
+ * kings fly (any distance along a diagonal, and capture from a distance, landing
+ * on any empty square beyond). Captures are compulsory, keep jumping while you
+ * can, reaching the far row makes a king (and ends the turn).
+ * Board: 64 characters, row 0 at the top. "a"/"b" men, "A"/"B" kings, "." empty,
+ * "x" a piece taken earlier in this turn's jumps (it blocks until the turn ends).
  * Player a starts at the bottom and moves up.
  */
 import { MoveError, other, type MoveResult, type Side } from "./types";
@@ -47,14 +49,34 @@ function pieceOptions(board: string, i: number): { steps: CheckersOption[]; jump
   if (!me) return { steps, jumps };
   const r = Math.floor(i / 8);
   const c = i % 8;
+  const inside = (rr: number, cc: number) => rr >= 0 && rr <= 7 && cc >= 0 && cc <= 7;
   for (const [dr, dc] of dirs(ch)) {
+    if (isKing(ch)) {
+      // Fly along the diagonal
+      let rr = r + dr, cc = c + dc;
+      while (inside(rr, cc) && board[rr * 8 + cc] === ".") {
+        steps.push({ from: i, to: rr * 8 + cc, take: null });
+        rr += dr;
+        cc += dc;
+      }
+      if (!inside(rr, cc) || owner(board[rr * 8 + cc]) !== other(me)) continue;
+      const take = rr * 8 + cc;
+      rr += dr;
+      cc += dc;
+      while (inside(rr, cc) && board[rr * 8 + cc] === ".") {
+        jumps.push({ from: i, to: rr * 8 + cc, take });
+        rr += dr;
+        cc += dc;
+      }
+      continue;
+    }
     const r1 = r + dr, c1 = c + dc;
-    if (r1 < 0 || r1 > 7 || c1 < 0 || c1 > 7) continue;
+    if (!inside(r1, c1)) continue;
     const j1 = r1 * 8 + c1;
     if (board[j1] === ".") steps.push({ from: i, to: j1, take: null });
     else if (owner(board[j1]) === other(me)) {
       const r2 = r1 + dr, c2 = c1 + dc;
-      if (r2 < 0 || r2 > 7 || c2 < 0 || c2 > 7) continue;
+      if (!inside(r2, c2)) continue;
       const j2 = r2 * 8 + c2;
       if (board[j2] === ".") jumps.push({ from: i, to: j2, take: j1 });
     }
@@ -86,17 +108,19 @@ export function applyMove(st: CheckersState, side: Side, mv: CheckersMove): Move
   b[opt.from] = ".";
   const captured = { ...st.captured };
   if (opt.take !== null) {
-    b[opt.take] = ".";
+    // Stays on the board as "x" until the jumps are over, so it can't be jumped twice
+    b[opt.take] = "x";
     captured[side] += 1;
   }
   const row = Math.floor(opt.to / 8);
   const crowned = !isKing(piece) && ((side === "a" && row === 0) || (side === "b" && row === 7));
   if (crowned) piece = piece.toUpperCase();
   b[opt.to] = piece;
-  const board = b.join("");
+  let board = b.join("");
 
   const took = st.chain !== null && st.last ? [...st.last.took, ...(opt.take !== null ? [opt.take] : [])] : opt.take !== null ? [opt.take] : [];
   const keepJumping = opt.take !== null && !crowned && pieceOptions(board, opt.to).jumps.length > 0;
+  if (!keepJumping) board = board.replace(/x/g, ".");
   const quiet = opt.take !== null || crowned ? 0 : st.quiet + 1;
   const next: CheckersState = {
     board,

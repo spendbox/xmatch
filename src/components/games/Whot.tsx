@@ -21,6 +21,7 @@ export function Whot({ game, names, act }: { game: Game; names: Names; act: Game
   const myTurn = game.status === "active" && started && st.turn === me;
   const theirCount = them === "a" ? st.count_a : st.count_b;
   const anyPlayable = hand.some((c) => canPlay(st, c));
+  const owed = st.pending ?? 0;
 
   async function play(card: string) {
     if (!myTurn || busy || !canPlay(st, card)) return;
@@ -58,14 +59,19 @@ export function Whot({ game, names, act }: { game: Game; names: Names; act: Game
           onClick={() => send({ type: "market" })}
           disabled={!myTurn || busy}
           className={clsx("relative transition active:scale-95", myTurn && !anyPlayable && "gm-pulse")}
-          aria-label={`Go to market. ${st.market} cards left`}
+          aria-label={owed && myTurn ? `Pick ${owed} cards` : `Go to market. ${st.market} cards left`}
         >
           <CardBack />
           <span className="absolute -top-2 -right-2 rounded-full bg-gold px-2 py-0.5 text-[12px] font-extrabold text-ink tabular-nums">{st.market}</span>
-          <span className="mt-1.5 block text-center text-[11px] font-bold text-white/70">Market</span>
+          <span className={clsx("mt-1.5 block text-center text-[11px] font-bold", owed && myTurn ? "text-gold" : "text-white/70")}>
+            {owed && myTurn ? `Pick ${owed}` : "Market"}
+          </span>
         </button>
         <div className="relative">
           <Card card={st.top} />
+          {owed > 0 && (
+            <span className="gm-burst absolute -top-3 -left-4 rounded-full bg-gold px-2 py-1 text-[12px] font-extrabold text-ink shadow">+{owed}</span>
+          )}
           {st.called && (
             <span className="gm-burst absolute -top-3 -right-4 flex items-center gap-1 rounded-full bg-white px-2 py-1 text-[11px] font-extrabold text-ink shadow">
               <ShapeIcon shape={st.called} size={14} color={MAROON} /> {st.called}
@@ -76,7 +82,14 @@ export function Whot({ game, names, act }: { game: Game; names: Names; act: Game
       </div>
 
       <p className={clsx("mt-4 min-h-[36px] text-center text-[13px] leading-snug", note ? "font-semibold text-[#ffb4b4]" : "text-white/80")}>
-        {note ?? (myTurn && !anyPlayable ? "Nothing to play. Tap the market to pick a card" : lastLine)}
+        {note ??
+          (myTurn && owed
+            ? anyPlayable
+              ? `Pick ${owed} coming! Play a 2 to pass it back, or tap the market to pick ${owed}`
+              : `Pick ${owed}! No 2 to answer with. Tap the market`
+            : myTurn && !anyPlayable
+              ? "Nothing to play. Tap the market to pick a card"
+              : lastLine)}
       </p>
 
       {/* Your hand */}

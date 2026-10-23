@@ -5,7 +5,7 @@ import clsx from "clsx";
 import { Crown } from "lucide-react";
 import type { Game, GameActions } from "@/lib/games";
 import { legalMoves, type CheckersState } from "@/lib/boardgames/checkers";
-import { GOLD, PURPLE, Player, Token, useTicker, type Names } from "./parts";
+import { GOLD, PURPLE, Player, useTicker, type Names } from "./parts";
 import { useMove } from "./useMove";
 
 const LIGHT = "#d9efe9";
@@ -67,7 +67,7 @@ export function Checkers({ game, names, act }: { game: Game; names: Names; act: 
             const c = i % 8;
             const dark = (r + c) % 2 === 1;
             const ch = st.board[i];
-            const owner = ch === "." ? null : ch.toLowerCase();
+            const owner = ch === "." || ch === "x" ? null : ch.toLowerCase();
             const isTarget = targets.some((o) => o.to === i);
             const isLast = st.last && (st.last.from === i || st.last.to === i);
             const canPick = movable.has(i) && st.chain === null;
@@ -84,19 +84,15 @@ export function Checkers({ game, names, act }: { game: Game; names: Names; act: 
                 {owner && (
                   <span
                     className={clsx(
-                      "relative block rounded-full transition",
+                      "relative block aspect-square w-[78%] rounded-full transition",
                       chosen === i && "-translate-y-1 scale-110 shadow-[0_0_0_3px_#f2b33d,0_0_16px_6px_rgba(242,179,61,0.6)]",
                       canPick && !busy && chosen !== i && "gm-pulse shadow-[0_0_0_3px_#ffffff,0_0_14px_4px_rgba(255,255,255,0.55)]",
                     )}
                   >
-                    <Token color={color(owner)} size={30} />
-                    {ch === ch.toUpperCase() && (
-                      <span className="absolute -top-1.5 left-1/2 grid h-4 w-4 -translate-x-1/2 place-items-center rounded-full bg-white text-ink shadow">
-                        <Crown size={11} strokeWidth={2.6} />
-                      </span>
-                    )}
+                    <Piece side={owner as "a" | "b"} king={ch === ch.toUpperCase()} />
                   </span>
                 )}
+                {ch === "x" && <span className="h-[72%] w-[72%] rounded-full bg-black/25 ring-2 ring-white/30" aria-label="Taken this turn" />}
                 {isTarget && <span className="absolute h-3.5 w-3.5 rounded-full bg-white/85 shadow-[0_0_0_4px_rgba(255,255,255,0.25)]" />}
               </button>
             );
@@ -119,5 +115,23 @@ export function Checkers({ game, names, act }: { game: Game; names: Names; act: 
               : "")}
       </p>
     </div>
+  );
+}
+
+// Each side's disc colour and a slightly darker shade of it for the ridge and crown
+const SHADES = { a: { base: GOLD, deep: "#c98b1c" }, b: { base: PURPLE, deep: "#7f62e0" } };
+
+/** A checkers piece: a plain disc with a ridge, a crown for kings */
+function Piece({ side, king }: { side: "a" | "b"; king: boolean }) {
+  const { base, deep } = SHADES[side];
+  return (
+    <span
+      className="grid aspect-square w-full place-items-center rounded-full"
+      style={{ background: base, boxShadow: `inset 0 -4px 0 ${deep}, 0 3px 6px rgba(0,0,0,0.35)` }}
+    >
+      <span className="grid h-[62%] w-[62%] place-items-center rounded-full" style={{ boxShadow: `inset 0 0 0 2.5px ${deep}` }}>
+        {king && <Crown size={14} strokeWidth={2.8} style={{ color: deep }} />}
+      </span>
+    </span>
   );
 }

@@ -6,6 +6,7 @@ import { Trophy, X } from "lucide-react";
 import { Spinner } from "@/components/ui/Button";
 import { usePrices } from "@/components/keys/usePrices";
 import { GAMES, sfx, type GameKind } from "@/lib/games";
+import { ChessPiece } from "./ChessPieces";
 
 /** Pick a game to challenge the other person to */
 export function GameLauncher({
@@ -173,12 +174,12 @@ export function GameArt({ kind }: { kind: GameKind }) {
   if (kind === "chess")
     return (
       <div className="flex h-full items-center justify-center gap-1">
-        {["♞", "♛"].map((g, i) => (
-          <span key={g} className="grid h-[56px] w-[56px] place-items-center rounded-2xl text-[38px] leading-none" style={{ background: i ? "#dfe6f2" : "#5c6f94", color: i ? "#1c1828" : "#f7f3ea" }}>
-            {g}
-            {"\uFE0E"}
-          </span>
-        ))}
+        <span className="grid h-[56px] w-[56px] place-items-center rounded-2xl bg-[#5c6f94]">
+          <ChessPiece type="n" color="w" className="h-11 w-11" />
+        </span>
+        <span className="grid h-[56px] w-[56px] place-items-center rounded-2xl bg-[#dfe6f2]">
+          <ChessPiece type="q" color="b" className="h-11 w-11" />
+        </span>
       </div>
     );
   if (kind === "ayo")
