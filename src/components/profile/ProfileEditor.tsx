@@ -68,6 +68,7 @@ export function ProfileEditor({
   const push = usePushState();
   const [name, setName] = useState(profile.display_name ?? "");
   const [bio, setBio] = useState(profile.bio);
+  const [confirmText, setConfirmText] = useState("");
   const [interests, setInterests] = useState(profile.interests);
   const [photos, setPhotos] = useState(profile.photos);
   const [open, setOpen] = useState(profile.open_to_masquerade);
@@ -93,6 +94,7 @@ export function ProfileEditor({
       setDraftBio(bio);
     }
     if (p === "interests") setDraftInterests(interests);
+    if (p === "delete") setConfirmText("");
     setPanel(p);
   }
   const close = () => setPanel(null);
@@ -536,12 +538,12 @@ export function ProfileEditor({
             {error && <p className="text-[14px] font-medium text-chili">{error}</p>}
             <form
               action={async () => {
-                const res = await deleteAccount();
+                const res = await deleteAccount(confirmText);
                 if (res?.error) setError(res.error);
               }}
             >
-              <SubmitButton size="lg" variant="danger" loadingText="Deleting…">
-                Yes, delete my account
+              <SubmitButton size="lg" variant="danger" loadingText="Deleting…" disabled={confirmText.trim().toUpperCase() !== "DELETE"}>
+                Delete my account forever
               </SubmitButton>
             </form>
             <Button size="lg" variant="secondary" onClick={close}>
@@ -551,6 +553,21 @@ export function ProfileEditor({
         }
       >
         <p className="text-[14px] text-muted">If you just need a break, you can simply log out and come back any time.</p>
+        <div className="mt-4">
+          <Label htmlFor="confirm-delete">
+            Type <b className="font-bold text-chili">DELETE</b> to confirm
+          </Label>
+          <Input
+            id="confirm-delete"
+            value={confirmText}
+            onChange={(e) => setConfirmText(e.target.value)}
+            placeholder="DELETE"
+            autoComplete="off"
+            autoCapitalize="characters"
+            spellCheck={false}
+            className="tracking-[0.2em] uppercase"
+          />
+        </div>
       </Sheet>
 
       {preview && (
