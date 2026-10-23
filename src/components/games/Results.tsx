@@ -84,7 +84,7 @@ export function Results({
 
       <p className="mt-6 text-[12px] font-extrabold tracking-[0.18em] text-gold uppercase">
         {info.title}
-        {game.kind === "c4" ? " · best of 3" : ""}
+        {game.kind === "c4" || game.kind === "bomb" ? " · best of 3" : ""}
       </p>
       <h1 className="gm-burst mt-1.5 font-display text-[48px] leading-none font-bold" style={{ animationDelay: "0.1s" }}>
         {title}

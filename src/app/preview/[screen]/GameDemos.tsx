@@ -1,9 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { GameArena } from "@/components/games/GameArena";
 import { GameLauncher } from "@/components/games/GameLauncher";
 import type { Game, GameActions } from "@/lib/games";
+import * as bomb from "@/lib/boardgames/bomb";
+import * as gems from "@/lib/boardgames/gems";
+import { MoveError } from "@/lib/boardgames/types";
 
 const names = { me: "Velvet Fox", them: "Golden Owl" };
 
@@ -197,13 +200,132 @@ function demo(screen: string): Game | null {
       return base({ status: "done", ended_at: at(-30), deadline_at: null, winner: "me", score_a: 2, score_b: 1, record: { played: 3, won: 2, lost: 1, alike: 80 } });
     case "game-results-tot":
       return base({ kind: "tot", status: "done", ended_at: at(-30), deadline_at: null, score_a: 8, score_b: 8, state: { qs: QS, alike: 8, picks: [] }, record: { played: 1, won: 0, lost: 0, alike: 80 } });
+    case "game-bomb-hide":
+      return base({ kind: "bomb", state: bombStart() });
+    case "game-bomb":
+      return base({
+        kind: "bomb",
+        mine: { bombs: [0, 4, 8] },
+        state: {
+          ...bombStart(),
+          phase: "play",
+          ready_a: true,
+          ready_b: true,
+          turn: "a",
+          open_b: "s..x.s...",
+          open_a: "x...s..s.",
+          boom_a: 1,
+          boom_b: 1,
+          last: { by: "b", cell: 7, bomb: false },
+          moves: 7,
+        },
+      });
+    case "game-bomb-round":
+      return base({
+        kind: "bomb",
+        state: {
+          ...bombStart(),
+          round: 2,
+          wins: { a: 1, b: 0 },
+          starter: "b",
+          ready_b: true,
+          result: { round: 1, winner: "a", why: "clear", bombs: { a: [0, 4, 8], b: [1, 3, 7] }, open: { a: "x.s.x..s.", b: "sx.xs.s.s" } },
+          moves: 12,
+        },
+      });
+    case "game-gems": {
+      const board = gems.freshBoard();
+      board[17] = "bh";
+      board[31] = "*";
+      board[38] = "gx";
+      return base({ kind: "gems", state: { board, turn: "a", left: 2, done: { a: 2, b: 2 }, points: { a: 1240, b: 980 }, last: null, moves: 8 } });
+    }
     default:
       return null;
   }
 }
 
+function bombStart(): bomb.BombState {
+  return {
+    phase: "hide",
+    round: 1,
+    wins: { a: 0, b: 0 },
+    starter: "a",
+    ready_a: false,
+    ready_b: false,
+    turn: null,
+    open_a: ".........",
+    open_b: ".........",
+    boom_a: 0,
+    boom_b: 0,
+    last: null,
+    result: null,
+    moves: 0,
+  };
+}
+
+/** Bombshell and Gem Clash previews you can actually play, against a simple bot */
+function useLocalGame(initial: Game | null) {
+  const [game, setGame] = useState(initial);
+  const ref = useRef(game);
+  ref.current = game;
+  const secrets = useRef<Record<"a" | "b", number[]>>({ a: (initial?.mine?.bombs as number[]) ?? [], b: [1, 3, 7] });
+
+  function apply(side: "a" | "b", mv: unknown): string | null {
+    const g = ref.current;
+    if (!g) return null;
+    try {
+      const r =
+        g.kind === "gems"
+          ? gems.applyMove(g.state as gems.GemsState, side, mv as gems.GemsMove)
+          : bomb.applyMove(g.state as bomb.BombState, side, mv as bomb.BombMove, secrets.current);
+      if (r.secrets) for (const s of ["a", "b"] as const) if (r.secrets[s]) secrets.current[s] = (r.secrets[s] as bomb.BombSecret).bombs;
+      const next: Game = { ...g, state: r.state, mine: { bombs: secrets.current.a } };
+      if (r.over) Object.assign(next, { status: "done", ended_at: new Date().toISOString(), score_a: r.over.score_a, score_b: r.over.score_b, winner: r.over.winner === "a" ? "me" : r.over.winner ? "ada" : null });
+      ref.current = next;
+      setGame(next);
+      return null;
+    } catch (e) {
+      if (e instanceof MoveError) return e.message;
+      throw e;
+    }
+  }
+
+  // The bot's turn
+  const st = game?.state;
+  useEffect(() => {
+    const g = ref.current;
+    if (!g || g.status !== "active" || (g.kind !== "gems" && g.kind !== "bomb")) return;
+    const t = setTimeout(() => {
+      const s = ref.current!.state;
+      if (g.kind === "bomb") {
+        const b = s as bomb.BombState;
+        if (b.phase === "hide" && !b.ready_b) apply("b", { type: "hide", cells: [0, 1, 2, 3, 4, 5, 6, 7, 8].sort(() => Math.random() - 0.5).slice(0, 3) });
+        else if (b.phase === "play" && b.turn === "b") {
+          const free = [...b.open_a].flatMap((c, i) => (c === "." ? [i] : []));
+          apply("b", { type: "pick", cell: free[Math.floor(Math.random() * free.length)] });
+        }
+      } else {
+        const gs = s as gems.GemsState;
+        if (gs.turn !== "b") return;
+        const opts: [number, number][] = [];
+        for (let i = 0; i < gems.N; i++) for (const j of [i + 1, i + gems.SIZE]) if (j < gems.N && (j !== i + 1 || i % gems.SIZE < gems.SIZE - 1) && gems.swapWorks(gs.board, i, j)) opts.push([i, j]);
+        const [a, b] = opts[Math.floor(Math.random() * opts.length)];
+        apply("b", { type: "swap", a, b });
+      }
+    }, game?.kind === "gems" ? 2600 : 1400);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [st]);
+
+  const local: GameActions = { ...act, move: async (mv) => apply("a", mv) };
+  return { game, act: local };
+}
+
 export function GameDemo({ screen }: { screen: string }) {
-  const game = useMemo(() => demo(screen), [screen]);
+  const initial = useMemo(() => demo(screen), [screen]);
+  const live = useLocalGame(initial);
+  const game = live.game;
   if (screen === "game-launcher") {
     return (
       <div className="min-h-dvh bg-cream">
@@ -216,7 +338,7 @@ export function GameDemo({ screen }: { screen: string }) {
     <GameArena
       game={game}
       names={names}
-      act={act}
+      act={game.kind === "bomb" || game.kind === "gems" ? live.act : act}
       onMinimize={() => {}}
       onClose={() => {}}
       peek={screen === "game-c4" ? "you're not winning this one 😤" : null}

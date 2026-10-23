@@ -6,14 +6,16 @@ import * as checkers from "@/lib/boardgames/checkers";
 import * as chess from "@/lib/boardgames/chess";
 import * as ayo from "@/lib/boardgames/ayo";
 import * as whot from "@/lib/boardgames/whot";
+import * as bomb from "@/lib/boardgames/bomb";
+import * as gems from "@/lib/boardgames/gems";
 
 /**
- * A move in Whot, Checkers, Chess or Ayo. The rules are checked here (the same
+ * A move in Whot, Checkers, Chess, Ayo, Bombshell or Gem Clash. The rules are checked here (the same
  * rules the phone uses to show legal moves), then saved with the service key.
  * Every save bumps `seq`, so a move made on an old view of the game is refused.
  */
 const IDLE_MS = 5 * 60_000;
-const KINDS = ["whot", "checkers", "chess", "ayo"];
+const KINDS = ["whot", "checkers", "chess", "ayo", "bomb", "gems"];
 
 export async function POST(req: Request) {
   const { user } = await getAuth();
@@ -34,7 +36,12 @@ export async function POST(req: Request) {
     if (g.kind === "checkers") result = checkers.applyMove(g.state, side, body.move as checkers.CheckersMove);
     else if (g.kind === "chess") result = chess.applyMove(g.state, side, body.move as chess.ChessMove);
     else if (g.kind === "ayo") result = ayo.applyMove(g.state, side, Number(body.move));
-    else {
+    else if (g.kind === "gems") result = gems.applyMove(g.state, side, body.move as gems.GemsMove);
+    else if (g.kind === "bomb") {
+      const { data: secrets } = await db.from("game_secrets").select("user_id, data").eq("game_id", g.id);
+      const bombsOf = (id: string) => ((secrets ?? []).find((s) => s.user_id === id)?.data?.bombs ?? []) as number[];
+      result = bomb.applyMove(g.state, side, body.move as bomb.BombMove, { a: bombsOf(g.player_a), b: bombsOf(g.player_b) });
+    } else {
       const [{ data: secrets }, { data: priv }] = await Promise.all([
         db.from("game_secrets").select("user_id, data").eq("game_id", g.id),
         db.from("game_private").select("data").eq("game_id", g.id).maybeSingle(),
@@ -46,6 +53,19 @@ export async function POST(req: Request) {
     if (e instanceof MoveError) return NextResponse.json({ error: e.message }, { status: 422 });
     throw e;
   }
+
+  const saveSecrets = () =>
+    result.secrets
+      ? Promise.all(
+          (["a", "b"] as Side[]).map((s) =>
+            result.secrets?.[s] !== undefined
+              ? db.from("game_secrets").update({ data: result.secrets[s] }).eq("game_id", g.id).eq("user_id", s === "a" ? g.player_a : g.player_b)
+              : null,
+          ),
+        )
+      : null;
+  // Bombshell: hidden bombs are saved first, so they're there the moment the round starts
+  if (g.kind === "bomb") await saveSecrets();
 
   // Save, but only if nobody else moved first
   const { data: saved } = await db
@@ -62,15 +82,7 @@ export async function POST(req: Request) {
     .select("id");
   if (!saved?.length) return NextResponse.json({ error: "The game moved on. Try again." }, { status: 409 });
 
-  if (result.secrets) {
-    await Promise.all(
-      (["a", "b"] as Side[]).map((s) =>
-        result.secrets?.[s] !== undefined
-          ? db.from("game_secrets").update({ data: result.secrets[s] }).eq("game_id", g.id).eq("user_id", s === "a" ? g.player_a : g.player_b)
-          : null,
-      ),
-    );
-  }
+  if (g.kind !== "bomb") await saveSecrets();
   if (result.priv !== undefined) await db.from("game_private").upsert({ game_id: g.id, data: result.priv });
 
   if (result.over) {
