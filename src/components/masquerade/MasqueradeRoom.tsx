@@ -453,7 +453,7 @@ export function MasqueradeRoom({
             ...(state.hourly && games.canPlay
               ? [{ key: "game", label: games.live ? "Back to game" : "Play a game", icon: <Gamepad2 size={24} strokeWidth={1.75} />, tone: "bg-brand-soft text-brand", onClick: games.play }]
               : []),
-            { key: "ice", label: "New icebreaker", icon: <Dices size={24} strokeWidth={1.75} />, tone: "bg-gold-soft text-[#9a6a0c]", onClick: () => void nextQuestion() },
+            { key: "ice", label: "Icebreaker", icon: <Dices size={24} strokeWidth={1.75} />, tone: "bg-gold-soft text-[#9a6a0c]", onClick: () => void nextQuestion() },
           ]}
           onGift={() => {
             refreshWallet();

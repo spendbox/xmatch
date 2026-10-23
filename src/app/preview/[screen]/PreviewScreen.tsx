@@ -296,7 +296,7 @@ function ScreenBody({ screen }: { screen: string }) {
     case "people":
       return <div className="pb-24"><YourPeople matches={recent} myId="me" /><BottomNav /></div>;
     case "admin-prices":
-      return <AdminShell><PricesManager settings={{ reopen_cost: 10, reveal_cost: 1, free_reveals: 10, invite_reward: 10, meet_cost: 10, meet_free_posts: 1, meet_hours: 3, explore_message_cost: 15, explore_photos_cost: 5, ghost_cost: 100, setup_reward: 5 }} invites={{ joined: 64, joined_7d: 12, buyers: 19, keys_paid: 410, top: [{ name: "Tolu", joined: 9, earned: 90 }, { name: "Kemi", joined: 6, earned: 40 }] }}
+      return <AdminShell><PricesManager settings={{ reopen_cost: 10, reveal_cost: 1, free_reveals: 10, invite_reward: 10, meet_cost: 10, meet_free_posts: 1, meet_hours: 3, explore_message_cost: 15, explore_photos_cost: 5, ghost_cost: 100, setup_reward: 5, slow_reveal_cost: 10 }} invites={{ joined: 64, joined_7d: 12, buyers: 19, keys_paid: 410, top: [{ name: "Tolu", joined: 9, earned: 90 }, { name: "Kemi", joined: 6, earned: 40 }] }}
         gifts={[{ id: "fire", name: "Fire", emoji: "🔥", price: 5, sort: 1, retired: false }, { id: "rose", name: "Rose", emoji: "🌹", price: 5, sort: 2, retired: false }, { id: "jollof", name: "Jollof", emoji: "🍛", price: 15, sort: 5, retired: false }, { id: "teddy", name: "Teddy bear", emoji: "🧸", price: 30, sort: 91, retired: true }]}
         packs={[{ id: "p50", keys: 50, naira: 750, tag: null, sort: 1, active: true }, { id: "p150", keys: 150, naira: 2000, tag: "Popular", sort: 2, active: true }, { id: "p500", keys: 500, naira: 4500, tag: "Best value", sort: 3, active: true }]} /></AdminShell>;
     case "admin-masquerade": {
@@ -463,6 +463,11 @@ function ScreenBody({ screen }: { screen: string }) {
             { id: 16, sender_id: "me", kind: "audio", body: "", created_at: iso(200), media_meta: { duration: 6 } },
             { id: 17, sender_id: "ada", kind: "text", body: "Haha deal. I'll bring the playlist", created_at: iso(120), reply_to: 16 },
             { id: 18, sender_id: "me", kind: "text", body: "", deleted_at: iso(60), created_at: iso(80) },
+            { id: 19, sender_id: "ada", kind: "image", body: "Guess where I am 👀", created_at: iso(70), slow: true, media_meta: { width: 400, height: 500, preview: photo("#f2b33d", "#e5484d", "☀") } },
+            { id: 20, sender_id: "me", kind: "text", body: "Ohh you're making me work for it", created_at: iso(60) },
+            { id: 21, sender_id: "ada", kind: "text", body: "Keep talking and find out 😌", created_at: iso(50) },
+            { id: 22, sender_id: "me", kind: "text", body: "Is it the beach?", created_at: iso(40) },
+            { id: 23, sender_id: "me", kind: "image", body: "", created_at: iso(30), slow: true, local_url: photo("#5b3fd9", "#1f9d6b", "🌴"), media_meta: { width: 400, height: 400 } },
           ]}
         />
       );

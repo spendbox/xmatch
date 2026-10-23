@@ -47,11 +47,48 @@ export function readMediaInfo(src: string, kind: "video" | "audio"): Promise<{ d
   });
 }
 
+/** A tiny picture (about 40px) of a photo or a video's first moments: all the other person gets of a slow reveal until it clears */
+async function tinyPreview(file: Blob, kind: "image" | "video"): Promise<Blob | null> {
+  try {
+    let source: CanvasImageSource;
+    let w: number;
+    let h: number;
+    if (kind === "image") {
+      const bmp = await createImageBitmap(file);
+      [source, w, h] = [bmp, bmp.width, bmp.height];
+    } else {
+      const v = document.createElement("video");
+      v.muted = true;
+      v.playsInline = true;
+      v.preload = "auto";
+      v.src = URL.createObjectURL(file);
+      await new Promise<void>((resolve, reject) => {
+        v.onloadeddata = () => {
+          v.currentTime = Math.min(0.5, (v.duration || 1) / 2);
+        };
+        v.onseeked = () => resolve();
+        v.onerror = () => reject(new Error("video"));
+        setTimeout(() => reject(new Error("slow")), 6000);
+      });
+      [source, w, h] = [v, v.videoWidth, v.videoHeight];
+    }
+    const scale = 40 / Math.max(w, h);
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(w * scale));
+    canvas.height = Math.max(1, Math.round(h * scale));
+    canvas.getContext("2d")!.drawImage(source, 0, 0, canvas.width, canvas.height);
+    return await new Promise<Blob | null>((r) => canvas.toBlob((b) => r(b), "image/jpeg", 0.7));
+  } catch {
+    return null;
+  }
+}
+
 export async function uploadChatMedia(
   supabase: SupabaseClient,
   matchId: string,
   file: Blob,
   kind: "image" | "video" | "audio",
+  slow = false,
 ) {
   let blob = file;
   let meta: Record<string, unknown> = {};
@@ -62,7 +99,16 @@ export async function uploadChatMedia(
   }
   if (blob.size > MAX_MEDIA_BYTES) throw new Error("That file is too big. The limit is 50 MB.");
   const mime = (blob.type || (kind === "audio" ? "audio/webm" : "application/octet-stream")).split(";")[0];
-  const path = `${matchId}/${crypto.randomUUID()}.${extFor(mime)}`;
+  const id = crypto.randomUUID();
+  const path = `${matchId}/${id}.${extFor(mime)}`;
+  if (slow && kind !== "audio") {
+    const tiny = await tinyPreview(file, kind);
+    if (tiny) {
+      const p = `${matchId}/${id}_p.jpg`;
+      const { error } = await supabase.storage.from(BUCKET).upload(p, new Blob([tiny], { type: "image/jpeg" }), { contentType: "image/jpeg", cacheControl: "31536000" });
+      if (!error) meta = { ...meta, preview: p };
+    }
+  }
   // Files never change once sent, so phones can keep them (saves downloading them again)
   // Storage reads the type from the file itself, so give it the plain one ("audio/webm", not "audio/webm;codecs=opus")
   const body = blob.type === mime ? blob : new Blob([blob], { type: mime });

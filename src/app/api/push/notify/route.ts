@@ -16,9 +16,9 @@ type Body = { kind?: string; matchId?: string; callId?: string; chatId?: string;
 const RECENT_MS = 60_000;
 const firstName = (n: string | null | undefined) => (n ?? "").split(" ")[0] || "Someone";
 
-function preview(kind: string, body: string | null) {
-  if (kind === "image") return "📷 Photo";
-  if (kind === "video") return "🎬 Video";
+function preview(kind: string, body: string | null, slow = false) {
+  if (kind === "image") return slow ? "⏳ Sent you a slow reveal photo" : "📷 Photo";
+  if (kind === "video") return slow ? "⏳ Sent you a slow reveal video" : "🎬 Video";
   if (kind === "audio") return "🎤 Voice note";
   if (kind === "gift") {
     const g = GIFTS.find((x) => x.id === body);
@@ -43,7 +43,7 @@ export async function POST(req: Request) {
     const other = m.user_a === uid ? m.user_b : m.user_a;
     const { data: msg } = await db
       .from("messages")
-      .select("kind, body, created_at")
+      .select("kind, body, created_at, slow")
       .eq("match_id", m.id)
       .eq("sender_id", uid)
       .order("id", { ascending: false })
@@ -55,7 +55,7 @@ export async function POST(req: Request) {
       [other as string],
       {
         title: firstName(me?.display_name),
-        body: preview(msg.kind as string, msg.body as string | null),
+        body: preview(msg.kind as string, msg.body as string | null, !!msg.slow),
         url: `/matches/${m.id}`,
         tag: `match-${m.id}`,
         icon: (me?.photos as string[] | null)?.[0] ?? null,
