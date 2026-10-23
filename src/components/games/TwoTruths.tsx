@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
+import { thingSentence, type Thing } from "@/lib/things";
 import { createClient } from "@/lib/supabase/client";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { buzz, sfx, type Game, type GameActions } from "@/lib/games";
@@ -60,12 +61,24 @@ function Write({ game, names, act, them }: { game: Game; names: Names; act: Game
   // Truths you've used before (kept on your account to use again)
   const [saved, setSaved] = useState<Truth[]>(game.mine?.draft?.saved ?? []);
   const [editing, setEditing] = useState(false);
+  // Your "things about me" cards, as ready-made truths
+  const [fromThings, setFromThings] = useState<string[]>(game.mine?.draft?.things ?? []);
   const refs = useRef<(HTMLTextAreaElement | null)[]>([]);
   const locked = !!game.state[`ready_${game.me}`];
   const theyReady = !!game.state[`ready_${them}`];
 
   useEffect(() => {
     act.call("my_truths", {}).then(({ data }) => Array.isArray(data) && setSaved(data as Truth[]));
+    const myId = game.me === "a" ? game.player_a : game.player_b;
+    createClient()
+      .from("profiles")
+      .select("things")
+      .eq("id", myId)
+      .maybeSingle()
+      .then(({ data }) => {
+        const list = ((data?.things ?? []) as Thing[]).map(thingSentence);
+        if (list.length) setFromThings(list);
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -223,6 +236,38 @@ function Write({ game, names, act, them }: { game: Game; names: Names; act: Game
             })}
           </div>
           <p className="mt-2 text-[11px] text-white/55">Your truths are saved when you lock in, so you can use them again in any game.</p>
+        </section>
+      )}
+
+      {fromThings.filter((t) => !saved.some((s) => s.body.toLowerCase() === t.toLowerCase())).length > 0 && (
+        <section className="mt-3 rounded-[20px] bg-white/8 p-3">
+          <p className="mb-2 text-[12px] font-extrabold tracking-[0.12em] text-gold uppercase">From your things</p>
+          <div className="no-scrollbar -mx-3 flex gap-2 overflow-x-auto px-3 pb-0.5">
+            {fromThings
+              .filter((t) => !saved.some((s) => s.body.toLowerCase() === t.toLowerCase()))
+              .map((t) => {
+                const used = lines.some((l) => l.trim().toLowerCase() === t.toLowerCase());
+                return (
+                  <button
+                    key={t}
+                    type="button"
+                    disabled={used}
+                    onClick={() => {
+                      addIdea(t);
+                      sfx("tap");
+                    }}
+                    className={clsx(
+                      "gm-btn max-w-[240px] shrink-0 truncate rounded-full px-3 py-1.5 text-left text-[13px] font-semibold",
+                      used ? "bg-[#7dffb5]/20 text-[#7dffb5]" : "bg-gold text-ink",
+                    )}
+                  >
+                    {used ? "✓ " : ""}
+                    {t}
+                  </button>
+                );
+              })}
+          </div>
+          <p className="mt-2 text-[11px] text-white/55">Tap one to use it, then twist one line into your lie.</p>
         </section>
       )}
 

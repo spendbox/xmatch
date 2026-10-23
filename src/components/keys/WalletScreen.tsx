@@ -28,6 +28,7 @@ const REASONS: Record<string, string> = {
   photos: "Unlocked someone's photos",
   explore_message: "Messaged someone from Explore",
   ghost: "Ghost mode (30 days)",
+  setup: "Getting set up",
 };
 
 export function WalletScreen({

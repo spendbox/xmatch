@@ -24,6 +24,7 @@ type Settings = {
   explore_message_cost: number;
   explore_photos_cost: number;
   ghost_cost: number;
+  setup_reward: number;
 };
 export type InviteStats = { joined: number; joined_7d: number; buyers: number; keys_paid: number; top: { name: string | null; joined: number; earned: number }[] };
 
@@ -55,6 +56,16 @@ export function PricesManager({ settings, gifts, packs, invites = null }: { sett
           <SettingField k="explore_message_cost" label="Message someone" hint="Keys to start a chat with someone you're not connected to" value={settings.explore_message_cost} />
           <SettingField k="explore_photos_cost" label="Unlock photos" hint="Keys to unblur someone's photos and see the rest" value={settings.explore_photos_cost} />
           <SettingField k="ghost_cost" label="Ghost mode" hint="Keys for 30 days hidden from the Meet page" value={settings.ghost_cost} />
+        </div>
+      </section>
+
+      <section className="mt-6 rounded-3xl border border-line bg-surface p-5 shadow-card">
+        <h2 className="text-[16px] font-semibold">Getting set up</h2>
+        <p className="mt-1 text-[13px] text-muted">
+          The checklist on Home: add where you are, turn on notifications and add 10 things about you. Paid once per member. Set it to 0 to stop paying it.
+        </p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <SettingField k="setup_reward" label="Setup reward" hint="Keys for finishing the Home checklist" value={settings.setup_reward} />
         </div>
       </section>
 

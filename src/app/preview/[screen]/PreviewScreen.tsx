@@ -22,6 +22,7 @@ import { Outcome } from "@/components/masquerade/Outcome";
 import { MatchesList } from "@/components/matches/MatchesList";
 import { MatchChat } from "@/components/matches/MatchChat";
 import { ProfileSheet } from "@/components/matches/ProfileSheet";
+import { ThingsDeck } from "@/components/profile/ThingsDeck";
 import { CallScreen } from "@/components/calls/CallScreen";
 import { ProfileEditor } from "@/components/profile/ProfileEditor";
 import { BottomNav } from "@/components/app/BottomNav";
@@ -57,6 +58,12 @@ const photo = (a: string, b: string, letter: string) =>
 
 const me: Profile = {
   id: "me",
+  things: [
+    { p: "food", a: "Jollof rice" },
+    { p: "music", a: "Asake on repeat" },
+    { p: "team", a: "Arsenal, sadly" },
+    { p: "weekend", a: "Owambe till late" },
+  ],
   display_name: "Tolu",
   birthdate: "1997-04-12",
   gender: "man",
@@ -289,7 +296,7 @@ function ScreenBody({ screen }: { screen: string }) {
     case "people":
       return <div className="pb-24"><YourPeople matches={recent} myId="me" /><BottomNav /></div>;
     case "admin-prices":
-      return <AdminShell><PricesManager settings={{ reopen_cost: 10, reveal_cost: 1, free_reveals: 10, invite_reward: 10, meet_cost: 10, meet_free_posts: 1, meet_hours: 3, explore_message_cost: 15, explore_photos_cost: 5, ghost_cost: 100 }} invites={{ joined: 64, joined_7d: 12, buyers: 19, keys_paid: 410, top: [{ name: "Tolu", joined: 9, earned: 90 }, { name: "Kemi", joined: 6, earned: 40 }] }}
+      return <AdminShell><PricesManager settings={{ reopen_cost: 10, reveal_cost: 1, free_reveals: 10, invite_reward: 10, meet_cost: 10, meet_free_posts: 1, meet_hours: 3, explore_message_cost: 15, explore_photos_cost: 5, ghost_cost: 100, setup_reward: 5 }} invites={{ joined: 64, joined_7d: 12, buyers: 19, keys_paid: 410, top: [{ name: "Tolu", joined: 9, earned: 90 }, { name: "Kemi", joined: 6, earned: 40 }] }}
         gifts={[{ id: "fire", name: "Fire", emoji: "🔥", price: 5, sort: 1, retired: false }, { id: "rose", name: "Rose", emoji: "🌹", price: 5, sort: 2, retired: false }, { id: "jollof", name: "Jollof", emoji: "🍛", price: 15, sort: 5, retired: false }, { id: "teddy", name: "Teddy bear", emoji: "🧸", price: 30, sort: 91, retired: true }]}
         packs={[{ id: "p50", keys: 50, naira: 750, tag: null, sort: 1, active: true }, { id: "p150", keys: 150, naira: 2000, tag: "Popular", sort: 2, active: true }, { id: "p500", keys: 500, naira: 4500, tag: "Best value", sort: 3, active: true }]} /></AdminShell>;
     case "admin-masquerade": {
@@ -304,12 +311,12 @@ function ScreenBody({ screen }: { screen: string }) {
       return <AdminShell><MasqueradeHealth stats={{ now: new Date(now).toISOString(), hours, switched_on: 1840, eligible_now: 960, no_place: 212, week: { pairs: 4120, clicked: 830, quiet: 1010, reopened: 190 }, by_mood: { friends: 1500, dating: 1900, spicy: 720 } }} /></AdminShell>;
     }
     case "home-clicked":
-      return <div className="pb-24"><HomeScreen demoPeople={homePeople} hour={demoHour("clicked")} profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} /><BottomNav /></div>;
+      return <div className="pb-24"><HomeScreen demoPeople={homePeople} demoSetup={{ place: true, push: false, things: 4, claimed: false, reward: 5 }} hour={demoHour("clicked")} profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} /><BottomNav /></div>;
     case "home-next":
     case "home-off":
       return (
         <div className="pb-24">
-          <HomeScreen demoPeople={homePeople} hour={demoHour(screen === "home-off" ? "off" : "next")} profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} stats={{ online: 214, week_chats: 12, week_unmasks: 5, gifts_received: 3 }} matches={recent} />
+          <HomeScreen demoPeople={homePeople} demoSetup={{ place: true, push: false, things: 4, claimed: false, reward: 5 }} hour={demoHour(screen === "home-off" ? "off" : "next")} profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} stats={{ online: 214, week_chats: 12, week_unmasks: 5, gifts_received: 3 }} matches={recent} />
           <BottomNav />
         </div>
       );
@@ -343,7 +350,7 @@ function ScreenBody({ screen }: { screen: string }) {
         </div>
       );
     case "meet-post":
-      return <HomeScreen demoPeople={homePeople} profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} hour={demoHour()} meets={demoMeets} demoSheet="post" />;
+      return <HomeScreen demoPeople={homePeople} demoSetup={{ place: true, push: false, things: 4, claimed: false, reward: 5 }} profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} hour={demoHour()} meets={demoMeets} demoSheet="post" />;
     case "room-meet":
     case "room-meet-mine":
       return (
@@ -368,7 +375,7 @@ function ScreenBody({ screen }: { screen: string }) {
     case "home":
       return (
         <div className="pb-24">
-          <HomeScreen demoPeople={homePeople} meets={demoMeets} hour={demoHour()} profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} stats={{ online: 214, week_chats: 12, week_unmasks: 5, gifts_received: 3 }} matches={recent} />
+          <HomeScreen demoPeople={homePeople} demoSetup={{ place: true, push: false, things: 4, claimed: false, reward: 5 }} meets={demoMeets} hour={demoHour()} profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} stats={{ online: 214, week_chats: 12, week_unmasks: 5, gifts_received: 3 }} matches={recent} />
           <BottomNav />
         </div>
       );
@@ -378,7 +385,7 @@ function ScreenBody({ screen }: { screen: string }) {
     case "sheet-spice":
     case "sheet-distance":
     case "sheet-seeking":
-      return <HomeScreen demoPeople={homePeople} profile={me} wallet={{ balance: 3, passes: 0, free_left: 0, next_free_at: new Date(now + 3 * 3600_000 + 12 * 60_000).toISOString() }} stats={null} matches={[]} hour={demoHour("next")} demoSheet="meet" />;
+      return <HomeScreen demoPeople={homePeople} demoSetup={{ place: true, push: false, things: 4, claimed: false, reward: 5 }} profile={me} wallet={{ balance: 3, passes: 0, free_left: 0, next_free_at: new Date(now + 3 * 3600_000 + 12 * 60_000).toISOString() }} stats={null} matches={[]} hour={demoHour("next")} demoSheet="meet" />;
     case "buttons":
       return (
         <div className="mx-auto max-w-md space-y-3 p-5 pt-16">
@@ -389,7 +396,7 @@ function ScreenBody({ screen }: { screen: string }) {
         </div>
       );
     case "waiting":
-      return <HomeScreen demoPeople={homePeople} profile={me} wallet={null} stats={null} matches={[]} hour={demoHour("next")} />;
+      return <HomeScreen demoPeople={homePeople} demoSetup={{ place: true, push: false, things: 4, claimed: false, reward: 5 }} profile={me} wallet={null} stats={null} matches={[]} hour={demoHour("next")} />;
     case "chat":
       return <MasqueradeRoom initial={session()} initialMessages={msgs} demo={{ remaining: 121 }} />;
     case "decide":
@@ -653,6 +660,8 @@ function ScreenBody({ screen }: { screen: string }) {
       );
     case "profile-preview":
       return <ProfileSheet profile={ada} shared={["Travel", "Food"]} onClose={() => {}} />;
+    case "things-deck":
+      return <ThingsDeck open onClose={() => {}} things={me.things ?? []} onSaved={() => {}} demo />;
     case "profile":
       return (
         <div className="pb-24">

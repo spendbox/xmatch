@@ -359,6 +359,11 @@ export function MasqueradeRoom({
               You both like {formatList(them.shared_interests)} ✓
             </span>
           )}
+          {(them.shared_words ?? []).length > 0 && (
+            <span className="mt-1 block font-semibold text-[#c2306b]">
+              You both mentioned {formatList(them.shared_words!)} ✨
+            </span>
+          )}
         </p>
         <MessageList
           messages={messages}

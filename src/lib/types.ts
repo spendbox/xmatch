@@ -24,6 +24,8 @@ export type Profile = {
   place_label?: string | null;
   /** Ghost mode: hidden from the Meet page while it lasts */
   ghost_on?: boolean;
+  /** "Things about me" cards: prompt id and answer */
+  things?: { p: string; a: string }[];
   ghost_until?: string | null;
 };
 
@@ -71,6 +73,8 @@ export type MasqueradeState = {
     connections?: number;
     reply_seconds?: number | null;
     has_voted: boolean;
+    /** Words you both used in "things about me" */
+    shared_words?: string[];
     /** In the app right now */
     online?: boolean;
     /** Minutes since they were last in the app */

@@ -3,13 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
-import { BellRing, Gift, Handshake, MapPin, MessageCircle } from "lucide-react";
+import { Handshake, MessageCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { intentLabel } from "@/lib/constants";
 import { sexLabel } from "@/lib/eventSpace";
 import { clock, lagosHour, lagosTime, type MasqueradeHour } from "@/lib/hourly";
-import { usePushState } from "@/components/app/Notifications";
-import { useInvites, useShareInvite } from "@/components/profile/InviteCard";
 import { Toggle } from "@/components/ui/Toggle";
 import { tapFeedback } from "@/components/ui/Button";
 import { MaskIcon } from "@/components/ui/MaskIcon";
@@ -72,23 +70,16 @@ export function useMasqueradeHour(userId: string, initial: MasqueradeHour | null
 export function MasqueradeCard({
   userId,
   ctl,
-  hasPlace,
-  onPlace,
   onSettings,
 }: {
   userId: string;
   ctl: ReturnType<typeof useMasqueradeHour>;
-  hasPlace: boolean;
-  onPlace: () => void;
   /** Tapped while waiting for a pair: open the Masquerade settings */
   onSettings?: () => void;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const { hour, setHour, skew } = ctl;
   const [now, setNow] = useState<number | null>(null);
-  const push = usePushState();
-  const invites = useInvites();
-  const { share, copied } = useShareInvite(invites);
 
   useEffect(() => {
     setNow(Date.now());
@@ -108,18 +99,6 @@ export function MasqueradeCard({
     if (error) setHour((h) => (h ? { ...h, enabled: !v } : h));
   }
 
-  // One small extra at a time, most useful first, so the card stays short
-  const extra =
-    !hour || (!enabled && !live) || live
-      ? null
-      : !hasPlace
-        ? "place"
-        : push.state === "off"
-          ? "push"
-          : !live && cur?.status !== "matched"
-            ? "invite"
-            : null;
-
   const preview = cur
     ? cur.my_vote === true
       ? `You unmasked. If ${cur.their_alias} does too, you're connected.`
@@ -133,7 +112,7 @@ export function MasqueradeCard({
     : "";
 
   return (
-    <section className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-brand via-[#6d4ff0] to-[#8f6bff] px-4 pt-3.5 pb-4 text-white shadow-[0_18px_40px_-18px_rgb(91_63_217/0.8)] lg:rounded-[28px] lg:p-6">
+    <section className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-brand via-[#6d4ff0] to-[#8f6bff] px-5 pt-4 pb-5 text-white shadow-[0_18px_40px_-18px_rgb(91_63_217/0.8)] lg:rounded-[28px] lg:p-6">
       <div aria-hidden className="absolute -top-14 -right-12 h-40 w-40 rounded-full bg-white/10" />
 
       <div className="relative flex items-center gap-3">
@@ -151,8 +130,8 @@ export function MasqueradeCard({
       {!hour ? (
         <p className="relative py-5 text-center text-[14px] text-white/80">Checking your pair…</p>
       ) : live && cur ? (
-        <div className="relative mt-3">
-          <div className="flex items-center gap-3">
+        <div className="relative mt-3.5">
+          <div className="flex items-center gap-3.5">
             <Face alias={cur.their_alias} />
             <div className="min-w-0 flex-1">
               <p className="truncate text-[17px] leading-tight font-semibold">{cur.their_alias}</p>
@@ -168,7 +147,7 @@ export function MasqueradeCard({
               <MessageCircle size={16} /> {cur.messages ? "Chat" : "Say hi"}
             </Link>
           </div>
-          <p className="mt-2.5 truncate text-[13px] text-white/85">{preview}</p>
+          <p className="mt-3 truncate text-[14px] text-white/85">{preview}</p>
         </div>
       ) : cur?.status === "matched" ? (
         <div className="relative mt-3 flex items-center gap-3">
@@ -205,13 +184,13 @@ export function MasqueradeCard({
             onSettings?.();
           }}
           aria-label={`Next pair at ${lagosTime(hour.next_at)}. Open your Masquerade settings`}
-          className="relative mt-2.5 flex w-full items-center gap-3 rounded-2xl text-left transition active:scale-[0.99]"
+          className="relative mt-3.5 flex w-full items-center gap-4 rounded-2xl text-left transition active:scale-[0.99]"
         >
           <div className="min-w-0 flex-1">
             <p className="text-[13px] text-white/75">
-              Next pair at {lagosTime(hour.next_at)} · <span className="font-semibold text-white underline decoration-white/40 underline-offset-2">Settings</span>
+              Next pair at {lagosTime(hour.next_at)}
             </p>
-            <p className="mt-0.5 text-[13px] leading-snug text-white/90">
+            <p className="mt-1 text-[14px] leading-snug text-white/90">
               {cur?.status === "ended" || cur?.status === "lapsed"
                 ? "This hour's chat is done. Someone new is coming."
                 : !hour.hour_open
@@ -221,7 +200,7 @@ export function MasqueradeCard({
                     : "We pair everyone on the hour."}
             </p>
             {hour.pulse && hour.pulse.all > 0 && (
-              <p className="mt-1.5 inline-flex max-w-full items-center gap-1.5 truncate rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-semibold">
+              <p className="mt-2.5 inline-flex max-w-full items-center gap-1.5 truncate rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-semibold">
                 <span className="relative flex h-2 w-2 shrink-0">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#7dffb5] opacity-75" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-[#7dffb5]" />
@@ -236,39 +215,6 @@ export function MasqueradeCard({
         </button>
       )}
 
-      {extra && (
-        <button
-          type="button"
-          onClick={() => {
-            tapFeedback();
-            if (extra === "place") onPlace();
-            else if (extra === "push") push.turnOn();
-            else share();
-          }}
-          disabled={extra === "push" && push.busy}
-          className="relative mt-3 flex h-9 w-full items-center gap-2 rounded-xl bg-white/12 px-3 text-left text-[12px] transition hover:bg-white/20"
-        >
-          {extra === "place" ? <MapPin size={15} className="shrink-0" /> : extra === "push" ? <BellRing size={15} className="shrink-0" /> : <Gift size={15} className="shrink-0" />}
-          <span className="min-w-0 flex-1 truncate">
-            {extra === "place" ? (
-              <>
-                <span className="font-semibold">Add where you are</span>
-                <span className="text-white/75"> · to be paired nearby</span>
-              </>
-            ) : extra === "push" ? (
-              <>
-                <span className="font-semibold">{push.busy ? "Turning on…" : "Turn on notifications"}</span>
-                <span className="text-white/75"> · know when your pair arrives</span>
-              </>
-            ) : (
-              <>
-                <span className="font-semibold">{copied ? "Link copied!" : "Invite friends"}</span>
-                <span className="text-white/75"> · {hour?.invite_reward ?? 10} Keys on their first purchase</span>
-              </>
-            )}
-          </span>
-        </button>
-      )}
     </section>
   );
 }
