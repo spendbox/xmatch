@@ -1,11 +1,10 @@
 import { getAuth } from "@/lib/auth";
-import type { ExploreList } from "@/lib/explore";
 import { ExploreScreen } from "@/components/explore/ExploreScreen";
 
 export const metadata = { title: "Meet" };
 
+/** The list loads on the phone (and is kept there for a few minutes), so opening Meet stays cheap */
 export default async function MeetPage() {
-  const { supabase } = await getAuth();
-  const { data } = await supabase.rpc("explore_people", { p_limit: 60 });
-  return <ExploreScreen initial={(data as ExploreList | null) ?? null} />;
+  const { user } = await getAuth();
+  return <ExploreScreen initial={null} userId={user?.id} />;
 }

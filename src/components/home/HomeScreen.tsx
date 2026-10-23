@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { Sticky } from "@/components/ui/Sticky";
 import { ChevronRight, UsersRound } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Wallet } from "@/lib/keys";
@@ -88,8 +89,9 @@ export function HomeScreen({
   const hasKeys = balance > 0;
 
   return (
-    <main className="mx-auto max-w-md px-5 pt-5 lg:max-w-6xl lg:px-10 lg:pt-10">
-      {/* Top bar */}
+    <main className="mx-auto max-w-md px-5 pt-2.5 lg:max-w-6xl lg:px-10 lg:pt-8">
+      {/* Top bar: stays at the top while you scroll */}
+      <Sticky>
       <header className="flex items-center gap-3">
         <Link href="/profile" aria-label="Your profile" className="lg:hidden">
           <Avatar src={profile.photos?.[0]} name={profile.display_name} size={46} className="ring-2 ring-surface" />
@@ -118,11 +120,12 @@ export function HomeScreen({
           <KeyCoin size={30} /> {balance}
         </Link>
       </header>
+      </Sticky>
 
       <RecentChats matches={matches} />
 
       <div className="lg:mt-8 lg:grid lg:grid-cols-12 lg:items-start lg:gap-8">
-      <div className="mt-5 lg:sticky lg:top-8 lg:col-span-7 lg:mt-0">
+      <div className="mt-5 lg:sticky lg:top-24 lg:col-span-7 lg:mt-0">
         <MasqueradeCard userId={profile.id} ctl={ctl} hasPlace={!!place.country} onPlace={() => setPlaceOpen(true)} onSettings={() => setMeetOpen(true)} />
 
         <Link

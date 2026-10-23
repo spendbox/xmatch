@@ -225,7 +225,8 @@ export async function POST(req: Request) {
         url: `/events/${c.event_id}/chat/${c.id}`,
         tag: `event-chat-${c.id}`,
       },
-      { skipIfActive: true },
+      // During an event everyone is in the app, so always send it: the phone skips it
+      // only if they're looking at this very chat (see sw.js)
     );
     return ok;
   }

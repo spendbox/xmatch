@@ -116,7 +116,11 @@ export function useGameHost({
     </>
   );
 
-  return { button, banner, overlay, game, openLauncher: () => setLauncher(true), rematch: (k: string) => void actions.start(k as GameKind) };
+  /** For the + menu beside the message box: open the game in progress, or pick one */
+  const play = () => (live ? setOpen(true) : setLauncher(true));
+  const canPlay = !disabled && !(noLauncher && !live);
+
+  return { button, banner, overlay, game, play, canPlay, live, openLauncher: () => setLauncher(true), rematch: (k: string) => void actions.start(k as GameKind) };
 }
 
 function Banner({

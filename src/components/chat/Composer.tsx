@@ -12,6 +12,9 @@ import { useVoiceRecorder } from "./useVoiceRecorder";
 
 export type MediaKind = "image" | "video";
 
+/** Something in the + menu beside the message box (a game, an icebreaker…) */
+export type ComposerAction = { key: string; label: string; icon: React.ReactNode; tone: string; onClick: () => void; badge?: string };
+
 type Props = {
   onSend: (text: string) => Promise<void> | void;
   /** Turn on photo/video sending */
@@ -24,9 +27,10 @@ type Props = {
   onGift?: () => void;
   disabled?: boolean;
   placeholder?: string;
-  leading?: React.ReactNode;
-  /** Another button after `leading` (e.g. gifts in the masked chat) */
-  trailingExtra?: React.ReactNode;
+  /** Extra things in the + menu, so the message box keeps its room */
+  actions?: ComposerAction[];
+  /** A dot on the + button (e.g. a game is waiting) */
+  plusDot?: boolean;
 };
 
 export function Composer({
@@ -39,8 +43,8 @@ export function Composer({
   onGift,
   disabled,
   placeholder = "Say something…",
-  leading,
-  trailingExtra,
+  actions = [],
+  plusDot,
 }: Props) {
   const [text, setText] = useState("");
   const [attachOpen, setAttachOpen] = useState(false);
@@ -144,10 +148,7 @@ export function Composer({
         </div>
       ) : (
         <form onSubmit={submit} className="flex items-end gap-2 px-3 pt-3">
-          {/* Extra buttons tuck away while you type, so the message box has room */}
-          {!hasText && leading}
-          {!hasText && trailingExtra}
-          {onSendMedia && (
+          {(onSendMedia || onGift || actions.length > 0) && (
             <button
               type="button"
               onClick={() => {
@@ -155,10 +156,15 @@ export function Composer({
                 setAttachOpen(true);
               }}
               disabled={disabled}
-              className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-cream text-ink-soft transition active:scale-95 disabled:opacity-50"
-              aria-label="Send a photo, video or gift"
+              className={clsx(
+                "relative grid h-12 w-12 shrink-0 place-items-center rounded-full transition active:scale-95 disabled:opacity-50",
+                attachOpen ? "bg-brand text-white" : "bg-cream text-ink-soft",
+              )}
+              aria-label="More: games, gifts and more"
+              aria-expanded={attachOpen}
             >
-              <Plus size={22} />
+              <Plus size={22} className={clsx("transition-transform duration-200", attachOpen && "rotate-45")} />
+              {plusDot && <span className="absolute top-2 right-2 h-2.5 w-2.5 rounded-full bg-gold ring-2 ring-surface" />}
             </button>
           )}
           <textarea
@@ -211,19 +217,38 @@ export function Composer({
       <input ref={gallery} type="file" accept="image/*,video/*" className="hidden" onChange={(e) => { choose(e.target.files); e.target.value = ""; }} />
       <input ref={camera} type="file" accept="image/*,video/*" capture="environment" className="hidden" onChange={(e) => { choose(e.target.files); e.target.value = ""; }} />
 
-      <Sheet open={attachOpen} onClose={() => setAttachOpen(false)} title="Share">
+      <Sheet open={attachOpen} onClose={() => setAttachOpen(false)} title="More">
         <div className="grid grid-cols-3 gap-2.5 pb-2">
-          <AttachTile icon={<Images size={24} strokeWidth={1.75} />} label="Photo & video" tone="bg-brand-soft text-brand" onClick={() => gallery.current?.click()} />
-          <AttachTile icon={<Camera size={24} strokeWidth={1.75} />} label="Camera" tone="bg-mint-soft text-mint" onClick={() => camera.current?.click()} />
-          <AttachTile
-            icon={<Gift size={24} strokeWidth={1.75} />}
-            label="Gift"
-            tone="bg-chili-soft text-chili"
-            onClick={() => {
-              setAttachOpen(false);
-              onGift?.();
-            }}
-          />
+          {actions.map((a) => (
+            <AttachTile
+              key={a.key}
+              icon={a.icon}
+              label={a.label}
+              tone={a.tone}
+              badge={a.badge}
+              onClick={() => {
+                setAttachOpen(false);
+                a.onClick();
+              }}
+            />
+          ))}
+          {onSendMedia && (
+            <>
+              <AttachTile icon={<Images size={24} strokeWidth={1.75} />} label="Photo & video" tone="bg-brand-soft text-brand" onClick={() => gallery.current?.click()} />
+              <AttachTile icon={<Camera size={24} strokeWidth={1.75} />} label="Camera" tone="bg-mint-soft text-mint" onClick={() => camera.current?.click()} />
+            </>
+          )}
+          {onGift && (
+            <AttachTile
+              icon={<Gift size={24} strokeWidth={1.75} />}
+              label="Gift"
+              tone="bg-chili-soft text-chili"
+              onClick={() => {
+                setAttachOpen(false);
+                onGift();
+              }}
+            />
+          )}
         </div>
       </Sheet>
 

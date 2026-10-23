@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import { GripHorizontal, MessageCircle, VideoOff, X } from "lucide-react";
 import type HlsType from "hls.js";
+import { refreshMenuBadges } from "@/components/app/useMenuBadges";
 import { createClient } from "@/lib/supabase/client";
 import type { DashpadEvent, EventMedia } from "@/lib/events";
 import { playlistPosition, streamType, youtubeId, type StreamType } from "@/lib/eventSpace";
@@ -95,6 +96,8 @@ export function EventMediaProvider({ userId, children }: { userId: string; child
   const [bars, setBars] = useState(0);
   const [videoHidden, setVideoHidden] = useState(false);
   const [unread, setUnread] = useState<Record<string, number>>({});
+  const unreadRef = useRef(unread);
+  unreadRef.current = unread;
   const [toast, setToast] = useState<Toast | null>(null);
   const [drag, setDrag] = useState({ x: 0, y: 0 });
   const [mediaOff, setMediaOff] = useState(false);
@@ -538,9 +541,21 @@ export function EventMediaProvider({ userId, children }: { userId: string; child
         const { data } = await supabase.rpc("my_live_event_chats");
         if (!alive || !Array.isArray(data)) return;
         const open = pathRef.current.match(CHAT_PATH);
+        // The Chats icon in the menu counts these too
+        refreshMenuBadges();
+        const list = data as { id: string; event_id: string; unread: boolean; name?: string; last_message?: string | null }[];
+        // A new message in a chat you're not looking at: show it at the top of the screen
+        const fresh = list.find((c) => c.event_id === eventId && c.unread && !(open && open[2] === c.id) && !unreadRef.current[c.id]);
+        if (fresh) {
+          setToast({
+            id: Date.now(),
+            text: `${fresh.name ?? "Someone"}: ${(fresh.last_message ?? "New message").slice(0, 80)}`,
+            href: `/events/${eventId}/chat/${fresh.id}`,
+          });
+        }
         setUnread((u) => {
           const next = { ...u };
-          for (const c of data as { id: string; event_id: string; unread: boolean }[]) {
+          for (const c of list) {
             if (c.event_id !== eventId) continue;
             next[c.id] = c.unread && !(open && open[2] === c.id) ? Math.max(1, u[c.id] ?? 0) : 0;
           }

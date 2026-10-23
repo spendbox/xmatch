@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Flag, Gamepad2, Gift, Handshake, LogOut, MoreVertical, Dices, RotateCcw, Timer, X } from "lucide-react";
-import { Spinner } from "@/components/ui/Button";
+import { Button, Spinner } from "@/components/ui/Button";
+import { Sheet } from "@/components/ui/Sheet";
 import { KeyCoin } from "@/components/keys/KeyIcon";
 import { GiftSheet, keysError } from "@/components/keys/GiftSheet";
 import { useWallet } from "@/components/keys/useWallet";
@@ -55,6 +56,9 @@ export function MasqueradeRoom({
   const [extending, setExtending] = useState(false);
   const [keysNote, setKeysNote] = useState<string | null>(null);
   const [reopening, setReopening] = useState(false);
+  const [askUnmask, setAskUnmask] = useState(false);
+  const [unmasked, setUnmasked] = useState(initial.me.vote === true);
+  const [voteError, setVoteError] = useState<string | null>(null);
   const prices = usePrices();
   const { wallet, refresh: refreshWallet } = useWallet(demo ? null : initial.me.id);
 
@@ -80,9 +84,12 @@ export function MasqueradeRoom({
   );
   const [remaining, setRemaining] = useState(remainingNow);
 
+  // Each refresh gets a number, so an older answer arriving late can't undo a newer one (like your unmask)
+  const ask = useRef(0);
   const refresh = useCallback(async () => {
+    const n = ++ask.current;
     const { data } = await supabase.rpc("get_masquerade", { p_session: initial.id });
-    if (data) setState(data as MasqueradeState);
+    if (data && n === ask.current) setState(data as MasqueradeState);
   }, [supabase, initial.id]);
 
   // Tick the timer
@@ -142,10 +149,21 @@ export function MasqueradeRoom({
 
   async function vote(unmask: boolean) {
     setVoting(true);
+    setAskUnmask(false);
+    setVoteError(null);
+    ask.current++;
     setState((s) => ({ ...s, me: { ...s.me, vote: unmask } }));
-    await supabase.rpc("vote_unmask", { p_session: state.id, p_unmask: unmask });
+    const { error } = await supabase.rpc("vote_unmask", { p_session: state.id, p_unmask: unmask });
+    if (error) {
+      setVoting(false);
+      setVoteError("That didn't go through. Check your connection and try again.");
+      setState((s) => ({ ...s, me: { ...s.me, vote: null } }));
+      return;
+    }
+    if (unmask) setUnmasked(true);
+    const n = ++ask.current;
     const { data } = await supabase.rpc("get_masquerade", { p_session: initial.id });
-    if (data) {
+    if (data && n === ask.current) {
       setState(data as MasqueradeState);
       // You were the second to unmask: tell the other person they clicked. The first: tell them you unmasked
       if (unmask && (data as MasqueradeState).status === "matched") notify({ kind: "masquerade_match", sessionId: initial.id });
@@ -203,8 +221,11 @@ export function MasqueradeRoom({
     noLauncher: !!meet?.turn_pending,
     offline: !!demo,
     peek: lastFromThem?.body ?? null,
-    unmask: state.hourly ? { onUnmask: () => void vote(true), done: state.me.vote === true } : null,
+    unmask: state.hourly ? { onUnmask: () => setAskUnmask(true), done: state.me.vote === true || unmasked } : null,
   });
+
+  // Once you've unmasked it stays that way on screen, whatever arrives late from the server
+  const iUnmasked = state.me.vote === true || unmasked;
 
   if (state.status !== "active" && state.status !== "lapsed") return <Outcome state={state} eventId={eventId} />;
   const back = meet ? "/meet" : "/home";
@@ -230,13 +251,21 @@ export function MasqueradeRoom({
               <ArrowLeft size={22} />
             </Link>
           )}
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-ink text-white">
+          <span className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full bg-ink text-white">
             <MaskIcon className="w-7" eyes="#1c1828" />
+            <span
+              className={`absolute -right-0.5 -bottom-0.5 h-3.5 w-3.5 rounded-full ring-2 ring-surface ${them.online ? "bg-mint" : "bg-[#b9b3c4]"}`}
+              aria-hidden
+            />
           </span>
           <div className="min-w-0 flex-1">
             <p className="truncate text-[16px] font-semibold">{them.alias}</p>
             <p className="truncate text-[13px] text-muted">
-              {[gender, (them.same_place ? "Near you" : them.place) ?? distanceLabel(them.distance_km) ?? intentLabel(state.intent)].filter(Boolean).join(" · ")}
+              <span className={them.online ? "font-semibold text-mint" : undefined}>{presenceText(them.online, them.seen_minutes)}</span>
+              {[gender, (them.same_place ? "Near you" : them.place) ?? distanceLabel(them.distance_km) ?? intentLabel(state.intent)]
+                .filter(Boolean)
+                .map((t) => ` · ${t}`)
+                .join("")}
             </p>
           </div>
           {lapsed ? (
@@ -287,10 +316,10 @@ export function MasqueradeRoom({
         <div className="flex items-center gap-3 border-b border-line bg-brand-soft/60 px-4 py-2.5">
           <Handshake size={18} className="shrink-0 text-brand" />
           <p className="min-w-0 flex-1 text-[13px] leading-snug">
-            {state.me.vote === true ? (
+            {iUnmasked ? (
               <>
-                <span className="font-semibold text-ink">You chose to unmask.</span>{" "}
-                <span className="text-muted">If {them.alias} does too, you&apos;re connected.</span>
+                <span className="block font-semibold text-ink">You chose to unmask.</span>
+                <span className="block text-muted">If {them.alias} does too, you&apos;re connected.</span>
               </>
             ) : (
               <>
@@ -307,10 +336,10 @@ export function MasqueradeRoom({
           >
             End
           </button>
-          {state.me.vote !== true && (
+          {!iUnmasked && (
             <button
               type="button"
-              onClick={() => vote(true)}
+              onClick={() => setAskUnmask(true)}
               disabled={voting}
               className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-brand px-3.5 text-[13px] font-semibold text-white transition active:scale-95 disabled:opacity-60"
             >
@@ -369,15 +398,15 @@ export function MasqueradeRoom({
         <div className="animate-fade-up border-t border-line bg-surface px-5 pt-4 pb-safe">
           <p className="text-center text-[15px] font-semibold">{meet ? "The meet ended" : "The hour ran out"} before you both decided</p>
           <p className="mx-auto mt-1 max-w-sm text-center text-[13px] leading-snug text-muted">
-            {state.me.vote === true
+            {iUnmasked
               ? `You unmasked. If ${them.alias} unmasks too, you're connected.`
               : `Unmask now, and if ${them.alias} does too, you're connected. Or reopen the chat to keep talking.`}
           </p>
           <div className="mt-3 grid grid-cols-2 gap-2.5 pb-2">
-            {state.me.vote !== true ? (
+            {!iUnmasked ? (
               <button
                 type="button"
-                onClick={() => vote(true)}
+                onClick={() => setAskUnmask(true)}
                 disabled={voting}
                 className="inline-flex h-12 items-center justify-center gap-1.5 rounded-2xl bg-brand text-[15px] font-semibold text-white disabled:opacity-60"
               >
@@ -410,36 +439,40 @@ export function MasqueradeRoom({
           replyTo={replyTo}
           replyName={replyTo ? (replyTo.sender_id === state.me.id ? "yourself" : replyTo.sender_id ? state.them.alias : replyTo.kind === "game" ? "the game" : "the icebreaker") : undefined}
           onCancelReply={() => setReplyTo(null)}
-          leading={
-            <>
-            {state.hourly && games.button}
-            <button
-              type="button"
-              onClick={nextQuestion}
-              className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-gold-soft text-[#9a6a0c]"
-              aria-label="New icebreaker question"
-              title="New icebreaker"
-            >
-              <Dices size={20} />
-            </button>
-            </>
-          }
-          trailingExtra={
-            <button
-              type="button"
-              onClick={() => {
-                refreshWallet();
-                setGiftOpen(true);
-              }}
-              className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-chili-soft text-chili"
-              aria-label="Send a gift"
-              title="Send a gift"
-            >
-              <Gift size={20} />
-            </button>
-          }
+          plusDot={state.hourly && games.live}
+          actions={[
+            ...(state.hourly && games.canPlay
+              ? [{ key: "game", label: games.live ? "Back to game" : "Play a game", icon: <Gamepad2 size={24} strokeWidth={1.75} />, tone: "bg-brand-soft text-brand", onClick: games.play }]
+              : []),
+            { key: "ice", label: "New icebreaker", icon: <Dices size={24} strokeWidth={1.75} />, tone: "bg-gold-soft text-[#9a6a0c]", onClick: () => void nextQuestion() },
+          ]}
+          onGift={() => {
+            refreshWallet();
+            setGiftOpen(true);
+          }}
         />
       ) : null}
+
+      <Sheet
+        open={askUnmask}
+        onClose={() => setAskUnmask(false)}
+        title={`Unmask to ${them.alias}?`}
+        subtitle={`If ${them.alias} unmasks too, you'll both see each other's name and photos, and the chat moves to Chats.`}
+        icon={<MaskIcon className="w-6" eyes="#5b3fd9" />}
+        footer={
+          <div className="space-y-2">
+            {voteError && <p className="text-center text-[13px] font-medium text-chili">{voteError}</p>}
+            <Button size="lg" onClick={() => vote(true)} loading={voting} loadingText="Unmasking…">
+              Yes, unmask
+            </Button>
+            <Button size="lg" variant="ghost" onClick={() => setAskUnmask(false)}>
+              Not yet
+            </Button>
+          </div>
+        }
+      >
+        <p className="text-[14px] leading-relaxed text-ink-soft">You can&apos;t take it back once you&apos;ve unmasked. Until they unmask too, you both stay masked.</p>
+      </Sheet>
 
       <GiftSheet
         open={giftOpen}
@@ -585,4 +618,12 @@ function MeetLine({ meet, them }: { meet: NonNullable<MasqueradeState["meet"]>; 
       {action}
     </div>
   );
+}
+
+function presenceText(online?: boolean, minutes?: number | null) {
+  if (online) return "Online";
+  if (minutes == null) return "Offline";
+  if (minutes < 60) return `Active ${Math.max(1, minutes)}m ago`;
+  if (minutes < 24 * 60) return `Active ${Math.floor(minutes / 60)}h ago`;
+  return "Offline";
 }

@@ -71,6 +71,10 @@ export type MasqueradeState = {
     connections?: number;
     reply_seconds?: number | null;
     has_voted: boolean;
+    /** In the app right now */
+    online?: boolean;
+    /** Minutes since they were last in the app */
+    seen_minutes?: number | null;
     profile: { id: string; display_name: string; bio: string; photos: string[] } | null;
   };
 };
