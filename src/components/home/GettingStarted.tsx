@@ -5,7 +5,8 @@ import clsx from "clsx";
 import { BellRing, Check, ChevronRight, Gift, MapPin, Sparkles } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { NEEDED, type Thing } from "@/lib/things";
-import { usePushState } from "@/components/app/Notifications";
+import { NotificationsPanel, usePushState } from "@/components/app/Notifications";
+import { Sheet } from "@/components/ui/Sheet";
 import { useInvites, useShareInvite } from "@/components/profile/InviteCard";
 import { KeyCoin } from "@/components/keys/KeyIcon";
 import { keysError } from "@/components/keys/GiftSheet";
@@ -36,6 +37,7 @@ export function GettingStarted({
   const [status, setStatus] = useState<Status | null>(demo ?? null);
   const [things, setThings] = useState<Thing[]>(initialThings);
   const [deck, setDeck] = useState(false);
+  const [pushHelpOpen, setPushHelpOpen] = useState(false);
   const [claiming, setClaiming] = useState(false);
   const [claimed, setClaimed] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -52,10 +54,11 @@ export function GettingStarted({
 
   // Notifications count unless this phone can't do them
   const pushOk = push.state === "on" || status.push;
-  const pushNA = push.state === "unsupported" || push.state === "blocked" || push.state === "needs-install";
+  // On iPhone, notifications need Dashpad on the home screen first: we show how
+  const pushHelp = push.state === "needs-install" || push.state === "blocked" || push.state === "unsupported";
   const placeOk = hasPlace || status.place;
   const thingsOk = things.length >= NEEDED;
-  const done = [placeOk, pushOk || pushNA, thingsOk].filter(Boolean).length;
+  const done = [placeOk, pushOk, thingsOk].filter(Boolean).length;
   const all = done === 3;
   const reward = status.reward;
 
@@ -67,7 +70,7 @@ export function GettingStarted({
       setClaiming(false);
       return setClaimed(reward);
     }
-    const { data, error: err } = await supabase.rpc("claim_setup_reward", { p_no_push: !pushOk && pushNA });
+    const { data, error: err } = await supabase.rpc("claim_setup_reward", { p_no_push: false });
     setClaiming(false);
     if (err) return setError(keysError(err.message));
     setClaimed((data as { reward: number }).reward);
@@ -116,18 +119,17 @@ export function GettingStarted({
         <Row
           icon={<BellRing size={17} />}
           done={pushOk}
-          skipped={!pushOk && pushNA}
-          title={push.busy ? "Turning on…" : "Turn on notifications"}
+          title={push.busy ? "Turning on…" : push.state === "needs-install" ? "Add Dashpad to your home screen" : "Turn on notifications"}
           sub={
             pushOk
               ? "You'll know when your pair arrives"
               : push.state === "needs-install"
-                ? "Skipped for now · add Dashpad to your home screen to turn them on"
-                : pushNA
-                  ? "Skipped · not available on this phone"
+                ? "iPhones need this before notifications can turn on · 3 quick steps"
+                : push.state === "blocked"
+                  ? "Blocked in your browser · tap to see how to allow them"
                   : "Know when your pair arrives"
           }
-          onClick={pushOk || pushNA ? undefined : () => void push.turnOn()}
+          onClick={pushOk ? undefined : pushHelp ? () => setPushHelpOpen(true) : () => void push.turnOn()}
         />
         <Row
           icon={<Gift size={17} />}
@@ -149,6 +151,10 @@ export function GettingStarted({
           {claiming ? <Spinner className="h-4 w-4" /> : <KeyCoin size={20} />} Claim {reward} Keys
         </button>
       )}
+
+      <Sheet open={pushHelpOpen} onClose={() => setPushHelpOpen(false)} title="Turn on notifications" icon={<BellRing size={22} strokeWidth={1.75} />}>
+        <NotificationsPanel push={push} />
+      </Sheet>
 
       <ThingsDeck open={deck} onClose={() => setDeck(false)} things={things} onSaved={setThings} demo={!!demo} />
     </section>

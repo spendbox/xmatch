@@ -109,7 +109,8 @@ export function GameArena({
     const holdEnd =
       over &&
       !showResults &&
-      ((game.kind === "truths" && game.state.phase === "reveal") || (["c4", "tot", "whot", "checkers", "chess", "ayo", "gems"].includes(game.kind) && endedAgo < 3) || (game.kind === "bomb" && endedAgo < 4));
+      ((game.kind === "truths" && game.state.phase === "reveal") || (game.kind === "c4" && endedAgo < 10) ||
+        (["tot", "whot", "checkers", "chess", "ayo", "gems"].includes(game.kind) && endedAgo < 3) || (game.kind === "bomb" && endedAgo < 4));
     if (over && !holdEnd) {
       resultsView = true;
       body = (
@@ -135,6 +136,8 @@ export function GameArena({
   }
 
   const bar = !(game.status === "invited" && game.me === "b") && !resultsView;
+  // Turn-based games: make it obvious when it's your move
+  const myTurn = game.status === "active" && !intro && TURN_GAMES.includes(game.kind) && game.state?.turn === game.me;
 
   if (!mounted) return null;
   return createPortal(
@@ -150,7 +153,15 @@ export function GameArena({
             >
               <ChevronLeft size={22} />
             </button>
-            <p className="min-w-0 flex-1 truncate text-center text-[11px] font-extrabold tracking-[0.16em] text-gold uppercase">{info.title}</p>
+            {myTurn ? (
+              <p className="min-w-0 flex-1 text-center">
+                <span className="gm-pulse inline-block rounded-full bg-gradient-to-b from-[#ffd36b] to-gold px-4 py-1.5 font-display text-[15px] font-black tracking-[0.12em] text-ink uppercase shadow-[0_0_0_3px_rgba(242,179,61,0.3),0_6px_20px_-4px_rgba(242,179,61,0.8)]">
+                  Your turn
+                </span>
+              </p>
+            ) : (
+              <p className="min-w-0 flex-1 truncate text-center text-[11px] font-extrabold tracking-[0.16em] text-gold uppercase">{info.title}</p>
+            )}
             {reacting && <ReactionButton open={tray} onToggle={() => setTray((t) => !t)} />}
             <button
               type="button"
@@ -169,6 +180,7 @@ export function GameArena({
           </div>
         )}
         <div className="relative min-h-0 flex-1 pb-[env(safe-area-inset-bottom)]">{body}</div>
+        <TurnStamp on={myTurn} />
         {reacting && resultsView && (
           <div className="absolute top-[max(12px,env(safe-area-inset-top))] right-3 z-40">
             <ReactionButton open={tray} onToggle={() => setTray((t) => !t)} />
@@ -315,6 +327,33 @@ function VsIntro({ game, names, act }: { game: Game; names: Names; act: GameActi
           {left > 3 ? 3 : left > 0 ? left : "Go!"}
         </span>
       </div>
+    </div>
+  );
+}
+
+const TURN_GAMES = ["c4", "whot", "checkers", "chess", "ayo", "gems", "bomb"];
+
+/** A big "Your turn!" for a moment whenever it becomes your move */
+function TurnStamp({ on }: { on: boolean }) {
+  const [show, setShow] = useState(0);
+  const was = useRef(on);
+  useEffect(() => {
+    if (on && !was.current) {
+      setShow(Date.now());
+      buzz([15, 40, 15]);
+      sfx("tick");
+      const t = setTimeout(() => setShow(0), 1100);
+      was.current = on;
+      return () => clearTimeout(t);
+    }
+    was.current = on;
+  }, [on]);
+  if (!show) return null;
+  return (
+    <div key={show} aria-hidden className="pointer-events-none absolute inset-0 z-40 grid place-items-center">
+      <span className="gm-stamp rounded-[22px] bg-gradient-to-b from-[#ffd36b] to-gold px-7 py-3 font-display text-[34px] font-black text-ink shadow-[0_8px_0_#b9831e,0_24px_60px_-10px_rgba(242,179,61,0.8)]">
+        Your turn!
+      </span>
     </div>
   );
 }

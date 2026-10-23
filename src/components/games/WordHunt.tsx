@@ -19,8 +19,8 @@ export function WordHunt({ game, names, act }: { game: Game; names: Names; act: 
   const [path, setPath] = useState<number[]>(game.mine?.demo_path ?? []);
   const [found, setFound] = useState<string[]>([]);
   const [flash, setFlash] = useState<{ text: string; tone: "good" | "bad" | "old"; key: number } | null>(null);
-  const [shake, setShake] = useState(0);
   const grid = useRef<HTMLDivElement>(null);
+  const boardRef = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
   // The swipe as it happens (state lags a frame behind on fast swipes, so read from here)
   const pathRef = useRef<number[]>([]);
@@ -120,7 +120,11 @@ export function WordHunt({ game, names, act }: { game: Game; names: Names; act: 
     }
     if (!dict?.has(w.toLowerCase())) {
       setFlash({ text: `${w} · not a word`, tone: "bad", key });
-      setShake((n) => n + 1);
+      // Shake the board in place (rebuilding it would drop the swipe handling on phones)
+      boardRef.current?.animate(
+        [{ transform: "none" }, { transform: "translateX(-7px)" }, { transform: "translateX(6px)" }, { transform: "translateX(-4px)" }, { transform: "none" }],
+        { duration: 380 },
+      );
       sfx("bad");
       buzz(40);
       return;
@@ -243,8 +247,8 @@ export function WordHunt({ game, names, act }: { game: Game; names: Names; act: 
 
       {/* Board */}
       <div
-        key={shake}
-        className={clsx("relative mt-4 rounded-[28px] p-3.5", shake > 0 && "gm-shake")}
+        ref={boardRef}
+        className="relative mt-4 rounded-[28px] p-3.5"
         style={{ background: "linear-gradient(180deg, #1f9d6b 0%, #137a52 100%)", boxShadow: "0 10px 0 #0a4a32, 0 30px 60px -20px rgba(31,157,107,0.7)" }}
       >
         <div

@@ -37,6 +37,8 @@ export type MasqueradeState = {
   hourly?: boolean;
   /** Reopened with Keys: open until both decide */
   reopened?: boolean;
+  /** Started from Meet (open until you both unmask) */
+  explore?: boolean;
   /** Opened from a meet (hourly is also true: decide any time) */
   meet?: {
     id: string;

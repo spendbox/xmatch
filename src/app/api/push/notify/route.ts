@@ -119,6 +119,40 @@ export async function POST(req: Request) {
     return ok;
   }
 
+  // Someone found you on Meet and opened a masked chat
+  if (b.kind === "masked_start" && b.sessionId) {
+    const { data: s } = await db.from("masquerade_sessions").select("id, user_a, user_b, alias_a, source, status, started_at").eq("id", b.sessionId).maybeSingle();
+    if (!s || s.user_a !== uid || s.source !== "explore" || s.status !== "active" || Date.now() - new Date(s.started_at as string).getTime() > RECENT_MS) return ok;
+    await pushToUsers([s.user_b as string], {
+      title: `${s.alias_a} wants to chat 🎭`,
+      body: "They found you on Meet. You're both masked until you both unmask.",
+      url: `/masquerade/${s.id}`,
+      tag: `masked-${s.id}`,
+    });
+    return ok;
+  }
+
+  // A message in a masked chat (sent only if they're not in the app right now)
+  if (b.kind === "masked_message" && b.sessionId) {
+    const { data: s } = await db.from("masquerade_sessions").select("id, user_a, user_b, alias_a, alias_b, status").eq("id", b.sessionId).maybeSingle();
+    if (!s || (s.user_a !== uid && s.user_b !== uid) || s.status !== "active") return ok;
+    const { data: msg } = await db
+      .from("masquerade_messages")
+      .select("body, created_at")
+      .eq("session_id", s.id)
+      .eq("sender_id", uid)
+      .order("id", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!msg || Date.now() - new Date(msg.created_at as string).getTime() > RECENT_MS) return ok;
+    await pushToUsers(
+      [(s.user_a === uid ? s.user_b : s.user_a) as string],
+      { title: `${s.user_a === uid ? s.alias_a : s.alias_b} 🎭`, body: preview("text", msg.body as string), url: `/masquerade/${s.id}`, tag: `masked-${s.id}` },
+      { skipIfActive: true },
+    );
+    return ok;
+  }
+
   // Someone paid to reopen a past masked pair: tell the other person
   if (b.kind === "masquerade_reopen" && b.sessionId) {
     const { data: s } = await db.from("masquerade_sessions").select("id, user_a, user_b, alias_a, alias_b, reopened_by, status").eq("id", b.sessionId).maybeSingle();

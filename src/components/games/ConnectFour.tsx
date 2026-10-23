@@ -175,7 +175,8 @@ export function ConnectFour({
               >
                 {filled && (
                   <span
-                    key={isNew ? `n-${st.round}-${st.moves}-${i}` : `s-${i}`}
+                    // The same key before and after the server confirms your move, so it only drops once
+                    key={isNew ? `n-${st.round}-${i}` : `s-${i}`}
                     className={clsx("absolute inset-0 rounded-full", isNew && "gm-drop", line.includes(i) && "gm-win-cell")}
                     style={
                       {

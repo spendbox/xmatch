@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import clsx from "clsx";
-import { Check, Dices, PartyPopper, Trash2, X } from "lucide-react";
+import { Check, ChevronLeft, Dices, PartyPopper, Trash2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { MAX_ANSWER, MAX_THINGS, NEEDED, nextPrompt, promptOf, type Thing } from "@/lib/things";
 import { tapFeedback, Spinner } from "@/components/ui/Button";
@@ -40,7 +40,12 @@ export function ThingsDeck({
   const [mounted, setMounted] = useState(false);
   const [n, setN] = useState(0);
   const input = useRef<HTMLTextAreaElement>(null);
-  const editing = edit !== null && edit < initial.length;
+  // Which saved card is open (going back to change one), or null for a new card
+  const [cursor, setCursor] = useState<number | null>(edit);
+  const editing = cursor !== null && cursor < things.length;
+  // Opened from Profile to change one card: saving closes it
+  const single = edit !== null;
+  const swipe = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => setMounted(true), []);
   // Fresh start each time it opens
@@ -50,10 +55,36 @@ export function ThingsDeck({
     setSkipped([]);
     setCelebrate(false);
     setError(null);
+    setCursor(edit);
     setPromptId(edit !== null ? (initial[edit]?.p ?? "else") : nextPrompt(initial).id);
     setAnswer(edit !== null ? (initial[edit]?.a ?? "") : "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, edit]);
+
+  /** Open one of the cards you've already filled in */
+  function go(i: number, list = things) {
+    setCursor(i);
+    setPromptId(list[i].p);
+    setAnswer(list[i].a);
+    setError(null);
+    setN((x) => x + 1);
+  }
+  /** A fresh card */
+  function fresh(list = things) {
+    setCursor(null);
+    setPromptId(nextPrompt(list, skipped).id);
+    setAnswer("");
+    setError(null);
+    setN((x) => x + 1);
+  }
+
+  // Back to the card before (the last one you filled in, from a new card)
+  const canBack = !single && !celebrate && (cursor === null ? things.length > 0 : cursor > 0);
+  function back() {
+    if (!canBack) return;
+    tapFeedback();
+    go(cursor === null ? things.length - 1 : cursor - 1);
+  }
 
   const prompt = promptOf(promptId);
   const count = things.length;
@@ -68,15 +99,21 @@ export function ThingsDeck({
   async function next() {
     const a = answer.trim();
     if (!a || busy) return;
+    // Going back through your cards without changing one: just move on
+    if (editing && !single && things[cursor!].a === a) {
+      tapFeedback();
+      return cursor! + 1 < things.length ? go(cursor! + 1) : fresh();
+    }
     setBusy(true);
     setError(null);
     tapFeedback();
-    const list = editing ? things.map((t, i) => (i === edit ? { p: promptId, a } : t)) : [...things, { p: promptId, a }];
+    const list = editing ? things.map((t, i) => (i === cursor ? { p: promptId, a } : t)) : [...things, { p: promptId, a }];
     try {
       const saved = await save(list.slice(0, MAX_THINGS));
       setThings(saved);
       onSaved(saved);
-      if (editing) return onClose();
+      if (single) return onClose();
+      if (editing) return cursor! + 1 < saved.length ? go(cursor! + 1, saved) : fresh(saved);
       setAnswer("");
       setN((x) => x + 1);
       if (saved.length === NEEDED) setCelebrate(true);
@@ -93,9 +130,11 @@ export function ThingsDeck({
     if (!editing || busy) return;
     setBusy(true);
     try {
-      const saved = await save(things.filter((_, i) => i !== edit));
+      const saved = await save(things.filter((_, i) => i !== cursor));
+      setThings(saved);
       onSaved(saved);
-      onClose();
+      if (single) return onClose();
+      fresh(saved);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -127,24 +166,51 @@ export function ThingsDeck({
 
         <div
           key={celebrate ? "done" : `${promptId}-${n}`}
-          className="relative animate-fade-up overflow-hidden rounded-[30px] p-5 text-white shadow-[0_30px_60px_-20px_rgba(0,0,0,0.6)]"
+          // Swipe right to go back a card, left for another question
+          onPointerDown={(e) => {
+            swipe.current = { x: e.clientX, y: e.clientY };
+          }}
+          onPointerUp={(e) => {
+            const st = swipe.current;
+            swipe.current = null;
+            if (!st || celebrate) return;
+            const dx = e.clientX - st.x;
+            if (Math.abs(dx) < 70 || Math.abs(e.clientY - st.y) > 50) return;
+            if (dx > 0) back();
+            else if (!editing && !single) shuffle();
+          }}
+          className="relative animate-fade-up touch-pan-y overflow-hidden rounded-[30px] p-5 text-white shadow-[0_30px_60px_-20px_rgba(0,0,0,0.6)]"
           style={{ background: celebrate ? "linear-gradient(150deg, #6d4ff0 0%, #c2306b 100%)" : prompt.tone }}
         >
           <div aria-hidden className="absolute -top-16 -right-14 h-44 w-44 rounded-full bg-white/10" />
           <div aria-hidden className="absolute -bottom-20 -left-10 h-40 w-40 rounded-full bg-black/10" />
 
           <div className="relative flex items-center gap-2">
+            {canBack && (
+              <button type="button" onClick={back} aria-label="Back to the card before" className="-ml-1 grid h-9 w-9 place-items-center rounded-full bg-white/15">
+                <ChevronLeft size={20} />
+              </button>
+            )}
             <p className="flex-1 text-[12px] font-bold tracking-[0.14em] text-white/80 uppercase">
-              {editing ? "Edit" : count < NEEDED ? `${count + 1} of ${NEEDED}` : `Thing ${count + 1}`}
+              {single
+                ? "Edit"
+                : editing
+                  ? `${cursor! + 1} of ${Math.max(NEEDED, count)} · editing`
+                  : count < NEEDED
+                    ? `${count + 1} of ${NEEDED}`
+                    : `Thing ${count + 1}`}
             </p>
             <button type="button" onClick={onClose} aria-label="Close" className="grid h-9 w-9 place-items-center rounded-full bg-white/15">
               <X size={18} />
             </button>
           </div>
-          {!editing && count < NEEDED && (
+          {!single && count < NEEDED && (
             <div className="relative mt-2.5 flex gap-1" aria-hidden>
               {Array.from({ length: NEEDED }, (_, i) => (
-                <span key={i} className={clsx("h-1.5 flex-1 rounded-full transition", i < count ? "bg-white" : "bg-white/25")} />
+                <span
+                  key={i}
+                  className={clsx("h-1.5 flex-1 rounded-full transition", i === (cursor ?? count) ? "bg-white" : i < count ? "bg-white/60" : "bg-white/25")}
+                />
               ))}
             </div>
           )}
@@ -238,7 +304,7 @@ export function ThingsDeck({
                   className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-white text-[15px] font-bold text-ink transition active:scale-[0.98] disabled:opacity-60"
                 >
                   {busy ? <Spinner className="h-4 w-4" /> : <Check size={18} />}
-                  {editing ? "Save" : left > 1 ? `Next · ${left - 1} to go` : left === 1 ? "Finish" : "Add"}
+                  {single ? "Save" : editing ? (things[cursor!]?.a === answer.trim() ? "Next" : "Save & next") : left > 1 ? `Next · ${left - 1} to go` : left === 1 ? "Finish" : "Add"}
                 </button>
               </div>
             </form>
