@@ -110,9 +110,10 @@ export function ProfileEditor({
 
   async function saveAbout() {
     setError(null);
-    if (!draftName.trim()) return setError("Please add your name.");
-    if (await update({ display_name: draftName.trim(), bio: draftBio.trim() })) {
-      setName(draftName.trim());
+    const newName = draftName.trim();
+    if (!newName) return setError("Please add your name.");
+    if (await update({ display_name: newName, bio: draftBio.trim() })) {
+      setName(newName);
       setBio(draftBio.trim());
       close();
     }

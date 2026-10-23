@@ -183,12 +183,12 @@ export function MasqueradeCard({
             tapFeedback();
             onSettings?.();
           }}
-          aria-label={`Next pair at ${lagosTime(hour.next_at)}. Open your Masquerade settings`}
+          aria-label={`Next pair up by ${lagosTime(hour.next_at)}. Open your Masquerade settings`}
           className="relative mt-3.5 flex w-full items-center gap-4 rounded-2xl text-left transition active:scale-[0.99]"
         >
           <div className="min-w-0 flex-1">
             <p className="text-[13px] text-white/75">
-              Next pair at {lagosTime(hour.next_at)}
+              Next pair up by {lagosTime(hour.next_at).replace(/\s?([AP]M)$/i, (_, m: string) => m.toLowerCase())}
             </p>
             <p className="mt-1 text-[14px] leading-snug text-white/90">
               {cur?.status === "ended" || cur?.status === "lapsed"
@@ -196,7 +196,7 @@ export function MasqueradeCard({
                 : !hour.hour_open
                   ? "Pairing runs 6am to 2am. Rest up."
                   : hour.hour_ran
-                    ? "Nobody fit your settings this hour."
+                    ? "No matches found this hour."
                     : "We pair everyone on the hour."}
             </p>
             {hour.pulse && hour.pulse.all > 0 && (
@@ -231,11 +231,10 @@ function Face({ alias, small }: { alias: string; small?: boolean }) {
   );
 }
 
-/** "128 people masking up in Lagos" */
+/** "128 people available in Lagos" */
 function pulseText(h: MasqueradeHour) {
   const p = h.pulse!;
-  const when = h.hour_open ? "this hour" : "today";
-  if (p.region >= 3 && p.region_name) return `${p.region} people masking up in ${p.region_name} ${when}`;
-  if (p.country >= 3) return `${p.country} people masking up in your country ${when}`;
-  return `${p.all} ${p.all === 1 ? "person" : "people"} masking up ${when}`;
+  if (p.region >= 3 && p.region_name) return `${p.region} people available in ${p.region_name}`;
+  if (p.country >= 3) return `${p.country} people available in your country`;
+  return `${p.all} ${p.all === 1 ? "person" : "people"} available`;
 }
