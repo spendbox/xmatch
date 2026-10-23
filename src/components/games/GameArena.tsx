@@ -17,7 +17,7 @@ import { ChessGame } from "./ChessGame";
 import { Ayo } from "./Ayo";
 import { Bombshell } from "./Bombshell";
 import { GemClash } from "./GemClash";
-import { ReactionButton, ReactionLayer, ReactionTray, useReactions } from "./Reactions";
+import { ReactionButton, ReactionHint, ReactionLayer, ReactionTray, useReactionHint, useReactions } from "./Reactions";
 
 /** The full-screen game: challenge, 3-2-1, the game itself, then results */
 export function GameArena({
@@ -49,6 +49,7 @@ export function GameArena({
   const reacting = game.status === "active" || game.status === "done" || game.status === "cancelled";
   const reactions = useReactions(reacting ? game.id : null);
   const [tray, setTray] = useState(false);
+  const reactHint = useReactionHint(game.status === "active");
   const info = gameInfo(game.kind);
   const over = game.status === "done" || game.status === "cancelled";
   const endedAgo = game.ended_at ? (act.now() - new Date(game.ended_at).getTime()) / 1000 : 99;
@@ -162,7 +163,16 @@ export function GameArena({
             ) : (
               <p className="min-w-0 flex-1 truncate text-center text-[11px] font-extrabold tracking-[0.16em] text-gold uppercase">{info.title}</p>
             )}
-            {reacting && <ReactionButton open={tray} onToggle={() => setTray((t) => !t)} />}
+            {reacting && (
+              <ReactionButton
+                open={tray}
+                pulse={reactHint.hint}
+                onToggle={() => {
+                  reactHint.dismiss();
+                  setTray((t) => !t);
+                }}
+              />
+            )}
             <button
               type="button"
               onClick={sound.toggle}
@@ -185,6 +195,14 @@ export function GameArena({
           <div className="absolute top-[max(12px,env(safe-area-inset-top))] right-3 z-40">
             <ReactionButton open={tray} onToggle={() => setTray((t) => !t)} />
           </div>
+        )}
+        {reacting && reactHint.hint && !tray && (
+          <ReactionHint
+            onTry={() => {
+              reactHint.dismiss();
+              setTray(true);
+            }}
+          />
         )}
         {reacting && tray && <ReactionTray onSend={reactions.send} onIdle={() => setTray(false)} />}
         <ReactionLayer floats={reactions.floats} />

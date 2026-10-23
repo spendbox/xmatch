@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Sticky } from "@/components/ui/Sticky";
 import { PeopleForYou } from "./PeopleForYou";
+import { WelcomeTour } from "./WelcomeTour";
 import { GettingStarted } from "./GettingStarted";
 import type { Thing } from "@/lib/things";
 import type { ExploreList } from "@/lib/explore";
@@ -47,6 +48,7 @@ export function HomeScreen({
   demoSheet,
   demoPeople,
   demoSetup,
+  demoTour,
 }: {
   profile: Profile;
   wallet: Wallet | null;
@@ -61,6 +63,8 @@ export function HomeScreen({
   /** Design previews: the people grid */
   demoPeople?: ExploreList;
   demoSetup?: { place: boolean; push: boolean; things: number; claimed: boolean; reward: number };
+  /** Design previews: open the welcome tour */
+  demoTour?: boolean;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const { wallet, refresh: refreshWallet } = useWallet(profile.id, initialWallet);
@@ -115,6 +119,7 @@ export function HomeScreen({
             tapFeedback();
             setMeetOpen(true);
           }}
+          data-tour="settings"
           className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-brand/20 bg-brand-soft text-brand transition active:scale-95"
           aria-label={`Your Masquerade settings: ${intentLabel(prefs.intent)}`}
           title={`${intentLabel(prefs.intent)} · Masquerade settings`}
@@ -146,6 +151,7 @@ export function HomeScreen({
         />
 
         <PeopleForYou userId={profile.id} demo={demoPeople} />
+        <WelcomeTour force={demoTour} off={!!demoPeople && !demoTour} />
       </div>
 
       <div className="lg:col-span-5">

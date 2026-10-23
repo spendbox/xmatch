@@ -21,7 +21,7 @@ export function PeopleForYou({ userId, demo }: { userId: string; demo?: ExploreL
   if (list && people.length === 0) return null;
 
   return (
-    <section className="mt-6">
+    <section data-tour="people" className="mt-6">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-[15px] font-semibold">People for you</h2>
         <Link href="/meet" onClick={tapFeedback} className="inline-flex items-center gap-0.5 text-[13px] font-semibold text-brand">

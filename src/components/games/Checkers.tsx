@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
 import { Crown } from "lucide-react";
 import type { Game, GameActions } from "@/lib/games";
-import { legalMoves, type CheckersState } from "@/lib/boardgames/checkers";
+import { applyMove, legalMoves, type CheckersState } from "@/lib/boardgames/checkers";
 import { GOLD, PURPLE, Player, useTicker, type Names } from "./parts";
 import { useMove } from "./useMove";
 
@@ -13,7 +13,10 @@ const DARK = "#1d6b63";
 
 export function Checkers({ game, names, act }: { game: Game; names: Names; act: GameActions }) {
   useTicker(500);
-  const st = game.state as CheckersState;
+  const server = game.state as CheckersState;
+  // Your move shows straight away (the server checks the same rules); it's replaced when the server answers
+  const [mine, setMine] = useState<{ moves: number; state: CheckersState } | null>(null);
+  const st = mine && mine.moves > server.moves ? mine.state : server;
   const me = game.me;
   const them = me === "a" ? "b" : "a";
   const color = (s: string) => (s === "a" ? GOLD : PURPLE);
@@ -21,7 +24,8 @@ export function Checkers({ game, names, act }: { game: Game; names: Names; act: 
   const [sel, setSel] = useState<number | null>(null);
 
   const myTurn = game.status === "active" && started && st.turn === me;
-  const options = myTurn ? legalMoves(st, me) : [];
+  // Worked out once per position, not on every redraw
+  const options = useMemo(() => (myTurn ? legalMoves(st, me) : []), [myTurn, st, me]);
   const movable = new Set(options.map((o) => o.from));
   const mustTake = options.some((o) => o.take !== null);
   const chosen = st.chain ?? sel;
@@ -38,8 +42,15 @@ export function Checkers({ game, names, act }: { game: Game; names: Names; act: 
   async function tap(i: number) {
     if (!myTurn || busy) return;
     if (chosen !== null && targets.some((o) => o.to === i)) {
-      const ok = await send({ from: chosen, to: i });
-      if (ok) setSel(null);
+      const move = { from: chosen, to: i };
+      try {
+        setMine({ moves: st.moves + 1, state: applyMove(st, me, move).state });
+      } catch {
+        /* the server will say why */
+      }
+      setSel(null);
+      const ok = await send(move);
+      if (!ok) setMine(null);
       return;
     }
     if (st.chain === null && movable.has(i)) setSel(i === sel ? null : i);
@@ -86,7 +97,7 @@ export function Checkers({ game, names, act }: { game: Game; names: Names; act: 
                     className={clsx(
                       "relative block aspect-square w-[78%] rounded-full transition",
                       chosen === i && "-translate-y-1 scale-110 shadow-[0_0_0_3px_#f2b33d,0_0_16px_6px_rgba(242,179,61,0.6)]",
-                      canPick && !busy && chosen !== i && "gm-pulse shadow-[0_0_0_3px_#ffffff,0_0_14px_4px_rgba(255,255,255,0.55)]",
+                      canPick && !busy && chosen !== i && "shadow-[0_0_0_3px_#ffffff]",
                     )}
                   >
                     <Piece side={owner as "a" | "b"} king={ch === ch.toUpperCase()} />

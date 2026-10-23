@@ -112,7 +112,7 @@ export function MasqueradeCard({
     : "";
 
   return (
-    <section className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-brand via-[#6d4ff0] to-[#8f6bff] px-5 pt-4 pb-5 text-white shadow-[0_18px_40px_-18px_rgb(91_63_217/0.8)] lg:rounded-[28px] lg:p-6">
+    <section data-tour="masquerade-card" className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-brand via-[#6d4ff0] to-[#8f6bff] px-5 pt-4 pb-5 text-white shadow-[0_18px_40px_-18px_rgb(91_63_217/0.8)] lg:rounded-[28px] lg:p-6">
       <div aria-hidden className="absolute -top-14 -right-12 h-40 w-40 rounded-full bg-white/10" />
 
       <div className="relative flex items-center gap-3">
