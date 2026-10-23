@@ -5,7 +5,7 @@ import clsx from "clsx";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Flag, UserX, MoreVertical, Phone, Video, X } from "lucide-react";
+import { ArrowLeft, Flag, Gamepad2, UserX, MoreVertical, Phone, Video, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { ChatMessage, Intent, Profile } from "@/lib/types";
 import { INTENT_ICONS, InterestIcon } from "@/components/ui/icons";
@@ -264,7 +264,8 @@ export function MatchChat({
 
       {games.banner}
       <Composer
-        leading={games.button}
+        plusDot={games.live}
+        actions={games.canPlay ? [{ key: "game", label: games.live ? "Back to game" : "Play a game", icon: <Gamepad2 size={24} strokeWidth={1.75} />, tone: "bg-brand-soft text-brand", onClick: games.play }] : []}
         onSend={send}
         onSendMedia={sendMedia}
         onSendVoice={sendVoice}

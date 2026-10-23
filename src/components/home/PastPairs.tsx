@@ -54,7 +54,7 @@ export function PastPairs({ pairs, balance, onChanged }: { pairs: PastPair[]; ba
                 <span className="min-w-0">
                   <span className="block truncate text-[15px] font-semibold">
                     {p.their_alias}
-                    <span className="font-normal text-muted">{[p.their_age, sexLabel(p.their_gender)].filter(Boolean).map((x) => ` · ${x}`).join("")}</span>
+                    <span className="font-normal text-muted">{[sexLabel(p.their_gender)].filter(Boolean).map((x) => ` · ${x}`).join("")}</span>
                   </span>
                   <span className="block truncate text-[13px] text-muted">{p.last_message ?? "No messages"}</span>
                   <span className="block truncate text-[11px] font-medium text-brand">

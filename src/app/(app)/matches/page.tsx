@@ -19,12 +19,12 @@ export default async function MatchesPage() {
           <MaskIcon className="w-14" eyes="#5b3fd9" />
         </span>
         <h1 className="mt-6 font-display text-[32px] font-semibold">
-          {matches.length ? "Pick a conversation" : "No matches yet"}
+          {matches.length ? "Pick a conversation" : "No chats yet"}
         </h1>
         <p className="mt-2 max-w-sm text-[15px] text-muted">
           {matches.length
             ? "Choose someone on the left to keep chatting, call or send a gift."
-            : "Your matches show up here after you both unmask. Five good minutes is all it takes."}
+            : "Your chats show up here: people you unmask with in Masquerade, and people you message from Meet."}
         </p>
         {!matches.length && (
           <ButtonLink href="/home" variant="gold" className="mt-6 h-12 px-6">

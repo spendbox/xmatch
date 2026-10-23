@@ -5,10 +5,32 @@ import { Check, Search, UsersRound, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { ExploreList, ExplorePerson, ExploreProfile } from "@/lib/explore";
 import { tapFeedback, Spinner } from "@/components/ui/Button";
+import { Sticky } from "@/components/ui/Sticky";
 import { ExploreProfileSheet } from "./ExploreProfileSheet";
 
 /** The Meet page: people like you in big circles, and a search to find anyone by name */
-export function ExploreScreen({ initial, demoProfile }: { initial: ExploreList | null; demoProfile?: ExploreProfile }) {
+const KEEP_MS = 10 * 60_000;
+const cacheKey = (uid: string) => `dp_meet_${uid}`;
+
+function readCache(uid?: string): ExploreList | null {
+  if (!uid) return null;
+  try {
+    const c = JSON.parse(localStorage.getItem(cacheKey(uid)) ?? "null") as { at: number; data: ExploreList } | null;
+    return c && Date.now() - c.at < KEEP_MS ? c.data : null;
+  } catch {
+    return null;
+  }
+}
+function writeCache(uid: string | undefined, data: ExploreList) {
+  if (!uid) return;
+  try {
+    localStorage.setItem(cacheKey(uid), JSON.stringify({ at: Date.now(), data }));
+  } catch {
+    /* private mode */
+  }
+}
+
+export function ExploreScreen({ initial, demoProfile, userId }: { initial: ExploreList | null; demoProfile?: ExploreProfile; userId?: string }) {
   const supabase = useMemo(() => createClient(), []);
   const [list, setList] = useState<ExploreList | null>(initial);
   const [q, setQ] = useState("");
@@ -35,9 +57,21 @@ export function ExploreScreen({ initial, demoProfile }: { initial: ExploreList |
   }, [q, supabase]);
 
   async function reload() {
-    const { data } = await supabase.rpc("explore_people", { p_limit: 60 });
-    if (data) setList(data as ExploreList);
+    const { data } = await supabase.rpc("explore_people", { p_limit: 50 });
+    if (data) {
+      setList(data as ExploreList);
+      writeCache(userId, data as ExploreList);
+    }
   }
+
+  // Your top 50: from the phone if it's fresh (under 10 minutes old), otherwise from Dashpad
+  useEffect(() => {
+    if (initial) return;
+    const kept = readCache(userId);
+    if (kept) setList(kept);
+    else void reload();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
   const people = results ?? list?.people ?? [];
   const searchingNow = results !== null || searching;
@@ -47,7 +81,8 @@ export function ExploreScreen({ initial, demoProfile }: { initial: ExploreList |
       <h1 className="font-display text-[34px] leading-tight font-semibold tracking-tight lg:text-[40px]">Meet</h1>
       <p className="mt-1 text-[15px] text-muted">People like you. Photos stay soft until you unlock them or connect.</p>
 
-      <label className="relative mt-5 block lg:max-w-md">
+      <Sticky className="mt-3">
+      <label className="relative block lg:max-w-md">
         <span className="sr-only">Search by name</span>
         <Search size={19} className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted" />
         <input
@@ -65,8 +100,9 @@ export function ExploreScreen({ initial, demoProfile }: { initial: ExploreList |
           </button>
         )}
       </label>
+      </Sticky>
 
-      <h2 className="mt-7 mb-4 text-[15px] font-semibold">{searchingNow ? (searching ? "Searching…" : `${people.length} ${people.length === 1 ? "person" : "people"} found`) : "People like you"}</h2>
+      <h2 className="mt-4 mb-4 text-[15px] font-semibold">{searchingNow ? (searching ? "Searching…" : `${people.length} ${people.length === 1 ? "person" : "people"} found`) : "Your closest matches"}</h2>
 
       {people.length > 0 ? (
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
@@ -115,6 +151,12 @@ export function ExploreScreen({ initial, demoProfile }: { initial: ExploreList |
             </li>
           ))}
         </ul>
+      ) : !list && !searchingNow ? (
+        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5" aria-label="Loading">
+          {Array.from({ length: 6 }, (_, i) => (
+            <li key={i} className="aspect-[3/4] animate-pulse rounded-[22px] bg-ink/[0.06]" style={{ animationDelay: `${i * 90}ms` }} />
+          ))}
+        </ul>
       ) : (
         !searching && (
           <div className="flex flex-col items-center rounded-[32px] border border-line bg-surface px-6 py-10 text-center shadow-card">
@@ -123,15 +165,12 @@ export function ExploreScreen({ initial, demoProfile }: { initial: ExploreList |
             </span>
             <h3 className="mt-5 text-[20px] font-semibold">{searchingNow ? "Nobody by that name" : "Nobody here yet"}</h3>
             <p className="mt-1.5 max-w-sm text-[15px] text-muted">
-              {searchingNow ? "Check the spelling, or try their first name." : "As more people join who fit your Masquerade settings, they'll show up here."}
+              {searchingNow ? "Check the spelling, or try their first name." : "As more people join, they'll show up here."}
             </p>
           </div>
         )
       )}
 
-      {!searchingNow && people.length > 0 && (
-        <p className="mt-6 text-center text-[12px] leading-relaxed text-muted">You see people whose settings fit yours, and yours fit theirs.</p>
-      )}
       <div className="h-6" />
 
       {open && <ExploreProfileSheet personId={open} demo={demoProfile} onClose={() => setOpen(null)} onChanged={reload} />}

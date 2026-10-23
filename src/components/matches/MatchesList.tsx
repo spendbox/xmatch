@@ -6,6 +6,7 @@ import clsx from "clsx";
 import { useState } from "react";
 import { MessageCircle, Search, Shapes, Users, X } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
+import { Sticky } from "@/components/ui/Sticky";
 import { ButtonLink } from "@/components/ui/Button";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { INTENT_ICONS } from "@/components/ui/icons";
@@ -40,9 +41,6 @@ export function MatchesList({
   const shown = term
     ? matches.filter((m) => m.display_name.toLowerCase().includes(term) || (m.last_message ?? "").toLowerCase().includes(term))
     : matches;
-  const fresh = term ? [] : matches.filter((m) => !m.last_message || Date.now() - new Date(m.created_at).getTime() < 48 * 3600_000);
-  // Only chats where they sent the last message (game cards, icebreakers and call records have no sender)
-  const yourTurn = matches.filter((m) => m.last_message && m.last_sender === m.other_id).length;
 
   return (
     <main className={side ? "px-4 pt-7 pb-6" : "mx-auto max-w-md px-5 pt-6 lg:max-w-3xl lg:px-10 lg:pt-10"}>
@@ -67,7 +65,8 @@ export function MatchesList({
         </>
       ) : (
         <>
-          <label className="mt-5 flex h-11 items-center gap-2 rounded-full border border-line-strong bg-surface px-4 focus-within:border-brand">
+          <Sticky className="mt-3" bleed={side ? "-mx-4 px-4" : undefined}>
+          <label className="flex h-11 items-center gap-2 rounded-full border border-line-strong bg-surface px-4 focus-within:border-brand">
             <Search size={17} className="shrink-0 text-muted" />
             <span className="sr-only">Search your chats</span>
             <input
@@ -85,55 +84,12 @@ export function MatchesList({
               </button>
             )}
           </label>
-
-          {fresh.length > 0 && (
-            <section className="mt-5">
-              <h2 className="mb-2.5 flex items-center gap-2 text-[15px] font-semibold">
-                New reveals
-                <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-chili opacity-60" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-chili" />
-                </span>
-              </h2>
-              <div className="-mx-5 flex gap-2.5 overflow-x-auto px-5 pt-1 pb-2 no-scrollbar">
-                {fresh.map((m, i) => (
-                  <Link
-                    key={m.id}
-                    href={`/matches/${m.id}`}
-                    className="relative aspect-[3/4] w-[78px] shrink-0 animate-fade-up overflow-hidden rounded-2xl bg-line shadow-card transition active:scale-[0.97]"
-                    style={{ animationDelay: `${i * 60}ms` }}
-                  >
-                    {m.photos?.[0] && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={m.photos[0]} alt={m.display_name} className="absolute inset-0 h-full w-full object-cover" />
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/5 to-transparent" />
-                    <span
-                      className={clsx("absolute top-1.5 right-1.5 h-2.5 w-2.5 rounded-full ring-2 ring-white/80", online(m.other_id) ? "bg-mint" : "bg-[#b9b3c4]")}
-                      aria-label={online(m.other_id) ? "Online" : "Offline"}
-                    />
-                    <div className="absolute inset-x-0 bottom-0 px-2 pb-1.5 text-white">
-                      <p className="truncate text-[12px] leading-tight font-semibold">{m.display_name.split(" ")[0]}</p>
-                      {!m.last_message && <p className="text-[10px] font-medium text-white/80">Say hi 👋</p>}
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          )}
+          </Sticky>
 
           <LiveEventChats compact={side} divided userId={myId} />
           {FEATURES.feed && <LiveFeedChats divided userId={myId} />}
 
-          <section className="mt-5">
-            <h2 className="mb-3 flex items-center justify-between text-[15px] font-semibold">
-              Conversations
-              {yourTurn > 0 && (
-                <span className="rounded-full bg-gold-soft px-2.5 py-1 text-[12px] font-semibold text-[#a26b00]">
-                  {yourTurn} waiting on you
-                </span>
-              )}
-            </h2>
+          <section className="mt-3">
             {shown.length === 0 && <p className="rounded-2xl bg-surface p-4 text-center text-[14px] text-muted">No chats match “{q.trim()}”.</p>}
             <ul className="space-y-2.5">
               {shown.map((m, i) => {
@@ -212,9 +168,9 @@ function Empty() {
           <MessageCircle size={20} />
         </span>
       </div>
-      <h2 className="mt-6 text-[20px] font-semibold">No matches yet</h2>
+      <h2 className="mt-6 text-[20px] font-semibold">No chats yet</h2>
       <p className="mt-2 max-w-xs text-[15px] leading-relaxed text-muted">
-        Your matches show up here after you both unmask. Five good minutes is all it takes.
+        Your chats show up here: people you unmask with in Masquerade, and people you message from Meet.
       </p>
       <ButtonLink href="/home" variant="gold" size="lg" className="mt-6" loadingText="Opening…">
         <MessageCircle size={19} /> Start a Masquerade

@@ -157,7 +157,7 @@ export function MasqueradeCard({
             <div className="min-w-0 flex-1">
               <p className="truncate text-[17px] leading-tight font-semibold">{cur.their_alias}</p>
               <p className="truncate text-[12px] text-white/75">
-                {[cur.their_age, sexLabel(cur.their_gender), intentLabel(cur.intent), cur.their_place].filter(Boolean).join(" · ")}
+                {[sexLabel(cur.their_gender), intentLabel(cur.intent), cur.their_place].filter(Boolean).join(" · ")}
               </p>
             </div>
             <Link

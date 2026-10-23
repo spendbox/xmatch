@@ -11,7 +11,15 @@ self.addEventListener("push", (event) => {
   }
   const title = data.title || "Dashpad";
   event.waitUntil(
-    self.registration.showNotification(title, {
+    (async () => {
+      // Already looking at that chat? No need to buzz (iPhones always need a notification shown)
+      const ios = /iPhone|iPad|iPod/.test(self.navigator.userAgent);
+      if (data.url && !ios) {
+        const wins = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+        const target = new URL(data.url, self.location.origin).href;
+        if (wins.some((w) => w.visibilityState === "visible" && w.url === target)) return;
+      }
+      return self.registration.showNotification(title, {
       body: data.body || "",
       icon: data.icon || "/icon-192.png",
       badge: "/badge-96.png",
@@ -20,7 +28,8 @@ self.addEventListener("push", (event) => {
       requireInteraction: !!data.requireInteraction,
       vibrate: data.requireInteraction ? [400, 200, 400, 200, 400] : [120, 60, 120],
       data: { url: data.url || "/home" },
-    }),
+      });
+    })(),
   );
 });
 
