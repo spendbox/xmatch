@@ -183,12 +183,12 @@ export function MasqueradeCard({
             tapFeedback();
             onSettings?.();
           }}
-          aria-label={`You will be paired with someone by ${lagosTime(hour.next_at)}. Open your Masquerade settings`}
+          aria-label={`Next pair up by ${lagosTime(hour.next_at)}. Open your Masquerade settings`}
           className="relative mt-3.5 flex w-full items-center gap-4 rounded-2xl text-left transition active:scale-[0.99]"
         >
           <div className="min-w-0 flex-1">
             <p className="text-[13px] text-white/75">
-              You will be paired with someone by {lagosTime(hour.next_at).replace(/\s?([AP]M)$/i, (_, m: string) => m.toLowerCase())}
+              Next pair up by {lagosTime(hour.next_at).replace(/\s?([AP]M)$/i, (_, m: string) => m.toLowerCase())}
             </p>
             <p className="mt-1 text-[14px] leading-snug text-white/90">
               {cur?.status === "ended" || cur?.status === "lapsed"

@@ -24,8 +24,6 @@ export type Profile = {
   place_label?: string | null;
   /** Ghost mode: hidden from the Meet page while it lasts */
   ghost_on?: boolean;
-  /** How many times they changed their name after signing up (once is allowed) */
-  name_changes?: number;
   /** "Things about me" cards: prompt id and answer */
   things?: { p: string; a: string }[];
   ghost_until?: string | null;
