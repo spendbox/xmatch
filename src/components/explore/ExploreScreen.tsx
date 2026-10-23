@@ -69,7 +69,7 @@ export function ExploreScreen({ initial, demoProfile }: { initial: ExploreList |
       <h2 className="mt-7 mb-4 text-[15px] font-semibold">{searchingNow ? (searching ? "Searching…" : `${people.length} ${people.length === 1 ? "person" : "people"} found`) : "People like you"}</h2>
 
       {people.length > 0 ? (
-        <ul className="grid grid-cols-3 gap-x-3 gap-y-5 sm:grid-cols-4 lg:grid-cols-6">
+        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           {people.map((p) => (
             <li key={p.id} className="min-w-0">
               <button
@@ -78,27 +78,33 @@ export function ExploreScreen({ initial, demoProfile }: { initial: ExploreList |
                   tapFeedback();
                   setOpen(p.id);
                 }}
-                className="group flex w-full flex-col items-center text-center"
+                className="group relative block aspect-[3/4] w-full overflow-hidden rounded-[22px] bg-brand-soft text-left shadow-card transition hover:-translate-y-0.5 hover:shadow-lift active:scale-[0.98]"
                 aria-label={`${p.name}${p.age ? `, ${p.age}` : ""}`}
               >
-                <span className="relative block aspect-square w-full max-w-[124px]">
-                  <span className="absolute inset-0 overflow-hidden rounded-full bg-brand-soft shadow-card ring-[3px] ring-surface transition group-hover:shadow-lift group-active:scale-95">
-                    {p.photo ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={p.photo} alt="" loading="lazy" className="h-full w-full object-cover" />
-                    ) : (
-                      <span className="grid h-full w-full place-items-center text-[28px] font-semibold text-brand">{p.name.charAt(0)}</span>
-                    )}
+                {p.photo ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={p.photo} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]" />
+                ) : (
+                  <span className="absolute inset-0 grid place-items-center text-[40px] font-semibold text-brand">{p.name.charAt(0)}</span>
+                )}
+                <span aria-hidden className="absolute inset-x-0 bottom-0 h-[55%] bg-gradient-to-t from-black/75 via-black/30 to-transparent" />
+                {p.online && (
+                  <span className="absolute top-2.5 left-2.5 inline-flex items-center gap-1 rounded-full bg-black/35 py-0.5 pr-2 pl-1.5 text-[11px] font-semibold text-white backdrop-blur-sm">
+                    <span className="h-2 w-2 rounded-full bg-[#7dffb5]" /> Online
                   </span>
-                  {p.online && <span className="absolute right-[9%] bottom-[9%] h-4 w-4 rounded-full bg-mint ring-[3px] ring-cream" aria-label="Online now" />}
-                  {p.connected && (
-                    <span className="absolute top-[4%] right-[4%] grid h-6 w-6 place-items-center rounded-full bg-brand text-white ring-2 ring-cream" title="You're connected">
-                      <Check size={14} strokeWidth={3} />
-                    </span>
-                  )}
+                )}
+                {p.connected && (
+                  <span className="absolute top-2.5 right-2.5 grid h-6 w-6 place-items-center rounded-full bg-brand text-white ring-2 ring-white/80" title="You're connected">
+                    <Check size={14} strokeWidth={3} />
+                  </span>
+                )}
+                <span className="absolute inset-x-0 bottom-0 p-3 text-white">
+                  <span className="block truncate text-[16px] leading-tight font-semibold">
+                    {p.name.split(" ")[0]}
+                    {p.age ? <span className="font-normal text-white/85">, {p.age}</span> : null}
+                  </span>
+                  {p.place && <span className="mt-0.5 block truncate text-[12px] text-white/75">{p.place.split(",")[0]}</span>}
                 </span>
-                <span className="mt-2 block w-full truncate text-[14px] font-semibold">{p.name.split(" ")[0]}</span>
-                <span className="block w-full truncate text-[12px] text-muted">{[p.age, p.place?.split(",")[0]].filter(Boolean).join(" · ")}</span>
               </button>
             </li>
           ))}
