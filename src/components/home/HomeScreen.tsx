@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Sticky } from "@/components/ui/Sticky";
-import { ChevronRight, UsersRound } from "lucide-react";
+import { PeopleForYou } from "./PeopleForYou";
+import type { ExploreList } from "@/lib/explore";
+import { ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Wallet } from "@/lib/keys";
 import type { MasqueradeHour } from "@/lib/hourly";
@@ -41,6 +43,7 @@ export function HomeScreen({
   matches = [],
   meets: initialMeets = null,
   demoSheet,
+  demoPeople,
 }: {
   profile: Profile;
   wallet: Wallet | null;
@@ -52,6 +55,8 @@ export function HomeScreen({
   hour?: MasqueradeHour | null;
   meets?: MeetList | null;
   demoSheet?: "meet" | "post";
+  /** Design previews: the people grid */
+  demoPeople?: ExploreList;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const { wallet, refresh: refreshWallet } = useWallet(profile.id, initialWallet);
@@ -128,20 +133,7 @@ export function HomeScreen({
       <div className="mt-5 lg:sticky lg:top-24 lg:col-span-7 lg:mt-0">
         <MasqueradeCard userId={profile.id} ctl={ctl} hasPlace={!!place.country} onPlace={() => setPlaceOpen(true)} onSettings={() => setMeetOpen(true)} />
 
-        <Link
-          href="/meet"
-          onClick={tapFeedback}
-          className="group mt-4 flex items-center gap-3.5 rounded-3xl border border-brand/15 bg-surface p-3.5 shadow-card transition hover:-translate-y-0.5 hover:shadow-lift active:scale-[0.99]"
-        >
-          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-brand text-white shadow-[0_8px_20px_-10px_rgb(91_63_217/0.8)]">
-            <UsersRound size={22} />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[16px] font-semibold">Explore</span>
-            <span className="block truncate text-[13px] text-muted">Find people like you, or search by name</span>
-          </span>
-          <ChevronRight size={20} className="shrink-0 text-muted transition group-hover:translate-x-0.5" />
-        </Link>
+        <PeopleForYou userId={profile.id} demo={demoPeople} />
       </div>
 
       <div className="lg:col-span-5">
