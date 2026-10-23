@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import clsx from "clsx";
 import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, Quote, X } from "lucide-react";
 import { ageFromBirthdate, GENDERS } from "@/lib/constants";
@@ -12,11 +13,20 @@ export function ProfileSheet({
   onClose,
   note,
   shared = [],
+  age: ageOverride,
+  extra,
+  footer,
 }: {
   profile: Profile;
   onClose: () => void;
   note?: string;
   shared?: string[];
+  /** When there's no birthdate to work it out from */
+  age?: number | null;
+  /** Shown under the note (e.g. locked photos) */
+  extra?: React.ReactNode;
+  /** Actions pinned to the bottom (e.g. Message) */
+  footer?: React.ReactNode;
 }) {
   const [i, setI] = useState(0);
   const [mounted, setMounted] = useState(false);
@@ -33,7 +43,7 @@ export function ProfileSheet({
   }, [onClose]);
 
   const photos = profile.photos ?? [];
-  const age = ageFromBirthdate(profile.birthdate);
+  const age = ageOverride ?? ageFromBirthdate(profile.birthdate);
   const gender = GENDERS.find((g) => g.value === profile.gender)?.label;
   if (!mounted) return null;
 
@@ -48,7 +58,7 @@ export function ProfileSheet({
       aria-label={profile.display_name ?? "Profile"}
     >
       <button className="absolute inset-0 hidden cursor-default lg:block" aria-label="Close" onClick={onClose} />
-      <div className="relative mx-auto max-w-md pb-12 lg:grid lg:h-[min(88vh,780px)] lg:w-full lg:max-w-5xl lg:animate-pop lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:overflow-hidden lg:rounded-[32px] lg:bg-surface lg:pb-0 lg:shadow-lift">
+      <div className={clsx("relative mx-auto max-w-md lg:grid lg:h-[min(88vh,780px)] lg:w-full lg:max-w-5xl lg:animate-pop lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:overflow-hidden lg:rounded-[32px] lg:bg-surface lg:pb-0 lg:shadow-lift", footer ? "pb-32" : "pb-12")}>
         {/* Photos */}
         <div className="relative lg:h-full lg:bg-ink">
           {photos[i] ? (
@@ -117,6 +127,7 @@ export function ProfileSheet({
             </button>
           </div>
           {note && <p className="rounded-2xl bg-brand-soft px-4 py-3 text-[13px] font-medium text-brand-ink lg:mt-5">{note}</p>}
+          {extra}
           {profile.bio && (
             <section className="rounded-3xl bg-surface p-5 shadow-card">
               <Quote size={20} className="text-brand" />
@@ -143,6 +154,11 @@ export function ProfileSheet({
                 })}
               </div>
             </section>
+          )}
+          {footer && (
+            <div className="fixed inset-x-0 bottom-0 z-10 border-t border-line bg-surface/95 px-4 pt-3 pb-safe backdrop-blur lg:sticky lg:-mx-8 lg:mt-6 lg:-mb-8 lg:px-8 lg:pb-6">
+              <div className="mx-auto max-w-md lg:max-w-none">{footer}</div>
+            </div>
           )}
         </div>
       </div>

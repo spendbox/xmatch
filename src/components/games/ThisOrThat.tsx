@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import { buzz, sfx, type Game, type GameActions, type TotQuestion } from "@/lib/games";
-import { Countdown, secondsLeft, useTicker, type Names } from "./parts";
+import { secondsLeft, useTicker, type Names } from "./parts";
 
 type Pick = "a" | "b" | null;
 
@@ -25,7 +25,6 @@ export function ThisOrThat({ game, names, act }: { game: Game; names: Names; act
   const theirPick: Pick = revealing ? picks[shownIndex]?.[me === "a" ? 1 : 0] ?? null : null;
   const same = revealing && myPick !== null && myPick === theirPick;
   const alike: number = st.alike ?? 0;
-  const left = secondsLeft(game.deadline_at, act.now) - revealLeft;
 
   // Sound for each reveal
   const seen = useRef(picks.length);
@@ -57,7 +56,6 @@ export function ThisOrThat({ game, names, act }: { game: Game; names: Names; act
         <span className="rounded-full bg-[#7dffb5]/15 px-3 py-1.5 text-[13px] font-extrabold text-[#7dffb5]">
           {alike}/{picks.length} alike
         </span>
-        {!revealing && game.status === "active" && <Countdown seconds={Math.max(0, left)} total={8} size={42} />}
       </div>
 
       {/* Progress */}

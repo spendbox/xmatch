@@ -5,7 +5,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { CallScreen } from "./CallScreen";
-import { startTone, stopTone } from "./tones";
+import { callCue, startTone, stopTone, unlockAudio } from "./tones";
+import { haptic } from "@/lib/haptics";
 
 export type CallKind = "audio" | "video";
 export type CallPeer = { name: string; photo?: string | null };
@@ -113,6 +114,7 @@ export function CallProvider({ userId, children }: { userId: string; children: R
       setCameraOff(false);
       setFacing("user");
       if (callRef.current) {
+        if (callRef.current.status !== "ended") callCue("ended");
         update({ status: "ended", endedReason: reason });
         timers.current.push(setTimeout(() => update(null), 1800));
       }
@@ -168,6 +170,7 @@ export function CallProvider({ userId, children }: { userId: string; children: R
           clearRestart();
           if (callRef.current?.status !== "connected") {
             stopTone();
+            callCue("connected");
             update({ status: "connected", connectedAt: Date.now() });
           }
         }
@@ -275,6 +278,7 @@ export function CallProvider({ userId, children }: { userId: string; children: R
   const startCall = useCallback(
     async (matchId: string, kind: CallKind, peer: CallPeer) => {
       if (callRef.current) return;
+      haptic(15);
       let stream: MediaStream;
       try {
         stream = await getMedia(kind);
@@ -312,6 +316,7 @@ export function CallProvider({ userId, children }: { userId: string; children: R
     const c = callRef.current;
     if (!c || c.role !== "callee" || c.status !== "incoming") return;
     stopTone();
+    haptic(15);
     let stream: MediaStream;
     try {
       stream = await getMedia(c.kind);
@@ -339,6 +344,7 @@ export function CallProvider({ userId, children }: { userId: string; children: R
   const decline = useCallback(async () => {
     const c = callRef.current;
     if (!c) return;
+    haptic(15);
     await supabase.rpc("update_call", { p_call: c.id, p_status: "declined" });
     teardown("Declined");
   }, [supabase, teardown]);
@@ -346,12 +352,16 @@ export function CallProvider({ userId, children }: { userId: string; children: R
   const hangUp = useCallback(async () => {
     const c = callRef.current;
     if (!c) return;
+    haptic(15);
     send({ type: "bye" });
     await supabase.rpc("update_call", { p_call: c.id, p_status: "ended" });
     teardown(c.status === "outgoing" ? "Cancelled" : "Call ended");
   }, [send, supabase, teardown]);
 
   // Listen for calls to me, and for the other side declining/ending
+  // Let an incoming call ring out loud even if you haven't touched the page since it loaded
+  useEffect(() => unlockAudio(), []);
+
   useEffect(() => {
     const ch = supabase
       .channel(`calls-${userId}`)

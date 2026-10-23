@@ -4,6 +4,7 @@ import clsx from "clsx";
 import Link, { useLinkStatus } from "next/link";
 import type { ComponentProps, ReactNode } from "react";
 import { useFormStatus } from "react-dom";
+import { haptic } from "@/lib/haptics";
 
 type Variant = "primary" | "secondary" | "ghost" | "gold" | "danger";
 type Size = "md" | "lg";
@@ -121,9 +122,5 @@ export function Spinner({ className }: { className?: string }) {
 
 /** A tiny buzz on phones that support it. */
 export function tapFeedback() {
-  try {
-    if (typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate(8);
-  } catch {
-    /* not supported */
-  }
+  haptic(8);
 }

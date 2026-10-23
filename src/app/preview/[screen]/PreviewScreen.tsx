@@ -45,6 +45,8 @@ import type { MasqueradeHour } from "@/lib/hourly";
 import type { ChatMessage, MasqueradeState, Profile } from "@/lib/types";
 import type { Meet, MeetChat, MeetList } from "@/lib/meets";
 import { MeetScreen } from "@/components/meets/MeetScreen";
+import { ExploreScreen } from "@/components/explore/ExploreScreen";
+import type { ExploreList, ExploreProfile } from "@/lib/explore";
 
 const photo = (a: string, b: string, letter: string) =>
   "data:image/svg+xml;utf8," +
@@ -114,7 +116,7 @@ const recent = [
   { id: "m3", created_at: iso(3000), last_message_at: iso(200), intent: "spicy" as const, other_id: "z", display_name: "Zara", photos: [photo("#5b3fd9", "#e5484d", "Z")], age: 29, last_message: null, last_sender: null },
 ];
 
-const APP_SCREENS = ["events-empty", "event-spotlight", "event-spotlight-live", "events", "event-upcoming", "event-live", "event-waiting", "event-ended", "home", "matches", "wallet", "profile", "rich-chat", "extend", "chat", "desktop-matches", "gifts", "home-next", "home-off", "home-clicked", "people", "feed", "feed-locked", "feed-chat", "feed-gifts", "meet", "meet-events", "meet-post"];
+const APP_SCREENS = ["events-empty", "event-spotlight", "event-spotlight-live", "events", "event-upcoming", "event-live", "event-waiting", "event-ended", "home", "matches", "wallet", "profile", "rich-chat", "extend", "chat", "desktop-matches", "gifts", "home-next", "home-off", "home-clicked", "people", "feed", "feed-locked", "feed-chat", "feed-gifts", "meet", "meet-events", "meet-post", "explore"];
 
 function ev(over: Partial<DashpadEvent> = {}): DashpadEvent {
   return {
@@ -192,6 +194,25 @@ const demoMeetChats: MeetChat[] = [
   { id: "c3", status: "active", ends_at: new Date(now + 100 * 60_000).toISOString(), mine: false, kind: "text", game: null, post: "Best small chops spot in Lekki?", their_alias: "Golden Heron", my_vote: null, game_status: null, in_line: false, last_message: "Okay that one made me laugh 😂" },
 ];
 
+const explorePeople: ExploreList = {
+  message_cost: 15,
+  photos_cost: 5,
+  people: [
+    ["Ada", 26, "#e5484d", "#f2b33d", true, false], ["Kemi", 24, "#5b3fd9", "#ffd166", true, true], ["Zainab", 25, "#1f9d6b", "#efebfd", false, false],
+    ["Bisi", 27, "#c2306b", "#fdf3dc", false, false], ["Ife", 23, "#2563eb", "#f2b33d", true, false], ["Tola", 28, "#a26b00", "#efebfd", false, false],
+    ["Funmi", 25, "#6d4ff0", "#e5f6ee", false, true], ["Chioma", 26, "#0f5c3e", "#ffd166", false, false], ["Amaka", 24, "#e8962a", "#5b3fd9", true, false],
+  ].map(([name, age, a, b, online, connected], i) => ({
+    id: `p${i}`, name: name as string, age: age as number, gender: "woman" as const, photo: photo(a as string, b as string, (name as string)[0]),
+    place: i % 2 ? "Yaba, Lagos" : "Akoka, Lagos", intent: "dating" as const, online: online as boolean, connected: connected as boolean,
+  })),
+};
+const exploreProfile: ExploreProfile = {
+  id: "p0", name: "Ada", age: 26, gender: "woman", bio: "Bookworm, beach lover, and the friend who always knows the best brunch spot.",
+  interests: ["Books", "Travel", "Dancing", "Food"], place: "Akoka, Lagos", intent: "dating", online: true,
+  photos: [photo("#e5484d", "#f2b33d", "A")], photo_count: 4, photos_unlocked: false, match_id: null,
+  shared_interests: ["Travel", "Food"], message_cost: 15, photos_cost: 5,
+};
+
 export function PreviewScreen({ screen }: { screen: string }) {
   const inner = <ScreenBody screen={screen} />;
   if (!APP_SCREENS.includes(screen)) return inner;
@@ -257,7 +278,7 @@ function ScreenBody({ screen }: { screen: string }) {
     case "people":
       return <div className="pb-24"><YourPeople matches={recent} myId="me" /><BottomNav /></div>;
     case "admin-prices":
-      return <AdminShell><PricesManager settings={{ reopen_cost: 10, reveal_cost: 1, free_reveals: 10, invite_reward: 10, meet_cost: 10, meet_free_posts: 1, meet_hours: 3 }} invites={{ joined: 64, joined_7d: 12, buyers: 19, keys_paid: 410, top: [{ name: "Tolu", joined: 9, earned: 90 }, { name: "Kemi", joined: 6, earned: 40 }] }}
+      return <AdminShell><PricesManager settings={{ reopen_cost: 10, reveal_cost: 1, free_reveals: 10, invite_reward: 10, meet_cost: 10, meet_free_posts: 1, meet_hours: 3, explore_message_cost: 15, explore_photos_cost: 5 }} invites={{ joined: 64, joined_7d: 12, buyers: 19, keys_paid: 410, top: [{ name: "Tolu", joined: 9, earned: 90 }, { name: "Kemi", joined: 6, earned: 40 }] }}
         gifts={[{ id: "fire", name: "Fire", emoji: "🔥", price: 5, sort: 1, retired: false }, { id: "rose", name: "Rose", emoji: "🌹", price: 5, sort: 2, retired: false }, { id: "jollof", name: "Jollof", emoji: "🍛", price: 15, sort: 5, retired: false }, { id: "teddy", name: "Teddy bear", emoji: "🧸", price: 30, sort: 91, retired: true }]}
         packs={[{ id: "p50", keys: 50, naira: 750, tag: null, sort: 1, active: true }, { id: "p150", keys: 150, naira: 2000, tag: "Popular", sort: 2, active: true }, { id: "p500", keys: 500, naira: 4500, tag: "Best value", sort: 3, active: true }]} /></AdminShell>;
     case "admin-masquerade": {
@@ -290,6 +311,10 @@ function ScreenBody({ screen }: { screen: string }) {
           demo={{ remaining: screen === "room-lapsed" ? 0 : 41 * 60 + 12 }}
         />
       );
+    case "explore":
+      return <div className="pb-24"><ExploreScreen initial={explorePeople} /><BottomNav /></div>;
+    case "explore-profile":
+      return <ExploreScreen initial={explorePeople} demoProfile={exploreProfile} />;
     case "meet":
     case "meet-events":
       return (

@@ -5,7 +5,7 @@ import clsx from "clsx";
 import { createClient } from "@/lib/supabase/client";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { buzz, sfx, type Game, type GameActions } from "@/lib/games";
-import { BigButton, Countdown, secondsLeft, useTicker, type Names } from "./parts";
+import { BigButton, useTicker, type Names } from "./parts";
 
 const FALLBACK_IDEAS = ["I have been to…", "I can cook…", "I once met…", "My first job was…", "I am scared of…", "I have never…"];
 let ideasCache: Promise<string[]> | null = null;
@@ -32,25 +32,24 @@ export function TwoTruths({
   const me = game.me;
   const them = me === "a" ? "b" : "a";
   const phase: "write" | "guess" | "reveal" = game.status === "active" ? st.phase : st.phase === "reveal" ? "reveal" : st.phase;
-  const left = secondsLeft(game.deadline_at, act.now);
-
-  if (phase === "write") return <Write game={game} names={names} act={act} left={left} them={them} />;
-  if (phase === "guess") return <Guess game={game} names={names} act={act} left={left} them={them} />;
+  if (phase === "write") return <Write game={game} names={names} act={act} them={them} />;
+  if (phase === "guess") return <Guess game={game} names={names} act={act} them={them} />;
   return <Reveal game={game} names={names} onResults={onResults} />;
 }
 
-function Header({ sub, left, total }: { title?: string; sub: string; left?: number; total?: number }) {
+function Header({ sub }: { title?: string; sub: string }) {
   return (
     <div className="flex items-center gap-3">
       <div className="min-w-0 flex-1">
         <p className="text-[14px] font-bold text-white/75">{sub}</p>
       </div>
-      {left !== undefined && total && <Countdown seconds={left} total={total} />}
     </div>
   );
 }
 
-function Write({ game, names, act, left, them }: { game: Game; names: Names; act: GameActions; left: number; them: "a" | "b" }) {
+type Truth = { id: number; body: string; uses: number };
+
+function Write({ game, names, act, them }: { game: Game; names: Names; act: GameActions; them: "a" | "b" }) {
   // (A draft can be passed in for design previews)
   const [lines, setLines] = useState<string[]>(game.mine?.draft?.lines ?? ["", "", ""]);
   const [lie, setLie] = useState<number | null>(game.mine?.draft?.lie ?? null);
@@ -58,9 +57,22 @@ function Write({ game, names, act, left, them }: { game: Game; names: Names; act
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [ideas, setIdeas] = useState<string[]>([]);
+  // Truths you've used before (kept on your account to use again)
+  const [saved, setSaved] = useState<Truth[]>(game.mine?.draft?.saved ?? []);
+  const [editing, setEditing] = useState(false);
   const refs = useRef<(HTMLTextAreaElement | null)[]>([]);
   const locked = !!game.state[`ready_${game.me}`];
   const theyReady = !!game.state[`ready_${them}`];
+
+  useEffect(() => {
+    act.call("my_truths", {}).then(({ data }) => Array.isArray(data) && setSaved(data as Truth[]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function forget(t: Truth) {
+    setSaved((list) => list.filter((x) => x.id !== t.id));
+    await act.call("delete_truth", { p_id: t.id });
+  }
 
   useEffect(() => {
     loadIdeas()
@@ -95,7 +107,7 @@ function Write({ game, names, act, left, them }: { game: Game; names: Names; act
   if (locked) {
     return (
       <div className="flex h-full flex-col px-[18px] pt-2 pb-6">
-        <Header title="TWO TRUTHS & A LIE" sub="Locked in" left={left} total={90} />
+        <Header title="TWO TRUTHS & A LIE" sub="Locked in" />
         <div className="m-auto text-center">
           <span className="gm-burst mx-auto grid h-24 w-24 place-items-center rounded-full bg-gold text-ink shadow-[0_6px_0_#b9831e]">
             <MaskIcon className="w-14" eyes="#f2b33d" />
@@ -111,10 +123,7 @@ function Write({ game, names, act, left, them }: { game: Game; names: Names; act
 
   return (
     <div className="flex h-full flex-col overflow-y-auto px-[18px] pt-2 pb-6">
-      <Header title="TWO TRUTHS & A LIE" sub="Round 1 · you write" left={left} total={90} />
-      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/12">
-        <div className="h-full rounded-full bg-gradient-to-r from-gold to-[#ffd36b] transition-[width] duration-300" style={{ width: `${(left / 90) * 100}%` }} />
-      </div>
+      <Header title="TWO TRUTHS & A LIE" sub="Round 1 · you write" />
       <h2 className="mt-5 font-display text-[28px] leading-[1.1] font-bold">Write two truths and one lie</h2>
       <p className="mt-1.5 text-[14px] text-white/70">Tap the mask on the one that&apos;s a lie. {names.them} has to find it.</p>
 
@@ -175,6 +184,48 @@ function Write({ game, names, act, left, them }: { game: Game; names: Names; act
         })}
       </div>
 
+      {saved.length > 0 && (
+        <section className="mt-4 rounded-[20px] bg-white/8 p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-[12px] font-extrabold tracking-[0.12em] text-gold uppercase">Your truths</p>
+            <button type="button" onClick={() => setEditing((e) => !e)} className="text-[12px] font-bold text-white/70">
+              {editing ? "Done" : "Edit"}
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {saved.map((t) => {
+              const used = lines.some((l) => l.trim().toLowerCase() === t.body.toLowerCase());
+              return (
+                <span key={t.id} className="inline-flex max-w-full items-center">
+                  <button
+                    type="button"
+                    disabled={editing || used}
+                    onClick={() => {
+                      addIdea(t.body);
+                      sfx("tap");
+                    }}
+                    className={clsx(
+                      "gm-btn max-w-full truncate rounded-full px-3 py-1.5 text-left text-[13px] font-semibold",
+                      used ? "bg-[#7dffb5]/20 text-[#7dffb5]" : "bg-white text-ink",
+                      editing && "rounded-r-none",
+                    )}
+                  >
+                    {used ? "✓ " : ""}
+                    {t.body}
+                  </button>
+                  {editing && (
+                    <button type="button" onClick={() => forget(t)} aria-label={`Remove “${t.body}”`} className="rounded-r-full bg-chili px-2.5 py-1.5 text-[13px] font-bold text-white">
+                      ✕
+                    </button>
+                  )}
+                </span>
+              );
+            })}
+          </div>
+          <p className="mt-2 text-[11px] text-white/55">Your truths are saved when you lock in, so you can use them again in any game.</p>
+        </section>
+      )}
+
       {ideas.length > 0 && (
         <div className="mt-3.5 flex flex-wrap items-center gap-2">
           <span className="text-[12px] font-bold text-white/60">Stuck? Try:</span>
@@ -200,7 +251,7 @@ function Write({ game, names, act, left, them }: { game: Game; names: Names; act
   );
 }
 
-function Guess({ game, names, act, left, them }: { game: Game; names: Names; act: GameActions; left: number; them: "a" | "b" }) {
+function Guess({ game, names, act, them }: { game: Game; names: Names; act: GameActions; them: "a" | "b" }) {
   const lines: string[] = game.state[`lines_${them}`] ?? [];
   const [local, setLocal] = useState<number | null>(null);
   const guess: number | null = game.mine?.guess ?? local;
@@ -216,7 +267,7 @@ function Guess({ game, names, act, left, them }: { game: Game; names: Names; act
 
   return (
     <div className="flex h-full flex-col px-[18px] pt-2 pb-6">
-      <Header title="TWO TRUTHS & A LIE" sub="Round 2 · you guess" left={left} total={45} />
+      <Header title="TWO TRUTHS & A LIE" sub="Round 2 · you guess" />
       <h2 className="mt-6 font-display text-[30px] leading-[1.1] font-bold">Which one is {names.them}&apos;s lie?</h2>
       <div className="mt-5 flex flex-col gap-3.5">
         {lines.map((l, k) => (

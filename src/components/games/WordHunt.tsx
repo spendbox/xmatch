@@ -22,6 +22,9 @@ export function WordHunt({ game, names, act }: { game: Game; names: Names; act: 
   const [shake, setShake] = useState(0);
   const grid = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
+  // The swipe as it happens (state lags a frame behind on fast swipes, so read from here)
+  const pathRef = useRef<number[]>([]);
+  const lastPoint = useRef<{ x: number; y: number } | null>(null);
 
   const left = game.status === "active" ? secondsLeft(game.deadline_at, act.now) : 0;
   const started = secondsLeft(game.started_at, act.now) <= 0;
@@ -63,36 +66,50 @@ export function WordHunt({ game, names, act }: { game: Game; names: Names; act: 
 
   function extend(i: number) {
     if (i < 0) return;
-    setPath((p) => {
-      if (p.length && p[p.length - 1] === i) return p;
-      // Slide back to undo the last letter
-      if (p.length >= 2 && p[p.length - 2] === i) {
-        sfx("tick");
-        return p.slice(0, -1);
-      }
-      if (p.includes(i) || (p.length && !touches(p[p.length - 1], i))) return p;
+    const p = pathRef.current;
+    if (p.length && p[p.length - 1] === i) return;
+    // Slide back to undo the last letter
+    if (p.length >= 2 && p[p.length - 2] === i) {
       sfx("tick");
-      buzz(5);
-      return [...p, i];
-    });
+      pathRef.current = p.slice(0, -1);
+      setPath(pathRef.current);
+      return;
+    }
+    if (p.includes(i) || (p.length && !touches(p[p.length - 1], i))) return;
+    sfx("tick");
+    buzz(5);
+    pathRef.current = [...p, i];
+    setPath(pathRef.current);
   }
 
-  function down(e: React.PointerEvent) {
+  // Phones (iPhones most of all) report the finger only every so often on a fast swipe,
+  // so check the tiles along the way between two reports too.
+  function trace(x: number, y: number) {
+    const from = lastPoint.current;
+    lastPoint.current = { x, y };
+    const el = grid.current;
+    if (!from || !el) return extend(cellAt(x, y));
+    const step = el.getBoundingClientRect().width / 4 / 5;
+    const n = Math.max(1, Math.ceil(Math.hypot(x - from.x, y - from.y) / step));
+    for (let k = 1; k <= n; k++) extend(cellAt(from.x + ((x - from.x) * k) / n, from.y + ((y - from.y) * k) / n));
+  }
+
+  function begin(x: number, y: number) {
     if (!playing) return;
-    (e.target as Element).releasePointerCapture?.(e.pointerId);
     dragging.current = true;
+    pathRef.current = [];
+    lastPoint.current = null;
     setPath([]);
-    extend(cellAt(e.clientX, e.clientY));
+    trace(x, y);
   }
-  function move(e: React.PointerEvent) {
-    if (!dragging.current) return;
-    extend(cellAt(e.clientX, e.clientY));
-  }
-  async function up() {
+
+  async function finish() {
     if (!dragging.current) return;
     dragging.current = false;
-    const p = path;
-    const w = word;
+    lastPoint.current = null;
+    const p = pathRef.current;
+    const w = p.map((i) => board[i]).join("");
+    pathRef.current = [];
     setPath([]);
     if (w.length < 3) return;
     const key = Date.now();
@@ -117,6 +134,55 @@ export function WordHunt({ game, names, act }: { game: Game; names: Names; act: 
       setFound((f) => f.filter((x) => x !== w));
       setFlash({ text: error, tone: "bad", key: Date.now() });
     }
+  }
+
+  // Touch is handled directly (not through pointer events) and blocked from scrolling
+  // the page, which iPhones otherwise do part-way through a swipe.
+  const handlers = useRef({ begin, trace, finish });
+  handlers.current = { begin, trace, finish };
+  useEffect(() => {
+    const el = grid.current;
+    if (!el) return;
+    const xy = (e: TouchEvent) => e.touches[0] ?? e.changedTouches[0];
+    const onStart = (e: TouchEvent) => {
+      e.preventDefault();
+      const t = xy(e);
+      if (t) handlers.current.begin(t.clientX, t.clientY);
+    };
+    const onMove = (e: TouchEvent) => {
+      e.preventDefault();
+      const t = xy(e);
+      if (t && dragging.current) handlers.current.trace(t.clientX, t.clientY);
+    };
+    const onEnd = (e: TouchEvent) => {
+      e.preventDefault();
+      void handlers.current.finish();
+    };
+    el.addEventListener("touchstart", onStart, { passive: false });
+    el.addEventListener("touchmove", onMove, { passive: false });
+    el.addEventListener("touchend", onEnd, { passive: false });
+    el.addEventListener("touchcancel", onEnd, { passive: false });
+    return () => {
+      el.removeEventListener("touchstart", onStart);
+      el.removeEventListener("touchmove", onMove);
+      el.removeEventListener("touchend", onEnd);
+      el.removeEventListener("touchcancel", onEnd);
+    };
+  }, []);
+
+  // Mouse and pen
+  function down(e: React.PointerEvent) {
+    if (e.pointerType === "touch") return;
+    (e.target as Element).releasePointerCapture?.(e.pointerId);
+    begin(e.clientX, e.clientY);
+  }
+  function move(e: React.PointerEvent) {
+    if (e.pointerType === "touch" || !dragging.current) return;
+    trace(e.clientX, e.clientY);
+  }
+  function up(e?: React.PointerEvent) {
+    if (e?.pointerType === "touch") return;
+    void finish();
   }
 
   // Polyline across the tiles you've swiped
@@ -183,12 +249,12 @@ export function WordHunt({ game, names, act }: { game: Game; names: Names; act: 
       >
         <div
           ref={grid}
-          className="relative grid touch-none grid-cols-4"
+          className="relative grid touch-none grid-cols-4 [-webkit-touch-callout:none] [-webkit-user-select:none]"
           onPointerDown={down}
           onPointerMove={move}
           onPointerUp={up}
           onPointerCancel={up}
-          onPointerLeave={() => dragging.current && up()}
+          onPointerLeave={(e) => e.pointerType !== "touch" && dragging.current && up()}
         >
           <svg viewBox="0 0 100 100" className="pointer-events-none absolute inset-0 z-10 h-full w-full" aria-hidden>
             {path.length > 1 && (

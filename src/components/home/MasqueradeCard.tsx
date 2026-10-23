@@ -7,7 +7,7 @@ import { BellRing, Gift, Handshake, MapPin, MessageCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { intentLabel } from "@/lib/constants";
 import { sexLabel } from "@/lib/eventSpace";
-import { clock, connectionsLabel, lagosHour, lagosTime, replyLabel, type MasqueradeHour } from "@/lib/hourly";
+import { clock, lagosHour, lagosTime, type MasqueradeHour } from "@/lib/hourly";
 import { usePushState } from "@/components/app/Notifications";
 import { useInvites, useShareInvite } from "@/components/profile/InviteCard";
 import { Toggle } from "@/components/ui/Toggle";
@@ -105,77 +105,81 @@ export function MasqueradeCard({
     if (error) setHour((h) => (h ? { ...h, enabled: !v } : h));
   }
 
+  // One small extra at a time, most useful first, so the card stays short
+  const extra =
+    !hour || (!enabled && !live) || live
+      ? null
+      : !hasPlace
+        ? "place"
+        : push.state === "off"
+          ? "push"
+          : !live && cur?.status !== "matched"
+            ? "invite"
+            : null;
+
+  const preview = cur
+    ? cur.my_vote === true
+      ? `You unmasked. If ${cur.their_alias} does too, you're connected.`
+      : cur.they_voted
+        ? `${cur.their_alias} has made a choice. Your move.`
+        : cur.messages === 0
+          ? "Say hi before the hour is up."
+          : cur.last_from_them && cur.last_message
+            ? `“${cur.last_message}”`
+            : "Keep the vibe going."
+    : "";
+
   return (
-    <section className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-brand via-[#6d4ff0] to-[#8f6bff] p-5 text-white shadow-[0_18px_40px_-18px_rgb(91_63_217/0.8)] lg:p-8">
-      <div aria-hidden className="absolute -top-14 -right-12 h-48 w-48 rounded-full bg-white/10" />
+    <section className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-brand via-[#6d4ff0] to-[#8f6bff] px-4 pt-3.5 pb-4 text-white shadow-[0_18px_40px_-18px_rgb(91_63_217/0.8)] lg:rounded-[28px] lg:p-6">
+      <div aria-hidden className="absolute -top-14 -right-12 h-40 w-40 rounded-full bg-white/10" />
 
       <div className="relative flex items-center gap-3">
-        <p className="min-w-0 flex-1 text-[13px] font-semibold tracking-wide text-white/80 uppercase">
+        <p className="min-w-0 flex-1 truncate text-[12px] font-semibold tracking-wide text-white/80 uppercase">
           {!enabled && !live ? "Masquerade is off" : live && hour ? `Your ${lagosHour(hour.hour_at)} pair` : "Masquerade"}
         </p>
+        {live && cur && (
+          <span className="rounded-full bg-white/15 px-2.5 py-1 text-[12px] font-bold tabular-nums">
+            {now ? clock(new Date(cur.ends_at).getTime() - serverNow) : "··:··"} left
+          </span>
+        )}
         <Toggle checked={enabled} onChange={toggle} label="Masquerade pairing" />
       </div>
 
       {!hour ? (
-        <p className="relative py-12 text-center text-[14px] text-white/80">Checking your pair…</p>
+        <p className="relative py-5 text-center text-[14px] text-white/80">Checking your pair…</p>
       ) : live && cur ? (
-        <div className="relative mt-4 text-center">
-          <p className="font-display text-[56px] leading-none font-semibold tabular-nums lg:text-[72px]">
-            {now ? clock(new Date(cur.ends_at).getTime() - serverNow) : "··:··"}
-          </p>
-          <p className="mt-1 text-[12px] text-white/70">left together</p>
-
-          <div className="mt-5 flex items-center justify-center gap-4">
-            <Face alias={cur.my_alias} small />
-            <span className="h-px w-6 border-t-2 border-dashed border-white/40" />
+        <div className="relative mt-3">
+          <div className="flex items-center gap-3">
             <Face alias={cur.their_alias} />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[17px] leading-tight font-semibold">{cur.their_alias}</p>
+              <p className="truncate text-[12px] text-white/75">
+                {[cur.their_age, sexLabel(cur.their_gender), intentLabel(cur.intent), cur.their_place].filter(Boolean).join(" · ")}
+              </p>
+            </div>
+            <Link
+              href={`/masquerade/${cur.id}`}
+              onClick={() => tapFeedback()}
+              className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-gold px-4 text-[14px] font-semibold text-ink shadow-[0_8px_24px_-6px_rgb(242_179_61/0.6)] transition active:scale-95"
+            >
+              <MessageCircle size={16} /> {cur.messages ? "Chat" : "Say hi"}
+            </Link>
           </div>
-          <p className="mt-3 text-[18px] font-semibold">{cur.their_alias}</p>
-          <p className="text-[13px] text-white/75">
-            {[cur.their_age, sexLabel(cur.their_gender), intentLabel(cur.intent)].filter(Boolean).join(" · ")}
-          </p>
-          {cur.their_place && (
-            <p className="text-[12px] text-white/60">
-              {cur.their_tier && cur.their_tier !== "state" ? `Nobody free nearby, so we found someone in ${cur.their_place}` : cur.their_place}
-            </p>
-          )}
-          <div className="mt-3 flex justify-center gap-2 text-[11px] font-semibold">
-            <span className="rounded-full bg-white/15 px-2.5 py-1">{connectionsLabel(cur.their_connections)}</span>
-            <span className="rounded-full bg-white/15 px-2.5 py-1">{replyLabel(cur.their_reply_seconds)}</span>
-          </div>
-
-          <p className="mx-auto mt-4 max-w-xs text-[13px] leading-snug text-white/90">
-            {cur.my_vote === true
-              ? `You unmasked. If ${cur.their_alias} does too, you're connected.`
-              : cur.they_voted
-                ? `${cur.their_alias} has made a choice. Your move.`
-                : cur.messages === 0
-                  ? "Say hi before the hour is up."
-                  : cur.last_from_them && cur.last_message
-                    ? `“${cur.last_message.length > 70 ? cur.last_message.slice(0, 67) + "…" : cur.last_message}”`
-                    : "Keep the vibe going."}
-          </p>
-          <Link
-            href={`/masquerade/${cur.id}`}
-            onClick={() => tapFeedback()}
-            className="mt-4 flex h-13 w-full items-center justify-center gap-2 rounded-2xl bg-gold py-3.5 text-[16px] font-semibold text-ink shadow-[0_8px_24px_-6px_rgb(242_179_61/0.6)] transition active:scale-[0.98]"
-          >
-            <MessageCircle size={19} /> {cur.messages ? "Open chat" : "Say hi"}
-          </Link>
+          <p className="mt-2.5 truncate text-[13px] text-white/85">{preview}</p>
         </div>
       ) : cur?.status === "matched" ? (
-        <div className="relative mt-4 flex items-center gap-3 rounded-2xl bg-white/12 p-3">
+        <div className="relative mt-3 flex items-center gap-3">
           {cur.their_photo ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={cur.their_photo} alt="" className="h-14 w-14 shrink-0 rounded-full object-cover ring-2 ring-white/40" />
+            <img src={cur.their_photo} alt="" className="h-12 w-12 shrink-0 rounded-full object-cover ring-2 ring-white/40" />
           ) : (
-            <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-white text-brand">
-              <Handshake size={24} />
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white text-brand">
+              <Handshake size={22} />
             </span>
           )}
           <div className="min-w-0 flex-1">
             <p className="text-[16px] font-semibold">You clicked!</p>
-            <p className="truncate text-[13px] text-white/85">With {cur.their_name ?? cur.their_alias} · next pair {lagosTime(hour.next_at)}</p>
+            <p className="truncate text-[12px] text-white/85">With {cur.their_name ?? cur.their_alias} · next pair {lagosTime(hour.next_at)}</p>
           </div>
           {cur.match_id && (
             <Link href={`/matches/${cur.match_id}`} className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-gold px-4 text-[14px] font-semibold text-ink">
@@ -184,81 +188,71 @@ export function MasqueradeCard({
           )}
         </div>
       ) : !enabled ? (
-        <div className="relative mt-5 pb-1 text-center">
-          <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-white/15">
-            <MaskIcon className="w-10 text-white" eyes="#6d4ff0" />
+        <div className="relative mt-3 flex items-center gap-3">
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white/15">
+            <MaskIcon className="w-8 text-white" eyes="#6d4ff0" />
           </span>
-          <p className="mx-auto mt-3 max-w-xs text-[14px] text-white/85">Switch it on to meet someone new, masked, every hour from 6am to 2am.</p>
+          <p className="min-w-0 flex-1 text-[13px] leading-snug text-white/85">Switch it on to meet someone new, masked, every hour from 6am to 2am.</p>
         </div>
       ) : (
-        <div className="relative mt-4 text-center">
-          <p className="text-[13px] text-white/70">Next pair at {lagosTime(hour.next_at)}</p>
-          <p className="mt-1 font-display text-[56px] leading-none font-semibold tabular-nums lg:text-[72px]">
-            {now ? clock(new Date(hour.next_at).getTime() - serverNow) : "··:··"}
-          </p>
-          {hour.pulse && hour.pulse.all > 0 && (
-            <p className="mx-auto mt-3 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[12px] font-semibold">
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#7dffb5] opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-[#7dffb5]" />
-              </span>
-              {pulseText(hour)}
+        <div className="relative mt-2.5 flex items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-[13px] text-white/75">Next pair at {lagosTime(hour.next_at)}</p>
+            <p className="mt-0.5 text-[13px] leading-snug text-white/90">
+              {cur?.status === "ended" || cur?.status === "lapsed"
+                ? "This hour's chat is done. Someone new is coming."
+                : !hour.hour_open
+                  ? "Pairing runs 6am to 2am. Rest up."
+                  : hour.hour_ran
+                    ? "Nobody fit your settings this hour."
+                    : "We pair everyone on the hour."}
             </p>
-          )}
-          <p className="mx-auto mt-3 max-w-xs text-[13px] leading-snug text-white/80">
-            {cur?.status === "ended" || cur?.status === "lapsed"
-              ? "This hour's chat is done. Someone new is coming."
-              : !hour.hour_open
-                ? "Pairing runs 6am to 2am. Rest up."
-                : hour.hour_ran
-                  ? "Nobody fit your settings this hour."
-                  : "We pair everyone on the hour."}
+            {hour.pulse && hour.pulse.all > 0 && (
+              <p className="mt-1.5 inline-flex max-w-full items-center gap-1.5 truncate rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-semibold">
+                <span className="relative flex h-2 w-2 shrink-0">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#7dffb5] opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-[#7dffb5]" />
+                </span>
+                <span className="truncate">{pulseText(hour)}</span>
+              </p>
+            )}
+          </div>
+          <p className="shrink-0 font-display text-[36px] leading-none font-semibold tabular-nums lg:text-[48px]">
+            {now ? clock(new Date(hour.next_at).getTime() - serverNow) : "··:··"}
           </p>
         </div>
       )}
 
-      {hour && enabled && !live && cur?.status !== "matched" && (
-        <button
-          type="button"
-          onClick={share}
-          className="relative mt-5 flex w-full items-center gap-2.5 rounded-2xl bg-white/12 px-4 py-3 text-left text-[13px] transition hover:bg-white/20"
-        >
-          <Gift size={17} className="shrink-0" />
-          <span className="min-w-0 flex-1">
-            <span className="font-semibold">{copied ? "Link copied!" : "While you wait: invite friends"}</span>
-            <span className="text-white/75"> · {hour.invite_reward ?? 10} Keys when your friend makes their first purchase</span>
-          </span>
-        </button>
-      )}
-
-      {hour && (enabled || live) && push.state === "off" && (
-        <button
-          type="button"
-          onClick={() => push.turnOn()}
-          disabled={push.busy}
-          className="relative mt-5 flex w-full items-center gap-2.5 rounded-2xl bg-white/12 px-4 py-3 text-left text-[13px] transition hover:bg-white/20"
-        >
-          <BellRing size={17} className="shrink-0" />
-          <span className="min-w-0 flex-1">
-            <span className="font-semibold">{push.busy ? "Turning on…" : "Turn on notifications"}</span>
-            <span className="text-white/75"> · know the moment your pair arrives</span>
-          </span>
-        </button>
-      )}
-
-      {hour && !hasPlace && (enabled || live) && (
+      {extra && (
         <button
           type="button"
           onClick={() => {
             tapFeedback();
-            onPlace();
+            if (extra === "place") onPlace();
+            else if (extra === "push") push.turnOn();
+            else share();
           }}
-          className="relative mt-5 flex w-full items-center gap-2.5 rounded-2xl bg-white/12 px-4 py-3 text-left text-[13px] transition hover:bg-white/20"
+          disabled={extra === "push" && push.busy}
+          className="relative mt-3 flex h-9 w-full items-center gap-2 rounded-xl bg-white/12 px-3 text-left text-[12px] transition hover:bg-white/20"
         >
-          <MapPin size={17} className="shrink-0" />
-          <span className="min-w-0 flex-1">
-            <span className="font-semibold">Add where you are</span>
-            <span className="text-white/75"> · so we pair you with people nearby</span>
+          {extra === "place" ? <MapPin size={15} className="shrink-0" /> : extra === "push" ? <BellRing size={15} className="shrink-0" /> : <Gift size={15} className="shrink-0" />}
+          <span className="min-w-0 flex-1 truncate">
+            {extra === "place" ? (
+              <>
+                <span className="font-semibold">Add where you are</span>
+                <span className="text-white/75"> · to be paired nearby</span>
+              </>
+            ) : extra === "push" ? (
+              <>
+                <span className="font-semibold">{push.busy ? "Turning on…" : "Turn on notifications"}</span>
+                <span className="text-white/75"> · know when your pair arrives</span>
+              </>
+            ) : (
+              <>
+                <span className="font-semibold">{copied ? "Link copied!" : "Invite friends"}</span>
+                <span className="text-white/75"> · {hour?.invite_reward ?? 10} Keys on their first purchase</span>
+              </>
+            )}
           </span>
         </button>
       )}
@@ -269,11 +263,11 @@ export function MasqueradeCard({
 function Face({ alias, small }: { alias: string; small?: boolean }) {
   return (
     <span
-      className={clsx("grid place-items-center rounded-full ring-4 ring-white/20", small ? "h-12 w-12 opacity-80" : "h-20 w-20")}
+      className={clsx("grid shrink-0 place-items-center rounded-full ring-[3px] ring-white/20", small ? "h-10 w-10 opacity-80" : "h-12 w-12")}
       style={{ background: nameColor(alias) }}
       title={small ? `You · ${alias}` : alias}
     >
-      <MaskIcon className={clsx("text-white", small ? "w-8" : "w-12")} eyes={nameColor(alias)} />
+      <MaskIcon className={clsx("text-white", small ? "w-6" : "w-8")} eyes={nameColor(alias)} />
     </span>
   );
 }

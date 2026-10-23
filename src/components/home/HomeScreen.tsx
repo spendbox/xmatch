@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, UsersRound } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Wallet } from "@/lib/keys";
 import type { MasqueradeHour } from "@/lib/hourly";
@@ -27,6 +27,8 @@ import { MeetFab } from "@/components/meets/MeetFab";
 import { PostMeetSheet } from "@/components/meets/PostMeetSheet";
 import { YourMeet } from "@/components/meets/YourMeet";
 import { useMeets } from "@/components/meets/useMeets";
+import { FEATURES } from "@/lib/features";
+import { RecentChats } from "./RecentChats";
 
 export type HomeStats = { online: number; week_chats: number; week_unmasks: number; gifts_received: number };
 
@@ -35,13 +37,15 @@ export function HomeScreen({
   wallet: initialWallet,
   nextEvent = null,
   hour: initialHour = null,
+  matches = [],
   meets: initialMeets = null,
   demoSheet,
 }: {
   profile: Profile;
   wallet: Wallet | null;
-  /** Not shown on Home any more (stats live on Profile, people in Chats) */
+  /** Not shown on Home any more (stats live on Profile) */
   stats?: HomeStats | null;
+  /** Your chats: the latest show as circles at the top */
   matches?: MatchSummary[];
   nextEvent?: DashpadEvent | null;
   hour?: MasqueradeHour | null;
@@ -50,7 +54,7 @@ export function HomeScreen({
 }) {
   const supabase = useMemo(() => createClient(), []);
   const { wallet, refresh: refreshWallet } = useWallet(profile.id, initialWallet);
-  const { list: meets, refresh: refreshMeets } = useMeets(initialMeets);
+  const { list: meets, refresh: refreshMeets } = useMeets(initialMeets, { off: !FEATURES.meets });
   const [postOpen, setPostOpen] = useState(demoSheet === "post");
   const now = useNow(30_000);
   const [prefs, setPrefs] = useState<SetupPrefs>(() => prefsFromProfile(profile));
@@ -115,9 +119,26 @@ export function HomeScreen({
         </Link>
       </header>
 
+      <RecentChats matches={matches} />
+
       <div className="lg:mt-8 lg:grid lg:grid-cols-12 lg:items-start lg:gap-8">
       <div className="mt-5 lg:sticky lg:top-8 lg:col-span-7 lg:mt-0">
         <MasqueradeCard userId={profile.id} ctl={ctl} hasPlace={!!place.country} onPlace={() => setPlaceOpen(true)} />
+
+        <Link
+          href="/meet"
+          onClick={tapFeedback}
+          className="group mt-4 flex items-center gap-3.5 rounded-3xl border border-brand/15 bg-surface p-3.5 shadow-card transition hover:-translate-y-0.5 hover:shadow-lift active:scale-[0.99]"
+        >
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-brand text-white shadow-[0_8px_20px_-10px_rgb(91_63_217/0.8)]">
+            <UsersRound size={22} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[16px] font-semibold">Explore</span>
+            <span className="block truncate text-[13px] text-muted">Find people like you, or search by name</span>
+          </span>
+          <ChevronRight size={20} className="shrink-0 text-muted transition group-hover:translate-x-0.5" />
+        </Link>
       </div>
 
       <div className="lg:col-span-5">
@@ -127,7 +148,7 @@ export function HomeScreen({
         <div className="mt-7 lg:mt-0 lg:mb-7">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-[15px] font-semibold">Upcoming events</h2>
-            <Link href="/meet?tab=events" className="inline-flex items-center gap-0.5 text-[13px] font-semibold text-brand">
+            <Link href="/events" className="inline-flex items-center gap-0.5 text-[13px] font-semibold text-brand">
               All events <ChevronRight size={16} />
             </Link>
           </div>
@@ -135,7 +156,7 @@ export function HomeScreen({
         </div>
       )}
 
-      {meets && (meets.mine || meets.posts.length > 0) && (
+      {FEATURES.meets && meets && (meets.mine || meets.posts.length > 0) && (
         <section className="mt-7 lg:mt-0 lg:mb-7">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-[15px] font-semibold">Meets for you</h2>
@@ -168,9 +189,9 @@ export function HomeScreen({
         onPlace={() => setPlaceOpen(true)}
       />
 
-      <MeetFab free={meets?.cost === 0} onOpen={() => setPostOpen(true)} />
+      {FEATURES.meets && <MeetFab free={meets?.cost === 0} onOpen={() => setPostOpen(true)} />}
       <PostMeetSheet
-        open={postOpen}
+        open={FEATURES.meets && postOpen}
         onClose={() => setPostOpen(false)}
         prefs={prefs}
         place={place.label}

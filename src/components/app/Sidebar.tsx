@@ -25,8 +25,7 @@ export function isActive(path: string, href: string) {
   return (
     path === href ||
     path.startsWith(href + "/") ||
-    (href === "/home" && (path.startsWith("/masquerade") || path.startsWith("/feed"))) ||
-    (href === "/meet" && path.startsWith("/events"))
+    (href === "/home" && (path.startsWith("/masquerade") || path.startsWith("/feed") || path.startsWith("/events")))
   );
 }
 

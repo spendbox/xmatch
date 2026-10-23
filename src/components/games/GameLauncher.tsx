@@ -6,6 +6,7 @@ import { Trophy, X } from "lucide-react";
 import { Spinner } from "@/components/ui/Button";
 import { usePrices } from "@/components/keys/usePrices";
 import { GAMES, sfx, type GameKind } from "@/lib/games";
+import { ChessPiece } from "./ChessPieces";
 
 /** Pick a game to challenge the other person to */
 export function GameLauncher({
@@ -145,6 +146,52 @@ export function GameArt({ kind }: { kind: GameKind }) {
       </div>
     );
   }
+  if (kind === "whot")
+    return (
+      <div className="relative h-full">
+        <span className="absolute top-2 left-[22%] h-[64px] w-[44px] -rotate-12 rounded-[8px] bg-[#fffaf1] shadow-[0_6px_14px_rgba(0,0,0,0.3)]">
+          <svg viewBox="0 0 24 24" className="absolute inset-0 m-auto h-6 w-6" aria-hidden="true"><path d="m12 2 2.9 6.6 7.1.6-5.4 4.7 1.6 7L12 17.3 5.8 21l1.6-7L2 9.2l7.1-.6Z" fill="#8f1d3a" /></svg>
+        </span>
+        <span className="absolute top-1 left-[44%] grid h-[64px] w-[44px] rotate-6 place-items-center rounded-[8px] bg-[#fffaf1] shadow-[0_6px_14px_rgba(0,0,0,0.3)]">
+          <span className="font-display text-[11px] font-black text-[#8f1d3a]">WHOT</span>
+        </span>
+      </div>
+    );
+  if (kind === "checkers")
+    return (
+      <div className="mx-auto grid h-full w-[78px] grid-cols-4 content-center overflow-hidden rounded-lg">
+        {Array.from({ length: 16 }, (_, i) => {
+          const dark = (Math.floor(i / 4) + i) % 2 === 1;
+          const piece = dark && (i < 4 ? "#a78bfa" : i > 11 ? "#f2b33d" : null);
+          return (
+            <span key={i} className="grid aspect-square place-items-center" style={{ background: dark ? "#1d6b63" : "#d9efe9" }}>
+              {piece && <span className="h-[70%] w-[70%] rounded-full" style={{ background: piece, boxShadow: "inset 0 -2px 0 rgba(0,0,0,0.25)" }} />}
+            </span>
+          );
+        })}
+      </div>
+    );
+  if (kind === "chess")
+    return (
+      <div className="flex h-full items-center justify-center gap-1">
+        <span className="grid h-[56px] w-[56px] place-items-center rounded-2xl bg-[#5c6f94]">
+          <ChessPiece type="n" color="w" className="h-11 w-11" />
+        </span>
+        <span className="grid h-[56px] w-[56px] place-items-center rounded-2xl bg-[#dfe6f2]">
+          <ChessPiece type="q" color="b" className="h-11 w-11" />
+        </span>
+      </div>
+    );
+  if (kind === "ayo")
+    return (
+      <div className="mx-2 grid h-full grid-cols-3 content-center gap-1.5 rounded-[18px] bg-[#8a5220] p-2">
+        {[4, 2, 3, 5, 1, 4].map((n, i) => (
+          <span key={i} className="relative grid aspect-square place-items-center rounded-full" style={{ background: "radial-gradient(circle at 50% 35%, #4a2a10 0%, #2b1606 75%)" }}>
+            <span className="text-[11px] font-extrabold text-[#f6efe2]">{n}</span>
+          </span>
+        ))}
+      </div>
+    );
   const letters = ["V", "I", "R", "A", "B", "E"];
   const on = [1, 4, 5];
   return (

@@ -1,3 +1,4 @@
+import { FEATURES } from "@/lib/features";
 import { redirect } from "next/navigation";
 import { getAuth } from "@/lib/auth";
 import type { Feed } from "@/lib/feed";
@@ -7,6 +8,7 @@ import { FeedScreen } from "@/components/feed/FeedScreen";
 export const metadata = { title: "Feed" };
 
 export default async function FeedPage() {
+  if (!FEATURES.feed) redirect("/home"); // Daily prompts are switched off
   const { supabase, user } = await getAuth();
   if (!user) redirect("/login");
   const [{ data: feed }, { data: wallet }] = await Promise.all([supabase.rpc("get_feed", { p_sort: "new", p_limit: 30, p_offset: 0 }), supabase.rpc("my_wallet")]);

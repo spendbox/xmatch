@@ -12,6 +12,7 @@ const act: GameActions = {
   respond: async () => null,
   cancel: async () => {},
   call: async () => ({ data: null, error: null }),
+  move: async () => null,
   refresh: async () => {},
   now: () => Date.now(),
 };
@@ -110,7 +111,18 @@ function demo(screen: string): Game | null {
         kind: "truths",
         deadline_at: at(58),
         state: { phase: "write", ready_b: false },
-        mine: { draft: { lines: ["I've been on stage with Burna Boy", "I can't swim, at all", ""], lie: 1 } },
+        mine: {
+          draft: {
+            lines: ["I've been on stage with Burna Boy", "I can't swim, at all", ""],
+            lie: 1,
+            saved: [
+              { id: 1, body: "I've been on stage with Burna Boy", uses: 3 },
+              { id: 2, body: "I was born in Kano", uses: 2 },
+              { id: 3, body: "I've never eaten amala", uses: 1 },
+              { id: 4, body: "I won a dance competition in JSS2", uses: 1 },
+            ],
+          },
+        },
       });
     case "game-truths-guess":
       return base({
@@ -140,6 +152,37 @@ function demo(screen: string): Game | null {
           guess_a: 1,
           guess_b: 0,
         },
+      });
+    case "game-whot":
+      return base({
+        kind: "whot",
+        state: { top: "circle:7", called: null, turn: "a", count_a: 6, count_b: 4, market: 33, last: { by: "b", card: "circle:7", note: "" }, moves: 9 },
+        mine: { hand: ["circle:2", "star:7", "whot:20", "square:11", "triangle:4", "cross:13"] },
+      });
+    case "game-checkers": {
+      const rows = [".b.b.b.b", "b.b...b.", ".....b.b", "..b.....", ".a...a..", "a...a...", ".a.a.a.a", "a.A.a.a."];
+      return base({
+        kind: "checkers",
+        state: { board: rows.join(""), turn: "a", chain: null, quiet: 3, captured: { a: 2, b: 1 }, last: { from: 19, to: 26, took: [] }, moves: 14 },
+      });
+    }
+    case "game-chess":
+      return base({
+        kind: "chess",
+        state: {
+          fen: "r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4",
+          turn: "a",
+          san: ["e4", "e5", "Bc4", "Nc6", "Qh5", "Nf6"],
+          last: { from: "g8", to: "f6", san: "Nf6" },
+          check: false,
+          taken: { a: "", b: "" },
+          moves: 6,
+        },
+      });
+    case "game-ayo":
+      return base({
+        kind: "ayo",
+        state: { pits: [5, 0, 7, 3, 1, 6, 2, 4, 0, 5, 1, 3], store: { a: 6, b: 5 }, turn: "a", last: { pit: 9, end: 2, captured: [] }, moves: 12 },
       });
     case "game-words":
       return base({

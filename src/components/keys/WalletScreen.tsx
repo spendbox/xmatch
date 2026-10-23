@@ -25,6 +25,8 @@ const REASONS: Record<string, string> = {
   refund: "Refund",
   event: "Masquerade Night entry",
   meet: "Posted a meet",
+  photos: "Unlocked someone's photos",
+  explore_message: "Messaged someone from Explore",
 };
 
 export function WalletScreen({

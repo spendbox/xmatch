@@ -9,6 +9,7 @@ import { KeyCoin } from "@/components/keys/KeyIcon";
 import { GiftArt } from "@/components/keys/GiftArt";
 import { addPack, saveGift, savePack, saveSetting } from "@/app/admin/(panel)/prices/actions";
 import { AdminTitle } from "./AdminShell";
+import { FEATURES } from "@/lib/features";
 
 export type AdminGift = { id: string; name: string; emoji: string; price: number; sort: number; retired: boolean };
 export type AdminPack = { id: string; keys: number; naira: number; tag: string | null; sort: number; active: boolean };
@@ -20,6 +21,8 @@ type Settings = {
   meet_cost: number;
   meet_free_posts: number;
   meet_hours: number;
+  explore_message_cost: number;
+  explore_photos_cost: number;
 };
 export type InviteStats = { joined: number; joined_7d: number; buyers: number; keys_paid: number; top: { name: string | null; joined: number; earned: number }[] };
 
@@ -45,6 +48,16 @@ export function PricesManager({ settings, gifts, packs, invites = null }: { sett
       </section>
 
       <section className="mt-6 rounded-3xl border border-line bg-surface p-5 shadow-card">
+        <h2 className="text-[16px] font-semibold">Explore</h2>
+        <p className="mt-1 text-[13px] text-muted">The Meet page. Both are free between people who are already connected.</p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <SettingField k="explore_message_cost" label="Message someone" hint="Keys to start a chat with someone you're not connected to" value={settings.explore_message_cost} />
+          <SettingField k="explore_photos_cost" label="Unlock photos" hint="Keys to see all of someone's photos (their main photo is always free)" value={settings.explore_photos_cost} />
+        </div>
+      </section>
+
+      {FEATURES.meets && (
+      <section className="mt-6 rounded-3xl border border-line bg-surface p-5 shadow-card">
         <h2 className="text-[16px] font-semibold">Meets</h2>
         <p className="mt-1 text-[13px] text-muted">Posts on Home and Meet. People who meet someone from a post always join free. Keys aren&apos;t refunded.</p>
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
@@ -53,6 +66,7 @@ export function PricesManager({ settings, gifts, packs, invites = null }: { sett
           <SettingField k="meet_hours" label="How long a meet stays up" hint="In hours (1 to 48)" value={settings.meet_hours} keysIcon={false} />
         </div>
       </section>
+      )}
 
       <section className="mt-6 rounded-3xl border border-line bg-surface p-5 shadow-card">
         <h2 className="text-[16px] font-semibold">Invites</h2>

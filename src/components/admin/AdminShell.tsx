@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { FEATURES } from "@/lib/features";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import { useEffect, useState } from "react";
@@ -14,7 +15,7 @@ const NAV = [
   { href: "/admin/masquerade", label: "Masquerade", icon: Activity },
   { href: "/admin/games", label: "Games", icon: Gamepad2 },
   { href: "/admin/nights", label: "Events", icon: CalendarDays },
-  { href: "/admin/prompts", label: "Daily prompts", icon: Sparkles },
+  ...(FEATURES.feed ? [{ href: "/admin/prompts", label: "Daily prompts", icon: Sparkles }] : []),
   { href: "/admin/icebreakers", label: "Icebreakers", icon: MessageCircleQuestion },
   { href: "/admin/prices", label: "Prices", icon: Tag },
 ];

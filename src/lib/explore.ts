@@ -1,0 +1,42 @@
+import type { Gender, Intent } from "@/lib/types";
+
+/** Someone in the Explore grid */
+export type ExplorePerson = {
+  id: string;
+  name: string;
+  age: number | null;
+  gender: Gender | null;
+  /** Their main photo (the only one you see until you unlock or connect) */
+  photo: string | null;
+  place: string | null;
+  intent: Intent;
+  online: boolean;
+  /** You already have a chat with them */
+  connected: boolean;
+};
+
+export type ExploreList = {
+  message_cost: number;
+  photos_cost: number;
+  people: ExplorePerson[];
+};
+
+/** One person's profile as you may see it */
+export type ExploreProfile = {
+  id: string;
+  name: string;
+  age: number | null;
+  gender: Gender | null;
+  bio: string;
+  interests: string[];
+  place: string | null;
+  intent: Intent;
+  online: boolean;
+  photos: string[];
+  photo_count: number;
+  photos_unlocked: boolean;
+  match_id: string | null;
+  shared_interests: string[];
+  message_cost: number;
+  photos_cost: number;
+};
