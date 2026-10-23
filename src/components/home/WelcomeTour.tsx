@@ -21,7 +21,7 @@ const STEPS: Step[] = [
   {
     icon: <MaskIcon className="w-8" eyes="#5b3fd9" />,
     title: "Welcome to Dashpad",
-    body: "Every hour you're paired with someone new, masked. Chat, play games, and unmask together when you click.",
+    body: "Every hour you're paired with a person anonymously. Chat, play games, and unmask together when you click.",
   },
   {
     target: "masquerade-card",

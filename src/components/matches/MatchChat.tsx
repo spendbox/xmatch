@@ -5,7 +5,7 @@ import clsx from "clsx";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Flag, Gamepad2, UserX, MoreVertical, Phone, Video, X } from "lucide-react";
+import { ArrowLeft, Dices, Flag, Gamepad2, UserX, MoreVertical, Phone, Video, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { ChatMessage, Intent, Profile } from "@/lib/types";
 import { INTENT_ICONS, InterestIcon } from "@/components/ui/icons";
@@ -265,7 +265,10 @@ export function MatchChat({
       {games.banner}
       <Composer
         plusDot={games.live}
-        actions={games.canPlay ? [{ key: "game", label: games.live ? "Back to game" : "Play a game", icon: <Gamepad2 size={24} strokeWidth={1.75} />, tone: "bg-brand-soft text-brand", onClick: games.play }] : []}
+        actions={[
+          ...(games.canPlay ? [{ key: "game", label: games.live ? "Back to game" : "Play a game", icon: <Gamepad2 size={24} strokeWidth={1.75} />, tone: "bg-brand-soft text-brand", onClick: games.play }] : []),
+          { key: "ice", label: "New icebreaker", icon: <Dices size={24} strokeWidth={1.75} />, tone: "bg-gold-soft text-[#9a6a0c]", onClick: () => void supabase.rpc("match_icebreaker", { p_match: matchId }) },
+        ]}
         onSend={send}
         onSendMedia={sendMedia}
         onSendVoice={sendVoice}
