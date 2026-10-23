@@ -15,6 +15,9 @@ import { Whot } from "./Whot";
 import { Checkers } from "./Checkers";
 import { ChessGame } from "./ChessGame";
 import { Ayo } from "./Ayo";
+import { Bombshell } from "./Bombshell";
+import { GemClash } from "./GemClash";
+import { ReactionButton, ReactionLayer, ReactionTray, useReactions } from "./Reactions";
 
 /** The full-screen game: challenge, 3-2-1, the game itself, then results */
 export function GameArena({
@@ -43,6 +46,9 @@ export function GameArena({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const sound = useGameSound();
+  const reacting = game.status === "active" || game.status === "done" || game.status === "cancelled";
+  const reactions = useReactions(reacting ? game.id : null);
+  const [tray, setTray] = useState(false);
   const info = gameInfo(game.kind);
   const over = game.status === "done" || game.status === "cancelled";
   const endedAgo = game.ended_at ? (act.now() - new Date(game.ended_at).getTime()) / 1000 : 99;
@@ -103,7 +109,7 @@ export function GameArena({
     const holdEnd =
       over &&
       !showResults &&
-      ((game.kind === "truths" && game.state.phase === "reveal") || (["c4", "tot", "whot", "checkers", "chess", "ayo"].includes(game.kind) && endedAgo < 3));
+      ((game.kind === "truths" && game.state.phase === "reveal") || (["c4", "tot", "whot", "checkers", "chess", "ayo", "gems"].includes(game.kind) && endedAgo < 3) || (game.kind === "bomb" && endedAgo < 4));
     if (over && !holdEnd) {
       resultsView = true;
       body = (
@@ -123,6 +129,8 @@ export function GameArena({
     else if (game.kind === "checkers") body = <Checkers game={game} names={names} act={act} />;
     else if (game.kind === "chess") body = <ChessGame game={game} names={names} act={act} />;
     else if (game.kind === "ayo") body = <Ayo game={game} names={names} act={act} />;
+    else if (game.kind === "bomb") body = <Bombshell game={game} names={names} act={act} />;
+    else if (game.kind === "gems") body = <GemClash game={game} names={names} act={act} />;
     else body = <WordHunt game={game} names={names} act={act} />;
   }
 
@@ -143,6 +151,7 @@ export function GameArena({
               <ChevronLeft size={22} />
             </button>
             <p className="min-w-0 flex-1 truncate text-center text-[11px] font-extrabold tracking-[0.16em] text-gold uppercase">{info.title}</p>
+            {reacting && <ReactionButton open={tray} onToggle={() => setTray((t) => !t)} />}
             <button
               type="button"
               onClick={sound.toggle}
@@ -160,6 +169,13 @@ export function GameArena({
           </div>
         )}
         <div className="relative min-h-0 flex-1 pb-[env(safe-area-inset-bottom)]">{body}</div>
+        {reacting && resultsView && (
+          <div className="absolute top-[max(12px,env(safe-area-inset-top))] right-3 z-40">
+            <ReactionButton open={tray} onToggle={() => setTray((t) => !t)} />
+          </div>
+        )}
+        {reacting && tray && <ReactionTray onSend={reactions.send} onIdle={() => setTray(false)} />}
+        <ReactionLayer floats={reactions.floats} />
         {err && (
           <p className="absolute inset-x-4 bottom-24 rounded-2xl bg-white px-4 py-3 text-center text-[14px] font-semibold text-ink shadow-lift">{err}</p>
         )}

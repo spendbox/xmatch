@@ -79,7 +79,7 @@ export function ExploreScreen({ initial, demoProfile }: { initial: ExploreList |
                   setOpen(p.id);
                 }}
                 className="group relative block aspect-[3/4] w-full overflow-hidden rounded-[22px] bg-brand-soft text-left shadow-card transition hover:-translate-y-0.5 hover:shadow-lift active:scale-[0.98]"
-                aria-label={`${p.name}${p.age ? `, ${p.age}` : ""}`}
+                aria-label={p.name}
               >
                 {p.photo ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -108,7 +108,6 @@ export function ExploreScreen({ initial, demoProfile }: { initial: ExploreList |
                 <span className="absolute inset-x-0 bottom-0 p-3 text-white">
                   <span className="block truncate text-[16px] leading-tight font-semibold">
                     {p.name.split(" ")[0]}
-                    {p.age ? <span className="font-normal text-white/85">, {p.age}</span> : null}
                   </span>
                   {p.place && <span className="mt-0.5 block truncate text-[12px] text-white/75">{p.place.split(",")[0]}</span>}
                 </span>

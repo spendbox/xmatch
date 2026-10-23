@@ -44,7 +44,11 @@ export function GhostMode({ on: initialOn, until: initialUntil }: { on: boolean;
         <span className="min-w-0 flex-1">
           <span className="block text-[15px] font-semibold">Ghost mode</span>
           <span className="block text-[13px] text-muted">
-            {on ? `Hidden from Meet until ${endDate}` : paid ? `Off · paid until ${endDate}` : `Hide from Meet · ${cost} Keys for 30 days`}
+            {on
+              ? `Hidden from searches until ${endDate}`
+              : paid
+                ? `Off · paid until ${endDate}`
+                : `Hide from searches in the Meet page · ${cost} Keys for 30 days`}
           </span>
         </span>
         <Toggle
@@ -57,13 +61,16 @@ export function GhostMode({ on: initialOn, until: initialUntil }: { on: boolean;
           }}
         />
       </div>
+      <p className="mt-1.5 px-2 text-[12px] leading-relaxed text-muted">
+        Nobody can find you in Meet searches, or on the wall at events you attend. You can still be paired in Masquerade, and your chats carry on as usual.
+      </p>
       {error && !confirm && <p className="mt-1.5 px-2 text-[13px] font-medium text-chili">{error}</p>}
 
       <Sheet
         open={confirm}
         onClose={() => setConfirm(false)}
         title="Go ghost?"
-        subtitle="Nobody can find you on the Meet page or search for you there. Your chats, masked pairs and events work as usual."
+        subtitle="Hide from searches in the Meet page, and from the wall at events you attend."
         icon={<Ghost size={22} strokeWidth={1.75} />}
         footer={
           <div className="space-y-2">
@@ -75,6 +82,8 @@ export function GhostMode({ on: initialOn, until: initialUntil }: { on: boolean;
         }
       >
         <ul className="space-y-2 text-[14px] text-ink-soft">
+          <li>You can still be paired in Masquerade, at any time or at events.</li>
+          <li>People you already chat with can still reach you.</li>
           <li>Lasts 30 days. It doesn&apos;t renew by itself.</li>
           <li>Switch it off and on as often as you like during those 30 days, at no extra cost.</li>
         </ul>

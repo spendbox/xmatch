@@ -81,7 +81,6 @@ export function ExploreProfileSheet({
   return (
     <ProfileSheet
       profile={profile}
-      age={p.age}
       blur={!p.photos_unlocked}
       shared={p.shared_interests}
       onClose={onClose}

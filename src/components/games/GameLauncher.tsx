@@ -6,6 +6,8 @@ import { Trophy, X } from "lucide-react";
 import { Spinner } from "@/components/ui/Button";
 import { usePrices } from "@/components/keys/usePrices";
 import { GAMES, sfx, type GameKind } from "@/lib/games";
+import { BombIcon } from "./Bombshell";
+import { Gem, GemDefs } from "./Gems";
 import { ChessPiece } from "./ChessPieces";
 
 /** Pick a game to challenge the other person to */
@@ -55,7 +57,7 @@ export function GameLauncher({
     <div className="fixed inset-0 z-[55] flex items-end justify-center">
       <button type="button" aria-label="Close" onClick={onClose} className="absolute inset-0 bg-ink/45 animate-fade-in" />
       <div
-        className="relative w-full max-w-md animate-sheet-up rounded-t-[32px] px-[18px] pt-3 pb-[max(24px,env(safe-area-inset-bottom))] text-white"
+        className="relative max-h-[92dvh] w-full max-w-md animate-sheet-up overflow-y-auto overscroll-contain rounded-t-[32px] px-[18px] pt-3 pb-[max(24px,env(safe-area-inset-bottom))] text-white"
         style={{ background: "radial-gradient(120% 70% at 50% 0%, #3b2a96 0%, #1a1240 60%, #0f0a2a 100%)" }}
       >
         <div className="mx-auto mb-4 h-[5px] w-11 rounded-full bg-white/25" />
@@ -88,6 +90,9 @@ export function GameLauncher({
                   </span>
                 )}
               </div>
+              {NEW.includes(g.kind) && (
+                <span className="absolute top-2 right-2 rounded-full bg-gold px-2 py-0.5 text-[10px] font-black tracking-wider text-ink">NEW</span>
+              )}
               <p className="mt-2 text-[15px] leading-tight font-extrabold">{g.title}</p>
               <p className="text-[12px] text-white/75">{g.short}</p>
             </button>
@@ -115,6 +120,8 @@ export function GameLauncher({
     document.body,
   );
 }
+
+const NEW: GameKind[] = ["bomb", "gems"];
 
 /** The little picture of each game, as on its card */
 export function GameArt({ kind }: { kind: GameKind }) {
@@ -190,6 +197,33 @@ export function GameArt({ kind }: { kind: GameKind }) {
             <span className="text-[11px] font-extrabold text-[#f6efe2]">{n}</span>
           </span>
         ))}
+      </div>
+    );
+  if (kind === "bomb")
+    return (
+      <div className="relative mx-auto grid h-full w-[86px] grid-cols-3 content-center gap-1">
+        {Array.from({ length: 9 }, (_, i) => (
+          <span
+            key={i}
+            className="grid aspect-square place-items-center rounded-[7px]"
+            style={{ background: i === 4 ? "#a3200a" : i === 2 || i === 6 ? "#178a50" : "linear-gradient(180deg,#ffe0bd,#f6a56a)", boxShadow: "inset 0 -2px 0 rgba(0,0,0,0.25)" }}
+          >
+            {i === 4 && <BombIcon className="h-[82%] w-[82%]" />}
+          </span>
+        ))}
+      </div>
+    );
+  if (kind === "gems")
+    return (
+      <div className="relative h-full">
+        <GemDefs />
+        <div className="mx-auto grid h-full w-[86px] grid-cols-3 content-center gap-0.5">
+          {["p", "r", "y", "b", "*", "g", "r", "rh", "p"].map((g, i) => (
+            <span key={i} className="aspect-square p-[2px]">
+              <Gem g={g} />
+            </span>
+          ))}
+        </div>
       </div>
     );
   const letters = ["V", "I", "R", "A", "B", "E"];

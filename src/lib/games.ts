@@ -5,10 +5,10 @@ import { createClient } from "@/lib/supabase/client";
 import { notify } from "@/lib/pushClient";
 import { haptic } from "@/lib/haptics";
 
-export type GameKind = "truths" | "tot" | "c4" | "words" | "whot" | "checkers" | "chess" | "ayo";
+export type GameKind = "truths" | "tot" | "c4" | "words" | "whot" | "checkers" | "chess" | "ayo" | "bomb" | "gems";
 
 /** Games whose moves go through the app's server (rules in src/lib/boardgames) */
-export const BOARD_GAMES: GameKind[] = ["whot", "checkers", "chess", "ayo"];
+export const BOARD_GAMES: GameKind[] = ["whot", "checkers", "chess", "ayo", "bomb", "gems"];
 export type GameStatus = "invited" | "active" | "done" | "declined" | "expired" | "cancelled";
 export type Side = "a" | "b";
 
@@ -51,6 +51,24 @@ export const GAMES: {
   card: string;
   edge: string;
 }[] = [
+  {
+    kind: "bomb",
+    title: "Bombshell",
+    short: "Hide 3 bombs, dodge theirs",
+    rules: ["Hide 3 bombs in your field", "Find their 6 safe tiles first", "Best of 3"],
+    bg: "radial-gradient(120% 60% at 50% 0%, #7a2a12 0%, #331006 60%, #140603 100%)",
+    card: "linear-gradient(160deg, #e0522a 0%, #8a2410 100%)",
+    edge: "#5a1608",
+  },
+  {
+    kind: "gems",
+    title: "Gem Clash",
+    short: "Match 3, outscore them",
+    rules: ["Same board, take turns", "2 swaps a turn · 5 turns", "Match 4+ for an extra swap"],
+    bg: "radial-gradient(120% 60% at 50% 0%, #6a1f9a 0%, #2a0d44 60%, #10051c 100%)",
+    card: "linear-gradient(160deg, #9b4dff 0%, #4f1f9a 100%)",
+    edge: "#34126a",
+  },
   {
     kind: "truths",
     title: "Two Truths & a Lie",
@@ -270,7 +288,7 @@ export type GameActions = {
   respond: (accept: boolean) => Promise<string | null>;
   cancel: () => Promise<void>;
   call: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: string | null }>;
-  /** Whot, Checkers, Chess and Ayo: send a move to the server, which checks the rules */
+  /** Board games (Whot, Checkers, Bombshell…): send a move to the server, which checks the rules */
   move: (move: unknown) => Promise<string | null>;
   refresh: () => Promise<void>;
   /** Server time, in ms */

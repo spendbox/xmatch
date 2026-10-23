@@ -165,7 +165,7 @@ export function MatchesList({
                       <div className="min-w-0 flex-1">
                         <div className="flex items-baseline justify-between gap-2">
                           <p className="truncate text-[16px] font-semibold">
-                            {m.display_name}, {m.age}
+                            {m.display_name}
                           </p>
                           <span className={clsx("shrink-0 text-[12px]", mine ? "font-semibold text-brand" : "text-muted")}>
                             {timeAgo(m.last_message_at)}

@@ -4,11 +4,11 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/server";
 
-const KINDS = ["truths", "tot", "c4", "words"] as const;
+const KINDS = ["truths", "tot", "c4", "words", "whot", "checkers", "chess", "ayo", "bomb", "gems"];
 
 export async function setGameOn(kind: string, on: boolean) {
   await requireAdmin();
-  if (!KINDS.includes(kind as (typeof KINDS)[number])) return { error: "Unknown game" };
+  if (!KINDS.includes(kind)) return { error: "Unknown game" };
   const { error } = await createAdminClient().from("app_settings").upsert({ key: `game_${kind}`, value: on ? 1 : 0, updated_at: new Date().toISOString() });
   revalidatePath("/admin/games");
   return error ? { error: "Couldn't save." } : {};

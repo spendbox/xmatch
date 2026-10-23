@@ -186,7 +186,6 @@ export function EventChat({ chat, myId, myInterests }: { chat: EventChatDetail; 
           <div className="min-w-0">
             <p className="truncate text-[16px] font-semibold">
               {other.name || "Someone"}
-              {other.age ? `, ${other.age}` : ""}
               {sexLabel(other.gender) && <span className="font-normal text-muted"> · {sexLabel(other.gender)}</span>}
             </p>
             <p className={clsx("inline-flex items-center gap-1 text-[12px] font-medium", lastCall ? "text-[#9a6a0c]" : "text-muted")}>
