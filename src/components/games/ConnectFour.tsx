@@ -36,7 +36,6 @@ export function ConnectFour({
   const board: string = showingPrev ? st.prev.board : st.board;
   const line: number[] = showingPrev ? (st.prev.line ?? []) : [];
   const myTurn = game.status === "active" && st.turn === me && !showingPrev && secondsLeft(game.started_at, act.now) <= 0;
-  const moveLeft = secondsLeft(game.deadline_at, act.now) - (pauseLeft > 0 ? pauseLeft : 0);
 
   // Drop the pending disc as soon as the server has it (or after a few seconds, if it didn't take)
   useEffect(() => {
@@ -119,7 +118,7 @@ export function ConnectFour({
           name="You"
           color={color(me)}
           active={st.turn === me && !showingPrev}
-          sub={st.turn === me && !showingPrev ? `Your move · ${Math.ceil(Math.max(0, moveLeft))}s` : "Waiting"}
+          sub={st.turn === me && !showingPrev ? "Your move" : "Waiting"}
         />
         <div className="font-display text-[22px] font-bold tabular-nums">
           {wins[me]}–{wins[them]}
@@ -129,7 +128,7 @@ export function ConnectFour({
           name={names.them}
           color={color(them)}
           active={st.turn === them && !showingPrev}
-          sub={st.turn === them && !showingPrev ? `Their move · ${Math.ceil(Math.max(0, moveLeft))}s` : "Waiting"}
+          sub={st.turn === them && !showingPrev ? "Their move" : "Waiting"}
         />
       </div>
       <p className="mt-2.5 text-center text-[12px] font-bold text-white/60">

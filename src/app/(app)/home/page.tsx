@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
-import { getAuth, getMyProfile } from "@/lib/auth";
+import { getAuth, getMatches, getMyProfile } from "@/lib/auth";
+import { FEATURES } from "@/lib/features";
 import type { Profile } from "@/lib/types";
 import type { Wallet } from "@/lib/keys";
 import type { DashpadEvent } from "@/lib/events";
@@ -14,12 +15,13 @@ export default async function HomePage() {
   if (!user) redirect("/login");
 
   // Everything loads at the same time
-  const [profile, { data: wallet }, { data: nextEvent }, { data: hour }, { data: meets }] = await Promise.all([
+  const [profile, { data: wallet }, { data: nextEvent }, { data: hour }, { data: meets }, matches] = await Promise.all([
     getMyProfile(),
     supabase.rpc("my_wallet"),
     supabase.rpc("next_event"),
     supabase.rpc("my_masquerade_hour"),
-    supabase.rpc("list_meets", { p_limit: 4 }),
+    FEATURES.meets ? supabase.rpc("list_meets", { p_limit: 4 }) : Promise.resolve({ data: null }),
+    getMatches(),
   ]);
 
   return (
@@ -29,6 +31,7 @@ export default async function HomePage() {
       nextEvent={(nextEvent as DashpadEvent | null) ?? null}
       hour={(hour as MasqueradeHour | null) ?? null}
       meets={(meets as MeetList | null) ?? null}
+      matches={matches}
     />
   );
 }

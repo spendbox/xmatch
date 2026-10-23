@@ -1,3 +1,4 @@
+import { FEATURES } from "@/lib/features";
 import { notFound, redirect } from "next/navigation";
 import { getAuth } from "@/lib/auth";
 import type { FeedChatDetail } from "@/lib/feed";
@@ -6,6 +7,7 @@ import { FeedChat } from "@/components/feed/FeedChat";
 export const metadata = { title: "Feed chat" };
 
 export default async function FeedChatPage({ params }: { params: Promise<{ id: string }> }) {
+  if (!FEATURES.feed) redirect("/home"); // Daily prompts are switched off
   const { id } = await params;
   const { supabase, user } = await getAuth();
   if (!user) redirect("/login");

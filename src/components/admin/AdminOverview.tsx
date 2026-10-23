@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FEATURES } from "@/lib/features";
 import { plural, word } from "@/lib/plural";
 import { CalendarDays, ChevronRight, Flag, Gift, Handshake, MessageCircleQuestion, Plus, Sparkles, Users, Wallet, Wifi } from "lucide-react";
 import { MaskLineIcon } from "@/components/ui/icons";
@@ -35,6 +36,7 @@ export function AdminOverview({ overview: o, nights, promptsAhead = 0 }: { overv
   return (
     <>
       <AdminTitle title="Overview" subtitle="How Dashpad is doing right now." />
+      {FEATURES.feed && (
       <Link
         href="/admin/prompts"
         className={
@@ -52,6 +54,7 @@ export function AdminOverview({ overview: o, nights, promptsAhead = 0 }: { overv
         </span>
         <ChevronRight size={18} className="shrink-0" />
       </Link>
+      )}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {stats.map((s) => (
           <div key={s.label} className="rounded-3xl border border-line bg-surface p-5 shadow-card">

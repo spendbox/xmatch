@@ -5,7 +5,10 @@ import { createClient } from "@/lib/supabase/client";
 import type { MeetChat, MeetList } from "@/lib/meets";
 
 /** Meets for you (and your own), kept fresh while the page is open */
-export function useMeets(initial: MeetList | null, { chats = false, initialChats = null }: { chats?: boolean; initialChats?: MeetChat[] | null } = {}) {
+export function useMeets(
+  initial: MeetList | null,
+  { chats = false, initialChats = null, off = false }: { chats?: boolean; initialChats?: MeetChat[] | null; /** Meets are switched off: don't load */ off?: boolean } = {},
+) {
   const supabase = useMemo(() => createClient(), []);
   const [list, setList] = useState<MeetList | null>(initial);
   const [myChats, setMyChats] = useState<MeetChat[] | null>(initialChats);
@@ -20,6 +23,7 @@ export function useMeets(initial: MeetList | null, { chats = false, initialChats
   }, [supabase, chats]);
 
   useEffect(() => {
+    if (off) return;
     if (!initial || chats) refresh();
     const onFocus = () => document.visibilityState === "visible" && refresh();
     const every = setInterval(onFocus, 60_000);
@@ -31,7 +35,7 @@ export function useMeets(initial: MeetList | null, { chats = false, initialChats
       document.removeEventListener("visibilitychange", onFocus);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refresh]);
+  }, [refresh, off]);
 
   return { list, myChats, refresh };
 }

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { notify } from "@/lib/pushClient";
+import { haptic } from "@/lib/haptics";
 
 export type GameKind = "truths" | "tot" | "c4" | "words";
 export type GameStatus = "invited" | "active" | "done" | "declined" | "expired" | "cancelled";
@@ -60,7 +61,7 @@ export const GAMES: {
     kind: "tot",
     title: "This or That",
     short: "How alike are you?",
-    rules: ["10 quick picks", "8 seconds each"],
+    rules: ["10 quick picks", "Pick at your own pace"],
     bg: "radial-gradient(120% 60% at 50% 0%, #6b1f47 0%, #2a0f2a 60%, #12071a 100%)",
     card: "linear-gradient(160deg, #c2306b 0%, #7a1d47 100%)",
     edge: "#4f122e",
@@ -69,7 +70,7 @@ export const GAMES: {
     kind: "c4",
     title: "Connect 4",
     short: "Four in a row wins",
-    rules: ["Best of 3", "20s per move"],
+    rules: ["Best of 3", "Take your time on each move"],
     bg: "radial-gradient(120% 60% at 50% 0%, #1f3a9a 0%, #121a4a 60%, #080b22 100%)",
     card: "linear-gradient(160deg, #2563eb 0%, #1b3a8f 100%)",
     edge: "#11265e",
@@ -184,11 +185,7 @@ export function sfx(name: Sfx) {
 
 /** Buzz the phone */
 export function buzz(pattern: number | number[] = 10) {
-  try {
-    if ("vibrate" in navigator) navigator.vibrate(pattern);
-  } catch {
-    /* not supported */
-  }
+  haptic(pattern);
 }
 
 // ---------------------------------------------------------------------------

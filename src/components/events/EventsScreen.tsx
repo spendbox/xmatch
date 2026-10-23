@@ -1,6 +1,7 @@
 "use client";
 
-import { BellRing, CalendarDays } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, BellRing, CalendarDays } from "lucide-react";
 import { KindIcon } from "./kind";
 import { eventPhase, type DashpadEvent } from "@/lib/events";
 import { EventCard, useNow } from "./EventCard";
@@ -19,6 +20,9 @@ export function EventsScreen({ events, embedded }: { events: DashpadEvent[]; /**
         <p className="mt-5 text-[15px] text-muted">Themed nights to meet people — masked rounds, photo walls and listening parties.</p>
       ) : (
         <>
+          <Link href="/home" className="-ml-2 mb-2 inline-grid h-10 w-10 place-items-center rounded-full hover:bg-ink/5" aria-label="Back home">
+            <ArrowLeft size={22} />
+          </Link>
           <h1 className="font-display text-[34px] leading-tight font-semibold tracking-tight lg:text-[40px]">Events</h1>
           <p className="mt-1 text-[15px] text-muted">Themed nights to meet people — masked rounds, photo walls and listening parties.</p>
         </>
@@ -34,7 +38,7 @@ export function EventsScreen({ events, embedded }: { events: DashpadEvent[]; /**
           <div className="mt-5 lg:mt-0">
             <h2 className="text-[20px] font-semibold">Nothing on the calendar yet</h2>
             <p className="mt-1.5 max-w-md text-[15px] text-muted">
-              New events show up here first. When one you&apos;re going to starts, you&apos;ll see a <span className="font-semibold text-ink">Live</span> badge on Meet.
+              New events show up here first. When one you&apos;re going to starts, you&apos;ll see a <span className="font-semibold text-ink">Live</span> badge on Home.
             </p>
           </div>
         </div>

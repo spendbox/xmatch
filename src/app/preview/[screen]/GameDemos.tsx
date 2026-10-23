@@ -110,7 +110,18 @@ function demo(screen: string): Game | null {
         kind: "truths",
         deadline_at: at(58),
         state: { phase: "write", ready_b: false },
-        mine: { draft: { lines: ["I've been on stage with Burna Boy", "I can't swim, at all", ""], lie: 1 } },
+        mine: {
+          draft: {
+            lines: ["I've been on stage with Burna Boy", "I can't swim, at all", ""],
+            lie: 1,
+            saved: [
+              { id: 1, body: "I've been on stage with Burna Boy", uses: 3 },
+              { id: 2, body: "I was born in Kano", uses: 2 },
+              { id: 3, body: "I've never eaten amala", uses: 1 },
+              { id: 4, body: "I won a dance competition in JSS2", uses: 1 },
+            ],
+          },
+        },
       });
     case "game-truths-guess":
       return base({
