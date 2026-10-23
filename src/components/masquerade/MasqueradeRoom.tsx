@@ -236,7 +236,7 @@ export function MasqueradeRoom({
           <div className="min-w-0 flex-1">
             <p className="truncate text-[16px] font-semibold">{them.alias}</p>
             <p className="truncate text-[13px] text-muted">
-              {[them.age, gender, (them.same_place ? "Near you" : them.place) ?? distanceLabel(them.distance_km) ?? intentLabel(state.intent)].filter(Boolean).join(" · ")}
+              {[gender, (them.same_place ? "Near you" : them.place) ?? distanceLabel(them.distance_km) ?? intentLabel(state.intent)].filter(Boolean).join(" · ")}
             </p>
           </div>
           {lapsed ? (
@@ -466,7 +466,7 @@ export function MasqueradeRoom({
         </span>
         <p className="mt-4 font-display text-[26px] font-semibold">{them.alias}</p>
         <p className="text-[14px] text-muted">
-          {[them.age, gender, them.place ?? distanceLabel(them.distance_km)].filter(Boolean).join(" · ")}
+          {[gender, them.place ?? distanceLabel(them.distance_km)].filter(Boolean).join(" · ")}
         </p>
         {!lapsed && !state.reopened && (
           <>

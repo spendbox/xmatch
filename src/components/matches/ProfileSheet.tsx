@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import clsx from "clsx";
 import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, Quote, X } from "lucide-react";
-import { ageFromBirthdate, GENDERS } from "@/lib/constants";
+import { GENDERS } from "@/lib/constants";
 import type { Profile } from "@/lib/types";
 import { InterestIcon } from "@/components/ui/icons";
 
@@ -13,7 +13,6 @@ export function ProfileSheet({
   onClose,
   note,
   shared = [],
-  age: ageOverride,
   extra,
   footer,
   blur,
@@ -22,8 +21,6 @@ export function ProfileSheet({
   onClose: () => void;
   note?: string;
   shared?: string[];
-  /** When there's no birthdate to work it out from */
-  age?: number | null;
   /** Shown under the note (e.g. locked photos) */
   extra?: React.ReactNode;
   /** Actions pinned to the bottom (e.g. Message) */
@@ -46,7 +43,6 @@ export function ProfileSheet({
   }, [onClose]);
 
   const photos = profile.photos ?? [];
-  const age = ageOverride !== undefined ? ageOverride : ageFromBirthdate(profile.birthdate);
   const gender = GENDERS.find((g) => g.value === profile.gender)?.label;
   if (!mounted) return null;
 
@@ -115,7 +111,6 @@ export function ProfileSheet({
           <div className="pointer-events-none absolute inset-x-0 bottom-0 p-5 text-white lg:hidden">
             <h2 className="font-display text-[36px] leading-none font-semibold">
               {profile.display_name}
-              {age ? <span className="font-normal text-white/85">, {age}</span> : null}
             </h2>
             {gender && <p className="mt-1.5 text-[14px] text-white/80">{gender}</p>}
           </div>
@@ -127,7 +122,6 @@ export function ProfileSheet({
             <div>
               <h2 className="font-display text-[44px] leading-none font-semibold">
                 {profile.display_name}
-                {age ? <span className="font-normal text-muted">, {age}</span> : null}
               </h2>
               {gender && <p className="mt-2 text-[15px] text-muted">{gender}</p>}
             </div>

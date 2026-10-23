@@ -7,7 +7,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Flag, UserX, MoreVertical, Phone, Video, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { ageFromBirthdate } from "@/lib/constants";
 import type { ChatMessage, Intent, Profile } from "@/lib/types";
 import { INTENT_ICONS, InterestIcon } from "@/components/ui/icons";
 import { intentLabel } from "@/lib/constants";
@@ -56,7 +55,6 @@ export function MatchChat({
   const [reporting, setReporting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
-  const age = ageFromBirthdate(other.birthdate);
   const { startCall, call } = useCall();
   const [giftOpen, setGiftOpen] = useState(false);
   const { wallet, refresh: refreshWallet } = useWallet(myId);
@@ -189,7 +187,6 @@ export function MatchChat({
           <div className="min-w-0">
             <p className="truncate text-[16px] font-semibold">
               {other.display_name}
-              {age ? `, ${age}` : ""}
             </p>
             <p className={clsx("truncate text-[12px] font-medium", theyreOnline ? "text-mint" : "text-muted")}>{lastSeenText(seen[other.id], now)}</p>
           </div>

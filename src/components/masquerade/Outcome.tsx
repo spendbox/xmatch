@@ -83,7 +83,7 @@ function Reveal({ state, eventId }: { state: MasqueradeState; eventId?: string |
         )}
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-5 pt-16 text-white">
           <p className="text-2xl font-semibold">
-            {p.display_name}, {state.them.age}
+            {p.display_name}
           </p>
           {p.bio && <p className="mt-1 line-clamp-2 text-[14px] text-white/85">{p.bio}</p>}
         </div>

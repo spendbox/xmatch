@@ -78,7 +78,6 @@ export function LiveEventChats({ compact, divided, userId }: { compact?: boolean
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[15px] font-semibold">
                     {c.name}
-                    {c.age ? <span className="font-normal text-muted">, {c.age}</span> : null}
                     {sexLabel(c.gender) && <span className="font-normal text-muted"> · {sexLabel(c.gender)}</span>}
                   </p>
                   <p className={clsx("truncate text-[13px]", c.unread ? "font-semibold text-ink" : "text-muted")}>
@@ -153,7 +152,6 @@ export function LiveFeedChats({ compact, divided, userId }: { compact?: boolean;
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[15px] font-semibold">
                     {c.other.name}
-                    {c.other.age ? <span className="font-normal text-muted">, {c.other.age}</span> : null}
                     {sexLabel(c.other.gender) && <span className="font-normal text-muted"> · {sexLabel(c.other.gender)}</span>}
                   </p>
                   <p className={clsx("truncate text-[13px]", c.unread ? "font-semibold text-ink" : "text-muted")}>{c.last_message ?? "Say hi"}</p>

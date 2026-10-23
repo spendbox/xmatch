@@ -91,7 +91,6 @@ export function ChatsPanel({
                     <p className="flex items-center gap-1.5 text-[15px] font-semibold">
                       <span className="truncate">
                         {c.name || "Someone"}
-                        {c.age ? <span className="font-normal text-muted">, {c.age}</span> : null}
                         {sexLabel(c.gender) && <span className="font-normal text-muted"> · {sexLabel(c.gender)}</span>}
                       </span>
                     </p>

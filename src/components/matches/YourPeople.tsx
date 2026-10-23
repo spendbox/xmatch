@@ -91,7 +91,6 @@ export function YourPeople({ matches }: { matches: MatchSummary[]; myId: string 
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[15px] font-semibold">
                         {m.display_name}
-                        {m.age ? <span className="font-normal text-muted">, {m.age}</span> : null}
                       </span>
                       <span className="flex items-center gap-1 truncate text-[12px] text-muted">
                         {INTENT_ICONS[m.intent]({ size: 12 })} {intentLabel(m.intent)}
