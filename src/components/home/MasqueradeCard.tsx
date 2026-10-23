@@ -231,11 +231,10 @@ function Face({ alias, small }: { alias: string; small?: boolean }) {
   );
 }
 
-/** "128 people masking up in Lagos" */
+/** "128 people available in Lagos" */
 function pulseText(h: MasqueradeHour) {
   const p = h.pulse!;
-  const when = h.hour_open ? "this hour" : "today";
-  if (p.region >= 3 && p.region_name) return `${p.region} people masking up in ${p.region_name} ${when}`;
-  if (p.country >= 3) return `${p.country} people masking up in your country ${when}`;
-  return `${p.all} ${p.all === 1 ? "person" : "people"} masking up ${when}`;
+  if (p.region >= 3 && p.region_name) return `${p.region} people available in ${p.region_name}`;
+  if (p.country >= 3) return `${p.country} people available in your country`;
+  return `${p.all} ${p.all === 1 ? "person" : "people"} available`;
 }
