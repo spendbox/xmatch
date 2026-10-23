@@ -17,6 +17,8 @@ async function handle(req: Request) {
     return NextResponse.json({ error: "Not allowed" }, { status: 401 });
   }
   const db = createAdminClient();
+  // Keep "usually replies in…" fresh: this runs every 5 minutes, 200 people at a time (it pairs quick repliers first)
+  await db.rpc("refresh_reply_stats", { p_limit: 200 });
   const { data: made, error } = await db.rpc("run_hourly_pairing");
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   const { data } = await db.rpc("hourly_pairs_to_notify");

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { thumbFallback, thumbUrl } from "@/lib/photos";
 import { Check, Search, UsersRound, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { ExploreList, ExplorePerson, ExploreProfile } from "@/lib/explore";
@@ -85,7 +86,8 @@ export function ExploreScreen({ initial, demoProfile, userId }: { initial: Explo
                 {p.photo ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={p.photo}
+                    src={thumbUrl(p.photo) ?? p.photo}
+                    onError={thumbFallback(p.photo)}
                     alt=""
                     loading="lazy"
                     className="absolute inset-0 h-full w-full object-cover"

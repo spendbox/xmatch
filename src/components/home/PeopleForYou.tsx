@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { thumbFallback, thumbUrl } from "@/lib/photos";
 import Link from "next/link";
 import clsx from "clsx";
 import { ChevronRight } from "lucide-react";
@@ -45,7 +46,8 @@ export function PeopleForYou({ userId, demo }: { userId: string; demo?: ExploreL
                       {p.photo ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
-                          src={p.photo}
+                          src={thumbUrl(p.photo) ?? p.photo}
+                          onError={thumbFallback(p.photo)}
                           alt=""
                           loading="lazy"
                           className="h-full w-full object-cover transition group-hover:scale-105"

@@ -126,7 +126,8 @@ export function MasqueradeRoom({
   const timeUp = remaining <= 0;
   useEffect(() => {
     if (demo || state.status !== "active") return;
-    const t = setInterval(refresh, timeUp ? 3000 : 10000);
+    // Changes arrive live; this only keeps the timer and "online" fresh, so every 20s is plenty
+    const t = setInterval(refresh, timeUp ? 3000 : 20000);
     return () => clearInterval(t);
   }, [refresh, timeUp, state.status, demo]);
 

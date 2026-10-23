@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-/** Someone counts as online if the app checked in within this time (it checks in every 45s while open). */
-export const ONLINE_MS = 2 * 60 * 1000;
+/** Someone counts as online if the app checked in within this time (it checks in every minute while open). */
+export const ONLINE_MS = 2.5 * 60 * 1000;
 
 export function isOnline(lastSeen?: string | null, now = Date.now()) {
   return !!lastSeen && now - new Date(lastSeen).getTime() < ONLINE_MS;
