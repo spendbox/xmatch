@@ -4,7 +4,9 @@ import { redirect } from "next/navigation";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 
 /** Permanently deletes the account, photos, matches and messages. */
-export async function deleteAccount(): Promise<{ error?: string } | void> {
+export async function deleteAccount(confirm: string): Promise<{ error?: string } | void> {
+  // They have to type DELETE first (checked here too, not just on the phone)
+  if (confirm.trim().toUpperCase() !== "DELETE") return { error: "Type DELETE to confirm." };
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
