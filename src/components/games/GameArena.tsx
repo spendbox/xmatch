@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { lockScroll } from "@/lib/scrollLock";
 import { createPortal } from "react-dom";
 import { ChevronLeft, Volume2, VolumeX, X } from "lucide-react";
 import { MaskIcon } from "@/components/ui/MaskIcon";
@@ -56,10 +57,9 @@ export function GameArena({
 
   // Lock the page behind
   useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const unlock = lockScroll();
     return () => {
-      document.body.style.overflow = prev;
+      unlock();
     };
   }, []);
 

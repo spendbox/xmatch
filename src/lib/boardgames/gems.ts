@@ -5,6 +5,10 @@
  *   Match 4 in a line: a striped gem (clears its row or column when matched).
  *   Match in an L or T: a bomb gem (clears the 3×3 around it).
  *   Match 5 in a line: a star (swap it with any gem to clear every gem of that colour).
+ * Swap two special gems together for a bigger blast:
+ *   striped + striped: its row and its column · striped + bomb: 3 rows and 3 columns
+ *   bomb + bomb: a 5×5 blast · star + striped: that colour all turn striped and go off
+ *   star + bomb: that colour all turn into bombs and go off · star + star: the whole board
  * Making a special gem earns an extra swap. After 5 turns each, the most points wins.
  */
 import { MoveError, other, type MoveResult, type Side } from "./types";
@@ -16,7 +20,12 @@ export const TURNS = 5;
 export const SWAPS = 2;
 export const STAR = "*";
 
+/** What went off, for the animations: a row or column beam, a blast ring, or a star's lightning */
+export type Fx = { k: "h" | "v" | "x" | "star"; at: number; r?: number; hits?: number[] };
+
 export type Step = {
+  /** Special gems that went off */
+  fx?: Fx[];
   /** Cells that popped */
   clear: number[];
   /** The board after gems fell and new ones dropped in */
@@ -103,6 +112,15 @@ function specialFor(g: Group, color: string): string | null {
   return null;
 }
 
+const area = (at: number, r: number) => {
+  const [y0, x0] = rc(at);
+  const out: number[] = [];
+  for (let y = y0 - r; y <= y0 + r; y++) for (let x = x0 - r; x <= x0 + r; x++) if (y >= 0 && y < SIZE && x >= 0 && x < SIZE) out.push(y * SIZE + x);
+  return out;
+};
+const row = (r: number) => (r < 0 || r >= SIZE ? [] : Array.from({ length: SIZE }, (_, x) => r * SIZE + x));
+const col = (c: number) => (c < 0 || c >= SIZE ? [] : Array.from({ length: SIZE }, (_, y) => y * SIZE + c));
+
 /** What a special gem clears when it goes off */
 function blast(board: (string | null)[], i: number, rng: Rng): number[] {
   const g = board[i];
@@ -128,15 +146,20 @@ function blast(board: (string | null)[], i: number, rng: Rng): number[] {
   return [];
 }
 
-/** Clear these cells, setting off any special gems among them */
-function explode(board: (string | null)[], start: Iterable<number>, rng: Rng, keep: Set<number> = new Set()) {
+/** Clear these cells, setting off any special gems among them (noted in fx, for the animations) */
+function explode(board: (string | null)[], start: Iterable<number>, rng: Rng, keep: Set<number> = new Set(), fx: Fx[] = []) {
   const out = new Set<number>();
   const queue = [...start];
   while (queue.length) {
     const i = queue.shift()!;
     if (out.has(i) || !board[i]) continue;
     out.add(i);
-    if (kindOf(board[i]) !== "plain") for (const j of blast(board, i, rng)) if (!out.has(j)) queue.push(j);
+    const k = kindOf(board[i]);
+    if (k !== "plain") {
+      const hit = blast(board, i, rng);
+      fx.push(k === "star" ? { k, at: i, hits: hit } : k === "x" ? { k, at: i, r: 1 } : { k, at: i });
+      for (const j of hit) if (!out.has(j)) queue.push(j);
+    }
   }
   for (const k of keep) out.delete(k);
   return out;
@@ -169,6 +192,8 @@ function fall(board: (string | null)[], rng: Rng) {
 export function swapWorks(board: string[], a: number, b: number) {
   if (a === b || a < 0 || b < 0 || a >= N || b >= N || !adjacent(a, b)) return false;
   if (board[a] === STAR || board[b] === STAR) return true;
+  // Two special gems always combine
+  if (kindOf(board[a]) !== "plain" && kindOf(board[b]) !== "plain") return true;
   const t = [...board];
   [t[a], t[b]] = [t[b], t[a]];
   return findGroups(t).some((g) => g.cells.includes(a) || g.cells.includes(b));
@@ -208,22 +233,63 @@ export function resolve(board: string[], a: number, b: number, rng: Rng = Math.r
 
   // A star swapped with a gem clears that colour (two stars clear everything)
   let forced: Set<number> | null = null;
+  const forcedFx: Fx[] = [];
+  const ka = kindOf(board[a]);
+  const kb = kindOf(board[b]);
   if (board[a] === STAR || board[b] === STAR) {
     const starAt = board[a] === STAR ? b : a; // after the swap
     const otherAt = starAt === a ? b : a;
-    const col = colorOf(cur[otherAt]);
-    const start = cur[otherAt] === STAR ? cur.map((_, i) => i) : [starAt, ...cur.flatMap((g, i) => (colorOf(g) === col ? [i] : []))];
+    const other = cur[otherAt];
+    const ko = kindOf(other);
+    const color = colorOf(other);
+    let start: number[];
+    if (other === STAR) {
+      start = cur.map((_, i) => i);
+      forcedFx.push({ k: "star", at: starAt, hits: start });
+      cur[otherAt] = "_";
+    } else {
+      const targets = cur.flatMap((g, i) => (colorOf(g) === color ? [i] : []));
+      // Star + striped or bomb: every gem of that colour becomes one, and they all go off
+      if (ko === "h" || ko === "v" || ko === "x") for (const t of targets) cur[t] = color + (ko === "x" ? "x" : rng() < 0.5 ? "h" : "v");
+      start = [starAt, ...targets];
+      forcedFx.push({ k: "star", at: starAt, hits: targets });
+    }
     // The star itself is spent: clear it without setting it off again
     cur[starAt] = "_";
-    forced = explode(cur, start, rng);
+    forced = explode(cur, start, rng, new Set(), forcedFx);
     forced.add(starAt);
+  } else if (ka !== "plain" && kb !== "plain") {
+    // Two specials combine where the moved gem lands
+    const at = b;
+    const [r, c] = rc(at);
+    cur[a] = "_";
+    cur[b] = "_";
+    let start: number[];
+    if (ka === "x" && kb === "x") {
+      start = area(at, 2);
+      forcedFx.push({ k: "x", at, r: 2 });
+    } else if (ka === "x" || kb === "x") {
+      start = [...row(r - 1), ...row(r), ...row(r + 1), ...col(c - 1), ...col(c), ...col(c + 1)];
+      for (const d of [-1, 0, 1]) {
+        if (r + d >= 0 && r + d < SIZE) forcedFx.push({ k: "h", at: (r + d) * SIZE + c });
+        if (c + d >= 0 && c + d < SIZE) forcedFx.push({ k: "v", at: r * SIZE + c + d });
+      }
+    } else {
+      start = [...row(r), ...col(c)];
+      forcedFx.push({ k: "h", at }, { k: "v", at });
+    }
+    forced = explode(cur, start, rng, new Set(), forcedFx);
+    forced.add(a);
+    forced.add(b);
   }
 
   for (let n = 0; n < 40; n++) {
     let clear: Set<number>;
     const place: [number, string][] = [];
+    let fx: Fx[] = [];
     if (forced) {
       clear = forced;
+      fx = forcedFx;
       forced = null;
     } else {
       const groups = findGroups(cur);
@@ -238,9 +304,14 @@ export function resolve(board: string[], a: number, b: number, rng: Rng = Math.r
           place.push([at, sp]);
         }
       }
-      clear = explode(cur, raw, rng, new Set(place.map(([i]) => i)));
+      clear = explode(cur, raw, rng, new Set(place.map(([i]) => i)), fx);
       // A special that was in the match still goes off
-      for (const [i] of place) if (kindOf(cur[i]) !== "plain") for (const j of explode(cur, blast(cur, i, rng), rng)) if (j !== i) clear.add(j);
+      for (const [i] of place)
+        if (kindOf(cur[i]) !== "plain") {
+          const k = kindOf(cur[i]);
+          fx.push(k === "x" ? { k, at: i, r: 1 } : { k: k as Fx["k"], at: i });
+          for (const j of explode(cur, blast(cur, i, rng), rng, new Set(), fx)) if (j !== i) clear.add(j);
+        }
     }
     const points = clear.size * 10 * Math.min(n + 1, 5) + place.length * 30;
     for (const i of clear) cur[i] = null;
@@ -249,7 +320,7 @@ export function resolve(board: string[], a: number, b: number, rng: Rng = Math.r
       made = true;
     }
     const f = fall(cur, rng);
-    steps.push({ clear: [...clear].sort((x, y) => x - y), board: [...f.board], drop: f.drop, points });
+    steps.push({ clear: [...clear].sort((x, y) => x - y), board: [...f.board], drop: f.drop, points, ...(fx.length ? { fx: fx.slice(0, 40) } : {}) });
     cur = f.board;
   }
   return { before, steps, board: cur as string[], made };

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { lockScroll } from "@/lib/scrollLock";
 import { FEATURES } from "@/lib/features";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
@@ -30,12 +31,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   useEffect(() => setMenu(false), [path]);
   useEffect(() => {
     if (!menu) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const unlock = lockScroll();
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setMenu(false);
     document.addEventListener("keydown", onKey);
     return () => {
-      document.body.style.overflow = prev;
+      unlock();
       document.removeEventListener("keydown", onKey);
     };
   }, [menu]);

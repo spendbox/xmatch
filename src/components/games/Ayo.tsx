@@ -169,18 +169,18 @@ export function Ayo({ game, names, act }: { game: Game; names: Names; act: GameA
             landing === i && "scale-110",
           )}
           style={{
-            background: "radial-gradient(circle at 50% 35%, #4a2a10 0%, #2b1606 75%)",
+            background: PIT,
             boxShadow: flash.includes(i)
-              ? `inset 0 4px 10px rgba(0,0,0,0.6), 0 0 0 3px ${GOLD}, 0 0 22px 6px rgba(242,179,61,0.8)`
+              ? `${CARVED}, 0 0 0 3px ${GOLD}, 0 0 22px 6px rgba(242,179,61,0.8)`
               : can
-                ? `inset 0 4px 10px rgba(0,0,0,0.6), 0 0 0 3px ${color(owner)}`
+                ? `${CARVED}, 0 0 0 3px ${color(owner)}`
                 : !anim && st.last?.end === i
-                  ? "inset 0 4px 10px rgba(0,0,0,0.6), 0 0 0 2px rgba(255,255,255,0.7)"
-                  : "inset 0 4px 10px rgba(0,0,0,0.6)",
+                  ? `${CARVED}, 0 0 0 2px rgba(255,240,210,0.75)`
+                  : CARVED,
           }}
         >
           <Seeds n={n} />
-          <span className="absolute -bottom-1 rounded-full bg-black/60 px-2 text-[12px] leading-[18px] font-extrabold tabular-nums">{n}</span>
+          <span className="absolute -bottom-1 rounded-full bg-[#1a0d06]/85 px-2 text-[12px] leading-[18px] font-extrabold text-[#f3e6cf] tabular-nums ring-1 ring-[#f3e6cf]/20">{n}</span>
         </button>
       </div>
     );
@@ -199,9 +199,13 @@ export function Ayo({ game, names, act }: { game: Game; names: Names; act: GameA
       <div
         ref={board}
         className="relative mt-3 flex min-h-0 flex-1 flex-col rounded-[32px] p-2.5"
-        style={{ background: "linear-gradient(90deg,#8a5220,#b9762f 50%,#8a5220)", boxShadow: "0 10px 0 #5a3412, 0 30px 60px -20px rgba(194,122,50,0.7)" }}
+        style={{
+          background: WOOD,
+          boxShadow: "0 10px 0 #3d2009, 0 30px 60px -20px rgba(0,0,0,0.7), inset 0 2px 0 rgba(255,230,190,0.25), inset 0 -3px 6px rgba(0,0,0,0.35)",
+        }}
       >
-        <div className="grid min-h-0 flex-1 grid-cols-2 gap-2.5">
+        <SeedDefs />
+        <div className="grid min-h-0 flex-1 grid-cols-2 grid-rows-[minmax(0,1fr)] gap-2.5">
           <Side name={names.them} color={color(them)} captured={store[them]} turn={st.turn === them && game.status === "active"} arrow="down">
             {left.map(pitView)}
           </Side>
@@ -214,15 +218,16 @@ export function Ayo({ game, names, act }: { game: Game; names: Names; act: GameA
         {hand && (
           <span
             aria-hidden
-            className="pointer-events-none absolute z-20 grid h-9 w-9 -translate-x-1/2 -translate-y-[85%] place-items-center rounded-full text-[12px] font-black text-ink transition-[left,top] duration-150 ease-out"
-            style={{
-              left: hand.x,
-              top: hand.y,
-              background: "radial-gradient(circle at 35% 30%, #fffaf0, #d8cbb2)",
-              boxShadow: "0 6px 14px rgba(0,0,0,0.45), 0 0 0 2px rgba(255,255,255,0.6)",
-            }}
+            className="pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-[85%] transition-[left,top] duration-150 ease-out"
+            style={{ left: hand.x, top: hand.y }}
           >
-            {hand.n}
+            <svg viewBox="0 0 40 34" className="h-9 w-10 drop-shadow-[0_8px_8px_rgba(0,0,0,0.55)]">
+              <ellipse cx="20" cy="17" rx="16" ry="13" fill="url(#ayo-seed)" />
+              <ellipse cx="14" cy="11" rx="5.5" ry="3" fill="#fff" opacity="0.55" transform="rotate(-20 14 11)" />
+            </svg>
+            <span className="absolute -top-2 -right-3 grid h-5 min-w-5 place-items-center rounded-full bg-[#1a0d06] px-1 text-[11px] font-black text-[#f3e6cf] ring-1 ring-[#f3e6cf]/30">
+              {hand.n}
+            </span>
           </span>
         )}
       </div>
@@ -243,7 +248,7 @@ export function Ayo({ game, names, act }: { game: Game; names: Names; act: GameA
   );
 }
 
-/** One player's half of the board: tinted in their colour, with their name and captures */
+/** One player's half of the board: a groove carved in the wood, with their name tag */
 function Side({
   name,
   color,
@@ -261,42 +266,79 @@ function Side({
 }) {
   return (
     <div
-      className="flex min-h-0 flex-col rounded-[24px] p-2 transition"
-      style={{ background: `${color}2e`, boxShadow: turn ? `inset 0 0 0 2.5px ${color}` : `inset 0 0 0 1.5px ${color}55` }}
+      className="flex min-h-0 flex-col rounded-[24px] p-2 transition-shadow"
+      style={{
+        background: "linear-gradient(180deg, rgba(40,18,6,0.38), rgba(40,18,6,0.22))",
+        boxShadow: turn
+          ? "inset 0 3px 8px rgba(0,0,0,0.5), inset 0 -1px 0 rgba(255,230,190,0.2), 0 0 0 2px rgba(255,214,140,0.7), 0 0 18px rgba(255,200,110,0.35)"
+          : "inset 0 3px 8px rgba(0,0,0,0.5), inset 0 -1px 0 rgba(255,230,190,0.2)",
+      }}
     >
-      <div className="mb-1.5 flex items-center justify-between gap-1 rounded-full px-2.5 py-1" style={{ background: color }}>
-        <span className="min-w-0 truncate text-[12px] font-extrabold text-ink">{name}</span>
-        <span className="shrink-0 text-[11px] font-black text-ink/80 tabular-nums">{captured} 🫘</span>
+      <div className="mb-1.5 flex items-center justify-between gap-1 rounded-full bg-[#1a0d06]/70 py-1 pr-2.5 pl-1.5 ring-1 ring-[#f3e6cf]/15">
+        <span className="flex min-w-0 items-center gap-1.5">
+          <span className="h-3.5 w-3.5 shrink-0 rounded-full ring-2 ring-[#1a0d06]" style={{ background: color }} />
+          <span className="min-w-0 truncate text-[12px] font-extrabold text-[#f3e6cf]">{name}</span>
+        </span>
+        <span className="shrink-0 text-[11px] font-black text-[#f3e6cf]/80 tabular-nums">{captured} seeds</span>
       </div>
-      <div className="relative grid min-h-0 flex-1 grid-rows-6 gap-1.5">{children}</div>
-      <p className="mt-1 text-center text-[10px] font-bold tracking-wider text-white/60 uppercase">
+      <div className="relative grid min-h-0 flex-1 grid-rows-[repeat(6,minmax(0,1fr))] gap-1.5">{children}</div>
+      <p className="mt-1 text-center text-[10px] font-bold tracking-wider text-[#f3e6cf]/60 uppercase">
         {arrow === "up" ? "Sows upward ↑" : "Sows downward ↓"}
       </p>
     </div>
   );
 }
 
-/** A little heap of seeds (up to 12 drawn, the number shows the rest) */
-function Seeds({ n }: { n: number }) {
-  const shown = Math.min(n, 12);
+// Wood: warm browns with long grain (fine noise stretched along the board) and a soft sheen
+const GRAIN =
+  "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='0.012 0.22' numOctaves='3' seed='11'/><feColorMatrix values='0 0 0 0 0.22  0 0 0 0 0.1  0 0 0 0 0.03  0 0 0 0.55 0'/></filter><rect width='100%' height='100%' filter='url(%23g)'/></svg>\")";
+const WOOD = `${GRAIN}, linear-gradient(90deg, rgba(255,220,170,0.08), rgba(0,0,0,0.12) 50%, rgba(255,220,170,0.08)), linear-gradient(180deg, #9b5f2c 0%, #84501f 40%, #7a4619 60%, #93592a 100%)`;
+const PIT = "radial-gradient(circle at 50% 38%, #4a2a12 0%, #331a09 45%, #1f0f05 80%, #170b03 100%)";
+const CARVED = "inset 0 6px 12px rgba(0,0,0,0.75), inset 0 -2px 3px rgba(255,220,170,0.12), 0 1.5px 0 rgba(255,230,190,0.35), 0 -1px 0 rgba(0,0,0,0.35)";
+
+/** The colours of a seed (shared by every seed on the board) */
+function SeedDefs() {
   return (
-    <span className="relative block h-[70%] w-[70%]" aria-hidden>
+    <svg width="0" height="0" className="absolute" aria-hidden>
+      <defs>
+        <radialGradient id="ayo-seed" cx="0.38" cy="0.32" r="0.75">
+          <stop offset="0" stopColor="#e9e6d6" />
+          <stop offset="0.35" stopColor="#b9b6a2" />
+          <stop offset="0.75" stopColor="#7f7c6a" />
+          <stop offset="1" stopColor="#4f4c40" />
+        </radialGradient>
+        <radialGradient id="ayo-seed-b" cx="0.38" cy="0.32" r="0.75">
+          <stop offset="0" stopColor="#ece4cf" />
+          <stop offset="0.4" stopColor="#c2b392" />
+          <stop offset="0.8" stopColor="#857356" />
+          <stop offset="1" stopColor="#544631" />
+        </radialGradient>
+      </defs>
+    </svg>
+  );
+}
+
+/** A heap of seeds: glossy grey-green nuts, each a slightly different oval at its own angle (up to 14 drawn) */
+function Seeds({ n }: { n: number }) {
+  const shown = Math.min(n, 14);
+  return (
+    <svg viewBox="0 0 100 100" className="absolute inset-[11%] h-[78%] w-[78%]" aria-hidden>
       {Array.from({ length: shown }, (_, k) => {
-        const a = (k * 137.5 * Math.PI) / 180;
-        const rad = 0.16 + 0.22 * Math.sqrt(k / Math.max(1, shown));
+        const a = k * 2.399963;
+        const r = shown === 1 ? 0 : 9 + 25 * Math.sqrt(k / shown);
+        const x = 50 + Math.cos(a) * r;
+        const y = 52 + Math.sin(a) * r;
+        const rot = (k * 67) % 180;
+        const rx = 11 + ((k * 7) % 3);
+        const ry = 9 + ((k * 5) % 2);
         return (
-          <span
-            key={k}
-            className="absolute h-[22%] w-[22%] rounded-full"
-            style={{
-              left: `${50 + Math.cos(a) * rad * 100 - 11}%`,
-              top: `${50 + Math.sin(a) * rad * 100 - 11}%`,
-              background: "radial-gradient(circle at 35% 30%, #f6efe2, #b9ab92)",
-              boxShadow: "0 1px 1px rgba(0,0,0,0.45)",
-            }}
-          />
+          <g key={k} transform={`translate(${x} ${y}) rotate(${rot})`}>
+            <ellipse cx="1.5" cy="2.5" rx={rx} ry={ry} fill="rgba(0,0,0,0.45)" />
+            <ellipse cx="0" cy="0" rx={rx} ry={ry} fill={k % 4 === 3 ? "url(#ayo-seed-b)" : "url(#ayo-seed)"} />
+            <ellipse cx={-rx * 0.35} cy={-ry * 0.4} rx={rx * 0.38} ry={ry * 0.22} fill="#fff" opacity="0.55" />
+          </g>
         );
       })}
-    </span>
+    </svg>
   );
 }

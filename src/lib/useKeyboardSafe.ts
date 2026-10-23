@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { lockScroll } from "@/lib/scrollLock";
 
 /**
  * Keeps a full-screen chat exactly the size of the visible screen on phones,
@@ -35,12 +36,13 @@ export function useKeyboardSafe<T extends HTMLElement>() {
     };
 
     // Stop the page itself from scrolling behind the chat (phones only)
-    const html = document.documentElement;
-    const prevHtml = html.style.overflow;
-    const prevBody = document.body.style.overflow;
+    let unlock: (() => void) | null = null;
     const lock = (on: boolean) => {
-      html.style.overflow = on ? "hidden" : prevHtml;
-      document.body.style.overflow = on ? "hidden" : prevBody;
+      if (on && !unlock) unlock = lockScroll();
+      if (!on && unlock) {
+        unlock();
+        unlock = null;
+      }
     };
 
     apply();

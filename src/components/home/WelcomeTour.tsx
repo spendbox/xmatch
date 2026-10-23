@@ -52,15 +52,20 @@ const STEPS: Step[] = [
 export function WelcomeTour({ force, off }: { force?: boolean; off?: boolean }) {
   const [step, setStep] = useState<number | null>(null);
   const [box, setBox] = useState<DOMRect | null>(null);
+  // Skipped: tucked away as a small button until it's finished
+  const [later, setLater] = useState<number | null>(null);
 
   useEffect(() => {
     if (force) return setStep(0);
     if (off) return;
+    let saved: string | null = null;
     try {
-      if (localStorage.getItem(KEY)) return;
+      saved = localStorage.getItem(KEY);
     } catch {
       return;
     }
+    if (saved === "1") return;
+    if (saved?.startsWith("later:")) return setLater(Math.max(0, Math.min(STEPS.length - 1, Number(saved.slice(6)) || 0)));
     const t = setTimeout(() => setStep(0), 900);
     return () => clearTimeout(t);
   }, [force, off]);
@@ -90,6 +95,39 @@ export function WelcomeTour({ force, off }: { force?: boolean; off?: boolean }) 
       /* private mode */
     }
     setStep(null);
+    setLater(null);
+  }
+
+  function skip() {
+    const at = step ?? 0;
+    try {
+      localStorage.setItem(KEY, `later:${at}`);
+    } catch {
+      /* private mode */
+    }
+    setStep(null);
+    setLater(at);
+  }
+
+  if (step === null && later !== null) {
+    return createPortal(
+      <button
+        type="button"
+        onClick={() => {
+          tapFeedback();
+          setStep(later);
+          setLater(null);
+        }}
+        className="fixed right-4 bottom-[calc(88px+env(safe-area-inset-bottom))] z-[45] inline-flex h-11 animate-pop items-center gap-2 rounded-full bg-ink pr-4 pl-1.5 text-[13px] font-semibold text-white shadow-lift lg:bottom-6"
+        aria-label="Finish the welcome tour"
+      >
+        <span className="grid h-8 w-8 place-items-center rounded-full bg-brand">
+          <MaskIcon className="w-5" eyes="#5b3fd9" />
+        </span>
+        Finish the tour · {later + 1}/{STEPS.length}
+      </button>,
+      document.body,
+    );
   }
 
   if (step === null) return null;
@@ -146,8 +184,8 @@ export function WelcomeTour({ force, off }: { force?: boolean; off?: boolean }) 
               ))}
             </div>
             {!last && (
-              <button type="button" onClick={finish} className="h-10 px-2 text-[14px] font-semibold text-muted">
-                Skip
+              <button type="button" onClick={skip} className="h-10 px-2 text-[14px] font-semibold text-muted">
+                Later
               </button>
             )}
             <button
