@@ -7,11 +7,15 @@ import { createClient } from "@/lib/supabase/client";
 export function useHeartbeat() {
   useEffect(() => {
     const supabase = createClient();
+    let last = 0;
+    // Once a minute while the app is open (and not again within 20s when you flip back to it)
     const beat = () => {
-      if (document.visibilityState === "visible") supabase.rpc("heartbeat").then(() => {});
+      if (document.visibilityState !== "visible" || Date.now() - last < 20_000) return;
+      last = Date.now();
+      supabase.rpc("heartbeat").then(() => {});
     };
     beat();
-    const t = setInterval(beat, 45_000);
+    const t = setInterval(beat, 60_000);
     document.addEventListener("visibilitychange", beat);
     return () => {
       clearInterval(t);

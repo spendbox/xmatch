@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { thumbFallback, thumbUrl } from "@/lib/photos";
 import Link from "next/link";
 import clsx from "clsx";
 import { ArrowLeft, MessageCircle, Search, Users } from "lucide-react";
@@ -80,7 +81,7 @@ export function YourPeople({ matches }: { matches: MatchSummary[]; myId: string 
                   <span className="relative block aspect-[4/5] bg-line">
                     {m.photos?.[0] && (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={m.photos[0]} alt={m.display_name} className="absolute inset-0 h-full w-full object-cover" />
+                      <img src={thumbUrl(m.photos[0]) ?? m.photos[0]} onError={thumbFallback(m.photos[0])} alt={m.display_name} className="absolute inset-0 h-full w-full object-cover" />
                     )}
                     <span
                       className={clsx("absolute top-2.5 right-2.5 h-3 w-3 rounded-full ring-2 ring-white", on ? "bg-mint" : "bg-[#b9b3c4]")}

@@ -33,7 +33,7 @@ export async function pushToUsers(userIds: string[], payload: PushPayload, opts:
   let ids = [...new Set(userIds)];
   if (opts.skipIfActive) {
     const { data } = await db.from("profiles").select("id, last_seen_at").in("id", ids);
-    const active = new Set((data ?? []).filter((p) => Date.now() - new Date(p.last_seen_at as string).getTime() < 60_000).map((p) => p.id as string));
+    const active = new Set((data ?? []).filter((p) => Date.now() - new Date(p.last_seen_at as string).getTime() < 90_000).map((p) => p.id as string));
     ids = ids.filter((id) => !active.has(id));
     if (!ids.length) return { sent: 0 };
   }

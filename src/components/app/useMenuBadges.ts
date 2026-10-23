@@ -57,7 +57,11 @@ export function useMenuBadges(userId: string): MenuBadges {
     timer.current = setTimeout(refresh, 600);
   }, [refresh]);
 
+  // Moving between pages re-checks at most every 30 seconds (new messages arrive live anyway)
+  const lastPathCheck = useRef(0);
   useEffect(() => {
+    if (Date.now() - lastPathCheck.current < 30_000) return;
+    lastPathCheck.current = Date.now();
     soon();
   }, [path, soon]);
 

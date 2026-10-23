@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { thumbFallback, thumbUrl } from "@/lib/photos";
 import clsx from "clsx";
 import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, Quote, X } from "lucide-react";
@@ -97,7 +98,7 @@ export function ProfileSheet({
                   <button key={p} onClick={() => setI(n)} aria-label={`Photo ${n + 1}`}
                     className={`h-14 w-14 overflow-hidden rounded-xl border-2 transition ${n === i ? "border-white" : "border-transparent opacity-70 hover:opacity-100"}`}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={p} alt="" className="h-full w-full object-cover" />
+                    <img src={thumbUrl(p) ?? p} onError={thumbFallback(p)} alt="" className="h-full w-full object-cover" />
                   </button>
                 ))}
               </div>
