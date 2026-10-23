@@ -267,9 +267,10 @@ export async function createEventUpload(
 > {
   await requireAdmin();
   const ext = (fileName.split(".").pop() ?? "").toLowerCase();
-  let type = (contentType || "").toLowerCase();
+  let type = (contentType || "").toLowerCase().split(";")[0].trim();
   type = TYPE_ALIASES[type] ?? type;
-  if (!type || type === "application/octet-stream") type = EXT_TYPES[ext] ?? "";
+  // A known music file goes by its name: computers label .m4a as "audio/x-m4a", "video/mp4" or nothing at all
+  if (["mp3", "m4a", "aac", "wav", "ogg", "oga"].includes(ext) || !type || type === "application/octet-stream") type = EXT_TYPES[ext] ?? type;
   const kind = (Object.keys(UPLOAD_TYPES) as ("image" | "audio" | "video")[]).find((k) => UPLOAD_TYPES[k].types.includes(type));
   if (!kind) return { error: "That file type isn't supported. Use JPG, PNG or WebP for pictures, MP3, M4A or WAV for music, and MP4 or WebM for video." };
   if (want === "image" && kind !== "image") return { error: "Please choose a picture (JPG, PNG or WebP)." };
