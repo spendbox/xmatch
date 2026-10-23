@@ -207,6 +207,16 @@ const explorePeople: ExploreList = {
     place: i % 2 ? "Yaba, Lagos" : "Akoka, Lagos", intent: "dating" as const, online: online as boolean, connected: connected as boolean,
   })),
 };
+
+// Home shows 20: the Explore people again under other names
+const NAMES = ["Tomi", "Femi", "Dami", "Seyi", "Nneka", "Uche", "Chioma", "Lola", "Bayo", "Kunle", "Amaka", "Ifeoma"];
+const homePeople: ExploreList = {
+  ...explorePeople,
+  people: Array.from({ length: 20 }, (_, i) => {
+    const p = explorePeople.people[i % explorePeople.people.length];
+    return i < explorePeople.people.length ? p : { ...p, id: `${p.id}-${i}`, name: NAMES[i % NAMES.length], online: i % 3 === 0, connected: false };
+  }),
+};
 const exploreProfile: ExploreProfile = {
   id: "p0", name: "Ada", age: 26, gender: "woman", bio: "Bookworm, beach lover, and the friend who always knows the best brunch spot.",
   interests: ["Books", "Travel", "Dancing", "Food"], place: "Akoka, Lagos", intent: null, online: true,
@@ -270,7 +280,7 @@ function ScreenBody({ screen }: { screen: string }) {
     case "masquerade":
       return (
         <div className="pb-24">
-          <HomeScreen profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} stats={{ online: 214, week_chats: 12, week_unmasks: 5, gifts_received: 3 }} matches={recent} />
+          <HomeScreen profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} stats={{ online: 214, week_chats: 12, week_unmasks: 5, gifts_received: 3 }} matches={recent} demoPeople={homePeople} />
           <BottomNav />
         </div>
       );
@@ -294,12 +304,12 @@ function ScreenBody({ screen }: { screen: string }) {
       return <AdminShell><MasqueradeHealth stats={{ now: new Date(now).toISOString(), hours, switched_on: 1840, eligible_now: 960, no_place: 212, week: { pairs: 4120, clicked: 830, quiet: 1010, reopened: 190 }, by_mood: { friends: 1500, dating: 1900, spicy: 720 } }} /></AdminShell>;
     }
     case "home-clicked":
-      return <div className="pb-24"><HomeScreen hour={demoHour("clicked")} profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} /><BottomNav /></div>;
+      return <div className="pb-24"><HomeScreen demoPeople={homePeople} hour={demoHour("clicked")} profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} /><BottomNav /></div>;
     case "home-next":
     case "home-off":
       return (
         <div className="pb-24">
-          <HomeScreen hour={demoHour(screen === "home-off" ? "off" : "next")} profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} stats={{ online: 214, week_chats: 12, week_unmasks: 5, gifts_received: 3 }} matches={recent} />
+          <HomeScreen demoPeople={homePeople} hour={demoHour(screen === "home-off" ? "off" : "next")} profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} stats={{ online: 214, week_chats: 12, week_unmasks: 5, gifts_received: 3 }} matches={recent} />
           <BottomNav />
         </div>
       );
@@ -333,7 +343,7 @@ function ScreenBody({ screen }: { screen: string }) {
         </div>
       );
     case "meet-post":
-      return <HomeScreen profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} hour={demoHour()} meets={demoMeets} demoSheet="post" />;
+      return <HomeScreen demoPeople={homePeople} profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} hour={demoHour()} meets={demoMeets} demoSheet="post" />;
     case "room-meet":
     case "room-meet-mine":
       return (
@@ -358,7 +368,7 @@ function ScreenBody({ screen }: { screen: string }) {
     case "home":
       return (
         <div className="pb-24">
-          <HomeScreen meets={demoMeets} hour={demoHour()} profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} stats={{ online: 214, week_chats: 12, week_unmasks: 5, gifts_received: 3 }} matches={recent} />
+          <HomeScreen demoPeople={homePeople} meets={demoMeets} hour={demoHour()} profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} stats={{ online: 214, week_chats: 12, week_unmasks: 5, gifts_received: 3 }} matches={recent} />
           <BottomNav />
         </div>
       );
@@ -368,7 +378,7 @@ function ScreenBody({ screen }: { screen: string }) {
     case "sheet-spice":
     case "sheet-distance":
     case "sheet-seeking":
-      return <HomeScreen profile={me} wallet={{ balance: 3, passes: 0, free_left: 0, next_free_at: new Date(now + 3 * 3600_000 + 12 * 60_000).toISOString() }} stats={null} matches={[]} hour={demoHour("next")} demoSheet="meet" />;
+      return <HomeScreen demoPeople={homePeople} profile={me} wallet={{ balance: 3, passes: 0, free_left: 0, next_free_at: new Date(now + 3 * 3600_000 + 12 * 60_000).toISOString() }} stats={null} matches={[]} hour={demoHour("next")} demoSheet="meet" />;
     case "buttons":
       return (
         <div className="mx-auto max-w-md space-y-3 p-5 pt-16">
@@ -379,7 +389,7 @@ function ScreenBody({ screen }: { screen: string }) {
         </div>
       );
     case "waiting":
-      return <HomeScreen profile={me} wallet={null} stats={null} matches={[]} hour={demoHour("next")} />;
+      return <HomeScreen demoPeople={homePeople} profile={me} wallet={null} stats={null} matches={[]} hour={demoHour("next")} />;
     case "chat":
       return <MasqueradeRoom initial={session()} initialMessages={msgs} demo={{ remaining: 121 }} />;
     case "decide":
@@ -398,7 +408,7 @@ function ScreenBody({ screen }: { screen: string }) {
     case "invite":
       return (
         <div className="pb-24">
-          <HomeScreen profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} stats={{ online: 214, week_chats: 12, week_unmasks: 5, gifts_received: 3 }} matches={recent} />
+          <HomeScreen profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} stats={{ online: 214, week_chats: 12, week_unmasks: 5, gifts_received: 3 }} matches={recent} demoPeople={homePeople} />
           <InviteSheet
             invite={{ id: "i", intent: "dating", spice: 2, from_age: 27, distance_km: 3, expires_at: new Date(now + 38_000).toISOString() }}
             onAccept={() => {}}

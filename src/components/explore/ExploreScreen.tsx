@@ -7,32 +7,13 @@ import type { ExploreList, ExplorePerson, ExploreProfile } from "@/lib/explore";
 import { tapFeedback, Spinner } from "@/components/ui/Button";
 import { Sticky } from "@/components/ui/Sticky";
 import { ExploreProfileSheet } from "./ExploreProfileSheet";
+import { useMeetList } from "./useMeetList";
 
-/** The Meet page: people like you in big circles, and a search to find anyone by name */
-const KEEP_MS = 10 * 60_000;
-const cacheKey = (uid: string) => `dp_meet_${uid}`;
-
-function readCache(uid?: string): ExploreList | null {
-  if (!uid) return null;
-  try {
-    const c = JSON.parse(localStorage.getItem(cacheKey(uid)) ?? "null") as { at: number; data: ExploreList } | null;
-    return c && Date.now() - c.at < KEEP_MS ? c.data : null;
-  } catch {
-    return null;
-  }
-}
-function writeCache(uid: string | undefined, data: ExploreList) {
-  if (!uid) return;
-  try {
-    localStorage.setItem(cacheKey(uid), JSON.stringify({ at: Date.now(), data }));
-  } catch {
-    /* private mode */
-  }
-}
-
+/** The Meet page: your closest matches in a grid, and a search to find anyone by name */
 export function ExploreScreen({ initial, demoProfile, userId }: { initial: ExploreList | null; demoProfile?: ExploreProfile; userId?: string }) {
   const supabase = useMemo(() => createClient(), []);
-  const [list, setList] = useState<ExploreList | null>(initial);
+  // Your top 50: from the phone if it's fresh (under 10 minutes old), otherwise from Dashpad
+  const { list, reload } = useMeetList(userId, initial);
   const [q, setQ] = useState("");
   const [results, setResults] = useState<ExplorePerson[] | null>(null);
   const [searching, setSearching] = useState(false);
@@ -56,22 +37,6 @@ export function ExploreScreen({ initial, demoProfile, userId }: { initial: Explo
     }, 350);
   }, [q, supabase]);
 
-  async function reload() {
-    const { data } = await supabase.rpc("explore_people", { p_limit: 50 });
-    if (data) {
-      setList(data as ExploreList);
-      writeCache(userId, data as ExploreList);
-    }
-  }
-
-  // Your top 50: from the phone if it's fresh (under 10 minutes old), otherwise from Dashpad
-  useEffect(() => {
-    if (initial) return;
-    const kept = readCache(userId);
-    if (kept) setList(kept);
-    else void reload();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
 
   const people = results ?? list?.people ?? [];
   const searchingNow = results !== null || searching;

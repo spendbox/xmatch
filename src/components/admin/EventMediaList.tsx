@@ -127,7 +127,7 @@ export function EventMediaList({ eventId, initial }: { eventId: string | null; i
           ref={input}
           type="file"
           multiple
-          accept="audio/*,video/mp4,video/webm,video/quicktime"
+          accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg,video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov"
           className="sr-only"
           onChange={(e) => addFiles(e.target.files)}
         />

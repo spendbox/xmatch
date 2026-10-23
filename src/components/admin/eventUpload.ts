@@ -7,9 +7,12 @@ import { createClient } from "@/lib/supabase/client";
 export async function uploadEventFile(eventId: string | null, file: File, want: "image" | "media") {
   const ticket = await createEventUpload(eventId, file.name, file.type, file.size, want);
   if ("error" in ticket) throw new Error(ticket.error);
+  // Storage reads the type from the file itself (not from contentType), and computers name
+  // some types oddly (an .m4a can be "audio/x-m4a" or blank), so send it with the right one
+  const body = file.type === ticket.contentType ? file : new File([file], file.name, { type: ticket.contentType });
   const { error } = await createClient()
     .storage.from("event-media")
-    .uploadToSignedUrl(ticket.path, ticket.token, file, { contentType: ticket.contentType, upsert: false, cacheControl: "31536000" });
+    .uploadToSignedUrl(ticket.path, ticket.token, body, { contentType: ticket.contentType, upsert: false, cacheControl: "31536000" });
   if (error) {
     const msg = String(error.message || "");
     if (/size|large|exceed/i.test(msg)) throw new Error("That file is too big. The limit is 50 MB.");

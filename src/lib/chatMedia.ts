@@ -64,7 +64,9 @@ export async function uploadChatMedia(
   const mime = (blob.type || (kind === "audio" ? "audio/webm" : "application/octet-stream")).split(";")[0];
   const path = `${matchId}/${crypto.randomUUID()}.${extFor(mime)}`;
   // Files never change once sent, so phones can keep them (saves downloading them again)
-  const { error } = await supabase.storage.from(BUCKET).upload(path, blob, { contentType: mime, cacheControl: "31536000" });
+  // Storage reads the type from the file itself, so give it the plain one ("audio/webm", not "audio/webm;codecs=opus")
+  const body = blob.type === mime ? blob : new Blob([blob], { type: mime });
+  const { error } = await supabase.storage.from(BUCKET).upload(path, body, { contentType: mime, cacheControl: "31536000" });
   if (error) throw error;
   return { path, meta: { ...meta, mime } };
 }
