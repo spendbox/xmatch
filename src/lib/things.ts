@@ -66,3 +66,15 @@ export function nextPrompt(things: Thing[], skip: string[] = []): ThingPrompt {
   const open = PROMPTS.filter((p) => !used.has(p.id) && !skip.includes(p.id));
   return open[0] ?? promptOf("else");
 }
+
+// Prompts that run straight into the answer ("I'm secretly good at" + "cooking")
+const FLOWS = /\b(is|to|be|find me|a|an|of|at|in|without|about)$/i;
+
+/** One of your things as a sentence, e.g. for Two Truths: "My comfort food is jollof rice" */
+export function thingSentence(t: Thing) {
+  const lead = promptOf(t.p).text.replace(/…$/, "").trim();
+  const a = t.a.trim();
+  if (t.p === "else" || t.p === "fact") return a;
+  if (FLOWS.test(lead)) return `${lead} ${a.charAt(0).toLowerCase()}${a.slice(1)}`;
+  return `${lead}: ${a}`;
+}

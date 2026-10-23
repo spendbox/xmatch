@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { requireAdmin } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/server";
-import { GamesManager, type GameStats, type TotRow, type IdeaRow, type ThingIdea } from "@/components/admin/GamesManager";
+import { GamesManager, type GameStats, type TotRow, type IdeaRow } from "@/components/admin/GamesManager";
 
 export default async function GamesPage() {
   await requireAdmin();
@@ -14,8 +14,6 @@ export default async function GamesPage() {
     db.rpc("admin_game_stats", { p_days: 7 }),
     db.rpc("admin_game_stats", { p_days: 1 }),
   ]);
-  // The most common "things about me" answers, as ideas for new cards (empty until update 32 is run)
-  const { data: thingIdeas } = await db.rpc("admin_thing_ideas", { p_limit: 60 });
   const on = Object.fromEntries((settings ?? []).map((r) => [(r.key as string).replace("game_", ""), r.value !== 0]));
   return (
     <GamesManager
@@ -24,7 +22,6 @@ export default async function GamesPage() {
       ideas={(ideas ?? []) as IdeaRow[]}
       week={(stats as GameStats | null) ?? null}
       today={(stats1 as GameStats | null) ?? null}
-      thingIdeas={(thingIdeas as ThingIdea[] | null) ?? []}
     />
   );
 }

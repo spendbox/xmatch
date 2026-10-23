@@ -124,6 +124,7 @@ function demo(screen: string): Game | null {
               { id: 3, body: "I've never eaten amala", uses: 1 },
               { id: 4, body: "I won a dance competition in JSS2", uses: 1 },
             ],
+            things: ["My comfort food is jollof rice", "On repeat right now: Asake", "My football team: Arsenal", "I'm secretly good at cooking"],
           },
         },
       });
