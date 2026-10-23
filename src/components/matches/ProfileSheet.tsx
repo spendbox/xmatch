@@ -16,6 +16,7 @@ export function ProfileSheet({
   age: ageOverride,
   extra,
   footer,
+  blur,
 }: {
   profile: Profile;
   onClose: () => void;
@@ -27,6 +28,8 @@ export function ProfileSheet({
   extra?: React.ReactNode;
   /** Actions pinned to the bottom (e.g. Message) */
   footer?: React.ReactNode;
+  /** Soften the photos (Meet, before you've unlocked them) */
+  blur?: boolean;
 }) {
   const [i, setI] = useState(0);
   const [mounted, setMounted] = useState(false);
@@ -43,7 +46,7 @@ export function ProfileSheet({
   }, [onClose]);
 
   const photos = profile.photos ?? [];
-  const age = ageOverride ?? ageFromBirthdate(profile.birthdate);
+  const age = ageOverride !== undefined ? ageOverride : ageFromBirthdate(profile.birthdate);
   const gender = GENDERS.find((g) => g.value === profile.gender)?.label;
   if (!mounted) return null;
 
@@ -60,10 +63,16 @@ export function ProfileSheet({
       <button className="absolute inset-0 hidden cursor-default lg:block" aria-label="Close" onClick={onClose} />
       <div className={clsx("relative mx-auto max-w-md lg:grid lg:h-[min(88vh,780px)] lg:w-full lg:max-w-5xl lg:animate-pop lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:overflow-hidden lg:rounded-[32px] lg:bg-surface lg:pb-0 lg:shadow-lift", footer ? "pb-32" : "pb-12")}>
         {/* Photos */}
-        <div className="relative lg:h-full lg:bg-ink">
+        <div className="relative overflow-hidden lg:h-full lg:bg-ink">
           {photos[i] ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img key={photos[i]} src={photos[i]} alt={profile.display_name ?? ""} className="aspect-[4/5] w-full animate-fade-in object-cover lg:aspect-auto lg:h-full" />
+            <img
+              key={photos[i]}
+              src={photos[i]}
+              alt={profile.display_name ?? ""}
+              className="aspect-[4/5] w-full animate-fade-in object-cover lg:aspect-auto lg:h-full"
+              style={blur ? { filter: "blur(7px)", transform: "scale(1.08)" } : undefined}
+            />
           ) : (
             <div className="aspect-[4/5] w-full bg-line lg:aspect-auto lg:h-full" />
           )}

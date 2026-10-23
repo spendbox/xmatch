@@ -13,8 +13,10 @@ export type Prices = {
   game_tot: number;
   game_c4: number;
   game_words: number;
+  /** Ghost mode, for 30 days */
+  ghost_cost: number;
 };
-const DEFAULTS: Prices = { reopen_cost: REOPEN_COST, reveal_cost: 1, free_reveals: 10, game_truths: 1, game_tot: 1, game_c4: 1, game_words: 1 };
+const DEFAULTS: Prices = { reopen_cost: REOPEN_COST, reveal_cost: 1, free_reveals: 10, game_truths: 1, game_tot: 1, game_c4: 1, game_words: 1, ghost_cost: 100 };
 
 // Prices are set by the admin in the database. Loaded once per visit and shared.
 let pricesCache: Promise<Prices> | null = null;

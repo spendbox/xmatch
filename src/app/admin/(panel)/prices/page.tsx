@@ -26,6 +26,7 @@ export default async function PricesPage() {
         meet_hours: s.meet_hours ?? 3,
         explore_message_cost: s.explore_message_cost ?? 15,
         explore_photos_cost: s.explore_photos_cost ?? 5,
+        ghost_cost: s.ghost_cost ?? 100,
       }}
       invites={(invites as InviteStats | null) ?? null}
       gifts={(gifts ?? []) as AdminGift[]}

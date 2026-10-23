@@ -22,6 +22,9 @@ export type Profile = {
   place_country?: string | null;
   place_region?: string | null;
   place_label?: string | null;
+  /** Ghost mode: hidden from the Meet page while it lasts */
+  ghost_on?: boolean;
+  ghost_until?: string | null;
 };
 
 export type MasqueradeState = {

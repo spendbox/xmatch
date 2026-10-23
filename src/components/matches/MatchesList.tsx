@@ -41,7 +41,8 @@ export function MatchesList({
     ? matches.filter((m) => m.display_name.toLowerCase().includes(term) || (m.last_message ?? "").toLowerCase().includes(term))
     : matches;
   const fresh = term ? [] : matches.filter((m) => !m.last_message || Date.now() - new Date(m.created_at).getTime() < 48 * 3600_000);
-  const yourTurn = matches.filter((m) => m.last_message && m.last_sender !== myId).length;
+  // Only chats where they sent the last message (game cards, icebreakers and call records have no sender)
+  const yourTurn = matches.filter((m) => m.last_message && m.last_sender === m.other_id).length;
 
   return (
     <main className={side ? "px-4 pt-7 pb-6" : "mx-auto max-w-md px-5 pt-6 lg:max-w-3xl lg:px-10 lg:pt-10"}>
@@ -137,7 +138,7 @@ export function MatchesList({
             <ul className="space-y-2.5">
               {shown.map((m, i) => {
                 const theirTurn = !!m.last_message && m.last_sender === myId;
-                const mine = m.unread ?? (!!m.last_message && m.last_sender !== myId);
+                const mine = m.unread ?? (!!m.last_message && m.last_sender === m.other_id);
                 return (
                   <li key={m.id} className="animate-fade-up" style={{ animationDelay: `${i * 50}ms` }}>
                     <Link

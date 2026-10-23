@@ -23,6 +23,7 @@ type Settings = {
   meet_hours: number;
   explore_message_cost: number;
   explore_photos_cost: number;
+  ghost_cost: number;
 };
 export type InviteStats = { joined: number; joined_7d: number; buyers: number; keys_paid: number; top: { name: string | null; joined: number; earned: number }[] };
 
@@ -50,9 +51,10 @@ export function PricesManager({ settings, gifts, packs, invites = null }: { sett
       <section className="mt-6 rounded-3xl border border-line bg-surface p-5 shadow-card">
         <h2 className="text-[16px] font-semibold">Explore</h2>
         <p className="mt-1 text-[13px] text-muted">The Meet page. Both are free between people who are already connected.</p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
           <SettingField k="explore_message_cost" label="Message someone" hint="Keys to start a chat with someone you're not connected to" value={settings.explore_message_cost} />
-          <SettingField k="explore_photos_cost" label="Unlock photos" hint="Keys to see all of someone's photos (their main photo is always free)" value={settings.explore_photos_cost} />
+          <SettingField k="explore_photos_cost" label="Unlock photos" hint="Keys to unblur someone's photos and see the rest" value={settings.explore_photos_cost} />
+          <SettingField k="ghost_cost" label="Ghost mode" hint="Keys for 30 days hidden from the Meet page" value={settings.ghost_cost} />
         </div>
       </section>
 

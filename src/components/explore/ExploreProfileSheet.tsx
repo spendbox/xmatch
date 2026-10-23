@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Lock, MessageCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { intentLabel } from "@/lib/constants";
 import type { ExploreProfile } from "@/lib/explore";
 import type { Profile } from "@/lib/types";
 import { Button, Spinner } from "@/components/ui/Button";
@@ -83,19 +82,18 @@ export function ExploreProfileSheet({
     <ProfileSheet
       profile={profile}
       age={p.age}
+      blur={!p.photos_unlocked}
       shared={p.shared_interests}
       onClose={onClose}
-      note={[p.online ? "Online now" : null, p.place, p.intent ? intentLabel(p.intent) : null].filter(Boolean).join(" · ") || undefined}
+      note={[p.online ? "Online now" : null, p.place].filter(Boolean).join(" · ") || undefined}
       extra={
-        !p.photos_unlocked && hidden > 0 ? (
+        !p.photos_unlocked ? (
           <section className="flex items-center gap-3 rounded-3xl bg-surface p-4 shadow-card">
             <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gold-soft text-[#8a5a00]">
               <Lock size={20} />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-[15px] font-semibold">
-                {hidden} more {hidden === 1 ? "photo" : "photos"}
-              </p>
+              <p className="text-[15px] font-semibold">{hidden > 0 ? `Unblur + ${hidden} more ${hidden === 1 ? "photo" : "photos"}` : "Unblur their photo"}</p>
               <p className="text-[13px] text-muted">Free once you&apos;re connected</p>
             </div>
             <button
