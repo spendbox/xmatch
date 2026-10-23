@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import { ArrowDown } from "lucide-react";
 import { buzz, sfx, type Game, type GameActions } from "@/lib/games";
-import { GOLD, PURPLE, Token, secondsLeft, useTicker, type Names } from "./parts";
+import { GOLD, PURPLE, Player, secondsLeft, useTicker, type Names } from "./parts";
 
 const EMPTY = "#0d1647";
 
@@ -225,26 +225,6 @@ export function ConnectFour({
           </button>
         </div>
       )}
-    </div>
-  );
-}
-
-function Player({ name, color, active, sub, right }: { name: string; color: string; active: boolean; sub: string; right?: boolean }) {
-  return (
-    <div
-      className={clsx("flex min-w-0 flex-1 items-center gap-2 rounded-[18px] p-2 transition", right && "flex-row-reverse text-right")}
-      style={{
-        background: active ? `${color}29` : "rgba(255,255,255,0.06)",
-        boxShadow: active ? `inset 0 0 0 2px ${color}` : undefined,
-      }}
-    >
-      <Token color={color} size={34} />
-      <div className="min-w-0 leading-tight">
-        <p className="truncate text-[13px] font-extrabold">{name}</p>
-        <p className="truncate text-[11px] font-bold" style={{ color: active ? color : "rgba(255,255,255,0.6)" }}>
-          {sub}
-        </p>
-      </div>
     </div>
   );
 }

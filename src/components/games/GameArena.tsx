@@ -11,6 +11,10 @@ import { ThisOrThat } from "./ThisOrThat";
 import { TwoTruths } from "./TwoTruths";
 import { WordHunt } from "./WordHunt";
 import { Results } from "./Results";
+import { Whot } from "./Whot";
+import { Checkers } from "./Checkers";
+import { ChessGame } from "./ChessGame";
+import { Ayo } from "./Ayo";
 
 /** The full-screen game: challenge, 3-2-1, the game itself, then results */
 export function GameArena({
@@ -99,7 +103,7 @@ export function GameArena({
     const holdEnd =
       over &&
       !showResults &&
-      ((game.kind === "truths" && game.state.phase === "reveal") || ((game.kind === "c4" || game.kind === "tot") && endedAgo < 3));
+      ((game.kind === "truths" && game.state.phase === "reveal") || (["c4", "tot", "whot", "checkers", "chess", "ayo"].includes(game.kind) && endedAgo < 3));
     if (over && !holdEnd) {
       resultsView = true;
       body = (
@@ -115,6 +119,10 @@ export function GameArena({
     } else if (game.kind === "c4") body = <ConnectFour game={game} names={names} act={act} peek={peek} onPeek={onMinimize} />;
     else if (game.kind === "tot") body = <ThisOrThat game={game} names={names} act={act} />;
     else if (game.kind === "truths") body = <TwoTruths game={game} names={names} act={act} onResults={() => setShowResults(true)} />;
+    else if (game.kind === "whot") body = <Whot game={game} names={names} act={act} />;
+    else if (game.kind === "checkers") body = <Checkers game={game} names={names} act={act} />;
+    else if (game.kind === "chess") body = <ChessGame game={game} names={names} act={act} />;
+    else if (game.kind === "ayo") body = <Ayo game={game} names={names} act={act} />;
     else body = <WordHunt game={game} names={names} act={act} />;
   }
 

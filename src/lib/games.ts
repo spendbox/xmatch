@@ -5,7 +5,10 @@ import { createClient } from "@/lib/supabase/client";
 import { notify } from "@/lib/pushClient";
 import { haptic } from "@/lib/haptics";
 
-export type GameKind = "truths" | "tot" | "c4" | "words";
+export type GameKind = "truths" | "tot" | "c4" | "words" | "whot" | "checkers" | "chess" | "ayo";
+
+/** Games whose moves go through the app's server (rules in src/lib/boardgames) */
+export const BOARD_GAMES: GameKind[] = ["whot", "checkers", "chess", "ayo"];
 export type GameStatus = "invited" | "active" | "done" | "declined" | "expired" | "cancelled";
 export type Side = "a" | "b";
 
@@ -83,6 +86,42 @@ export const GAMES: {
     bg: "radial-gradient(120% 60% at 50% 0%, #136b4a 0%, #0b3a2a 60%, #05170f 100%)",
     card: "linear-gradient(160deg, #1f9d6b 0%, #0f5c3e 100%)",
     edge: "#0a3a28",
+  },
+  {
+    kind: "whot",
+    title: "Whot",
+    short: "Finish your cards first",
+    rules: ["Match the shape or number", "Pick two, hold on, Whot!"],
+    bg: "radial-gradient(120% 60% at 50% 0%, #8f1d3a 0%, #3d0b1c 60%, #19050c 100%)",
+    card: "linear-gradient(160deg, #b8264a 0%, #6e1028 100%)",
+    edge: "#470a1a",
+  },
+  {
+    kind: "checkers",
+    title: "Checkers",
+    short: "Jump them all",
+    rules: ["Captures are a must", "Reach the end for a king"],
+    bg: "radial-gradient(120% 60% at 50% 0%, #0f766e 0%, #0b3b38 60%, #041a18 100%)",
+    card: "linear-gradient(160deg, #14918a 0%, #0b4f4a 100%)",
+    edge: "#073330",
+  },
+  {
+    kind: "chess",
+    title: "Chess",
+    short: "Checkmate wins",
+    rules: ["Full rules", "You play white if you challenge"],
+    bg: "radial-gradient(120% 60% at 50% 0%, #3b4a66 0%, #1a2233 60%, #0b0f18 100%)",
+    card: "linear-gradient(160deg, #4b5d80 0%, #222c42 100%)",
+    edge: "#141a28",
+  },
+  {
+    kind: "ayo",
+    title: "Ayo",
+    short: "Sow and capture seeds",
+    rules: ["Capture 2s and 3s", "First to 25 seeds wins"],
+    bg: "radial-gradient(120% 60% at 50% 0%, #9a5a1e 0%, #45250c 60%, #1d0f05 100%)",
+    card: "linear-gradient(160deg, #c27a32 0%, #7a4516 100%)",
+    edge: "#4d2a0c",
   },
 ];
 
@@ -231,6 +270,8 @@ export type GameActions = {
   respond: (accept: boolean) => Promise<string | null>;
   cancel: () => Promise<void>;
   call: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: string | null }>;
+  /** Whot, Checkers, Chess and Ayo: send a move to the server, which checks the rules */
+  move: (move: unknown) => Promise<string | null>;
   refresh: () => Promise<void>;
   /** Server time, in ms */
   now: () => number;
@@ -365,6 +406,20 @@ export function useChatGame({
       await loadOne(g.id);
     },
     call,
+    move: async (move) => {
+      const g = gameRef.current;
+      if (!g) return null;
+      const res = await fetch("/api/games/move", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ game: g.id, move }),
+      }).catch(() => null);
+      await loadOne(g.id);
+      if (!res) return "Couldn't reach Dashpad. Check your connection.";
+      if (res.ok) return null;
+      const j = (await res.json().catch(() => ({}))) as { error?: string };
+      return j.error ?? "That didn't work. Try again.";
+    },
     refresh: load,
     now,
   };
