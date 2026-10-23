@@ -147,8 +147,9 @@ export function MasqueradeRoom({
     const { data } = await supabase.rpc("get_masquerade", { p_session: initial.id });
     if (data) {
       setState(data as MasqueradeState);
-      // You were the second to unmask: tell the other person they clicked
+      // You were the second to unmask: tell the other person they clicked. The first: tell them you unmasked
       if (unmask && (data as MasqueradeState).status === "matched") notify({ kind: "masquerade_match", sessionId: initial.id });
+      else if (unmask && (data as MasqueradeState).status !== "ended") notify({ kind: "masquerade_unmask", sessionId: initial.id });
     }
     setVoting(false);
   }

@@ -100,6 +100,25 @@ export async function POST(req: Request) {
     return ok;
   }
 
+  // You unmasked first: tell the other person, so they can unmask too
+  if (b.kind === "masquerade_unmask" && b.sessionId) {
+    const { data: s } = await db
+      .from("masquerade_sessions")
+      .select("id, user_a, user_b, alias_a, alias_b, unmask_a, unmask_b, status")
+      .eq("id", b.sessionId)
+      .maybeSingle();
+    if (!s || (s.user_a !== uid && s.user_b !== uid) || (s.status !== "active" && s.status !== "lapsed")) return ok;
+    const iAmA = s.user_a === uid;
+    if ((iAmA ? s.unmask_a : s.unmask_b) !== true || (iAmA ? s.unmask_b : s.unmask_a) === true) return ok;
+    await pushToUsers([(iAmA ? s.user_b : s.user_a) as string], {
+      title: `${iAmA ? s.alias_a : s.alias_b} unmasked 🎭`,
+      body: "They want to see who you are. Unmask too and you're connected.",
+      url: `/masquerade/${s.id}`,
+      tag: `unmask-${s.id}`,
+    });
+    return ok;
+  }
+
   // Someone paid to reopen a past masked pair: tell the other person
   if (b.kind === "masquerade_reopen" && b.sessionId) {
     const { data: s } = await db.from("masquerade_sessions").select("id, user_a, user_b, alias_a, alias_b, reopened_by, status").eq("id", b.sessionId).maybeSingle();

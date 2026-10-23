@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { CallScreen } from "./CallScreen";
 import { callCue, startTone, stopTone, unlockAudio } from "./tones";
 import { haptic } from "@/lib/haptics";
+import { showMediaHelp } from "@/lib/mediaPermission";
 
 export type CallKind = "audio" | "video";
 export type CallPeer = { name: string; photo?: string | null };
@@ -283,7 +284,7 @@ export function CallProvider({ userId, children }: { userId: string; children: R
       try {
         stream = await getMedia(kind);
       } catch {
-        alert(kind === "video" ? "Allow camera and microphone access to make video calls." : "Allow microphone access to make calls.");
+        showMediaHelp(kind === "video" ? "video" : "audio");
         return;
       }
       const { data: id, error } = await supabase.rpc("start_call", { p_match: matchId, p_kind: kind });
@@ -321,7 +322,7 @@ export function CallProvider({ userId, children }: { userId: string; children: R
     try {
       stream = await getMedia(c.kind);
     } catch {
-      alert("Allow microphone (and camera for video) to answer.");
+      showMediaHelp(c.kind === "video" ? "video" : "audio");
       return;
     }
     update({ status: "connecting" });

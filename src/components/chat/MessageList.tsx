@@ -15,6 +15,7 @@ import { AudioPlayer } from "./AudioPlayer";
 import { MediaViewer, type ViewerItem } from "./MediaViewer";
 import { GameCard } from "@/components/games/GameCard";
 import { gameInfo } from "@/lib/games";
+import { MaskIcon } from "@/components/ui/MaskIcon";
 import { useSignedUrl } from "./useSignedUrl";
 
 type Props = {
@@ -185,6 +186,16 @@ export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDat
                   {(!g || m.body !== g.title) && <p className="text-[15px] font-medium leading-snug text-ink">{m.body}</p>}
                 </div>
               </div>
+            </div>
+          );
+        }
+
+        if (m.kind === "system" && / unmasked\b/.test(m.body)) {
+          return (
+            <div key={m.id} className="my-2 flex justify-center" data-msg={m.id}>
+              <span className="inline-flex animate-pop items-center gap-1.5 rounded-full bg-brand-soft px-3.5 py-1.5 text-[12px] font-semibold text-brand-ink">
+                <MaskIcon className="w-4 text-brand" eyes="#efebfd" /> {m.body}
+              </span>
             </div>
           );
         }

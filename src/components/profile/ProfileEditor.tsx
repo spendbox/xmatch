@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { showMediaHelp } from "@/lib/mediaPermission";
 import clsx from "clsx";
 import {
-  AtSign, BellOff, BellRing, Cake, ChevronRight, Eye, FileText, ImagePlus, MessageCircle, LogOut, PenLine, Shapes, ShieldCheck, SlidersHorizontal, Trash2,
+  AtSign, BellOff, BellRing, Cake, ChevronRight, Eye, FileText, ImagePlus, MessageCircle, LogOut, Mic, PenLine, Shapes, ShieldCheck, SlidersHorizontal, Trash2,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { uploadPhoto, deletePhoto } from "@/lib/photos";
@@ -317,6 +318,21 @@ export function ProfileEditor({
               <span className={clsx("block truncate text-[13px]", push.state === "on" ? "font-medium text-mint" : "text-muted")}>
                 {push.state ? pushStateText[push.state] : "Checking…"}
               </span>
+            </span>
+            <ChevronRight size={18} className="shrink-0 text-muted" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => showMediaHelp("video")}
+            className="mt-3 flex w-full items-center gap-3.5 rounded-3xl border border-line bg-surface p-4 text-left shadow-card transition hover:border-line-strong active:scale-[0.98]"
+          >
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-[14px] bg-brand-soft text-brand">
+              <Mic size={20} strokeWidth={1.75} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[15px] font-semibold">Microphone &amp; camera</span>
+              <span className="block truncate text-[13px] text-muted">For calls and voice notes · tap to allow</span>
             </span>
             <ChevronRight size={18} className="shrink-0 text-muted" />
           </button>

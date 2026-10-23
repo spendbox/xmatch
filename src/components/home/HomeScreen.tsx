@@ -123,7 +123,7 @@ export function HomeScreen({
 
       <div className="lg:mt-8 lg:grid lg:grid-cols-12 lg:items-start lg:gap-8">
       <div className="mt-5 lg:sticky lg:top-8 lg:col-span-7 lg:mt-0">
-        <MasqueradeCard userId={profile.id} ctl={ctl} hasPlace={!!place.country} onPlace={() => setPlaceOpen(true)} />
+        <MasqueradeCard userId={profile.id} ctl={ctl} hasPlace={!!place.country} onPlace={() => setPlaceOpen(true)} onSettings={() => setMeetOpen(true)} />
 
         <Link
           href="/meet"

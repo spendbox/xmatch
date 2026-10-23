@@ -85,7 +85,7 @@ export function ExploreProfileSheet({
       age={p.age}
       shared={p.shared_interests}
       onClose={onClose}
-      note={[p.online ? "Online now" : null, p.place, intentLabel(p.intent)].filter(Boolean).join(" · ")}
+      note={[p.online ? "Online now" : null, p.place, p.intent ? intentLabel(p.intent) : null].filter(Boolean).join(" · ") || undefined}
       extra={
         !p.photos_unlocked && hidden > 0 ? (
           <section className="flex items-center gap-3 rounded-3xl bg-surface p-4 shadow-card">

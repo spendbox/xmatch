@@ -74,11 +74,14 @@ export function MasqueradeCard({
   ctl,
   hasPlace,
   onPlace,
+  onSettings,
 }: {
   userId: string;
   ctl: ReturnType<typeof useMasqueradeHour>;
   hasPlace: boolean;
   onPlace: () => void;
+  /** Tapped while waiting for a pair: open the Masquerade settings */
+  onSettings?: () => void;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const { hour, setHour, skew } = ctl;
@@ -195,9 +198,19 @@ export function MasqueradeCard({
           <p className="min-w-0 flex-1 text-[13px] leading-snug text-white/85">Switch it on to meet someone new, masked, every hour from 6am to 2am.</p>
         </div>
       ) : (
-        <div className="relative mt-2.5 flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => {
+            tapFeedback();
+            onSettings?.();
+          }}
+          aria-label={`Next pair at ${lagosTime(hour.next_at)}. Open your Masquerade settings`}
+          className="relative mt-2.5 flex w-full items-center gap-3 rounded-2xl text-left transition active:scale-[0.99]"
+        >
           <div className="min-w-0 flex-1">
-            <p className="text-[13px] text-white/75">Next pair at {lagosTime(hour.next_at)}</p>
+            <p className="text-[13px] text-white/75">
+              Next pair at {lagosTime(hour.next_at)} · <span className="font-semibold text-white underline decoration-white/40 underline-offset-2">Settings</span>
+            </p>
             <p className="mt-0.5 text-[13px] leading-snug text-white/90">
               {cur?.status === "ended" || cur?.status === "lapsed"
                 ? "This hour's chat is done. Someone new is coming."
@@ -220,7 +233,7 @@ export function MasqueradeCard({
           <p className="shrink-0 font-display text-[36px] leading-none font-semibold tabular-nums lg:text-[48px]">
             {now ? clock(new Date(hour.next_at).getTime() - serverNow) : "··:··"}
           </p>
-        </div>
+        </button>
       )}
 
       {extra && (
