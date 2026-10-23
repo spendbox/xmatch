@@ -46,6 +46,7 @@ import type { ChatMessage, MasqueradeState, Profile } from "@/lib/types";
 import type { Meet, MeetChat, MeetList } from "@/lib/meets";
 import { MeetScreen } from "@/components/meets/MeetScreen";
 import { ExploreScreen } from "@/components/explore/ExploreScreen";
+import { MediaHelp } from "@/components/app/MediaHelp";
 import type { ExploreList, ExploreProfile } from "@/lib/explore";
 
 const photo = (a: string, b: string, letter: string) =>
@@ -208,7 +209,7 @@ const explorePeople: ExploreList = {
 };
 const exploreProfile: ExploreProfile = {
   id: "p0", name: "Ada", age: 26, gender: "woman", bio: "Bookworm, beach lover, and the friend who always knows the best brunch spot.",
-  interests: ["Books", "Travel", "Dancing", "Food"], place: "Akoka, Lagos", intent: "dating", online: true,
+  interests: ["Books", "Travel", "Dancing", "Food"], place: "Akoka, Lagos", intent: null, online: true,
   photos: [photo("#e5484d", "#f2b33d", "A")], photo_count: 4, photos_unlocked: false, match_id: null,
   shared_interests: ["Travel", "Food"], message_cost: 15, photos_cost: 5,
 };
@@ -311,6 +312,9 @@ function ScreenBody({ screen }: { screen: string }) {
           demo={{ remaining: screen === "room-lapsed" ? 0 : 41 * 60 + 12 }}
         />
       );
+    case "media-help":
+    case "media-help-blocked":
+      return <MediaHelp demo={{ kind: "video", status: screen === "media-help" ? "idle" : "denied", dev: "iphone" }} />;
     case "explore":
       return <div className="pb-24"><ExploreScreen initial={explorePeople} /><BottomNav /></div>;
     case "explore-profile":

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { showMediaHelp } from "@/lib/mediaPermission";
 
 const MAX_SECONDS = 180;
 
@@ -87,6 +88,7 @@ export function useVoiceRecorder() {
       return true;
     } catch {
       setError("Allow microphone access to send voice notes.");
+      showMediaHelp("audio");
       cleanup();
       return false;
     }

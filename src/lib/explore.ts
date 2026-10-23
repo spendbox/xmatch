@@ -9,7 +9,8 @@ export type ExplorePerson = {
   /** Their main photo (the only one you see until you unlock or connect) */
   photo: string | null;
   place: string | null;
-  intent: Intent;
+  /** Only once you've both chatted */
+  intent: Intent | null;
   online: boolean;
   /** You already have a chat with them */
   connected: boolean;
@@ -30,7 +31,8 @@ export type ExploreProfile = {
   bio: string;
   interests: string[];
   place: string | null;
-  intent: Intent;
+  /** What they're in the mood for: only once you've both chatted */
+  intent: Intent | null;
   online: boolean;
   photos: string[];
   photo_count: number;

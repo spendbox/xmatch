@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
-import { MessageCircle, Shapes, Users } from "lucide-react";
+import { useState } from "react";
+import { MessageCircle, Search, Shapes, Users, X } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { ButtonLink } from "@/components/ui/Button";
 import { MaskIcon } from "@/components/ui/MaskIcon";
@@ -34,7 +35,12 @@ export function MatchesList({
   const side = variant === "sidebar";
   const { seen, now } = usePresence(matches.map((m) => m.other_id));
   const online = (id: string) => isOnline(seen[id], now);
-  const fresh = matches.filter((m) => !m.last_message || Date.now() - new Date(m.created_at).getTime() < 48 * 3600_000);
+  const [q, setQ] = useState("");
+  const term = q.trim().toLowerCase();
+  const shown = term
+    ? matches.filter((m) => m.display_name.toLowerCase().includes(term) || (m.last_message ?? "").toLowerCase().includes(term))
+    : matches;
+  const fresh = term ? [] : matches.filter((m) => !m.last_message || Date.now() - new Date(m.created_at).getTime() < 48 * 3600_000);
   const yourTurn = matches.filter((m) => m.last_message && m.last_sender !== myId).length;
 
   return (
@@ -60,21 +66,40 @@ export function MatchesList({
         </>
       ) : (
         <>
+          <label className="mt-5 flex h-11 items-center gap-2 rounded-full border border-line-strong bg-surface px-4 focus-within:border-brand">
+            <Search size={17} className="shrink-0 text-muted" />
+            <span className="sr-only">Search your chats</span>
+            <input
+              id="chats-search"
+              type="search"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search chats"
+              autoComplete="off"
+              className="h-full min-w-0 flex-1 bg-transparent text-[15px] outline-none"
+            />
+            {q && (
+              <button type="button" onClick={() => setQ("")} aria-label="Clear search" className="grid h-7 w-7 place-items-center rounded-full text-muted hover:bg-ink/5">
+                <X size={16} />
+              </button>
+            )}
+          </label>
+
           {fresh.length > 0 && (
-            <section className="mt-6">
-              <h2 className="mb-3 flex items-center gap-2 text-[15px] font-semibold">
+            <section className="mt-5">
+              <h2 className="mb-2.5 flex items-center gap-2 text-[15px] font-semibold">
                 New reveals
                 <span className="relative flex h-2 w-2">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-chili opacity-60" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-chili" />
                 </span>
               </h2>
-              <div className="-mx-5 flex gap-3 overflow-x-auto px-5 pt-1 pb-3 no-scrollbar">
+              <div className="-mx-5 flex gap-2.5 overflow-x-auto px-5 pt-1 pb-2 no-scrollbar">
                 {fresh.map((m, i) => (
                   <Link
                     key={m.id}
                     href={`/matches/${m.id}`}
-                    className="relative aspect-[3/4] w-[120px] shrink-0 animate-fade-up overflow-hidden rounded-3xl bg-line shadow-card transition active:scale-[0.97]"
+                    className="relative aspect-[3/4] w-[78px] shrink-0 animate-fade-up overflow-hidden rounded-2xl bg-line shadow-card transition active:scale-[0.97]"
                     style={{ animationDelay: `${i * 60}ms` }}
                   >
                     {m.photos?.[0] && (
@@ -83,17 +108,12 @@ export function MatchesList({
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/5 to-transparent" />
                     <span
-                      className={clsx("absolute top-3 right-3 h-3 w-3 rounded-full ring-2 ring-white/80", online(m.other_id) ? "bg-mint" : "bg-[#b9b3c4]")}
+                      className={clsx("absolute top-1.5 right-1.5 h-2.5 w-2.5 rounded-full ring-2 ring-white/80", online(m.other_id) ? "bg-mint" : "bg-[#b9b3c4]")}
                       aria-label={online(m.other_id) ? "Online" : "Offline"}
                     />
-                    <span className={clsx("absolute top-2.5 left-2.5 grid h-7 w-7 place-items-center rounded-full shadow", INTENT_TONE[m.intent])}>
-                      {INTENT_ICONS[m.intent]({ size: 14, strokeWidth: 2.25 })}
-                    </span>
-                    <div className="absolute inset-x-0 bottom-0 p-3 text-white">
-                      <p className="truncate text-[15px] font-semibold">
-                        {m.display_name}, {m.age}
-                      </p>
-                      {!m.last_message && <p className="text-[11px] font-medium text-white/80">Say hi 👋</p>}
+                    <div className="absolute inset-x-0 bottom-0 px-2 pb-1.5 text-white">
+                      <p className="truncate text-[12px] leading-tight font-semibold">{m.display_name.split(" ")[0]}</p>
+                      {!m.last_message && <p className="text-[10px] font-medium text-white/80">Say hi 👋</p>}
                     </div>
                   </Link>
                 ))}
@@ -113,8 +133,9 @@ export function MatchesList({
                 </span>
               )}
             </h2>
+            {shown.length === 0 && <p className="rounded-2xl bg-surface p-4 text-center text-[14px] text-muted">No chats match “{q.trim()}”.</p>}
             <ul className="space-y-2.5">
-              {matches.map((m, i) => {
+              {shown.map((m, i) => {
                 const theirTurn = !!m.last_message && m.last_sender === myId;
                 const mine = m.unread ?? (!!m.last_message && m.last_sender !== myId);
                 return (
