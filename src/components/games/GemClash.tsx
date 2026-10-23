@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import { Shuffle } from "lucide-react";
 import { buzz, sfx, type Game, type GameActions } from "@/lib/games";
-import { SIZE, SWAPS, TURNS, adjacent, hasMove, swapWorks, type GemsState } from "@/lib/boardgames/gems";
+import { SIZE, SWAPS, TURNS, adjacent, hasMove, swapWorks, type Fx, type GemsState } from "@/lib/boardgames/gems";
 import { GOLD, PURPLE, Player, useTicker, type Names } from "./parts";
 import { useMove } from "./useMove";
 import { Gem, GemDefs } from "./Gems";
@@ -24,12 +24,16 @@ type Float = { id: number; text: string; x: number; y: number };
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const rc = (i: number) => [Math.floor(i / SIZE), i % SIZE] as const;
 
-/** Where two swapped gems came from, so they slide past each other */
-function slideOf(a: number, b: number): Record<number, [number, number]> {
+/** Where two swapped gems came from, so they slide past each other (`left`: how much of the way is left, after a drag) */
+function slideOf(a: number, b: number, left = 1): Record<number, [number, number]> {
   const [ra, ca] = rc(a);
   const [rb, cb] = rc(b);
-  return { [a]: [rb - ra, cb - ca], [b]: [ra - rb, ca - cb] };
+  return { [a]: [(rb - ra) * left, (cb - ca) * left], [b]: [(ra - rb) * left, (ca - cb) * left] };
 }
+
+const GEM_COLORS: Record<string, string> = { r: "#ff4d6a", y: "#ffd23f", g: "#2ee88b", b: "#4aa3ff", p: "#c77dff" };
+const gemColor = (g: string | undefined) => (g && g !== "*" ? GEM_COLORS[g[0]] : "#ffffff") ?? "#ffffff";
+type Burst = { id: number; fx: Fx[]; clear: number[]; board: string[] };
 const swapped = (board: string[], a: number, b: number) => {
   const t = [...board];
   [t[a], t[b]] = [t[b], t[a]];
@@ -58,8 +62,14 @@ export function GemClash({ game, names, act }: { game: Game; names: Names; act: 
   const mine = useRef<string | null>(null);
   const boardRef = useRef(st.board);
   boardRef.current = st.board;
-  const drag = useRef<{ i: number; x: number; y: number } | null>(null);
+  const drag = useRef<{ i: number; x: number; y: number; j: number; frac: number; moved: boolean } | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
+  // Each gem's handle, for following your finger without redrawing the board
+  const gemEls = useRef<(HTMLSpanElement | null)[]>([]);
+  // What's on screen right now (for the effects)
+  const shownBoard = useRef(st.board);
+  shownBoard.current = view.board;
+  const [burst, setBurst] = useState<Burst | null>(null);
 
   const myTurn = game.status === "active" && started && st.turn === me;
   const canPlay = myTurn && !busy && !anim;
@@ -105,8 +115,10 @@ export function GemClash({ game, names, act }: { game: Game; names: Names; act: 
       for (const [n, step] of last.steps.entries()) {
         if (run.current !== id) return;
         setView((v) => ({ ...v, pop: new Set(step.clear) }));
-        sfx(n === 0 ? "match" : "word");
-        buzz(n === 0 ? 12 : [8, 30, 8]);
+        const big = !!step.fx?.length;
+        setBurst({ id: nextKey(), fx: step.fx ?? [], clear: step.clear, board: shownBoard.current });
+        sfx(big ? "win" : n === 0 ? "match" : "word");
+        buzz(big ? [20, 30, 40] : n === 0 ? 12 : [8, 30, 8]);
         const cells = step.clear.map(rc);
         const x = ((cells.reduce((s, [, c]) => s + c, 0) / cells.length + 0.5) / SIZE) * 100;
         const y = ((cells.reduce((s, [r]) => s + r, 0) / cells.length + 0.5) / SIZE) * 100;
@@ -114,7 +126,8 @@ export function GemClash({ game, names, act }: { game: Game; names: Names; act: 
         setFloats((f) => [...f, { id: fid, text: `+${step.points}`, x, y }]);
         setTimeout(() => setFloats((f) => f.filter((q) => q.id !== fid)), 1000);
         if (n >= 1) say(n >= 3 ? `Mega combo ×${n + 1}!` : `Combo ×${n + 1}!`);
-        await wait(230);
+        else if ((step.fx?.length ?? 0) >= 3) say("Power combo!");
+        await wait(big ? 420 : 240);
         if (run.current !== id) return;
         pts += step.points;
         setShown((s) => ({ ...s, [last.by]: pts }));
@@ -122,6 +135,7 @@ export function GemClash({ game, names, act }: { game: Game; names: Names; act: 
         await wait(330);
       }
       if (run.current !== id) return;
+      setBurst(null);
       setView((v) => ({ board: finalBoard, key: v.key }));
       setShown(finalPoints);
       setAnim(false);
@@ -146,13 +160,13 @@ export function GemClash({ game, names, act }: { game: Game; names: Names; act: 
     return () => clearTimeout(t);
   }, [canPlay, st.moves]);
 
-  async function trySwap(a: number, b: number) {
+  async function trySwap(a: number, b: number, done = 0) {
     setSel(null);
     if (!canPlay || !adjacent(a, b)) return;
     const board = boardRef.current;
     if (!swapWorks(board, a, b)) {
       // Slide over and back
-      setView({ board: swapped(board, a, b), key: nextKey(), slide: slideOf(a, b) });
+      setView({ board: swapped(board, a, b), key: nextKey(), slide: slideOf(a, b, 1 - done) });
       sfx("bad");
       buzz([10, 40, 10]);
       await wait(200);
@@ -161,7 +175,7 @@ export function GemClash({ game, names, act }: { game: Game; names: Names; act: 
       return;
     }
     mine.current = `${a}-${b}`;
-    setView({ board: swapped(board, a, b), key: nextKey(), slide: slideOf(a, b) });
+    setView({ board: swapped(board, a, b), key: nextKey(), slide: slideOf(a, b, 1 - done) });
     const ok = await send({ type: "swap", a, b });
     if (!ok) {
       mine.current = null;
@@ -169,9 +183,19 @@ export function GemClash({ game, names, act }: { game: Game; names: Names; act: 
     }
   }
 
+  // Swiping: the gem follows your finger (and its neighbour moves the other way), then glides into place
+  function place(i: number, x: number, y: number, ease = false) {
+    const el = gemEls.current[i];
+    if (!el) return;
+    el.style.transition = ease ? "transform 0.16s cubic-bezier(0.3, 0.7, 0.3, 1)" : "none";
+    el.style.transform = x || y ? `translate(${x}px, ${y}px)` : "";
+    // The gem you're holding sits on top
+    const cellEl = el.parentElement;
+    if (cellEl) cellEl.style.zIndex = x || y ? (drag.current?.i === i ? "3" : "2") : "";
+  }
   function down(e: React.PointerEvent, i: number) {
     if (!canPlay) return;
-    drag.current = { i, x: e.clientX, y: e.clientY };
+    drag.current = { i, x: e.clientX, y: e.clientY, j: -1, frac: 0, moved: false };
     gridRef.current?.setPointerCapture(e.pointerId);
   }
   function move(e: React.PointerEvent) {
@@ -180,16 +204,39 @@ export function GemClash({ game, names, act }: { game: Game; names: Names; act: 
     const cell = gridRef.current.clientWidth / SIZE;
     const dx = e.clientX - d.x;
     const dy = e.clientY - d.y;
-    if (Math.max(Math.abs(dx), Math.abs(dy)) < cell * 0.35) return;
-    drag.current = null;
+    if (!d.moved && Math.max(Math.abs(dx), Math.abs(dy)) < 6) return;
+    d.moved = true;
     const [r, c] = rc(d.i);
-    const to = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? (c < SIZE - 1 ? d.i + 1 : -1) : c > 0 ? d.i - 1 : -1) : dy > 0 ? (r < SIZE - 1 ? d.i + SIZE : -1) : r > 0 ? d.i - SIZE : -1;
-    if (to >= 0) void trySwap(d.i, to);
+    const horiz = Math.abs(dx) > Math.abs(dy);
+    const to = horiz ? (dx > 0 ? (c < SIZE - 1 ? d.i + 1 : -1) : c > 0 ? d.i - 1 : -1) : dy > 0 ? (r < SIZE - 1 ? d.i + SIZE : -1) : r > 0 ? d.i - SIZE : -1;
+    if (d.j >= 0 && d.j !== to) place(d.j, 0, 0);
+    d.j = to;
+    if (to < 0) return place(d.i, 0, 0);
+    const amount = Math.min(cell, Math.abs(horiz ? dx : dy));
+    d.frac = amount / cell;
+    const sx = horiz ? Math.sign(dx) * amount : 0;
+    const sy = horiz ? 0 : Math.sign(dy) * amount;
+    place(d.i, sx, sy);
+    place(to, -sx, -sy);
+    // Far enough: let go of it for you, like a real swipe
+    if (d.frac >= 0.85) finishDrag();
   }
-  function up() {
+  function finishDrag() {
     const d = drag.current;
     drag.current = null;
     if (!d) return;
+    if (d.moved && d.j >= 0 && d.frac >= 0.35) {
+      place(d.i, 0, 0);
+      place(d.j, 0, 0);
+      void trySwap(d.i, d.j, d.frac);
+      return;
+    }
+    if (d.moved) {
+      // Not far enough: back it goes
+      place(d.i, 0, 0, true);
+      if (d.j >= 0) place(d.j, 0, 0, true);
+      return;
+    }
     // A tap: pick a gem, then tap a neighbour to swap
     if (sel !== null && adjacent(sel, d.i)) void trySwap(sel, d.i);
     else setSel(sel === d.i ? null : d.i);
@@ -241,8 +288,8 @@ export function GemClash({ game, names, act }: { game: Game; names: Names; act: 
             className="relative grid h-full w-full touch-none overflow-hidden rounded-[18px] select-none"
             style={{ gridTemplateColumns: `repeat(${SIZE}, 1fr)` }}
             onPointerMove={move}
-            onPointerUp={up}
-            onPointerCancel={() => (drag.current = null)}
+            onPointerUp={finishDrag}
+            onPointerCancel={finishDrag}
           >
             {view.board.map((g, i) => {
               const [r, c] = rc(i);
@@ -256,6 +303,12 @@ export function GemClash({ game, names, act }: { game: Game; names: Names; act: 
                   className="relative overflow-visible p-[7%]"
                   style={{ background: (r + c) % 2 ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.1)", borderRadius: 10 }}
                 >
+                  <span
+                    ref={(el) => {
+                      gemEls.current[i] = el;
+                    }}
+                    className="block h-full w-full will-change-transform"
+                  >
                   <span
                     key={`${view.key}-${i}`}
                     className={clsx(
@@ -275,10 +328,12 @@ export function GemClash({ game, names, act }: { game: Game; names: Names; act: 
                   >
                     <Gem g={g} />
                   </span>
+                  </span>
                   {sel === i && <span className="pointer-events-none absolute inset-[3%] rounded-[10px] ring-[3px] ring-gold" />}
                 </div>
               );
             })}
+            {burst && <Effects key={burst.id} burst={burst} />}
             {floats.map((f) => (
               <span
                 key={f.id}
@@ -302,6 +357,7 @@ export function GemClash({ game, names, act }: { game: Game; names: Names; act: 
         <Legend g="gx" text="L or T" />
         <Legend g="*" text="5 in a row" />
       </div>
+      <p className="mt-1.5 text-center text-[11px] font-semibold text-white/55">Swap two power-ups together to combine them</p>
 
       {stuck && (
         <button type="button" onClick={() => send({ type: "shuffle" })} className="gm-btn gm-gold mx-auto mt-3 inline-flex h-11 items-center gap-2 rounded-2xl px-5 text-[15px] font-extrabold">
@@ -341,5 +397,110 @@ function Score({ value, color, right }: { value: number; color: string; right?: 
     <p className={clsx("font-display text-[30px] leading-none font-black tabular-nums", right && "text-right")} style={{ color, textShadow: `0 0 18px ${color}66` }}>
       {value.toLocaleString()}
     </p>
+  );
+}
+
+const pct = (n: number) => `${(n / SIZE) * 100}%`;
+
+/** Beams across rows and columns, blast rings, a star's lightning, and sparkles where gems pop */
+function Effects({ burst }: { burst: Burst }) {
+  const { fx, clear, board } = burst;
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0 z-10">
+      {clear.slice(0, 40).flatMap((i) => {
+        const [r, c] = rc(i);
+        return [0, 1, 2, 3].map((k) => {
+          const a = ((i * 37 + k * 90) % 360) * (Math.PI / 180);
+          return (
+            <span
+              key={`${i}-${k}`}
+              className="gm-spark absolute h-[3.2%] w-[3.2%] rounded-full"
+              style={
+                {
+                  left: `calc(${pct(c + 0.5)} - 1.6%)`,
+                  top: `calc(${pct(r + 0.5)} - 1.6%)`,
+                  background: gemColor(board[i]),
+                  boxShadow: `0 0 6px ${gemColor(board[i])}`,
+                  "--sx": `${Math.cos(a) * 260}%`,
+                  "--sy": `${Math.sin(a) * 260}%`,
+                } as React.CSSProperties
+              }
+            />
+          );
+        });
+      })}
+      {fx.map((f, k) => {
+        const [r, c] = rc(f.at);
+        const tone = gemColor(board[f.at]);
+        if (f.k === "h" || f.k === "v") {
+          const h = f.k === "h";
+          return (
+            <span
+              key={k}
+              className={h ? "gm-beam-x absolute" : "gm-beam-y absolute"}
+              style={
+                h
+                  ? {
+                      left: 0,
+                      right: 0,
+                      top: `calc(${pct(r + 0.5)} - 4%)`,
+                      height: "8%",
+                      transformOrigin: `${pct(c + 0.5)} 50%`,
+                      background: `linear-gradient(180deg, transparent, ${tone} 25%, #fff 50%, ${tone} 75%, transparent)`,
+                      boxShadow: `0 0 18px 4px ${tone}`,
+                      borderRadius: 999,
+                    }
+                  : {
+                      top: 0,
+                      bottom: 0,
+                      left: `calc(${pct(c + 0.5)} - 4%)`,
+                      width: "8%",
+                      transformOrigin: `50% ${pct(r + 0.5)}`,
+                      background: `linear-gradient(90deg, transparent, ${tone} 25%, #fff 50%, ${tone} 75%, transparent)`,
+                      boxShadow: `0 0 18px 4px ${tone}`,
+                      borderRadius: 999,
+                    }
+              }
+            />
+          );
+        }
+        if (f.k === "x") {
+          const size = (2 * (f.r ?? 1) + 1) / SIZE;
+          return (
+            <span
+              key={k}
+              className="gm-shock absolute rounded-full"
+              style={{
+                left: `calc(${pct(c + 0.5)} - ${(size * 100) / 2}%)`,
+                top: `calc(${pct(r + 0.5)} - ${(size * 100) / 2}%)`,
+                width: `${size * 100}%`,
+                height: `${size * 100}%`,
+                border: "4px solid #fff",
+                boxShadow: `0 0 24px 8px ${tone}, inset 0 0 24px 6px ${tone}`,
+              }}
+            />
+          );
+        }
+        // A star: lightning to every gem it takes
+        return (
+          <svg key={k} viewBox={`0 0 ${SIZE} ${SIZE}`} className="absolute inset-0 h-full w-full overflow-visible">
+            {(f.hits ?? []).slice(0, 49).map((h) => {
+              const [hr, hc] = rc(h);
+              // A jagged bolt: two kinks off the straight line
+              const x1 = c + 0.5, y1 = r + 0.5, x2 = hc + 0.5, y2 = hr + 0.5;
+              const nx = -(y2 - y1) * 0.12, ny = (x2 - x1) * 0.12;
+              const d = `M${x1} ${y1} L${x1 + (x2 - x1) / 3 + nx} ${y1 + (y2 - y1) / 3 + ny} L${x1 + ((x2 - x1) * 2) / 3 - nx} ${y1 + ((y2 - y1) * 2) / 3 - ny} L${x2} ${y2}`;
+              return (
+                <g key={h} className="gm-zap">
+                  <path d={d} pathLength={1} fill="none" stroke="#ffd36b" strokeOpacity={0.45} strokeWidth={0.22} strokeLinecap="round" strokeLinejoin="round" />
+                  <path d={d} pathLength={1} fill="none" stroke="#fff" strokeWidth={0.07} strokeLinecap="round" strokeLinejoin="round" />
+                </g>
+              );
+            })}
+            <circle className="gm-shock" cx={c + 0.5} cy={r + 0.5} r={0.9} fill="#fff" opacity={0.85} style={{ transformOrigin: `${c + 0.5}px ${r + 0.5}px` }} />
+          </svg>
+        );
+      })}
+    </div>
   );
 }

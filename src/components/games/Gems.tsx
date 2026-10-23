@@ -32,6 +32,16 @@ export function GemDefs() {
             <stop offset="1" stopColor={edge} />
           </linearGradient>
         ))}
+        <linearGradient id="gm-band" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#fff" stopOpacity="0.2" />
+          <stop offset="0.5" stopColor="#fff" />
+          <stop offset="1" stopColor="#fff" stopOpacity="0.2" />
+        </linearGradient>
+        <radialGradient id="gm-core">
+          <stop offset="0" stopColor="#fff" />
+          <stop offset="0.55" stopColor="#fff" stopOpacity="0.85" />
+          <stop offset="1" stopColor="#fff" stopOpacity="0" />
+        </radialGradient>
         {Object.entries(SHAPES).map(([c, d]) => (
           <clipPath key={c} id={`gm-c-${c}`}>
             <path d={d} />
@@ -69,13 +79,23 @@ export function Gem({ g, className }: { g: string; className?: string }) {
         {/* The cut face in the middle */}
         <path d={d} fill={TONES[c][0]} opacity="0.35" transform="translate(50 52) scale(0.52) translate(-50 -50)" />
         {(k === "h" || k === "v") && (
-          <g clipPath={`url(#gm-c-${c})`} opacity="0.95">
-            {[34, 50, 66].map((p) =>
-              k === "h" ? <rect key={p} x="0" y={p - 4} width="100" height="8" fill="#fff" /> : <rect key={p} x={p - 4} y="0" width="8" height="100" fill="#fff" />,
-            )}
+          // Striped: a glowing band with arrows showing which way it fires
+          <g transform={k === "v" ? "rotate(90 50 50)" : undefined}>
+            <g clipPath={`url(#gm-c-${c})`}>
+              <rect x="0" y="36" width="100" height="28" fill={TONES[c][0]} opacity="0.55" />
+              <rect x="0" y="45" width="100" height="10" fill="url(#gm-band)" />
+              <rect className="gm-sheen" x="-40" y="36" width="30" height="28" fill="#fff" opacity="0.55" />
+            </g>
+            <path d="M8 50 L20 40 L20 60 Z M92 50 L80 40 L80 60 Z" fill="#fff" stroke={TONES[c][2]} strokeWidth="2.5" strokeLinejoin="round" />
           </g>
         )}
-        {k === "x" && <circle cx="50" cy="52" r="13" fill="#fff" opacity="0.9" />}
+        {k === "x" && (
+          // Bomb: wrapped, with a glowing core and a ring of sparks around it
+          <>
+            <circle cx="50" cy="52" r="20" fill="url(#gm-core)" />
+            <circle className="gm-wrap" cx="50" cy="52" r="34" fill="none" stroke="#fff" strokeWidth="5" strokeDasharray="9 7" strokeLinecap="round" opacity="0.9" />
+          </>
+        )}
         <ellipse cx="36" cy="30" rx="13" ry="7" fill="#fff" opacity="0.55" transform="rotate(-28 36 30)" />
       </svg>
     </span>

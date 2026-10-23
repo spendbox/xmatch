@@ -59,7 +59,10 @@ export function NotificationsPanel({ push }: { push: ReturnType<typeof usePushSt
   if (state === "needs-install") {
     return (
       <div className="space-y-4">
-        <p className="text-[14px] text-muted">On iPhone, notifications only work once Dashpad is on your home screen. It takes a few seconds:</p>
+        <p className="text-[14px] text-muted">
+          Apple only lets apps on your home screen send notifications, so on iPhone Dashpad needs to be there first. It takes a few seconds, and Dashpad then opens
+          full screen like any app:
+        </p>
         <ol className="space-y-2.5">
           <Step n={1} icon={<Share size={16} />}>
             Tap the <b>Share</b> button in Safari
@@ -68,7 +71,7 @@ export function NotificationsPanel({ push }: { push: ReturnType<typeof usePushSt
             Choose <b>Add to Home Screen</b>, then <b>Add</b>
           </Step>
           <Step n={3} icon={<Bell size={16} />}>
-            Open Dashpad from your home screen and turn notifications on in Profile
+            Open Dashpad from your home screen, then tap <b>Turn on notifications</b>. That&apos;s it, one tap from then on
           </Step>
         </ol>
       </div>

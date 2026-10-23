@@ -12,6 +12,7 @@ import { MaskIcon } from "@/components/ui/MaskIcon";
 import { INTENT_ICONS } from "@/components/ui/icons";
 import { intentLabel } from "@/lib/constants";
 import { LiveEventChats, LiveFeedChats } from "./LiveEventChats";
+import { MaskedChats } from "./MaskedChats";
 import { FEATURES } from "@/lib/features";
 import { isOnline, usePresence } from "@/lib/usePresence";
 import type { Intent, MatchSummary } from "@/lib/types";
@@ -59,6 +60,7 @@ export function MatchesList({
 
       {matches.length === 0 ? (
         <>
+          <MaskedChats />
           <LiveEventChats compact={side} userId={myId} />
           {FEATURES.feed && <LiveFeedChats compact={side} userId={myId} />}
           {side ? <p className="mt-6 rounded-2xl bg-surface p-4 text-[14px] text-muted">Your chats will appear here.</p> : <Empty />}
@@ -86,6 +88,7 @@ export function MatchesList({
           </label>
           </Sticky>
 
+          <MaskedChats term={term} />
           <LiveEventChats compact={side} divided userId={myId} />
           {FEATURES.feed && <LiveFeedChats divided userId={myId} />}
 
@@ -172,8 +175,8 @@ function Empty() {
       <p className="mt-2 max-w-xs text-[15px] leading-relaxed text-muted">
         Your chats show up here: people you unmask with in Masquerade, and people you message from Meet.
       </p>
-      <ButtonLink href="/home" variant="gold" size="lg" className="mt-6" loadingText="Opening…">
-        <MessageCircle size={19} /> Start a Masquerade
+      <ButtonLink href="/meet" variant="gold" size="lg" className="mt-6" loadingText="Opening…">
+        <Users size={19} /> Meet someone
       </ButtonLink>
     </div>
   );

@@ -27,8 +27,8 @@ export default async function MatchesPage() {
             : "Your chats show up here: people you unmask with in Masquerade, and people you message from Meet."}
         </p>
         {!matches.length && (
-          <ButtonLink href="/home" variant="gold" className="mt-6 h-12 px-6">
-            Start a Masquerade
+          <ButtonLink href="/meet" variant="gold" className="mt-6 h-12 px-6">
+            Meet someone
           </ButtonLink>
         )}
       </div>

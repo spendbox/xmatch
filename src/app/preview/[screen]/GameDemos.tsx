@@ -237,6 +237,7 @@ function demo(screen: string): Game | null {
     case "game-gems": {
       const board = gems.freshBoard();
       board[17] = "bh";
+      board[18] = "rv";
       board[31] = "*";
       board[38] = "gx";
       return base({ kind: "gems", state: { board, turn: "a", left: 2, done: { a: 2, b: 2 }, points: { a: 1240, b: 980 }, last: null, moves: 8 } });

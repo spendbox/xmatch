@@ -141,6 +141,8 @@ export function MasqueradeRoom({
       .insert({ session_id: state.id, sender_id: state.me.id, body: text, reply_to: reply })
       .select("id, sender_id, kind, body, created_at, reply_to")
       .single();
+    // They're not in the app? Let them know (the server checks)
+    if (!error && data) notify({ kind: "masked_message", sessionId: state.id });
     setMessages((l) => {
       const without = l.filter((m) => m.id !== temp.id);
       if (error || !data) return without;
@@ -229,7 +231,8 @@ export function MasqueradeRoom({
   const iUnmasked = state.me.vote === true || unmasked;
 
   if (state.status !== "active" && state.status !== "lapsed") return <Outcome state={state} eventId={eventId} />;
-  const back = meet ? "/meet" : "/home";
+  // Open-ended chats (from Meet, or reopened) live in Chats
+  const back = meet ? "/meet" : state.reopened ? "/matches" : "/home";
 
   const them = state.them;
   const gender = GENDERS.find((g) => g.value === them.gender)?.label;
@@ -272,7 +275,7 @@ export function MasqueradeRoom({
           {lapsed ? (
             <span className="shrink-0 rounded-full bg-cream px-2.5 py-1 text-[12px] font-semibold text-muted">{meet ? "Meet over" : "Hour over"}</span>
           ) : state.reopened ? (
-            <span className="shrink-0 rounded-full bg-mint-soft px-2.5 py-1 text-[12px] font-semibold text-mint">Reopened</span>
+            <span className="shrink-0 rounded-full bg-mint-soft px-2.5 py-1 text-[12px] font-semibold text-mint">{state.explore ? "Open chat" : "Reopened"}</span>
           ) : (
             <TimerRing remaining={remaining} total={total} />
           )}

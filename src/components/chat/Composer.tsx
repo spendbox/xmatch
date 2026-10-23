@@ -12,6 +12,9 @@ import { useVoiceRecorder } from "./useVoiceRecorder";
 
 export type MediaKind = "image" | "video";
 
+const TIP_KEY = "dp_plus_tip";
+const TIP_TIMES = 3;
+
 /** Something in the + menu beside the message box (a game, an icebreaker…) */
 export type ComposerAction = { key: string; label: string; icon: React.ReactNode; tone: string; onClick: () => void; badge?: string };
 
@@ -57,6 +60,31 @@ export function Composer({
   const camera = useRef<HTMLInputElement>(null);
   const voice = useVoiceRecorder();
   const hasText = text.trim().length > 0;
+  const hasPlus = !!(onSendMedia || onGift || actions.length > 0);
+
+  // Someone's first 3 chats: a little tip pointing at the + (gone once they've tapped it)
+  const [tip, setTip] = useState(false);
+  useEffect(() => {
+    if (!hasPlus || !actions.length) return;
+    try {
+      const n = Number(localStorage.getItem(TIP_KEY) ?? "0");
+      if (n >= TIP_TIMES) return;
+      localStorage.setItem(TIP_KEY, String(n + 1));
+      const t = setTimeout(() => setTip(true), 900);
+      return () => clearTimeout(t);
+    } catch {
+      /* private mode */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  function plusSeen() {
+    setTip(false);
+    try {
+      localStorage.setItem(TIP_KEY, String(TIP_TIMES));
+    } catch {
+      /* private mode */
+    }
+  }
 
   // Grow the box with the message, up to 5 lines
   useEffect(() => {
@@ -148,11 +176,25 @@ export function Composer({
         </div>
       ) : (
         <form onSubmit={submit} className="flex items-end gap-2 px-3 pt-3">
-          {(onSendMedia || onGift || actions.length > 0) && (
+          {hasPlus && (
+            <span className="relative shrink-0">
+            {tip && (
+              <button
+                type="button"
+                onClick={plusSeen}
+                className="absolute bottom-[calc(100%+12px)] left-0 z-20 w-[230px] animate-pop rounded-2xl bg-ink px-3.5 py-2.5 text-left text-[13px] leading-snug text-white shadow-lift"
+              >
+                <b className="block text-[14px]">Tap + for more 🎮</b>
+                Games, gifts{actions.some((a) => a.key === "ice") ? ", icebreakers" : ""} and more live here.
+                <span className="mt-1 block text-[11px] font-semibold text-white/60">Got it</span>
+                <span aria-hidden className="absolute -bottom-1.5 left-[18px] h-3 w-3 rotate-45 bg-ink" />
+              </button>
+            )}
             <button
               type="button"
               onClick={() => {
                 tapFeedback();
+                plusSeen();
                 setAttachOpen(true);
               }}
               disabled={disabled}
@@ -165,7 +207,9 @@ export function Composer({
             >
               <Plus size={22} className={clsx("transition-transform duration-200", attachOpen && "rotate-45")} />
               {plusDot && <span className="absolute top-2 right-2 h-2.5 w-2.5 rounded-full bg-gold ring-2 ring-surface" />}
+              {tip && <span aria-hidden className="absolute inset-0 animate-ping rounded-full ring-2 ring-brand" />}
             </button>
+            </span>
           )}
           <textarea
             ref={area}

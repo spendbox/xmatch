@@ -64,7 +64,7 @@ export const GAMES: {
     kind: "gems",
     title: "Gem Clash",
     short: "Match 3, outscore them",
-    rules: ["Same board, take turns", "2 swaps a turn · 5 turns", "Match 4+ for an extra swap"],
+    rules: ["Same board, take turns", "2 swaps a turn · 5 turns", "Match 4+ for an extra swap", "Swap two power-ups together for a huge blast"],
     bg: "radial-gradient(120% 60% at 50% 0%, #6a1f9a 0%, #2a0d44 60%, #10051c 100%)",
     card: "linear-gradient(160deg, #9b4dff 0%, #4f1f9a 100%)",
     edge: "#34126a",

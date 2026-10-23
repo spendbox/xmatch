@@ -221,6 +221,22 @@ input[type="number"]::-webkit-outer-spin-button {
 .gm-move { animation: gm-move var(--md, 0.3s) cubic-bezier(0.5, 0, 0.75, 1.2) both; }
 @keyframes gm-gem-pop { 0% { transform: scale(1); filter: brightness(1); } 35% { transform: scale(1.28); filter: brightness(1.8); } 100% { transform: scale(0); opacity: 0; filter: brightness(2); } }
 .gm-gem-pop { animation: gm-gem-pop 0.24s ease-in both; }
+/* Gem Clash power-ups and effects */
+@keyframes gm-sheen { 0%, 55% { transform: translateX(0) skewX(-20deg); } 100% { transform: translateX(180px) skewX(-20deg); } }
+.gm-sheen { animation: gm-sheen 2.2s ease-in-out infinite; }
+@keyframes gm-wrap { to { transform: rotate(360deg); } }
+.gm-wrap { transform-box: fill-box; transform-origin: center; animation: gm-wrap 4s linear infinite; }
+@keyframes gm-beam-x { 0% { transform: scaleX(0); opacity: 1; } 60% { transform: scaleX(1); opacity: 1; } 100% { transform: scaleX(1) scaleY(0.2); opacity: 0; } }
+.gm-beam-x { animation: gm-beam-x 0.42s ease-out both; }
+@keyframes gm-beam-y { 0% { transform: scaleY(0); opacity: 1; } 60% { transform: scaleY(1); opacity: 1; } 100% { transform: scaleY(1) scaleX(0.2); opacity: 0; } }
+.gm-beam-y { animation: gm-beam-y 0.42s ease-out both; }
+@keyframes gm-shock { 0% { transform: scale(0.2); opacity: 1; } 100% { transform: scale(1.1); opacity: 0; } }
+.gm-shock { animation: gm-shock 0.45s ease-out both; }
+@keyframes gm-spark { 0% { transform: translate(0, 0) scale(1); opacity: 1; } 100% { transform: translate(var(--sx), var(--sy)) scale(0.2); opacity: 0; } }
+.gm-spark { animation: gm-spark 0.45s cubic-bezier(0.2, 0.7, 0.4, 1) both; }
+@keyframes gm-zap { 0% { stroke-dashoffset: 1; opacity: 1; } 55% { stroke-dashoffset: 0; opacity: 1; } 100% { stroke-dashoffset: 0; opacity: 0; } }
+.gm-zap path { stroke-dasharray: 1; animation: gm-zap 0.45s ease-out both; }
+@media (prefers-reduced-motion: reduce) { .gm-sheen, .gm-wrap { animation: none; } }
 @keyframes gm-spin { to { transform: rotate(360deg); } }
 .gm-spin { animation: gm-spin 3s linear infinite; }
 

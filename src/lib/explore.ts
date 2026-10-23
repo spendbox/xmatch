@@ -41,6 +41,8 @@ export type ExploreProfile = {
   shared_interests: string[];
   message_cost: number;
   photos_cost: number;
+  /** A masked chat you already have with them from Meet */
+  masked_id?: string | null;
   /** Their "things about me" */
   things?: { p: string; a: string }[];
   /** Words you both used in your things */

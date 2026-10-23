@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { lockScroll } from "@/lib/scrollLock";
 import { thumbFallback, thumbUrl } from "@/lib/photos";
 import clsx from "clsx";
 import { createPortal } from "react-dom";
@@ -34,12 +35,11 @@ export function ProfileSheet({
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const unlock = lockScroll();
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     document.addEventListener("keydown", onKey);
     return () => {
-      document.body.style.overflow = prev;
+      unlock();
       document.removeEventListener("keydown", onKey);
     };
   }, [onClose]);

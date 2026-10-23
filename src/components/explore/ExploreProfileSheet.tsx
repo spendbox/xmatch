@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Lock, MessageCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { notify } from "@/lib/pushClient";
 import type { ExploreProfile } from "@/lib/explore";
 import type { Profile } from "@/lib/types";
 import { Button, Spinner } from "@/components/ui/Button";
@@ -55,6 +56,7 @@ export function ExploreProfileSheet({
 
   async function message() {
     if (p?.match_id) return router.push(`/matches/${p.match_id}`);
+    if (p?.masked_id) return router.push(`/masquerade/${p.masked_id}`);
     setBusy("message");
     setError(null);
     const { data, error: err } = await supabase.rpc("message_person", { p_id: personId });
@@ -63,7 +65,10 @@ export function ExploreProfileSheet({
       return setError(keysError(err?.message));
     }
     onChanged?.();
-    router.push(`/matches/${data as string}`);
+    // Paid chats from Meet start masked: you both unmask when you're ready
+    const r = data as { kind: "match" | "masked"; id: string };
+    if (r.kind === "masked") notify({ kind: "masked_start", sessionId: r.id });
+    router.push(r.kind === "match" ? `/matches/${r.id}` : `/masquerade/${r.id}`);
   }
 
   if (!p) {
@@ -114,6 +119,8 @@ export function ExploreProfileSheet({
             <MessageCircle size={20} />
             {p.match_id ? (
               "Message"
+            ) : p.masked_id ? (
+              "Continue your masked chat"
             ) : (
               <>
                 Message · <KeyCoin size={20} /> {p.message_cost}

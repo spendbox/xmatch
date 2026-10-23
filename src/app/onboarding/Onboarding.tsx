@@ -263,7 +263,7 @@ export function Onboarding({ profile, demoStep, demoDone }: { profile: Profile; 
 
             {step === 2 && (
               <>
-                <PhotoGrid photos={photos} onAdd={addPhoto} onRemove={removePhoto} />
+                <PhotoGrid photos={photos} onAdd={addPhoto} onRemove={removePhoto} onReorder={setPhotos} />
                 <div className="rounded-3xl border border-line bg-surface p-4 shadow-card">
                   <p className="flex items-center gap-2 text-[14px] font-semibold">
                     <Lightbulb size={17} className="text-gold" /> Photos that get the best reveals

@@ -372,6 +372,13 @@ function ScreenBody({ screen }: { screen: string }) {
           demo={{ remaining: 2 * 3600 }}
         />
       );
+    case "home-tour":
+      return (
+        <div className="pb-24">
+          <HomeScreen demoTour demoPeople={homePeople} demoSetup={{ place: true, push: false, things: 4, claimed: false, reward: 5 }} hour={demoHour("next")} profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} matches={recent} />
+          <BottomNav />
+        </div>
+      );
     case "home":
       return (
         <div className="pb-24">

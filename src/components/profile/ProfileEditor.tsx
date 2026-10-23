@@ -394,7 +394,7 @@ export function ProfileEditor({
         open={panel === "photos"}
         onClose={close}
         title="Photos"
-        subtitle={`${photos.length} of ${MAX_PHOTOS} · the first one is your main photo. Changes save straight away.`}
+        subtitle={`${photos.length} of ${MAX_PHOTOS} · changes save straight away`}
         icon={<ImagePlus size={22} strokeWidth={1.75} />}
         footer={<Button size="lg" onClick={close}>Done</Button>}
       >
@@ -415,6 +415,11 @@ export function ProfileEditor({
             setPhotos(next);
             supabase.from("profiles").update({ photos: next }).eq("id", profile.id).then(() => {});
             deletePhoto(supabase, url);
+          }}
+          onReorder={(next) => {
+            setError(null);
+            setPhotos(next);
+            supabase.from("profiles").update({ photos: next }).eq("id", profile.id).then(() => {});
           }}
         />
         {error && <p className="mt-3 text-[14px] font-medium text-chili">{error}</p>}
