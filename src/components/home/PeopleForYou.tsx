@@ -16,7 +16,8 @@ const SHOWN = 20;
 export function PeopleForYou({ userId, demo }: { userId: string; demo?: ExploreList }) {
   const { list, reload } = useMeetList(userId, demo ?? null);
   const [open, setOpen] = useState<string | null>(null);
-  const people = (list?.people ?? []).slice(0, SHOWN);
+  // Online now first, then everyone else in the order Dashpad suggests (most likely to click and reply)
+  const people = [...(list?.people ?? [])].sort((a, b) => Number(b.online) - Number(a.online)).slice(0, SHOWN);
   if (list && people.length === 0) return null;
 
   return (

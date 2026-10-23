@@ -68,6 +68,7 @@ export function ProfileEditor({
   const push = usePushState();
   const [name, setName] = useState(profile.display_name ?? "");
   const [bio, setBio] = useState(profile.bio);
+  const [nameChanges, setNameChanges] = useState(profile.name_changes ?? 0);
   const [interests, setInterests] = useState(profile.interests);
   const [photos, setPhotos] = useState(profile.photos);
   const [open, setOpen] = useState(profile.open_to_masquerade);
@@ -102,7 +103,7 @@ export function ProfileEditor({
     const { error: err } = await supabase.from("profiles").update(fields).eq("id", profile.id);
     setSaving(false);
     if (err) {
-      setError("Couldn't save. Please try again.");
+      setError(/changed your name/i.test(err.message) ? "You've already changed your name once." : "Couldn't save. Please try again.");
       return false;
     }
     return true;
@@ -110,10 +111,14 @@ export function ProfileEditor({
 
   async function saveAbout() {
     setError(null);
-    if (!draftName.trim()) return setError("Please add your name.");
-    if (await update({ display_name: draftName.trim(), bio: draftBio.trim() })) {
-      setName(draftName.trim());
+    const newName = draftName.trim();
+    if (!newName) return setError("Please add your name.");
+    const renaming = newName !== name;
+    if (renaming && !confirm(`You can only change your name once. Change it to “${newName}”?`)) return;
+    if (await update({ ...(renaming ? { display_name: newName } : {}), bio: draftBio.trim() })) {
+      setName(newName);
       setBio(draftBio.trim());
+      if (renaming) setNameChanges((n) => n + 1);
       close();
     }
   }
@@ -442,7 +447,10 @@ export function ProfileEditor({
           </div>
           <div>
             <Label htmlFor="name">First name</Label>
-            <Input id="name" value={draftName} maxLength={40} onChange={(e) => setDraftName(e.target.value)} />
+            <Input id="name" value={draftName} maxLength={40} disabled={nameChanges >= 1} onChange={(e) => setDraftName(e.target.value)} />
+            <p className="mt-1 text-xs text-muted">
+              {nameChanges >= 1 ? "You've already changed your name once." : "You can change your name once."}
+            </p>
           </div>
           <div>
             <Label htmlFor="bio">Bio</Label>
