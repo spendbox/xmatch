@@ -47,7 +47,7 @@ export async function pushToUsers(userIds: string[], payload: PushPayload, opts:
           await webpush.sendNotification(
             { endpoint: s.endpoint as string, keys: { p256dh: s.p256dh as string, auth: s.auth as string } },
             JSON.stringify(payload),
-            { TTL: payload.requireInteraction ? 60 : 60 * 60 * 12, urgency: payload.requireInteraction ? "high" : "normal" },
+            { TTL: payload.requireInteraction ? 60 : 60 * 60 * 12, urgency: "high" },
           );
           sent++;
         } catch (e) {

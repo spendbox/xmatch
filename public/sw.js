@@ -14,10 +14,13 @@ self.addEventListener("push", (event) => {
     (async () => {
       // Already looking at that chat? No need to buzz (iPhones always need a notification shown)
       const ios = /iPhone|iPad|iPod/.test(self.navigator.userAgent);
+      const wins = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      const open = wins.filter((w) => w.visibilityState === "visible");
+      // Dashpad is open: it plays its own chime
+      open.forEach((w) => w.postMessage({ type: "dp-push" }));
       if (data.url && !ios) {
-        const wins = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
         const target = new URL(data.url, self.location.origin).href;
-        if (wins.some((w) => w.visibilityState === "visible" && w.url === target)) return;
+        if (open.some((w) => w.url === target)) return;
       }
       return self.registration.showNotification(title, {
       body: data.body || "",
@@ -25,6 +28,9 @@ self.addEventListener("push", (event) => {
       badge: "/badge-96.png",
       tag: data.tag || undefined,
       renotify: !!data.tag,
+      // Play the phone's notification sound (and again when a chat's notification updates);
+      // while Dashpad is open on screen its own chime plays instead, so you don't hear two
+      silent: open.length > 0,
       requireInteraction: !!data.requireInteraction,
       vibrate: data.requireInteraction ? [400, 200, 400, 200, 400] : [120, 60, 120],
       data: { url: data.url || "/home" },

@@ -10,6 +10,7 @@ import { MenuBadgesContext, useMenuBadges } from "./useMenuBadges";
 import { CallProvider } from "@/components/calls/CallProvider";
 import { EventMediaProvider } from "@/components/events/media/EventMediaProvider";
 import { MediaHelp } from "./MediaHelp";
+import { chime } from "@/lib/chime";
 
 export function AppChrome({ user, children }: { user: ChromeUser; children: React.ReactNode }) {
   const path = usePathname();
@@ -20,6 +21,15 @@ export function AppChrome({ user, children }: { user: ChromeUser; children: Reac
   // Background helper for notifications; keeps this phone's subscription fresh
   useEffect(() => {
     registerWorker().then(() => refreshSubscription());
+  }, []);
+  // A notification arrived while Dashpad is open: chime
+  useEffect(() => {
+    if (!("serviceWorker" in navigator)) return;
+    const onMessage = (e: MessageEvent) => {
+      if (e.data?.type === "dp-push") chime();
+    };
+    navigator.serviceWorker.addEventListener("message", onMessage);
+    return () => navigator.serviceWorker.removeEventListener("message", onMessage);
   }, []);
 
   return (
