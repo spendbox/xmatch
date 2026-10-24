@@ -703,6 +703,11 @@ function ScreenBody({ screen }: { screen: string }) {
       const demoStep = st === "intro" ? { step: "intro" as const } : st === "q1" ? { step: "q" as const, qi: 0 } : st === "artists" ? { step: "q" as const, qi: 5 } : st === "scale" ? { step: "q" as const, qi: 7 } : { step: st as "about" | "finish" | "done" };
       return pactWrap(<PactFlow pact={demoPact} questions={demoQs} count={4127} signedIn={false} mine={null} result={null} demoStep={demoStep} />);
     }
+    case "pact-edit": {
+      const answers = Object.fromEntries(demoQs.map((q) => [q.id, q.kind === "scale" ? 4 : q.kind === "choose_many" ? q.options.slice(0, 3).map((o) => o.id) : q.options[1].id]));
+      const about = { gender: "woman" as const, intents: ["friendship" as const], seeking: [], age: 26, ageMin: 22, ageMax: 32, area: "Island", work: undefined };
+      return pactWrap(<PactFlow pact={demoPact} questions={demoQs} count={4127} signedIn mine={{ about, answers }} result={null} demoStep={{ step: "edit" }} />);
+    }
     case "pact-finish-in":
       return pactWrap(<PactFlow pact={demoPact} questions={demoQs} count={4127} signedIn mine={null} result={null} demoStep={{ step: "finish" }} />);
     case "pact-finish-school":
