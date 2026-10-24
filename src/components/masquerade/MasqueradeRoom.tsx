@@ -343,13 +343,17 @@ export function MasqueradeRoom({
         <div className="flex items-center gap-2 overflow-x-auto px-4 pb-3 no-scrollbar lg:hidden">
           <Tag strong>{connectionsLabel(them.connections)}</Tag>
           <Tag>{replyLabel(them.reply_seconds)}</Tag>
-          <Tag>
-            You <Chilis level={state.me.spice} />
-          </Tag>
-          <Tag>
-            Them <Chilis level={them.spice} />
-          </Tag>
-          <Tag strong>Questions: {spiceLabel(state.spice_level)}</Tag>
+          {state.intent !== "friends" && (
+            <>
+              <Tag>
+                You <Chilis level={state.me.spice} />
+              </Tag>
+              <Tag>
+                Them <Chilis level={them.spice} />
+              </Tag>
+              <Tag strong>Questions: {spiceLabel(state.spice_level)}</Tag>
+            </>
+          )}
           {[...(them.shared_interests ?? []), ...them.interests.filter((i) => !(them.shared_interests ?? []).includes(i))]
             .slice(0, 8)
             .map((i) => (
@@ -584,16 +588,20 @@ export function MasqueradeRoom({
       <h3 className="mt-6 mb-2 text-[12px] font-semibold tracking-wide text-muted uppercase">Here for</h3>
       <p className="text-[15px] font-semibold">{intentLabel(state.intent)}</p>
 
-      <h3 className="mt-6 mb-2 text-[12px] font-semibold tracking-wide text-muted uppercase">Question spice</h3>
-      <div className="flex flex-wrap gap-2">
-        <Tag>
-          You <Chilis level={state.me.spice} />
-        </Tag>
-        <Tag>
-          Them <Chilis level={them.spice} />
-        </Tag>
-        <Tag strong>{spiceLabel(state.spice_level)}</Tag>
-      </div>
+      {state.intent !== "friends" && (
+        <>
+          <h3 className="mt-6 mb-2 text-[12px] font-semibold tracking-wide text-muted uppercase">Question spice</h3>
+          <div className="flex flex-wrap gap-2">
+            <Tag>
+              You <Chilis level={state.me.spice} />
+            </Tag>
+            <Tag>
+              Them <Chilis level={them.spice} />
+            </Tag>
+            <Tag strong>{spiceLabel(state.spice_level)}</Tag>
+          </div>
+        </>
+      )}
 
       <h3 className="mt-6 mb-2 text-[12px] font-semibold tracking-wide text-muted uppercase">Into</h3>
       <div className="flex flex-wrap gap-2">

@@ -74,6 +74,8 @@ export function MeetSheet({
             <ChevronRight size={18} className="shrink-0 text-muted" />
           </button>
         </Section>
+        {/* Question spice is for icebreakers, which only dating and spicy chats get */}
+        {prefs.intent !== "friends" && (
         <Section title="Question spice" note="You'll see each other's pick. The questions land in the middle.">
           <Choice
             name="Question spice"
@@ -84,6 +86,7 @@ export function MeetSheet({
             options={SPICE_LEVELS.map((s) => ({ value: s.value, label: s.label, hint: SPICE_HINTS[s.value], icon: <SpiceIcon level={s.value} size={22} /> }))}
           />
         </Section>
+        )}
 
         {/* Gender and age: optional, Anyone by default */}
         <section className="rounded-2xl border border-line">
