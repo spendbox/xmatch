@@ -4,7 +4,8 @@ import { getAuth } from "@/lib/auth";
 import { pactPhase } from "@/lib/pacts";
 import { claimEntries, loadPact, resultFor } from "@/lib/pactsServer";
 import { PactReveal } from "@/components/pacts/PactReveal";
-import { Countdown, PactMatching, pactDate } from "@/components/pacts/PactBits";
+import { Countdown, PactMatching } from "@/components/pacts/PactBits";
+import { pactDate } from "@/lib/pacts";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Your Pact match", robots: { index: false } };

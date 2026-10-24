@@ -21,7 +21,7 @@ export async function createPact(name: string, slug: string): Promise<{ id?: str
   if (taken) return { error: `dashpad.site/pact/${s} is already taken. Try another link.` };
   const closes = new Date(Date.now() + 12 * 86400_000);
   const reveal = new Date(Date.now() + 14 * 86400_000);
-  const { data, error } = await db.from("pacts").insert({ name: n, slug: s, closes_at: closes.toISOString(), reveal_at: reveal.toISOString() }).select("id").single();
+  const { data, error } = await db.from("pacts").insert({ name: n, slug: s, areas: [], closes_at: closes.toISOString(), reveal_at: reveal.toISOString() }).select("id").single();
   if (error || !data) return { error: "Couldn't create the pact. Please try again." };
   await db.from("pact_questions").insert(SEED_QUESTIONS.map((q, i) => ({ ...q, pact_id: data.id, position: i })));
   revalidatePath("/admin/pacts");
@@ -167,12 +167,16 @@ export async function retryPactReveal(id: string): Promise<{ error?: string; sum
   return { summary: r.step === "done" ? "Done. Everyone has been told." : "It's moving again. Refresh in a minute to see progress." };
 }
 
-export async function deletePact(id: string): Promise<{ error?: string }> {
+/** Deletes a pact with its questions, answers and matches. The admin types the pact's name to confirm. */
+export async function deletePact(id: string, typedName: string): Promise<{ error?: string }> {
   await requireAdmin();
   const db = createAdminClient();
-  const { count } = await db.from("pact_entries").select("id", { count: "exact", head: true }).eq("pact_id", id);
-  if (count) return { error: "People have already answered this pact, so it can't be deleted. Move it back to draft instead." };
-  await db.from("pacts").delete().eq("id", id);
+  const { data: p } = await db.from("pacts").select("name").eq("id", id).maybeSingle();
+  if (!p) return { error: "This pact was already deleted." };
+  if (clean(typedName, 60).toLowerCase() !== clean(p.name, 60).toLowerCase()) return { error: "The name doesn't match. Type it exactly to delete." };
+  // Answers and matches go with it; chats that already started stay open
+  const { error } = await db.from("pacts").delete().eq("id", id);
+  if (error) return { error: "Couldn't delete it. Please try again." };
   revalidatePath("/admin/pacts");
   return {};
 }

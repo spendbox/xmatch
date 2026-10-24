@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" aria-label="Anime eyes and sparkles">
+<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2b2066"/><stop offset="1" stop-color="#ff7ab0"/></linearGradient></defs>
+<rect width="400" height="400" fill="url(#g)"/>
+<circle cx="340" cy="60" r="90" fill="#fff" opacity=".08"/><circle cx="40" cy="330" r="70" fill="#fff" opacity=".06"/>
+<g transform="translate(0 -24)">
+<path d="M70 170 q60-50 120 0" stroke="#1c1310" stroke-width="10" fill="none" stroke-linecap="round"/><path d="M210 170 q60-50 120 0" stroke="#1c1310" stroke-width="10" fill="none" stroke-linecap="round"/>
+<ellipse cx="130" cy="205" rx="48" ry="58" fill="#fff"/><ellipse cx="270" cy="205" rx="48" ry="58" fill="#fff"/>
+<ellipse cx="134" cy="212" rx="34" ry="44" fill="#5b3fd9"/><ellipse cx="274" cy="212" rx="34" ry="44" fill="#5b3fd9"/>
+<ellipse cx="136" cy="222" rx="18" ry="24" fill="#1c1310"/><ellipse cx="276" cy="222" rx="18" ry="24" fill="#1c1310"/>
+<circle cx="120" cy="192" r="11" fill="#fff"/><circle cx="260" cy="192" r="11" fill="#fff"/><circle cx="148" cy="240" r="5" fill="#fff"/><circle cx="288" cy="240" r="5" fill="#fff"/>
+<path d="M190 290 q10 10 20 0" stroke="#1c1310" stroke-width="6" fill="none" stroke-linecap="round"/>
+<ellipse cx="96" cy="282" rx="22" ry="9" fill="#ff5aa5" opacity=".6"/><ellipse cx="304" cy="282" rx="22" ry="9" fill="#ff5aa5" opacity=".6"/>
+</g>
+<path d="M330 110 l8 22 22 8 -22 8 -8 22 -8 -22 -22 -8 22 -8z" fill="#f2c45a"/><path d="M70 70 l5 14 14 5 -14 5 -5 14 -5 -14 -14 -5 14 -5z" fill="#fff" opacity=".85"/>
+</svg>

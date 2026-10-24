@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { pactPhase, type Pact } from "@/lib/pacts";
-import { PactLogo, pactDate } from "./PactBits";
+import { PactLogo } from "./PactBits";
+import { pactDate } from "@/lib/pacts";
 
 export type PactListItem = Pact & { count: number };
 

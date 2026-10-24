@@ -115,6 +115,24 @@ body {
   input, select, textarea, button {
     font: inherit;
   }
+  /* Tap feedback (see TapFeedback.tsx): a quick dip when pressed, a soft pulse while it works.
+     In the base layer, so a button's own active:/transition classes still win. */
+  :where([data-pressed]) {
+    scale: var(--dp-press, 0.96);
+    filter: brightness(0.95);
+    transition: scale 60ms ease-out, filter 60ms ease-out;
+  }
+  :where(button, [role="button"], a[href], summary, label):not([data-pressed]) {
+    transition: scale 180ms cubic-bezier(0.34, 1.56, 0.64, 1), filter 180ms ease;
+  }
+  :where([data-busy]:not([aria-busy])) {
+    cursor: progress;
+    animation: dp-busy 1s ease-in-out infinite;
+  }
+}
+@keyframes dp-busy {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
 }
 
 /* Hide number input spinners */

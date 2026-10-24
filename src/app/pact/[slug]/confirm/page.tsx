@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { confirmEntry } from "@/lib/pactsServer";
-import { PactLogo, pactDate } from "@/components/pacts/PactBits";
+import { PactLogo } from "@/components/pacts/PactBits";
+import { pactDate } from "@/lib/pacts";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Email confirmed", robots: { index: false } };

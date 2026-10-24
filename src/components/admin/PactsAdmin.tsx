@@ -7,7 +7,7 @@ import clsx from "clsx";
 import { Plus } from "lucide-react";
 import { createPact } from "@/app/admin/(panel)/pacts/actions";
 import { pactPhase } from "@/lib/pacts";
-import { pactDate } from "@/components/pacts/PactBits";
+import { pactDate } from "@/lib/pacts";
 import { AdminTitle } from "./AdminShell";
 
 export type AdminPact = {
@@ -90,7 +90,7 @@ export function PactsAdmin({ pacts }: { pacts: AdminPact[] }) {
           </label>
           <button disabled={busy} className="h-11 rounded-full bg-ink px-5 text-[14px] font-semibold text-white disabled:opacity-60">{busy ? "Creating…" : "Create"}</button>
           {error && <p className="text-[14px] font-medium text-chili sm:col-span-3">{error}</p>}
-          <p className="text-[13px] text-muted sm:col-span-3">It starts as a draft with 10 ready-made questions. Nobody can see it until you publish.</p>
+          <p className="text-[13px] text-muted sm:col-span-3">It starts as a draft with 20 ready-made questions. Nobody can see it until you publish.</p>
         </form>
       )}
       {pacts.length === 0 ? (
