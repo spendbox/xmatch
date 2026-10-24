@@ -18,6 +18,7 @@ import { distanceLabel, GENDERS, intentLabel, MASQUERADE_MINUTES, spiceLabel } f
 import type { ChatMessage, MasqueradeState } from "@/lib/types";
 import { MessageList } from "@/components/chat/MessageList";
 import { Composer } from "@/components/chat/Composer";
+import { usePaidChatPeople } from "./usePaidChatPeople";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { Chilis } from "@/components/ui/Spice";
 import { TimerRing } from "./TimerRing";
@@ -51,6 +52,10 @@ export function MasqueradeRoom({
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [state, setState] = useState(initial);
+  // A chat you paid to start on Meet: you saw their name and photo there, so their name shows (photo blurred)
+  const paidPeople = usePaidChatPeople(!!demo);
+  const known = paidPeople[state.id];
+  const theirName = known?.name || state.them.alias;
   const [messages, setMessages] = useState(initialMessages);
   const [menu, setMenu] = useState(false);
   const [reporting, setReporting] = useState(false);
@@ -184,9 +189,9 @@ export function MasqueradeRoom({
     if (
       !confirm(
         state.meet
-          ? `Let go of ${state.them.alias}? The chat closes for both of you.`
+          ? `Let go of ${theirName}? The chat closes for both of you.`
           : state.hourly
-            ? `Let go of ${state.them.alias}? The chat closes for both of you. You'll get someone new next hour.`
+            ? `Let go of ${theirName}? The chat closes for both of you. You'll get someone new next hour.`
             : "Leave this masquerade? The chat will be deleted.",
       )
     )
@@ -216,15 +221,15 @@ export function MasqueradeRoom({
     await refresh();
   }
 
-  // Games: hourly and reopened pairs and meet chats, while the chat is open.
+  // Games: every masked chat, while it's open.
   // In a game meet the first game comes from the line, so the game button waits for it.
   const meet = state.meet ?? null;
   const lastFromThem = [...messages].reverse().find((m) => m.sender_id && m.sender_id !== state.me.id && m.kind === "text");
   const games = useGameHost({
     sessionId: state.id,
-    names: { me: state.me.alias, them: state.them.alias },
+    names: { me: state.me.alias, them: theirName },
     masked: true,
-    disabled: !state.hourly || state.status !== "active" || remaining <= 0,
+    disabled: state.status !== "active" || remaining <= 0,
     noLauncher: !!meet?.turn_pending,
     offline: !!demo,
     peek: lastFromThem?.body ?? null,
@@ -260,7 +265,14 @@ export function MasqueradeRoom({
             </Link>
           )}
           <span className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full bg-ink text-white">
-            <MaskIcon className="w-7" eyes="#1c1828" />
+            {known?.photo ? (
+              <span className="absolute inset-0 overflow-hidden rounded-full">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={known.photo} alt="" className="h-full w-full scale-110 object-cover blur-md" />
+              </span>
+            ) : (
+              <MaskIcon className="w-7" eyes="#1c1828" />
+            )}
             <span
               className={`absolute -right-0.5 -bottom-0.5 h-3.5 w-3.5 rounded-full ring-2 ring-surface ${them.online ? "bg-mint" : "bg-[#b9b3c4]"}`}
               aria-hidden
@@ -268,7 +280,7 @@ export function MasqueradeRoom({
           </span>
           <div className="min-w-0 flex-1">
             <p className="flex items-center gap-1.5 text-[16px] font-semibold">
-              <span className="truncate">{them.alias}</span>
+              <span className="truncate">{theirName}</span>
               {pact && <GoldStar size={18} />}
             </p>
             {pact && <p className="truncate text-[12px] font-semibold text-[#a26b00]">{pact} match</p>}
@@ -331,12 +343,12 @@ export function MasqueradeRoom({
             {iUnmasked ? (
               <>
                 <span className="block font-semibold text-ink">You chose to unmask.</span>
-                <span className="block text-muted">If {them.alias} does too, you&apos;re connected.</span>
+                <span className="block text-muted">If {theirName} does too, you&apos;re connected.</span>
               </>
             ) : (
               <>
                 <span className="font-semibold text-ink">Feeling the vibe?</span>{" "}
-                <span className="text-muted">{them.has_voted ? `${them.alias} has made a choice.` : "Unmask whenever you're ready."}</span>
+                <span className="text-muted">{them.has_voted ? `${theirName} has made a choice.` : "Unmask whenever you're ready."}</span>
               </>
             )}
           </p>
@@ -380,9 +392,9 @@ export function MasqueradeRoom({
         <MessageList
           messages={messages}
           myId={state.me.id}
-          nameOf={(id) => (id === state.me.id ? "You" : state.them.alias)}
+          nameOf={(id) => (id === state.me.id ? "You" : theirName)}
           onReply={setReplyTo}
-          onGameAgain={state.hourly && chatting ? games.rematch : undefined}
+          onGameAgain={chatting ? games.rematch : undefined}
         />
       </div>
 
@@ -416,8 +428,8 @@ export function MasqueradeRoom({
           <p className="text-center text-[15px] font-semibold">{meet ? "The meet ended" : "The hour ran out"} before you both decided</p>
           <p className="mx-auto mt-1 max-w-sm text-center text-[13px] leading-snug text-muted">
             {iUnmasked
-              ? `You unmasked. If ${them.alias} unmasks too, you're connected.`
-              : `Unmask now, and if ${them.alias} does too, you're connected. Or reopen the chat to keep talking.`}
+              ? `You unmasked. If ${theirName} unmasks too, you're connected.`
+              : `Unmask now, and if ${theirName} does too, you're connected. Or reopen the chat to keep talking.`}
           </p>
           <div className="mt-3 grid grid-cols-2 gap-2.5 pb-2">
             {!iUnmasked ? (
@@ -447,21 +459,24 @@ export function MasqueradeRoom({
         </div>
       )}
 
-      {meet && chatting && !(games.game && (games.game.status === "invited" || games.game.status === "active")) && <MeetLine meet={meet} them={them.alias} />}
-      {state.hourly && chatting && games.banner}
+      {meet && chatting && !(games.game && (games.game.status === "invited" || games.game.status === "active")) && <MeetLine meet={meet} them={theirName} />}
+      {chatting && games.banner}
       {chatting ? (
         <Composer
           onSend={send}
           placeholder={state.hourly ? "Message" : undefined}
           replyTo={replyTo}
-          replyName={replyTo ? (replyTo.sender_id === state.me.id ? "yourself" : replyTo.sender_id ? state.them.alias : replyTo.kind === "game" ? "the game" : "the icebreaker") : undefined}
+          replyName={replyTo ? (replyTo.sender_id === state.me.id ? "yourself" : replyTo.sender_id ? theirName : replyTo.kind === "game" ? "the game" : "the icebreaker") : undefined}
           onCancelReply={() => setReplyTo(null)}
-          plusDot={state.hourly && games.live}
+          plusDot={games.live}
           actions={[
-            ...(state.hourly && games.canPlay
+            ...(games.canPlay
               ? [{ key: "game", label: games.live ? "Back to game" : "Play a game", icon: <Gamepad2 size={24} strokeWidth={1.75} />, tone: "bg-brand-soft text-brand", onClick: games.play }]
               : []),
-            { key: "ice", label: "Icebreaker", icon: <Dices size={24} strokeWidth={1.75} />, tone: "bg-gold-soft text-[#9a6a0c]", onClick: () => void nextQuestion() },
+            // Icebreakers are written for dating, so friendship chats don't get them
+            ...(state.intent !== "friends"
+              ? [{ key: "ice", label: "Icebreaker", icon: <Dices size={24} strokeWidth={1.75} />, tone: "bg-gold-soft text-[#9a6a0c]", onClick: () => void nextQuestion() }]
+              : []),
           ]}
           onGift={() => {
             refreshWallet();
@@ -473,8 +488,8 @@ export function MasqueradeRoom({
       <Sheet
         open={askUnmask}
         onClose={() => setAskUnmask(false)}
-        title={`Unmask to ${them.alias}?`}
-        subtitle={`If ${them.alias} unmasks too, you'll both see each other's name and photos, and the chat moves to Chats.`}
+        title={`Unmask to ${theirName}?`}
+        subtitle={`If ${theirName} unmasks too, you'll both see each other's name and photos, and the chat moves to Chats.`}
         icon={<MaskIcon className="w-6" eyes="#5b3fd9" />}
         footer={
           <div className="space-y-2">
@@ -495,7 +510,7 @@ export function MasqueradeRoom({
         open={giftOpen}
         onClose={() => setGiftOpen(false)}
         balance={wallet?.balance ?? null}
-        toName={them.alias}
+        toName={theirName}
         onSend={async (g) => {
           const { error } = await supabase.rpc("send_gift", { p_gift: g.id, p_session: state.id });
           if (error) return keysError(error.message);
@@ -505,16 +520,21 @@ export function MasqueradeRoom({
       />
       {timeUp && !state.hourly && <DecisionSheet state={state} voting={voting} onVote={vote} />}
       {reporting && <ReportSheet onClose={() => setReporting(false)} onReport={report} />}
-      {state.hourly && games.overlay}
+      {games.overlay}
     </div>
 
     {/* About them — side panel on computers */}
     <aside className="hidden w-[340px] shrink-0 flex-col overflow-y-auto border-l border-line bg-surface px-6 py-8 lg:flex">
       <div className="flex flex-col items-center text-center">
-        <span className="grid h-24 w-24 animate-float place-items-center rounded-full bg-ink text-white shadow-lift">
-          <MaskIcon className="w-14" eyes="#1c1828" />
+        <span className="grid h-24 w-24 animate-float place-items-center overflow-hidden rounded-full bg-ink text-white shadow-lift">
+          {known?.photo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={known.photo} alt="" className="h-full w-full scale-110 object-cover blur-lg" />
+          ) : (
+            <MaskIcon className="w-14" eyes="#1c1828" />
+          )}
         </span>
-        <p className="mt-4 font-display text-[26px] font-semibold">{them.alias}</p>
+        <p className="mt-4 font-display text-[26px] font-semibold">{theirName}</p>
         <p className="text-[14px] text-muted">
           {[gender, them.place ?? distanceLabel(them.distance_km)].filter(Boolean).join(" · ")}
         </p>

@@ -9298,3 +9298,108 @@ insert into public.tot_questions (prompt, a, b, spice) values
   ('Rather', 'One wild night', 'A week of teasing', 3),
   ('Rather', 'Make-up sex', 'Birthday sex', 3)
 on conflict (a, b) do nothing;
+
+-- ---------------------------------------------------------------------------
+-- Part 48: When you pay to message someone from Meet, you already saw their name and
+-- main photo there. So in that masked chat you see their name, with their photo
+-- blurred. They still see only your mask name until you both unmask.
+-- ---------------------------------------------------------------------------
+create or replace function public.paid_chat_people() returns json
+language sql stable security definer set search_path = public as $$
+  select coalesce(json_object_agg(s.id, json_build_object('name', p.display_name, 'photo', p.photos[1])), '{}'::json)
+  from masquerade_sessions s
+  join profiles p on p.id = s.user_b
+  where s.user_a = auth.uid()
+    and s.source = 'explore'
+    and s.pact_id is null
+    and s.meet_id is null
+    and s.status = 'active'
+$$;
+revoke execute on function public.paid_chat_people() from public, anon;
+grant execute on function public.paid_chat_people() to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Part 49: Games work in every open masked chat, not just hourly pairs and Meet
+-- posts: chats you paid to start from Meet, Link-Up matches, reopened pairs and
+-- 5-minute masquerades too (while the chat is still open).
+-- ---------------------------------------------------------------------------
+create or replace function public.game_chat_ok(uid uuid, p_session uuid, p_match uuid, out other uuid)
+language plpgsql stable security definer set search_path = public as $$
+declare
+  s masquerade_sessions;
+  m matches;
+begin
+  other := null;
+  if p_session is not null then
+    select * into s from masquerade_sessions where id = p_session and (user_a = uid or user_b = uid);
+    if not found or s.status <> 'active' or now() >= s.ends_at then return; end if;
+    other := case when s.user_a = uid then s.user_b else s.user_a end;
+  elsif p_match is not null then
+    select * into m from matches where id = p_match and (user_a = uid or user_b = uid);
+    if not found then return; end if;
+    other := case when m.user_a = uid then m.user_b else m.user_a end;
+  end if;
+  if other is not null and public.is_blocked(uid, other) then other := null; end if;
+end $$;
+revoke all on function public.game_chat_ok(uuid, uuid, uuid) from public, anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Part 50: The icebreaker questions are written for dating, so friendship chats
+-- don't get them any more (masked or connected). Questions an admin wrote for a
+-- specific Masquerade Night still show in that night's chats.
+-- ---------------------------------------------------------------------------
+create or replace function public.pick_icebreaker(p_session uuid, p_spice smallint, p_event uuid) returns text
+language sql volatile security definer set search_path = public as $$
+  select body from (
+    select body, 0 as pri from icebreakers i
+    where p_event is not null and i.event_id = p_event and i.active
+      and not exists (select 1 from masquerade_messages m where m.session_id = p_session and m.kind = 'icebreaker' and m.body = i.body)
+    union all
+    select body, 1 from icebreakers i
+    where i.event_id is null and i.active and i.spice = p_spice
+      and not exists (select 1 from masquerade_messages m where m.session_id = p_session and m.kind = 'icebreaker' and m.body = i.body)
+    union all
+    select body, 2 from icebreakers i where i.event_id is null and i.active and i.spice = p_spice
+  ) x
+  -- Friendship chats only get a night's own questions
+  where x.pri = 0 or coalesce((select s.intent::text from masquerade_sessions s where s.id = p_session), 'dating') <> 'friends'
+  order by pri, random() limit 1
+$$;
+revoke execute on function public.pick_icebreaker(uuid, smallint, uuid) from public, anon, authenticated;
+
+create or replace function public.match_icebreaker(p_match uuid) returns void
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  m matches;
+  lvl smallint;
+  q text;
+begin
+  select * into m from matches where id = p_match and (user_a = uid or user_b = uid);
+  if not found then raise exception 'Not your chat'; end if;
+  -- Icebreakers are for dating and spicy chats
+  if m.intent = 'friends' then return; end if;
+  if public.is_blocked(m.user_a, m.user_b) then raise exception 'Not available'; end if;
+  if (select count(*) from messages
+      where match_id = p_match and sender_id is null and kind = 'text' and created_at > now() - interval '1 minute') >= 6 then
+    raise exception 'Slow down a little';
+  end if;
+
+  select round((coalesce(a.pref_spice, 1) + coalesce(b.pref_spice, 1)) / 2.0)::smallint into lvl
+  from profiles a, profiles b where a.id = m.user_a and b.id = m.user_b;
+
+  select body into q from (
+    select i.body, 0 as pri from icebreakers i
+    where i.event_id is null and i.active and i.spice = lvl
+      and not exists (select 1 from messages x where x.match_id = p_match and x.sender_id is null and x.body = '💬 ' || i.body)
+      and not exists (select 1 from masquerade_messages x where x.session_id = m.session_id and x.kind = 'icebreaker' and x.body = i.body)
+    union all
+    select i.body, 1 from icebreakers i where i.event_id is null and i.active and i.spice = lvl
+  ) x order by pri, random() limit 1;
+  if q is null then return; end if;
+
+  insert into messages (match_id, sender_id, kind, body) values (p_match, null, 'text', '💬 ' || q);
+  update matches set last_message_at = now() where id = p_match;
+end $$;
+revoke execute on function public.match_icebreaker(uuid) from public, anon;
+grant execute on function public.match_icebreaker(uuid) to authenticated;

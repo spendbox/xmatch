@@ -38,7 +38,7 @@ const STEPS: Step[] = [
   {
     icon: <Gamepad2 size={22} />,
     title: "Games, gifts and more",
-    body: "In any chat, tap the + beside the message box to play games, send gifts or get an icebreaker.",
+    body: "In any chat, tap the + beside the message box to play games or send gifts.",
   },
 ];
 

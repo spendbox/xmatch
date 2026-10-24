@@ -38,6 +38,8 @@ export function MatchesList({
   const { seen, now } = usePresence(matches.map((m) => m.other_id));
   const online = (id: string) => isOnline(seen[id], now);
   const [q, setQ] = useState("");
+  // Masked chats count as chats: the "No chats yet" box shows only once we know there are none
+  const [masked, setMasked] = useState<number | null>(null);
   const term = q.trim().toLowerCase();
   const shown = term
     ? matches.filter((m) => m.display_name.toLowerCase().includes(term) || (m.last_message ?? "").toLowerCase().includes(term))
@@ -60,10 +62,10 @@ export function MatchesList({
 
       {matches.length === 0 ? (
         <>
-          <MaskedChats />
+          <MaskedChats onCount={setMasked} />
           <LiveEventChats compact={side} userId={myId} />
           {FEATURES.feed && <LiveFeedChats compact={side} userId={myId} />}
-          {side ? <p className="mt-6 rounded-2xl bg-surface p-4 text-[14px] text-muted">Your chats will appear here.</p> : <Empty />}
+          {masked === 0 && (side ? <p className="mt-6 rounded-2xl bg-surface p-4 text-[14px] text-muted">Your chats will appear here.</p> : <Empty />)}
         </>
       ) : (
         <>
