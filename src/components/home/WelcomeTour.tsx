@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import clsx from "clsx";
-import { Gamepad2, SlidersHorizontal, Sparkles, UsersRound } from "lucide-react";
+import { Gamepad2, Sparkles, UsersRound } from "lucide-react";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { tapFeedback } from "@/components/ui/Button";
 
@@ -28,12 +28,6 @@ const STEPS: Step[] = [
     icon: <Sparkles size={22} />,
     title: "Your Masquerade card",
     body: "Your pair for the hour shows up here. Tap the card any time to change who you meet: mood, ages, distance and more.",
-  },
-  {
-    target: "settings",
-    icon: <SlidersHorizontal size={22} />,
-    title: "Or tap this button",
-    body: "It opens the same Masquerade settings from the top of Home.",
   },
   {
     target: "people",

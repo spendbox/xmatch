@@ -110,26 +110,28 @@ export function HomeScreen({
       {/* Top bar: stays at the top while you scroll */}
       <Sticky>
       <header className="flex items-center gap-3">
-        <Link href="/profile" aria-label="Your profile" className="lg:hidden">
-          <Avatar src={profile.photos?.[0]} name={profile.display_name} size={46} className="ring-2 ring-surface" />
-        </Link>
+        <span className="relative shrink-0 lg:hidden">
+          <Link href="/profile" aria-label="Your profile" className="block">
+            <Avatar src={profile.photos?.[0]} name={profile.display_name} size={46} className="ring-2 ring-surface" />
+          </Link>
+          {/* Small badge on the photo: your Masquerade mood; tap it to change settings */}
+          <button
+            type="button"
+            onClick={() => {
+              tapFeedback();
+              setMeetOpen(true);
+            }}
+            className="absolute -right-1 -bottom-1 grid h-[22px] w-[22px] place-items-center rounded-full border-2 border-cream bg-brand text-white shadow-sm"
+            aria-label={`Your Masquerade settings: ${intentLabel(prefs.intent)}`}
+            title={`${intentLabel(prefs.intent)} · Masquerade settings`}
+          >
+            {INTENT_ICONS[prefs.intent]({ size: 11, strokeWidth: 2.5 })}
+          </button>
+        </span>
         <div className="min-w-0 flex-1">
           <p className="text-[13px] text-muted">{greeting}</p>
           <p className="truncate text-[19px] leading-tight font-semibold lg:font-display lg:text-[34px]">{profile.display_name}</p>
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            tapFeedback();
-            setMeetOpen(true);
-          }}
-          data-tour="settings"
-          className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-brand/20 bg-brand-soft text-brand transition active:scale-95"
-          aria-label={`Your Masquerade settings: ${intentLabel(prefs.intent)}`}
-          title={`${intentLabel(prefs.intent)} · Masquerade settings`}
-        >
-          {INTENT_ICONS[prefs.intent]({ size: 20, strokeWidth: 2 })}
-        </button>
         <FeedbackButton />
         <Link
           href="/wallet"
