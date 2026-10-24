@@ -16,11 +16,11 @@ Owner setup (about 30 min):
 - [ ] Allow uploads from dashpad.site in the bucket's CORS settings
 
 Build (about 1 day):
-- [ ] Server route that gives the phone a one-time upload link to R2 (same idea as event uploads now)
-- [ ] Phone makes two sizes before upload: full (1280px) and a small preview (~320px)
+- [x] Server route that gives the phone a one-time upload link to R2 (`/api/media/photo`, profile photos)
+- [x] Phone makes two sizes before upload: full (1280px) and a small preview (400px)
 - [ ] Use the small preview on lists, the event wall, chat headers and avatars
 - [ ] Event music, video and covers upload to R2 instead of Supabase storage
-- [ ] Deleting a photo, deleting an account and admin "remove photo" also delete from R2
+- [x] Deleting a photo, deleting an account and admin "remove photo" also delete from R2
 - [ ] One-off script to copy existing photos from Supabase and update profile links (or let old ones phase out)
 - [ ] Later: private chat photos/videos/voice notes to a private R2 bucket with signed links
 

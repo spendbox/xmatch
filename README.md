@@ -73,6 +73,20 @@ Admin has: an **Overview** (members, online now, masquerades, matches, revenue, 
 
 **Feedback**: people tap the help button (life ring) at the top of Home, or "Help and feedback" in the side menu on computers, to send feedback, report a problem, ask for help or share an idea. Messages show in admin → Feedback, where you mark them handled or delete them. Run `supabase/updates/45_feedback.sql` once in Supabase to switch it on.
 
+## Photos on Cloudflare R2 (optional, saves download costs)
+
+New profile photos go to R2 once these are set in Vercel (then redeploy). Until then, Supabase storage is used. Older photos keep working from Supabase.
+
+| Name | Value |
+|---|---|
+| `R2_ACCOUNT_ID` | your Cloudflare account ID |
+| `R2_ACCESS_KEY_ID` | R2 API token's Access Key ID |
+| `R2_SECRET_ACCESS_KEY` | R2 API token's Secret Access Key (keep private) |
+| `R2_BUCKET` | the bucket name, e.g. `dashpad-media` |
+| `NEXT_PUBLIC_MEDIA_URL` | the bucket's address, e.g. `https://media.dashpad.site` |
+
+Also run `supabase/updates/57_r2_photos.sql` (with your media address in it), and allow uploads from dashpad.site in the bucket's CORS settings.
+
 ## Bot protection (Cloudflare Turnstile)
 
 1. In Cloudflare go to **Turnstile → Add widget**. Add the domain `dashpad.site`, choose **Managed**.

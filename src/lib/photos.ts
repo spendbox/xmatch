@@ -12,8 +12,28 @@ async function compress(file: File, maxSize = 1280): Promise<Blob> {
   return new Promise((resolve) => canvas.toBlob((b) => resolve(b ?? file), "image/jpeg", 0.85));
 }
 
+/** Where new photos are served from when they're stored on Cloudflare R2 (empty: Supabase storage) */
+const MEDIA = (process.env.NEXT_PUBLIC_MEDIA_URL ?? "").replace(/\/+$/, "");
+
+/** Uploads straight to R2 with one-time links from the server. Null if R2 isn't switched on. */
+async function uploadToR2(blob: Blob, small: Blob): Promise<string | null> {
+  if (!MEDIA) return null;
+  const res = await fetch("/api/media/photo", { method: "POST" }).catch(() => null);
+  if (!res || res.status === 404) return null;
+  const link = (await res.json().catch(() => null)) as { url?: string; upload?: string; uploadThumb?: string; error?: string } | null;
+  if (!res.ok || !link?.url || !link.upload) throw new Error(link?.error ?? "The upload didn't finish. Please try again.");
+  const put = (to: string, body: Blob) => fetch(to, { method: "PUT", body, headers: { "Content-Type": "image/jpeg", "Cache-Control": "public, max-age=31536000, immutable" } });
+  const done = await put(link.upload, blob).catch(() => null);
+  if (!done?.ok) throw new Error("The upload didn't finish. Please try again.");
+  // The small copy: if it fails, the full one is used
+  if (link.uploadThumb) await put(link.uploadThumb, small).catch(() => null);
+  return link.url;
+}
+
 export async function uploadPhoto(supabase: SupabaseClient, userId: string, file: File) {
   const [blob, small] = await Promise.all([compress(file), compress(file, THUMB_SIZE)]);
+  const onR2 = await uploadToR2(blob, small);
+  if (onR2) return onR2;
   const id = crypto.randomUUID();
   const path = `${userId}/${id}.jpg`;
   const { error } = await supabase.storage.from("photos").upload(path, blob, {
@@ -35,7 +55,8 @@ const THUMB_SUFFIX = "_t";
 /** The small copy of a Dashpad photo (older photos don't have one: use onError to fall back) */
 export function thumbUrl(url: string | null | undefined) {
   if (!url) return url ?? null;
-  return /\/storage\/v1\/object\/public\/photos\/[^?]+\.jpg$/.test(url) && !url.endsWith(`${THUMB_SUFFIX}.jpg`) ? url.replace(/\.jpg$/, `${THUMB_SUFFIX}.jpg`) : url;
+  const ours = /\/storage\/v1\/object\/public\/photos\/[^?]+\.jpg$/.test(url) || (!!MEDIA && url.startsWith(`${MEDIA}/photos/`) && url.endsWith(".jpg"));
+  return ours && !url.endsWith(`${THUMB_SUFFIX}.jpg`) ? url.replace(/\.jpg$/, `${THUMB_SUFFIX}.jpg`) : url;
 }
 
 /** For <img onError>: if the small copy isn't there, show the full photo */
@@ -46,6 +67,10 @@ export function thumbFallback(full: string | null | undefined) {
 }
 
 export async function deletePhoto(supabase: SupabaseClient, url: string) {
+  if (MEDIA && url.startsWith(`${MEDIA}/`)) {
+    await fetch("/api/media/photo", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url }) }).catch(() => null);
+    return;
+  }
   const marker = "/storage/v1/object/public/photos/";
   const i = url.indexOf(marker);
   if (i === -1) return;

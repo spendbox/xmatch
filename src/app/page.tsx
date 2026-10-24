@@ -238,6 +238,12 @@ export default function Landing() {
             <a href="/terms" className="hover:text-brand">Terms</a>
             <a href="/privacy" className="hover:text-brand">Privacy</a>
             <a href="mailto:support@dashpad.site" className="hover:text-brand">Contact</a>
+            <a href="https://x.com/dashpad_connect" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-brand" aria-label="Dashpad on X (@dashpad_connect)">
+              <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="currentColor" aria-hidden="true">
+                <path d="M18.9 2H22l-6.8 7.8L23 22h-6.2l-4.8-6.3L6.4 22H3.3l7.3-8.3L1 2h6.3l4.4 5.8L18.9 2Zm-1.1 18.2h1.7L6.3 3.7H4.5l13.3 16.5Z" />
+              </svg>
+              @dashpad_connect
+            </a>
           </div>
           © {new Date().getFullYear()} Dashpad · dashpad.site · 18+ only
         </footer>

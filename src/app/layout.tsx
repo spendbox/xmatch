@@ -17,6 +17,8 @@ export const metadata: Metadata = {
     siteName: "Dashpad",
     type: "website",
   },
+  // Shared links on X show Dashpad's card and handle
+  twitter: { card: "summary", site: "@dashpad_connect", creator: "@dashpad_connect" },
   appleWebApp: { capable: true, title: "Dashpad", statusBarStyle: "default" },
   icons: { apple: "/apple-touch-icon.png" },
 };

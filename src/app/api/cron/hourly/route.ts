@@ -21,26 +21,52 @@ async function handle(req: Request) {
   const db = createAdminClient();
   // Keep "usually replies in…" fresh: this runs every 5 minutes, 200 people at a time (it pairs quick repliers first)
   await db.rpc("refresh_reply_stats", { p_limit: 200 });
-  const { data: made, error } = await db.rpc("run_hourly_pairing");
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  const { data } = await db.rpc("hourly_pairs_to_notify");
-  const pairs = (data ?? []) as NewPair[];
+  // Pair in batches (each a few seconds) until everyone has had a turn, for up to ~40 seconds;
+  // anyone left is picked up by the next run, 5 minutes later
+  let made = 0;
+  let left = 0;
+  for (;;) {
+    const { data, error } = await db.rpc("run_hourly_pairing_batch", { p_budget: 1500 });
+    if (error) {
+      // Before update 56 runs in Supabase: the old one-call pairing
+      if (/run_hourly_pairing_batch/.test(error.message)) {
+        const old = await db.rpc("run_hourly_pairing");
+        if (old.error) return NextResponse.json({ error: old.error.message }, { status: 500 });
+        made = (old.data as number) ?? 0;
+        break;
+      }
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    const r = data as { made: number; left: number };
+    made += r.made;
+    left = r.left;
+    if (!left || Date.now() - started > 40_000) break;
+  }
+  // Tell each new pair, a chunk at a time while there's time; anyone not told yet is told next run
+  let told = 0;
   let sent = 0;
-  for (let i = 0; i < pairs.length; i += 20) {
-    const res = await Promise.all(
-      pairs.slice(i, i + 20).flatMap((p) => {
-        const until = new Date(p.ends_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: "Africa/Lagos" });
-        const tell = (to: string, them: string) =>
-          pushToUsers([to], {
-            title: "Your new pair is here 🎭",
-            body: `You're paired with ${them} (${intentLabel(p.intent)}) until ${until}. Say hi while you're both masked.`,
-            url: `/masquerade/${p.id}`,
-            tag: `pair-${p.id}`,
-          });
-        return [tell(p.user_a, p.alias_b), tell(p.user_b, p.alias_a)];
-      }),
-    );
-    sent += res.reduce((n, r) => n + r.sent, 0);
+  while (Date.now() - started < 50_000) {
+    const { data } = await db.rpc("hourly_pairs_to_notify", { p_limit: 400 });
+    const pairs = (data ?? []) as NewPair[];
+    if (!pairs.length) break;
+    told += pairs.length;
+    for (let i = 0; i < pairs.length; i += 50) {
+      const res = await Promise.all(
+        pairs.slice(i, i + 50).flatMap((p) => {
+          const until = new Date(p.ends_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: "Africa/Lagos" });
+          const tell = (to: string, them: string) =>
+            pushToUsers([to], {
+              title: "Your new pair is here 🎭",
+              body: `You're paired with ${them} (${intentLabel(p.intent)}) until ${until}. Say hi while you're both masked.`,
+              url: `/masquerade/${p.id}`,
+              tag: `pair-${p.id}`,
+            });
+          return [tell(p.user_a, p.alias_b), tell(p.user_b, p.alias_a)];
+        }),
+      );
+      sent += res.reduce((n, r) => n + r.sent, 0);
+    }
+    if (pairs.length < 400) break;
   }
   // Nudge whoever has gone quiet in a live chat (once per chat)
   const { data: quiet } = await db.rpc("sessions_to_nudge");
@@ -66,7 +92,7 @@ async function handle(req: Request) {
   } catch (e) {
     console.error("pact reveal failed", e);
   }
-  return NextResponse.json({ ok: true, made, told: pairs.length, sent, nudged: nudges.length, pacts });
+  return NextResponse.json({ ok: true, made, left, told, sent, nudged: nudges.length, pacts });
 }
 
 export const GET = handle;
