@@ -199,7 +199,7 @@ export function PactFlow({
               ))}
             </span>
             <span>
-              <b className="tabular-nums" style={{ color: accent }}>{joined.toLocaleString()}</b> {joined === 1 ? "person has" : "people have"} taken the Pact
+              <b className="tabular-nums" style={{ color: accent }}>{joined.toLocaleString()}</b> {joined === 1 ? "person has" : "people have"} answered
             </span>
           </div>
         </div>
