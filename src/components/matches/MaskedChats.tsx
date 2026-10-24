@@ -34,11 +34,24 @@ export function MaskedChats({ term = "", demo, onCount }: { term?: string; demo?
 
   useEffect(() => {
     if (demo) return;
-    supabase.rpc("my_masked_chats").then(({ data }) => {
-      const list = Array.isArray(data) ? (data as MaskedChat[]) : [];
-      setChats(list);
-      onCount?.(list.length);
-    });
+    const load = () =>
+      supabase.rpc("my_masked_chats").then(({ data }) => {
+        const list = Array.isArray(data) ? (data as MaskedChat[]) : [];
+        setChats(list);
+        onCount?.(list.length);
+      });
+    load();
+    // A chat was read (or a message arrived): refresh the unread dots
+    let t: ReturnType<typeof setTimeout> | null = null;
+    const again = () => {
+      if (t) clearTimeout(t);
+      t = setTimeout(load, 700);
+    };
+    window.addEventListener("dp:badges", again);
+    return () => {
+      window.removeEventListener("dp:badges", again);
+      if (t) clearTimeout(t);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase, demo]);
   const paid = usePaidChatPeople(!!demo);
