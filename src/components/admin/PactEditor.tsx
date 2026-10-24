@@ -39,7 +39,7 @@ export function PactEditor({ pact, questions: initial, count, matches }: { pact:
   const { reveal_step: step, reveal_stats: st = {} } = pact as Pact & { reveal_step?: string | null; reveal_stats?: Record<string, number> & { error?: string; failed_at?: string } };
   const progress =
     pact.status !== "revealed" && step === "match"
-      ? "Matching everyone… (this can take a few minutes for a big pact)"
+      ? "Matching everyone… (this can take a few minutes for a big Twin)"
       : pact.status !== "revealed" && step === "ready"
         ? `${plural(st.pairs ?? 0, "match", "matches")} ready from ${people(st.people ?? count)}. Hidden until reveal night.`
         : pact.status === "revealed" && step && step !== "done"
@@ -109,7 +109,7 @@ export function PactEditor({ pact, questions: initial, count, matches }: { pact:
   return (
     <div className="pb-24">
       {pact.status !== "draft" && new Date(pact.closes_at).getTime() <= Date.now() && step !== "done" && <AdminAutoRefresh seconds={10} />}
-      <Link href="/admin/pacts" className="mb-3 inline-flex items-center gap-1.5 text-[14px] font-semibold text-muted"><ArrowLeft size={16} /> Pacts</Link>
+      <Link href="/admin/pacts" className="mb-3 inline-flex items-center gap-1.5 text-[14px] font-semibold text-muted"><ArrowLeft size={16} /> Twin</Link>
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-[32px] leading-tight font-semibold">{pact.name}</h1>
@@ -130,12 +130,12 @@ export function PactEditor({ pact, questions: initial, count, matches }: { pact:
         </div>
         <div className="flex flex-wrap gap-2">
           <Link href={`/admin/pacts/${pact.id}/answers`} className="inline-flex h-11 items-center gap-2 rounded-full border border-line-strong bg-white px-4 text-[14px] font-semibold"><BarChart3 size={16} /> Answers</Link>
-          <a href={`/pact/${pact.slug}?preview=1`} target="_blank" className="inline-flex h-11 items-center gap-2 rounded-full border border-line-strong bg-white px-4 text-[14px] font-semibold"><Eye size={16} /> Preview</a>
+          <a href={`/twin/${pact.slug}?preview=1`} target="_blank" className="inline-flex h-11 items-center gap-2 rounded-full border border-line-strong bg-white px-4 text-[14px] font-semibold"><Eye size={16} /> Preview</a>
           {pact.status !== "draft" && (
-            <a href={`/pact/${pact.slug}`} target="_blank" className="inline-flex h-11 items-center gap-2 rounded-full border border-line-strong bg-white px-4 text-[14px] font-semibold"><ExternalLink size={16} /> Open page</a>
+            <a href={`/twin/${pact.slug}`} target="_blank" className="inline-flex h-11 items-center gap-2 rounded-full border border-line-strong bg-white px-4 text-[14px] font-semibold"><ExternalLink size={16} /> Open page</a>
           )}
           {pact.status === "draft" && (
-            <button disabled={!!busy} onClick={() => run("publish", () => setPactStatus(pact.id, "live"), "Published. The pact is live.")} className="h-11 rounded-full bg-brand px-5 text-[14px] font-semibold text-white disabled:opacity-60">Publish pact</button>
+            <button disabled={!!busy} onClick={() => run("publish", () => setPactStatus(pact.id, "live"), "Published. The Twin is live.")} className="h-11 rounded-full bg-brand px-5 text-[14px] font-semibold text-white disabled:opacity-60">Publish Twin</button>
           )}
           {pact.status === "live" && (
             <button disabled={!!busy} onClick={() => run("draft", () => setPactStatus(pact.id, "draft"), "Moved back to draft.")} className="h-11 rounded-full border border-line-strong bg-white px-4 text-[14px] font-semibold disabled:opacity-60">Unpublish</button>
@@ -158,7 +158,7 @@ export function PactEditor({ pact, questions: initial, count, matches }: { pact:
               {busy === "reveal" ? "Matching…" : sureReveal ? "Tap again to reveal now" : "Reveal now"}
             </button>
           )}
-          <button disabled={!!busy} onClick={() => setDeleting(true)} className="grid h-11 w-11 place-items-center rounded-full border border-line-strong bg-white text-chili disabled:opacity-60" aria-label="Delete pact" title="Delete pact"><Trash2 size={17} /></button>
+          <button disabled={!!busy} onClick={() => setDeleting(true)} className="grid h-11 w-11 place-items-center rounded-full border border-line-strong bg-white text-chili disabled:opacity-60" aria-label="Delete Twin" title="Delete Twin"><Trash2 size={17} /></button>
         </div>
       </div>
 
@@ -169,7 +169,7 @@ export function PactEditor({ pact, questions: initial, count, matches }: { pact:
           <label className="grid gap-1.5">
             <span className="text-[13px] font-semibold">Link</span>
             <span className="flex h-11 items-center overflow-hidden rounded-xl border border-line-strong bg-white focus-within:border-brand">
-              <span className="pl-3.5 text-[14px] text-muted">/pact/</span>
+              <span className="pl-3.5 text-[14px] text-muted">/twin/</span>
               <input id="d-slug" className="h-full min-w-0 flex-1 px-1 text-[15px] font-semibold text-brand outline-none" value={d.slug} onChange={(e) => setD({ ...d, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") })} />
             </span>
           </label>
@@ -177,8 +177,8 @@ export function PactEditor({ pact, questions: initial, count, matches }: { pact:
 
           <label className="grid gap-1.5 md:col-span-2">
             <span className="text-[13px] font-semibold">Main button text (optional)</span>
-            <input id="d-button" className={field} value={d.button_text} maxLength={30} placeholder="Take the Pact" onChange={(e) => setD({ ...d, button_text: e.target.value })} />
-            <span className="text-[12px] text-muted">The big button on the pact page. Leave empty for &quot;Take the Pact&quot;.</span>
+            <input id="d-button" className={field} value={d.button_text} maxLength={30} placeholder="Find my Twin" onChange={(e) => setD({ ...d, button_text: e.target.value })} />
+            <span className="text-[12px] text-muted">The big button on the Twin page. Leave empty for &quot;Find my Twin&quot;.</span>
           </label>
 
           <ImageField label="Logo" hint="Square, at least 400 × 400" value={d.logo_url} round busy={busy === "upload"} onFile={(f) => upload(f, (url) => setD((x) => ({ ...x, logo_url: url })))} onClear={() => setD({ ...d, logo_url: null })} />
@@ -216,7 +216,7 @@ export function PactEditor({ pact, questions: initial, count, matches }: { pact:
           <label className="grid gap-1.5">
             <span className="text-[13px] font-semibold">Only for emails ending in (optional)</span>
             <input id="d-domain" className={field} value={d.email_domain ?? ""} placeholder="e.g. school.edu.ng" onChange={(e) => setD({ ...d, email_domain: e.target.value })} />
-            <span className="text-[12px] text-muted">For school or company pacts. People log in with that email to take part.</span>
+            <span className="text-[12px] text-muted">For school or company Twins. People log in with that email to take part.</span>
           </label>
         </div>
         <div className="mt-5 flex justify-end">
@@ -441,13 +441,13 @@ function DeletePact({ pact, count, onClose, onDeleted }: { pact: Pact; count: nu
   }
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 sm:items-center" onClick={() => !busy && onClose()}>
-      <div role="dialog" aria-label="Delete pact" className="w-full rounded-t-[28px] bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:max-w-md sm:rounded-[28px]" onClick={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-label="Delete Twin" className="w-full rounded-t-[28px] bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:max-w-md sm:rounded-[28px]" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start gap-3">
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-chili-soft text-chili"><Trash2 size={20} /></span>
           <div className="min-w-0 flex-1">
             <h3 className="text-[18px] font-semibold">Delete {pact.name}?</h3>
             <p className="mt-1 text-[13.5px] text-muted">
-              {count > 0 ? `This deletes the pact, its questions, and the answers and matches of ${people(count)}. ` : "This deletes the pact and its questions. "}
+              {count > 0 ? `This deletes the Twin, its questions, and the answers and matches of ${people(count)}. ` : "This deletes the Twin and its questions. "}
               Masked chats people already started stay open. This can&apos;t be undone.
             </p>
           </div>

@@ -8,6 +8,10 @@ const nextConfig: NextConfig = {
   devIndicators: false,
   // Big icebreaker imports (thousands of questions) go through a server action
   experimental: { serverActions: { bodySizeLimit: "4mb" } },
+  // Pacts are now called Twin: old links keep working
+  async redirects() {
+    return [{ source: "/pact/:path*", destination: "/twin/:path*", permanent: true }];
+  },
   images: {
     remotePatterns: [{ protocol: "https", hostname: supabaseHost }],
   },

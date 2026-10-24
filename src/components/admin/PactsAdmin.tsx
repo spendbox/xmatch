@@ -42,18 +42,18 @@ export function PactsAdmin({ pacts }: { pacts: AdminPact[] }) {
     setError(null);
     const r = await createPact(name, slug);
     setBusy(false);
-    if (r.error || !r.id) return setError(r.error ?? "Couldn't create the pact.");
+    if (r.error || !r.id) return setError(r.error ?? "Couldn't create the Twin.");
     router.push(`/admin/pacts/${r.id}`);
   }
 
   return (
     <div>
       <AdminTitle
-        title="Pacts"
+        title="Twin"
         subtitle="Questionnaire events. People answer, and on reveal night everyone gets their one best match."
         action={
           <button onClick={() => setOpen(true)} className="inline-flex h-11 items-center gap-2 rounded-full bg-brand px-5 text-[14px] font-semibold text-white">
-            <Plus size={18} /> New pact
+            <Plus size={18} /> New Twin
           </button>
         }
       />
@@ -68,14 +68,14 @@ export function PactsAdmin({ pacts }: { pacts: AdminPact[] }) {
                 setName(e.target.value);
                 if (!edited) setSlug(slugify(e.target.value));
               }}
-              placeholder="The Lagos Pact"
+              placeholder="Lagos Twin"
               className="h-11 rounded-xl border border-line-strong bg-white px-3.5 text-[15px] outline-none focus:border-brand"
             />
           </label>
           <label className="grid gap-1.5">
             <span className="text-[13px] font-semibold">Link</span>
             <span className="flex h-11 items-center overflow-hidden rounded-xl border border-line-strong bg-white focus-within:border-brand">
-              <span className="pl-3.5 text-[14px] text-muted">/pact/</span>
+              <span className="pl-3.5 text-[14px] text-muted">/twin/</span>
               <input
                 id="pact-slug"
                 value={slug}
@@ -94,7 +94,7 @@ export function PactsAdmin({ pacts }: { pacts: AdminPact[] }) {
         </form>
       )}
       {pacts.length === 0 ? (
-        <p className="rounded-3xl border border-dashed border-line-strong p-8 text-center text-[15px] text-muted">No pacts yet. Create the first one above.</p>
+        <p className="rounded-3xl border border-dashed border-line-strong p-8 text-center text-[15px] text-muted">No Twins yet. Create the first one above.</p>
       ) : (
         <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {pacts.map((p) => {
@@ -116,7 +116,7 @@ export function PactsAdmin({ pacts }: { pacts: AdminPact[] }) {
                       <span className="truncate text-[16px] font-semibold">{p.name}</span>
                       <span className={clsx("shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold", badge[1])}>{badge[0]}</span>
                     </span>
-                    <span className="block truncate text-[13px] text-brand">/pact/{p.slug}</span>
+                    <span className="block truncate text-[13px] text-brand">/twin/{p.slug}</span>
                     <span className="mt-1 block text-[13px] text-muted">
                       <b className="text-ink tabular-nums">{p.count.toLocaleString()}</b> answered
                       {p.matches ? <> · <b className="text-ink tabular-nums">{p.matches.toLocaleString()}</b> {p.matches === 1 ? "match" : "matches"}</> : null} · reveal {pactDate(p.reveal_at)}

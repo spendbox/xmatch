@@ -39,7 +39,7 @@ export function AdminPreview({ pact, questions, count, as }: { pact: Pact; quest
         </div>
         <div className="no-scrollbar mx-auto mt-2 flex max-w-[480px] gap-1.5 overflow-x-auto">
           {STAGES.map((s) => (
-            <Link key={s.id} href={`/pact/${pact.slug}?preview=1&as=${s.id}`} className={"shrink-0 rounded-full px-3 py-1.5 text-[12.5px] font-bold " + (s.id === stage ? "bg-white text-[#1c1310]" : "bg-white/10 text-white/80")}>
+            <Link key={s.id} href={`/twin/${pact.slug}?preview=1&as=${s.id}`} className={"shrink-0 rounded-full px-3 py-1.5 text-[12.5px] font-bold " + (s.id === stage ? "bg-white text-[#1c1310]" : "bg-white/10 text-white/80")}>
               {s.label}
             </Link>
           ))}

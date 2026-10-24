@@ -20,7 +20,7 @@ export default async function RoomPage({ params }: { params: Promise<{ id: strin
   ]);
   // A pact match is revealed with a tap on the pact's page first
   const pactInfo = pact as { name: string; slug: string; seen: boolean } | null;
-  if (pactInfo && !pactInfo.seen) redirect(`/pact/${pactInfo.slug}`);
+  if (pactInfo && !pactInfo.seen) redirect(`/twin/${pactInfo.slug}`);
 
   return (
     <MasqueradeRoom

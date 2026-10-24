@@ -43,7 +43,7 @@ export function PactInsights({ pact, questions, insights: s, people, page, perPa
       </p>
 
       <section className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Tile label="Took the pact" value={s.entries} sub={`${s.today.toLocaleString()} in the last 24 hours`} />
+        <Tile label="Answered" value={s.entries} sub={`${s.today.toLocaleString()} in the last 24 hours`} />
         <Tile label="Have an account" value={s.with_account} sub={`${pct(s.with_account, s.entries)}% of everyone`} />
         <Tile label="Matches made" value={s.matches.total} sub={s.matches.total ? `${peopleCount(peopleMatched)} · ${pct(peopleMatched, s.entries)}% matched` : stage ?? "After answers close"} accent />
         <Tile label="Average match" value={s.matches.avg_score ?? 0} suffix="%" sub={s.matches.total ? "how alike pairs are" : "—"} />
