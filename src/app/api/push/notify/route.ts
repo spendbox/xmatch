@@ -125,7 +125,7 @@ export async function POST(req: Request) {
     if (!s || s.user_a !== uid || s.source !== "explore" || s.status !== "active" || Date.now() - new Date(s.started_at as string).getTime() > RECENT_MS) return ok;
     await pushToUsers([s.user_b as string], {
       title: `${s.alias_a} wants to chat 🎭`,
-      body: "They found you on Meet. You're both masked until you both unmask.",
+      body: "They found you on Meet and can see who you are. You can’t see them until you both unmask.",
       url: `/masquerade/${s.id}`,
       tag: `masked-${s.id}`,
     });
