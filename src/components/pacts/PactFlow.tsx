@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { ArrowLeft, ArrowRight, Bell, Briefcase, Check, Flame, Heart, Minus, Plus, Share2, Users } from "lucide-react";
 import { INTENTS, WORK, pactPhase, people, type PactView, type About, type Answer, type Answers, type Pact, type PactIntent, type PactQuestion } from "@/lib/pacts";
@@ -30,6 +31,7 @@ export function PactFlow({
   result,
   demoStep,
   preview,
+  edit,
 }: {
   pact: Pact;
   questions: PactQuestion[];
@@ -43,12 +45,15 @@ export function PactFlow({
   demoStep?: { step: Step; qi?: number };
   /** Admin preview: everything works, but nothing is saved */
   preview?: boolean;
+  /** Opened from your "You're in" card: go straight to your answers to change them */
+  edit?: boolean;
 }) {
   const sample = !!demoStep || !!preview;
   const accent = pact.accent;
   const phase = pactPhase(pact);
   const draftKey = `dp_pact_draft_${pact.slug}`;
-  const [step, setStep] = useState<Step>(demoStep?.step ?? "intro");
+  const router = useRouter();
+  const [step, setStep] = useState<Step>(demoStep?.step ?? (edit && questions.length && pactPhase(pact) === "open" ? "q" : "intro"));
   const [qi, setQi] = useState(demoStep?.qi ?? 0);
   const [answers, setAnswers] = useState<Answers>(mine?.answers ?? {});
   const [about, setAbout] = useState<Partial<About>>(mine?.about ? { ...mine.about, intents: (mine.about.intents ?? []).slice(0, 1) } : { intents: [], seeking: [], age: 25, ageMin: 21, ageMax: 35 });
@@ -152,6 +157,8 @@ export function PactFlow({
     if (!taken) setJoined((n) => n + 1);
     setTaken(true);
     setStep("done");
+    // So Home and this page show your saved answers next time
+    router.refresh();
   }
 
   // ---------------------------------------------------------------- reveal night

@@ -25,7 +25,10 @@ export default async function HomePage() {
     getMatches(),
   ]);
   // The soonest open pact, if any, sits with the events
-  const pact = (await livePacts().catch(() => [])).find((p) => new Date(p.closes_at).getTime() > Date.now()) ?? null;
+  const open = (await livePacts().catch(() => [])).find((p) => new Date(p.closes_at).getTime() > Date.now()) ?? null;
+  // Already answered it: the card opens your answers to change them
+  const { data: mine } = open ? await supabase.from("pact_entries").select("id").eq("pact_id", open.id).eq("user_id", user.id).maybeSingle() : { data: null };
+  const pact = open ? { ...open, taken: !!mine } : null;
 
   return (
     <HomeScreen

@@ -8,6 +8,18 @@ const site = () => (process.env.NEXT_PUBLIC_SITE_URL ?? "https://dashpad.site").
 const PACT_COLS = "id, slug, name, tagline, logo_url, header_url, accent, intents, areas, email_domain, button_text, closes_at, reveal_at, status, matched_at";
 const Q_COLS = "id, position, kind, title, subtitle, options, min_pick, max_pick, weight";
 
+/** How many people have answered each pact, counted now (the stored total only updates once a minute) */
+async function liveCounts(ids: string[], stored: Map<string, number>) {
+  const db = createAdminClient();
+  const counts = await Promise.all(
+    ids.map(async (id) => {
+      const { count, error } = await db.from("pact_entries").select("id", { count: "exact", head: true }).eq("pact_id", id);
+      return error || count === null ? stored.get(id) ?? 0 : count;
+    }),
+  );
+  return new Map(ids.map((id, i) => [id, counts[i]]));
+}
+
 /** A published pact with its questions and how many people have answered */
 export async function loadPact(slug: string, opts: { drafts?: boolean } = {}) {
   const db = createAdminClient();
@@ -16,15 +28,20 @@ export async function loadPact(slug: string, opts: { drafts?: boolean } = {}) {
   const { data } = await q.maybeSingle();
   if (!data) return null;
   const { entries_count, ...pact } = data as Pact & { entries_count: number };
-  const { data: questions } = await db.from("pact_questions").select(Q_COLS).eq("pact_id", pact.id).order("position");
-  return { pact: pact as Pact, questions: (questions ?? []) as PactQuestion[], count: entries_count ?? 0 };
+  const [{ data: questions }, counts] = await Promise.all([
+    db.from("pact_questions").select(Q_COLS).eq("pact_id", pact.id).order("position"),
+    liveCounts([pact.id], new Map([[pact.id, entries_count ?? 0]])),
+  ]);
+  return { pact: pact as Pact, questions: (questions ?? []) as PactQuestion[], count: counts.get(pact.id) ?? 0 };
 }
 
 /** Live pacts for the Events page */
 export async function livePacts() {
   const db = createAdminClient();
   const { data } = await db.from("pacts").select(`${PACT_COLS}, entries_count`).neq("status", "draft").gt("reveal_at", new Date(Date.now() - 3 * 86400_000).toISOString()).order("reveal_at");
-  return ((data ?? []) as (Pact & { entries_count: number })[]).map(({ entries_count, ...p }) => ({ ...p, count: entries_count ?? 0 }));
+  const rows = (data ?? []) as (Pact & { entries_count: number })[];
+  const counts = await liveCounts(rows.map((r) => r.id), new Map(rows.map((r) => [r.id, r.entries_count ?? 0])));
+  return rows.map(({ entries_count: _, ...p }) => ({ ...p, count: counts.get(p.id) ?? 0 }));
 }
 
 /**

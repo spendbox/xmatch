@@ -5,14 +5,14 @@ import { pactPhase, type Pact } from "@/lib/pacts";
 import { PactLogo } from "./PactBits";
 import { pactDate } from "@/lib/pacts";
 
-export type PactListItem = Pact & { count: number };
+export type PactListItem = Pact & { count: number; taken?: boolean };
 
 /** A pact shown as an event: header, logo, how many have answered, and when it reveals */
 export function PactCard({ pact, compact }: { pact: PactListItem; compact?: boolean }) {
   const phase = pactPhase(pact);
   const when = phase === "open" ? `Answers close ${pactDate(pact.closes_at)}` : phase === "closed" ? `Matching now · reveal ${pactDate(pact.reveal_at)}` : phase === "matching" ? "Matches arriving now" : "Matches are out";
   return (
-    <Link href={`/twin/${pact.slug}`} className="group relative block overflow-hidden rounded-[28px] bg-[#140d24] text-white shadow-card transition active:scale-[0.98]">
+    <Link href={phase === "open" && pact.taken ? `/twin/${pact.slug}?edit=1` : `/twin/${pact.slug}`} className="group relative block overflow-hidden rounded-[28px] bg-[#140d24] text-white shadow-card transition active:scale-[0.98]">
       <div className={compact ? "relative h-24" : "relative h-36"}>
         {pact.header_url ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -30,7 +30,11 @@ export function PactCard({ pact, compact }: { pact: PactListItem; compact?: bool
         <div className="min-w-0 flex-1">
           <h3 className="truncate font-display text-[19px] leading-tight font-bold">{pact.name}</h3>
           <p className="mt-0.5 truncate text-[13px] text-white/70">
-            <b className="text-white tabular-nums">{pact.count.toLocaleString()}</b> answered · {when}
+            {phase === "open" && pact.taken ? (
+              <><b className="text-white">You&apos;re in</b> · tap to change your answers</>
+            ) : (
+              <><b className="text-white tabular-nums">{pact.count.toLocaleString()}</b> answered · {when}</>
+            )}
           </p>
         </div>
       </div>
