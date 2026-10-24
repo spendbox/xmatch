@@ -4,10 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { ArrowDown, ArrowLeft, ArrowUp, ExternalLink, ImagePlus, Plus, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, BarChart3, ExternalLink, Eye, ImagePlus, Plus, Trash2, X } from "lucide-react";
 import { deletePact, retryPactReveal, revealPactNow, savePactDetails, savePactQuestions, setPactStatus, type PactDetails } from "@/app/admin/(panel)/pacts/actions";
 import { ART_LIBRARY, INTENTS, KIND_LABEL, art, MAX_QUESTIONS, SEED_QUESTIONS, WEIGHT_LABEL, pactPhase, people, plural, type Pact, type PactIntent, type PactQuestion, type QuestionKind, type Weight } from "@/lib/pacts";
 import { uploadEventFile } from "./eventUpload";
+import { AdminAutoRefresh } from "./AdminAutoRefresh";
 
 const ACCENTS = ["#f2c45a", "#ff7ab0", "#2ee88b", "#7cc8ff", "#c48bff", "#ff8a4c", "#ffffff"];
 // Reveal times are set in Lagos time (no daylight saving, always UTC+1)
@@ -102,6 +103,7 @@ export function PactEditor({ pact, questions: initial, count, matches }: { pact:
 
   return (
     <div className="pb-24">
+      {pact.status !== "draft" && new Date(pact.closes_at).getTime() <= Date.now() && step !== "done" && <AdminAutoRefresh seconds={10} />}
       <Link href="/admin/pacts" className="mb-3 inline-flex items-center gap-1.5 text-[14px] font-semibold text-muted"><ArrowLeft size={16} /> Pacts</Link>
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
@@ -122,6 +124,8 @@ export function PactEditor({ pact, questions: initial, count, matches }: { pact:
           )}
         </div>
         <div className="flex flex-wrap gap-2">
+          <Link href={`/admin/pacts/${pact.id}/answers`} className="inline-flex h-11 items-center gap-2 rounded-full border border-line-strong bg-white px-4 text-[14px] font-semibold"><BarChart3 size={16} /> Answers</Link>
+          <a href={`/pact/${pact.slug}?preview=1`} target="_blank" className="inline-flex h-11 items-center gap-2 rounded-full border border-line-strong bg-white px-4 text-[14px] font-semibold"><Eye size={16} /> Preview</a>
           {pact.status !== "draft" && (
             <a href={`/pact/${pact.slug}`} target="_blank" className="inline-flex h-11 items-center gap-2 rounded-full border border-line-strong bg-white px-4 text-[14px] font-semibold"><ExternalLink size={16} /> Open page</a>
           )}

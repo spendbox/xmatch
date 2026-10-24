@@ -8978,3 +8978,89 @@ language sql stable security definer set search_path = public as $$
     and (m.id is null or (o.user_id is null and m.created_at < now() - interval '48 hours'))
 $$;
 revoke execute on function public.pact_stranded(uuid) from public, anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Part 43: One summary of a pact for the admin page: how people answered each
+-- question, who took part, and how matching went (live while it's matching).
+-- Only the server can call it. Also: the "people have taken the Pact" number is now
+-- recounted every minute, instead of on every answer (that slowed answering down a lot
+-- when many people answered at the same time).
+-- ---------------------------------------------------------------------------
+drop trigger if exists pact_entries_count on public.pact_entries;
+drop function if exists public.pact_entries_count();
+create or replace function public.refresh_pact_counts() returns void
+language sql security definer set search_path = public as $$
+  update pacts p set entries_count = c.n
+  from (select p2.id, (select count(*) from pact_entries e where e.pact_id = p2.id) n
+        from pacts p2 where p2.status <> 'revealed' or p2.reveal_at > now() - interval '3 days') c
+  where p.id = c.id and p.entries_count is distinct from c.n;
+$$;
+revoke execute on function public.refresh_pact_counts() from public, anon, authenticated;
+select public.refresh_pact_counts();
+
+create or replace function public.pact_insights(p_pact uuid) returns json
+language sql stable security definer set search_path = public as $$
+  with e as (select * from pact_entries where pact_id = p_pact),
+  picks as (
+    -- every answer as (question, option): one row per pick for "pick a few", the number for sliders
+    select j.key as q, coalesce(x.value, j.value #>> '{}') as a
+    from e
+    cross join lateral jsonb_each(e.answers) j
+    left join lateral jsonb_array_elements_text(case when jsonb_typeof(j.value) = 'array' then j.value else '[]'::jsonb end) x on true
+    where jsonb_typeof(j.value) <> 'array' or x.value is not null
+  ),
+  m as (select * from pact_matches where pact_id = p_pact)
+  select json_build_object(
+    'entries', (select count(*) from e),
+    'with_account', (select count(*) from e where user_id is not null),
+    'today', (select count(*) from e where created_at > now() - interval '24 hours'),
+    'answers', (select coalesce(json_agg(json_build_object('q', q, 'a', a, 'n', n)), '[]'::json) from (select q, a, count(*) n from picks group by q, a) t),
+    'answered', (select coalesce(json_object_agg(q, n), '{}'::json) from (select j.key q, count(*) n from e cross join lateral jsonb_each(e.answers) j group by j.key) t),
+    'intents', (select coalesce(json_object_agg(k, n), '{}'::json) from (select x k, count(*) n from e cross join lateral jsonb_array_elements_text(coalesce(e.about -> 'intents', '[]'::jsonb)) x group by x) t),
+    'gender', (select coalesce(json_object_agg(k, n), '{}'::json) from (select e.about ->> 'gender' k, count(*) n from e where e.about ? 'gender' group by 1) t),
+    'areas', (select coalesce(json_object_agg(k, n), '{}'::json) from (select e.about ->> 'area' k, count(*) n from e where e.about ? 'area' group by 1) t),
+    'work', (select coalesce(json_object_agg(k, n), '{}'::json) from (select e.about ->> 'work' k, count(*) n from e where e.about ? 'work' group by 1) t),
+    'ages', (select coalesce(json_object_agg(k, n), '{}'::json) from (
+      select case when a < 22 then '18-21' when a < 26 then '22-25' when a < 31 then '26-30' when a < 36 then '31-35' when a < 46 then '36-45' else '46+' end k, count(*) n
+      from (select (e.about ->> 'age')::int a from e where e.about ? 'age') x group by 1) t),
+    'matches', json_build_object(
+      'total', (select count(*) from m),
+      'rematches', (select count(*) from m where rematch),
+      'avg_score', (select round(avg(score)) from m),
+      'by_intent', (select coalesce(json_object_agg(intent, n), '{}'::json) from (select intent, count(*) n from m group by intent) t),
+      'seen', (select count(*) from e where match_seen_at is not null),
+      'chats', (select count(*) from m where session_id is not null),
+      'both_joined', (select count(*) from m join pact_entries a on a.id = m.a join pact_entries b on b.id = m.b where a.user_id is not null and b.user_id is not null)
+    )
+  )
+$$;
+revoke execute on function public.pact_insights(uuid) from public, anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Part 44: School and company pacts confirm the email: we send a link to it, and only
+-- people who tap it are matched. "Send my link" can go out once every 10 minutes at most.
+-- Deleting a Dashpad account now deletes that person's pact answers too.
+-- ---------------------------------------------------------------------------
+alter table public.pact_entries add column if not exists verified_at timestamptz;
+alter table public.pact_entries add column if not exists verify_token text not null default replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', '');
+alter table public.pact_entries add column if not exists link_sent_at timestamptz;
+create unique index if not exists pact_entries_verify_token on public.pact_entries (verify_token);
+
+-- Answers go with the account when it's deleted
+alter table public.pact_entries drop constraint if exists pact_entries_user_id_fkey;
+alter table public.pact_entries add constraint pact_entries_user_id_fkey foreign key (user_id) references public.profiles (id) on delete cascade;
+
+-- Rematches only include people who confirmed their email, for school and company pacts
+create or replace function public.pact_stranded(p_pact uuid)
+returns table (id uuid, about jsonb, answers jsonb, match_id bigint)
+language sql stable security definer set search_path = public as $$
+  select e.id, e.about, e.answers, m.id
+  from pact_entries e
+  join pacts p on p.id = e.pact_id
+  left join pact_matches m on m.pact_id = e.pact_id and e.id in (m.a, m.b)
+  left join pact_entries o on o.id = case when m.a = e.id then m.b else m.a end
+  where e.pact_id = p_pact and e.user_id is not null
+    and (p.email_domain is null or e.verified_at is not null)
+    and (m.id is null or (o.user_id is null and m.created_at < now() - interval '48 hours'))
+$$;
+revoke execute on function public.pact_stranded(uuid) from public, anon, authenticated;
