@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { ArrowDown, ArrowLeft, ArrowUp, BarChart3, ExternalLink, Eye, ImagePlus, Plus, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, BarChart3, ExternalLink, Eye, ImagePlus, ListPlus, Plus, Trash2, X } from "lucide-react";
 import { deletePact, retryPactReveal, revealPactNow, savePactDetails, savePactQuestions, setPactStatus, type PactDetails } from "@/app/admin/(panel)/link-ups/actions";
 import { ART_LIBRARY, INTENTS, KIND_LABEL, art, MAX_QUESTIONS, SEED_QUESTIONS, WEIGHT_LABEL, pactPhase, people, plural, type Pact, type PactIntent, type PactQuestion, type QuestionKind, type Weight } from "@/lib/pacts";
 import { uploadEventFile } from "./eventUpload";
@@ -318,6 +318,29 @@ function ImageField({ label, hint, value, round, busy, onFile, onClear }: { labe
 function QuestionForm({ q, patch, upload, busy }: { q: PactQuestion; patch: (p: Partial<PactQuestion>) => void; upload: (f: File | undefined, set: (url: string) => void) => void; busy: boolean }) {
   const fixed = q.kind === "this_or_that" || q.kind === "scale";
   const [picking, setPicking] = useState<string | null>(null);
+  // Add many answers at once: one per line
+  const [bulk, setBulk] = useState<string | null>(null);
+  const bulkLines = (bulk ?? "").split(/\r?\n/).map((l) => l.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, "").trim().slice(0, 60)).filter(Boolean);
+  // The lines that aren't already answers (repeats skipped)
+  const bulkNew = (() => {
+    const have = new Set(q.options.map((o) => o.label.trim().toLowerCase()).filter(Boolean));
+    const out: string[] = [];
+    for (const l of bulkLines) {
+      const k = l.toLowerCase();
+      if (have.has(k)) continue;
+      have.add(k);
+      out.push(l);
+    }
+    return out;
+  })();
+  const addBulk = () => {
+    const fresh = bulkNew.slice();
+    // Fill empty answer boxes first, then add new ones (40 at most)
+    const opts = q.options.map((o) => (!o.label.trim() && fresh.length ? { ...o, label: fresh.shift()! } : o));
+    const room = Math.max(0, 40 - opts.length);
+    patch({ options: [...opts, ...fresh.slice(0, room).map((label) => ({ id: newId(), label }))] });
+    setBulk(null);
+  };
   const setOpt = (id: string, p: Partial<PactQuestion["options"][number]>) => patch({ options: q.options.map((o) => (o.id === id ? { ...o, ...p } : o)) });
   return (
     <div className="grid grid-cols-1 gap-4 border-t border-line px-3 py-4 sm:px-4 md:grid-cols-2">
@@ -368,8 +391,31 @@ function QuestionForm({ q, patch, upload, busy }: { q: PactQuestion; patch: (p: 
             )}
           </div>
         ))}
-        {!fixed && q.options.length < 40 && (
-          <button type="button" onClick={() => patch({ options: [...q.options, { id: newId(), label: "" }] })} className="inline-flex h-10 w-fit items-center gap-1.5 rounded-full border border-dashed border-line-strong px-4 text-[13.5px] font-semibold text-ink-soft"><Plus size={15} /> Add an answer</button>
+        {!fixed && q.options.length < 40 && bulk === null && (
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => patch({ options: [...q.options, { id: newId(), label: "" }] })} className="inline-flex h-10 w-fit items-center gap-1.5 rounded-full border border-dashed border-line-strong px-4 text-[13.5px] font-semibold text-ink-soft"><Plus size={15} /> Add an answer</button>
+            <button type="button" onClick={() => setBulk("")} className="inline-flex h-10 w-fit items-center gap-1.5 rounded-full border border-dashed border-line-strong px-4 text-[13.5px] font-semibold text-ink-soft"><ListPlus size={15} /> Add many at once</button>
+          </div>
+        )}
+        {!fixed && bulk !== null && (
+          <div className="grid gap-2 rounded-2xl border border-line-strong bg-cream/50 p-3">
+            <span className="text-[13px] font-semibold">Type or paste answers, one per line</span>
+            <textarea
+              autoFocus
+              rows={6}
+              value={bulk}
+              onChange={(e) => setBulk(e.target.value)}
+              placeholder={"Burna Boy\nWizkid\nDavido\nTems"}
+              className="w-full resize-y rounded-xl border border-line-strong bg-white p-3 text-[15px] leading-relaxed outline-none focus:border-brand"
+            />
+            <span className="text-[12px] text-muted">
+              {bulkLines.length ? `${bulkNew.length} new${bulkLines.length > bulkNew.length ? `, ${bulkLines.length - bulkNew.length} already there` : ""}` : "Nothing yet"} · up to 40 answers in total · pictures can be added after
+            </span>
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setBulk(null)} className="h-10 rounded-full border border-line-strong bg-white px-4 text-[13.5px] font-semibold">Cancel</button>
+              <button type="button" disabled={!bulkNew.length} onClick={addBulk} className="h-10 rounded-full bg-brand px-4 text-[13.5px] font-semibold text-white disabled:opacity-50">Add {bulkNew.length || ""} {bulkNew.length === 1 ? "answer" : "answers"}</button>
+            </div>
+          </div>
         )}
       </div>
       {picking && (
