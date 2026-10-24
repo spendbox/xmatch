@@ -98,9 +98,12 @@ export function PactFlow({
       if (d?.answers) setAnswers(d.answers);
       if (d?.about) setAbout(d.about);
       if (savedPactTokens().some((t) => t.slug === pact.slug)) setTaken(true);
+      // Answered everything, then signed up, but it wasn't saved: go straight to the last step to join
+      else if (signedIn && phase === "open" && !new URL(window.location.href).searchParams.has("resume") && d?.answers && d?.about && !aboutProblem(d.about, pact) && questions.every((qq) => answered(qq, d.answers[qq.id]))) setStep("finish");
     } catch {
       /* nothing saved */
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draftKey, mine, sample, pact.slug]);
   useEffect(() => {
     if (sample) return;

@@ -38,7 +38,9 @@ export function takeAfterJoin(): string | null {
   try {
     const v = localStorage.getItem(AFTER_JOIN);
     if (v) localStorage.removeItem(AFTER_JOIN);
-    return v && /^\/pact\/[a-z0-9-]+(\?resume=1)?$/.test(v) ? v : null;
+    // Link-Up pages live at /link/…; older saves may say /pact/, /twin/ or /link-up/
+    const m = v?.match(/^\/(?:link|link-up|pact|twin)\/([a-z0-9-]+)(\?resume=1)?$/);
+    return m ? `/link/${m[1]}${m[2] ?? ""}` : null;
   } catch {
     return null;
   }
