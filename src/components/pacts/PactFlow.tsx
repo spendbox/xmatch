@@ -294,33 +294,33 @@ export function PactFlow({
     ].filter(Boolean).join(" · ");
     return (
       <Shell pact={pact}>
-        <form onSubmit={submit} className="flex min-h-full flex-1 flex-col px-[18px] pt-4 pb-[max(1.3rem,env(safe-area-inset-bottom))]">
-          <div className="flex items-center gap-2.5 px-1">
+        <form onSubmit={submit} className="flex min-h-full min-w-0 flex-1 flex-col px-4 pt-4 pb-32">
+          <div className="flex min-w-0 items-center gap-2.5 px-1">
             <button type="button" onClick={back} aria-label="Back" className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/[0.08]">
               <ArrowLeft size={20} />
             </button>
             <PactLogo pact={pact} size={32} />
             <span className="min-w-0 flex-1 truncate text-[14px] font-bold text-white/80">{pact.name}</span>
           </div>
-          <h1 className="mt-5 px-1 font-display text-[29px] leading-tight font-bold">Your answers</h1>
+          <h1 className="mt-5 px-1 font-display text-[27px] leading-tight font-bold">Your answers</h1>
           <p className="mt-1 px-1 text-[14px] text-white/65">Tap any answer to change it, then save.</p>
-          <ul className="mt-4 grid gap-2">
+          <ul className="mt-4 grid min-w-0 grid-cols-1 gap-2">
             {questions.map((qq, i) => (
-              <li key={qq.id}>
-                <button type="button" onClick={() => (setError(null), setQi(i), setStep("q"))} className="flex w-full items-center gap-3 rounded-2xl bg-white/[0.06] px-4 py-3 text-left transition active:bg-white/[0.1]">
+              <li key={qq.id} className="min-w-0">
+                <button type="button" onClick={() => (setError(null), setQi(i), setStep("q"))} className="flex w-full min-w-0 items-center gap-3 rounded-2xl bg-white/[0.06] px-3.5 py-3 text-left transition active:bg-white/[0.1]">
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[12.5px] font-semibold text-white/55">{qq.title}</span>
-                    <span className="block truncate text-[15px] font-bold">{answerLabel(qq, answers[qq.id]) || <span className="text-[#ffb4b4]">Not answered</span>}</span>
+                    <span className="line-clamp-2 block text-[15px] leading-snug font-bold break-words">{answerLabel(qq, answers[qq.id]) || <span className="text-[#ffb4b4]">Not answered</span>}</span>
                   </span>
                   <ArrowRight size={16} className="shrink-0 text-white/40" />
                 </button>
               </li>
             ))}
-            <li>
-              <button type="button" onClick={() => (setError(null), setStep("about"))} className="flex w-full items-center gap-3 rounded-2xl bg-white/[0.06] px-4 py-3 text-left transition active:bg-white/[0.1]">
+            <li className="min-w-0">
+              <button type="button" onClick={() => (setError(null), setStep("about"))} className="flex w-full min-w-0 items-center gap-3 rounded-2xl bg-white/[0.06] px-3.5 py-3 text-left transition active:bg-white/[0.1]">
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[12.5px] font-semibold text-white/55">About you</span>
-                  <span className="block truncate text-[15px] font-bold">{aboutLine || "Not filled in"}</span>
+                  <span className="line-clamp-2 block text-[15px] leading-snug font-bold break-words">{aboutLine || "Not filled in"}</span>
                 </span>
                 <ArrowRight size={16} className="shrink-0 text-white/40" />
               </button>
@@ -332,8 +332,8 @@ export function PactFlow({
               <input type="email" inputMode="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={`you@${domain}`} className="rounded-2xl border border-white/20 bg-white/[0.06] px-4 text-[16px] outline-none focus:border-white/50" style={{ height: 52 }} />
             </label>
           )}
-          <div className="flex-1" />
-          {error && <p className="mt-4 rounded-2xl bg-[#e5484d]/15 px-4 py-3 text-[14px] font-semibold text-[#ffb4b4]" role="alert">{error}</p>}
+          <div className="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-[480px] bg-gradient-to-t from-[#160d2e] via-[#160d2e] to-transparent px-4 pt-6 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          {error && <p className="mb-3 rounded-2xl bg-[#e5484d]/15 px-4 py-3 text-[14px] font-semibold text-[#ffb4b4]" role="alert">{error}</p>}
           <button
             type="submit"
             disabled={busy}
@@ -345,11 +345,12 @@ export function PactFlow({
                 setError(msg);
               }
             }}
-            className="mt-5 h-14 rounded-full text-[16.5px] font-extrabold text-[#1c1310] disabled:opacity-60"
+            className="h-14 w-full rounded-full text-[16.5px] font-extrabold text-[#1c1310] shadow-lift disabled:opacity-60"
             style={{ background: accent }}
           >
             {busy ? "Saving…" : "Save changes"}
           </button>
+          </div>
         </form>
       </Shell>
     );
