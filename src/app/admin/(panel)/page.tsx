@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/admin";
 import { AdminOverview, type Overview } from "@/components/admin/AdminOverview";
 import type { AdminNight } from "@/components/admin/NightsList";
+import { StorageCheck } from "@/components/admin/StorageCheck";
 
 export default async function AdminHome() {
   await requireAdmin();
@@ -18,5 +19,10 @@ export default async function AdminHome() {
   const days = new Set((prompts ?? []).map((p) => p.day as string));
   let ahead = 0;
   for (const d = new Date(today + "T12:00:00Z"); days.has(d.toISOString().slice(0, 10)); d.setUTCDate(d.getUTCDate() + 1)) ahead++;
-  return <AdminOverview overview={overview as Overview} nights={(nights ?? []) as AdminNight[]} promptsAhead={ahead} />;
+  return (
+    <>
+      <AdminOverview overview={overview as Overview} nights={(nights ?? []) as AdminNight[]} promptsAhead={ahead} />
+      <StorageCheck />
+    </>
+  );
 }

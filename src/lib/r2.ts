@@ -66,3 +66,48 @@ export async function deletePhotoFolder(userId: string) {
   if (!r2Enabled() || !/^[0-9a-f-]{36}$/i.test(userId)) return;
   await deleteKeys(await listKeys(`photos/${userId}/`));
 }
+
+/** For the admin storage check: write, read back from the public address, and delete a tiny test file */
+export async function testR2(): Promise<{ step: string; ok: boolean; detail?: string }[]> {
+  const out: { step: string; ok: boolean; detail?: string }[] = [];
+  const key = `_check/test-${Date.now()}.txt`;
+  try {
+    const put = await r2().fetch(objectUrl(key), { method: "PUT", body: "ok", headers: { "Content-Type": "text/plain" } });
+    const text = put.ok ? "" : await put.text().catch(() => "");
+    const code = text.match(/<Code>([^<]+)<\/Code>/)?.[1];
+    out.push({
+      step: "Save a test file to the bucket",
+      ok: put.ok,
+      detail: put.ok
+        ? undefined
+        : code === "NoSuchBucket"
+          ? `Bucket "${process.env.R2_BUCKET}" wasn't found. Check R2_BUCKET is exactly the bucket's name.`
+          : put.status === 403 || code === "AccessDenied" || code === "InvalidAccessKeyId" || code === "SignatureDoesNotMatch"
+            ? "Cloudflare refused the keys. Check R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY, and that the API token has Object Read & Write on this bucket."
+            : `Cloudflare said ${put.status}${code ? ` (${code})` : ""}.`,
+    });
+    if (!put.ok) return out;
+  } catch (e) {
+    out.push({ step: "Save a test file to the bucket", ok: false, detail: `Couldn't reach R2 (${e instanceof Error ? e.message : "network error"}). Check R2_ACCOUNT_ID.` });
+    return out;
+  }
+  try {
+    const read = await fetch(publicUrl(key), { cache: "no-store" });
+    out.push({
+      step: `Open it from ${mediaBase()}`,
+      ok: read.ok,
+      detail: read.ok ? undefined : `Got ${read.status}. In the bucket's Settings, connect the custom domain (${mediaBase().replace(/^https?:\/\//, "")}) and make sure it says Active.`,
+    });
+  } catch (e) {
+    out.push({ step: `Open it from ${mediaBase()}`, ok: false, detail: `Couldn't open ${mediaBase()} (${e instanceof Error ? e.message : "network error"}). The custom domain may not be connected yet, or NEXT_PUBLIC_MEDIA_URL has a typo.` });
+  }
+  const del = await r2().fetch(objectUrl(key), { method: "DELETE" }).catch(() => null);
+  out.push({ step: "Delete the test file", ok: !!del?.ok, detail: del?.ok ? undefined : "Couldn't delete it. The API token needs Object Read & Write." });
+  return out;
+}
+
+/** For the admin storage check: an upload link the browser uses to test the bucket's CORS settings */
+export async function testUploadLink() {
+  const key = `_check/browser-${Date.now()}.txt`;
+  return { key, upload: await uploadLink(key) };
+}
