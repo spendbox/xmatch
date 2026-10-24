@@ -9,9 +9,11 @@ const PACT_COLS = "id, slug, name, tagline, logo_url, header_url, accent, intent
 const Q_COLS = "id, position, kind, title, subtitle, options, min_pick, max_pick, weight";
 
 /** A published pact with its questions and how many people have answered */
-export async function loadPact(slug: string) {
+export async function loadPact(slug: string, opts: { drafts?: boolean } = {}) {
   const db = createAdminClient();
-  const { data } = await db.from("pacts").select(`${PACT_COLS}, entries_count`).eq("slug", slug).neq("status", "draft").maybeSingle();
+  let q = db.from("pacts").select(`${PACT_COLS}, entries_count`).eq("slug", slug);
+  if (!opts.drafts) q = q.neq("status", "draft");
+  const { data } = await q.maybeSingle();
   if (!data) return null;
   const { entries_count, ...pact } = data as Pact & { entries_count: number };
   const { data: questions } = await db.from("pact_questions").select(Q_COLS).eq("pact_id", pact.id).order("position");
@@ -387,6 +389,8 @@ async function tellPage(pact: Pact, page: { user_id: string | null; email: strin
 /** For the every-minute job: matches pacts whose answers have closed, and reveals them at reveal time, until the deadline */
 export async function revealDuePacts(deadline: number) {
   const db = createAdminClient();
+  // "4,127 people have taken the Pact": recounted here, once a minute
+  await db.rpc("refresh_pact_counts");
   const now = new Date().toISOString();
   const { data } = await db
     .from("pacts")

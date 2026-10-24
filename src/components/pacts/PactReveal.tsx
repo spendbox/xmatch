@@ -12,12 +12,12 @@ import { AFTER_JOIN, rememberToken } from "./pactTokens";
 export type { RevealMatch };
 
 /** Reveal night: a teaser to tap (an account is needed to reveal), then your match and how to say hi */
-export function PactReveal({ pact, view, signedIn, total, token }: { pact: Pact; view: PactView; signedIn: boolean; total: number; /** The private link's token, kept on this phone so the match follows them into their new account */ token?: string }) {
+export function PactReveal({ pact, view, signedIn, total, token, preview }: { pact: Pact; view: PactView; signedIn: boolean; total: number; /** The private link's token, kept on this phone so the match follows them into their new account */ token?: string; /** Admin preview: the button just shows the next stage */ preview?: boolean }) {
   useEffect(() => {
     if (token) rememberToken(pact.slug, token);
   }, [token, pact.slug]);
   if (view.kind === "none") return <NoMatch pact={pact} lost={view.lost} signedIn={signedIn} total={total} />;
-  if (view.kind === "teaser") return <Teaser pact={pact} view={view} signedIn={signedIn} total={total} />;
+  if (view.kind === "teaser") return <Teaser pact={pact} view={view} signedIn={signedIn} total={total} preview={preview} />;
   return <Revealed pact={pact} match={view.match} signedIn={signedIn} total={total} />;
 }
 
@@ -47,7 +47,7 @@ export function GoldStar({ size = 22, className }: { size?: number; className?: 
   );
 }
 
-function Teaser({ pact, view, signedIn, total }: { pact: Pact; view: Extract<PactView, { kind: "teaser" }>; signedIn: boolean; total: number }) {
+function Teaser({ pact, view, signedIn, total, preview }: { pact: Pact; view: Extract<PactView, { kind: "teaser" }>; signedIn: boolean; total: number; preview?: boolean }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -87,7 +87,11 @@ function Teaser({ pact, view, signedIn, total }: { pact: Pact; view: Extract<Pac
       </div>
       <div className="flex-1" />
       <div className="mt-8 grid gap-2">
-        {signedIn ? (
+        {preview ? (
+          <Link href={`/pact/${pact.slug}?preview=1&as=revealed`} className="flex h-14 items-center justify-center rounded-full text-[16.5px] font-extrabold text-[#1c1310]" style={{ background: accent }}>
+            Join Dashpad to reveal
+          </Link>
+        ) : signedIn ? (
           <button onClick={reveal} disabled={busy} className="flex h-14 items-center justify-center gap-2 rounded-full text-[16.5px] font-extrabold text-[#1c1310] transition active:scale-[0.98] disabled:opacity-70" style={{ background: accent }}>
             <MaskIcon className="w-7" eyes={accent} /> {busy ? "Revealing…" : "Reveal my match"}
           </button>

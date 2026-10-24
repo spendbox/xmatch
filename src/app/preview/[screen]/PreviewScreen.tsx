@@ -54,6 +54,8 @@ import { PactCard } from "@/components/pacts/PactCard";
 import { MaskedChats } from "@/components/matches/MaskedChats";
 import { PactsAdmin } from "@/components/admin/PactsAdmin";
 import { PactEditor } from "@/components/admin/PactEditor";
+import { PactInsights } from "@/components/admin/PactInsights";
+import { AdminPreview } from "@/components/pacts/AdminPreview";
 import type { ExploreList, ExploreProfile } from "@/lib/explore";
 
 const photo = (a: string, b: string, letter: string) =>
@@ -753,6 +755,35 @@ function ScreenBody({ screen }: { screen: string }) {
         { id: demoPact.id, slug: "lagos-pact", name: "The Lagos Pact", accent: "#f2c45a", logo_url: null, status: "live", closes_at: demoPact.closes_at, reveal_at: demoPact.reveal_at, matched_at: null, created_at: iso(86400 * 3), count: 4127, matches: 0 },
         { id: "p2", slug: "unilag-pact", name: "UNILAG Pact", accent: "#7cc8ff", logo_url: null, status: "draft", closes_at: demoPact.closes_at, reveal_at: demoPact.reveal_at, matched_at: null, created_at: iso(3600), count: 0, matches: 0 },
       ]} /></AdminShell>;
+    case "admin-pact-preview":
+      return <AdminPreview pact={{ ...demoPact, status: "draft" }} questions={demoQs} count={0} as="open" />;
+    case "admin-pact-answers": {
+      const n = 4127;
+      const split = (q: number, shares: number[]) => shares.map((f, k) => ({ q: `q${q}`, a: String.fromCharCode(97 + k), n: Math.round(n * f) }));
+      return (
+        <AdminShell>
+          <PactInsights
+            pact={{ ...demoPact, closes_at: iso(3600), reveal_at: new Date(now + 9 * 3600_000).toISOString(), reveal_step: "ready", reveal_stats: {} }}
+            questions={demoQs}
+            insights={{
+              entries: n, with_account: 1630, today: 412,
+              answers: [...split(0, [0.58, 0.42]), ...split(1, [0.47, 0.53]), ...split(2, [0.71, 0.29]), ...split(3, [0.62, 0.38]), ...split(4, [0.55, 0.45]), ...split(5, [0.61, 0.52, 0.44, 0.48, 0.57, 0.33, 0.29, 0.18, 0.21, 0.24, 0.27, 0.19, 0.12, 0.15, 0.09, 0.22]), ...split(6, [0.31, 0.27, 0.16, 0.18, 0.08]), ...[1, 2, 3, 4, 5].map((v, k) => ({ q: "q7", a: String(v), n: Math.round(n * [0.08, 0.17, 0.33, 0.27, 0.15][k]) })), ...split(8, [0.66, 0.34]), ...split(9, [0.52, 0.48])],
+              answered: Object.fromEntries(demoQs.map((q) => [q.id, n])),
+              intents: { business: 1720, friendship: 2480, love: 1950, spicy: 690 }, gender: { woman: 2190, man: 1937 }, areas: { Island: 2310, Mainland: 1817 },
+              work: { Tech: 520, Finance: 310, "Creative & media": 280, "Building my own thing": 390, Student: 220 },
+              ages: { "18-21": 610, "22-25": 1380, "26-30": 1240, "31-35": 560, "36-45": 270, "46+": 67 },
+              matches: { total: 1896, rematches: 0, avg_score: 84, by_intent: { love: 760, spicy: 210, business: 480, friendship: 446 }, seen: 0, chats: 0, both_joined: 412 },
+            }}
+            people={[
+              { id: "p1", email: "tolu.a@gmail.com", user_id: "u1", created_at: iso(300), match_seen_at: null, about: { gender: "woman", intents: ["business", "love"], seeking: ["man"], age: 27, ageMin: 25, ageMax: 35, area: "Island", work: "Tech" }, answers: { q0: "b", q1: "a", q2: "a", q3: "a", q4: "a", q5: ["d", "e"], q6: "b", q7: 2, q8: "a", q9: "a" } },
+              { id: "p2", email: "kemi@yahoo.com", user_id: null, created_at: iso(900), match_seen_at: null, about: { gender: "woman", intents: ["friendship"], seeking: [], age: 23, ageMin: 20, ageMax: 30, area: "Mainland" }, answers: { q0: "a", q1: "b", q2: "b", q3: "a", q4: "b", q5: ["a", "b", "c"], q6: "a", q7: 5, q8: "b", q9: "b" } },
+            ]}
+            page={1}
+            perPage={50}
+          />
+        </AdminShell>
+      );
+    }
     case "admin-pact":
       return <AdminShell><PactEditor pact={demoPact} questions={demoQs} count={4127} matches={0} /></AdminShell>;
     case "pact-home-card":

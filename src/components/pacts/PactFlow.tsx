@@ -29,6 +29,7 @@ export function PactFlow({
   mine,
   result,
   demoStep,
+  preview,
 }: {
   pact: Pact;
   questions: PactQuestion[];
@@ -40,7 +41,10 @@ export function PactFlow({
   result: PactView | null;
   /** Previews only */
   demoStep?: { step: Step; qi?: number };
+  /** Admin preview: everything works, but nothing is saved */
+  preview?: boolean;
 }) {
+  const sample = !!demoStep || !!preview;
   const accent = pact.accent;
   const phase = pactPhase(pact);
   const draftKey = `dp_pact_draft_${pact.slug}`;
@@ -57,7 +61,7 @@ export function PactFlow({
 
   // Pick up where you left off (on this phone)
   useEffect(() => {
-    if (mine || demoStep) return;
+    if (mine || sample) return;
     try {
       const d = JSON.parse(localStorage.getItem(draftKey) ?? "null");
       if (d?.answers) setAnswers(d.answers);
@@ -66,15 +70,15 @@ export function PactFlow({
     } catch {
       /* nothing saved */
     }
-  }, [draftKey, mine, demoStep, pact.slug]);
+  }, [draftKey, mine, sample, pact.slug]);
   useEffect(() => {
-    if (demoStep) return;
+    if (sample) return;
     try {
       localStorage.setItem(draftKey, JSON.stringify({ answers, about }));
     } catch {
       /* private mode */
     }
-  }, [answers, about, draftKey, demoStep]);
+  }, [answers, about, draftKey, sample]);
 
   const q = questions[qi];
   const total = questions.length;
@@ -104,7 +108,7 @@ export function PactFlow({
 
   async function submit(e?: React.FormEvent) {
     e?.preventDefault();
-    if (demoStep) return setStep("done");
+    if (sample) return setStep("done");
     setBusy(true);
     setError(null);
     const human = form.current ? (new FormData(form.current).get("cf-turnstile-response") as string | null) : null;
@@ -141,7 +145,7 @@ export function PactFlow({
     return (
       <Shell pact={pact}>
         {result ? (
-          <PactReveal pact={pact} view={result} signedIn={signedIn} total={joined} />
+          <PactReveal pact={pact} view={result} signedIn={signedIn} total={joined} preview={preview} />
         ) : (
           <RevealLookup pact={pact} />
         )}
