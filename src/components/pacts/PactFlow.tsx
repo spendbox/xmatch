@@ -7,6 +7,7 @@ import clsx from "clsx";
 import { ArrowLeft, ArrowRight, Bell, Briefcase, Check, Flame, Heart, Minus, Plus, Share2, Users } from "lucide-react";
 import { INTENTS, WORK, pactPhase, people, type PactView, type About, type Answer, type Answers, type Pact, type PactIntent, type PactQuestion } from "@/lib/pacts";
 import { Turnstile } from "@/components/ui/Turnstile";
+import { MaskIcon } from "@/components/ui/MaskIcon";
 import { Countdown, OptionArt, PactLogo, PactMatching } from "./PactBits";
 import { pactDate } from "@/lib/pacts";
 import { PactReveal } from "./PactReveal";
@@ -204,8 +205,11 @@ export function PactFlow({
   if (step === "intro") {
     const closed = phase === "closed";
     return (
-      <Shell pact={pact}>
-        <Header pact={pact} />
+      <Shell pact={pact} wide>
+        {/* Computers: picture and name on the left, countdown and button on the right */}
+        <div className="flex flex-1 flex-col lg:grid lg:grid-cols-2">
+        <div className="flex flex-col lg:border-r lg:border-white/10 lg:pb-14">
+        <Header pact={pact} className="lg:h-auto lg:min-h-[340px] lg:flex-1" />
         <div className="relative -mt-11 flex flex-col items-center px-6 text-center">
           <span className="rounded-full border-4 border-[#160d2e] shadow-lift">
             <PactLogo pact={pact} />
@@ -215,7 +219,9 @@ export function PactFlow({
             {pact.tagline || `Answer ${total} questions. On reveal night, everyone gets their one best match.`}
           </p>
         </div>
-        <div className="mx-5 mt-6 rounded-[22px] border p-4" style={{ background: "#22163f", borderColor: `${accent}40` }}>
+        </div>
+        <div className="flex flex-1 flex-col lg:justify-center lg:px-4 lg:py-10">
+        <div className="mx-5 mt-6 rounded-[22px] border p-4 lg:mt-0" style={{ background: "#22163f", borderColor: `${accent}40` }}>
           <Countdown to={pact.closes_at} accent={accent} label="Answers close in" />
           <div className="mt-3.5 flex items-center justify-center gap-2.5 border-t border-white/10 pt-3 text-[14px] font-semibold">
             <span className="flex">
@@ -236,8 +242,8 @@ export function PactFlow({
             </li>
           ))}
         </ol>
-        <div className="flex-1" />
-        <div className="grid gap-2.5 px-5 pt-6 pb-[max(1.6rem,env(safe-area-inset-bottom))]">
+        <div className="flex-1 lg:hidden" />
+        <div className="grid gap-2.5 px-5 pt-6 pb-[max(1.6rem,env(safe-area-inset-bottom))] lg:pt-8 lg:pb-0">
           {closed ? (
             <p className="rounded-2xl bg-white/[0.07] px-4 py-3.5 text-center text-[14.5px] text-white/85">
               {taken ? "You're in. Answers are closed, and your match arrives on reveal night." : "Answers are closed for this Link-Up. Reveal night is coming."}
@@ -248,6 +254,8 @@ export function PactFlow({
             </button>
           )}
           <p className="text-center text-[12px] text-white/55">Free with a Dashpad account · answers stay private · 18+</p>
+        </div>
+        </div>
         </div>
       </Shell>
     );
@@ -376,7 +384,7 @@ export function PactFlow({
   };
   const progress = step === "q" ? (qi + 1) / (total + 2) : step === "about" ? (total + 1) / (total + 2) : 1;
   return (
-    <Shell pact={pact}>
+    <Shell pact={pact} side={<SideInfo pact={pact} joined={joined} />}>
       <form ref={form} onSubmit={submit} className="flex min-h-full flex-1 flex-col px-[18px] pt-4 pb-[max(1.3rem,env(safe-area-inset-bottom))]">
         <div className="flex items-center gap-2.5 px-1">
           <button type="button" onClick={back} aria-label="Back" className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/[0.08]">
@@ -499,19 +507,65 @@ function aboutProblem(a: Partial<About>, pact: Pact) {
 
 // ---------------------------------------------------------------- pieces
 
-function Shell({ pact, children }: { pact: Pact; children: React.ReactNode }) {
+/**
+ * The page around the Link-Up. Phones: full screen. Computers: the Link-Up's colours (or a soft
+ * copy of its header picture) behind a card, Dashpad's name on top, and on wide screens the
+ * Link-Up's details beside the questions.
+ */
+function Shell({ pact, children, side, wide }: { pact: Pact; children: React.ReactNode; side?: React.ReactNode; wide?: boolean }) {
   return (
-    <div className="min-h-dvh bg-[#0d0820] text-[#fbf4e6]">
-      <div className="relative mx-auto flex min-h-dvh max-w-[480px] flex-col overflow-hidden bg-[#160d2e] lg:my-6 lg:min-h-[calc(100dvh-3rem)] lg:rounded-[32px] lg:shadow-2xl" style={{ ["--pact" as string]: pact.accent }}>
-        {children}
+    <div className="relative min-h-dvh overflow-hidden bg-[#0d0820] text-[#fbf4e6]">
+      <div aria-hidden className="pointer-events-none absolute inset-0 hidden lg:block">
+        {pact.header_url && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={pact.header_url} alt="" className="h-full w-full scale-110 object-cover opacity-20 blur-2xl" />
+        )}
+        <div className="absolute inset-0" style={{ background: `radial-gradient(45% 55% at 12% 18%, ${pact.accent}38 0%, transparent 70%), radial-gradient(40% 50% at 90% 85%, #6a2a6e66 0%, transparent 70%)` }} />
+      </div>
+      <header className="relative mx-auto hidden max-w-6xl items-center justify-between px-8 pt-6 lg:flex">
+        <Link href="/" className="inline-flex items-center gap-2.5" aria-label="Dashpad home">
+          <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#5b3fd9]">
+            <MaskIcon className="w-6 text-white" eyes="#5b3fd9" />
+          </span>
+          <span className="font-display text-[20px] font-semibold">Dashpad</span>
+        </Link>
+        <span className="rounded-full border border-white/15 px-3 py-1 text-[12.5px] font-semibold text-white/70">Link-Up</span>
+      </header>
+      <div className="relative mx-auto flex max-w-6xl items-start justify-center gap-14 lg:px-8 lg:pt-5 lg:pb-8">
+        {side && <aside className="sticky top-8 hidden w-[340px] shrink-0 pt-6 xl:block">{side}</aside>}
+        <div
+          className={clsx("relative flex min-h-dvh w-full max-w-[480px] flex-col overflow-hidden", wide && "lg:max-w-[980px]") + " bg-[#160d2e] lg:min-h-[calc(100dvh-7.5rem)] lg:rounded-[32px] lg:shadow-2xl lg:ring-1 lg:ring-white/10"}
+          style={{ ["--pact" as string]: pact.accent }}
+        >
+          {children}
+        </div>
       </div>
     </div>
   );
 }
 
-function Header({ pact }: { pact: Pact }) {
+/** Beside the questions on wide screens: what this Link-Up is and when it closes */
+function SideInfo({ pact, joined }: { pact: Pact; joined: number }) {
   return (
-    <div className="relative h-[260px] shrink-0">
+    <div>
+      <PactLogo pact={pact} size={72} />
+      <h2 className="mt-5 font-display text-[34px] leading-[1.05] font-bold tracking-tight [text-wrap:balance]">{pact.name}</h2>
+      {pact.tagline && <p className="mt-3 text-[16px] leading-relaxed text-white/75">{pact.tagline}</p>}
+      <div className="mt-6 rounded-[22px] border p-4" style={{ background: "#22163f99", borderColor: `${pact.accent}40` }}>
+        <Countdown to={pact.closes_at} accent={pact.accent} label="Answers close in" />
+      </div>
+      <p className="mt-4 text-[14.5px] text-white/70">
+        <b className="tabular-nums" style={{ color: pact.accent }}>{joined.toLocaleString()}</b> {joined === 1 ? "person has" : "people have"} answered
+      </p>
+      <p className="mt-1 text-[14.5px] text-white/70">Reveal night: {pactDate(pact.reveal_at)}</p>
+      <p className="mt-6 text-[12.5px] text-white/45">Your answers stay private. Only your one match is revealed, masked.</p>
+    </div>
+  );
+}
+
+function Header({ pact, className }: { pact: Pact; className?: string }) {
+  return (
+    <div className={clsx("relative h-[260px] shrink-0", className)}>
       {pact.header_url ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={pact.header_url} alt="" className="absolute inset-0 h-full w-full object-cover" />
