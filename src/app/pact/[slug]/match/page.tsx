@@ -16,7 +16,7 @@ export default async function PactMatchPage({ params, searchParams }: { params: 
   if (!loaded || !t || !/^[0-9a-f]{64}$/.test(t)) notFound();
   const { pact, count } = loaded;
   const { user } = await getAuth();
-  if (user) await claimEntries(user.id, user.email, [t]);
+  if (user) await claimEntries(user.id, [t]);
   const result = await resultFor(pact.id, { token: t });
   if (!result) notFound();
   return (

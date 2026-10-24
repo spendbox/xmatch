@@ -28,10 +28,9 @@ export async function POST(req: Request) {
   if (!user && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return NextResponse.json({ error: "Enter your email so we can send you your match." }, { status: 400 });
   if (!user && isThrowaway(email)) return NextResponse.json({ error: "Please use your real email. Your match is sent there." }, { status: 400 });
   if (pact.email_domain) {
-    // School and company pacts: only for verified accounts with that email
+    // School and company pacts: that email only, and it gets a link to confirm it's theirs before matching
     const domain = pact.email_domain.replace(/^@/, "").toLowerCase();
-    if (!user) return NextResponse.json({ error: `Log in with your ${domain} email to take this pact.`, login: true }, { status: 400 });
-    if (!(user.email ?? "").toLowerCase().endsWith("@" + domain)) return NextResponse.json({ error: `This pact is only for ${domain} emails.` }, { status: 400 });
+    if (!email.endsWith("@" + domain)) return NextResponse.json({ error: user ? `This pact is only for ${domain} emails, and your Dashpad account uses a different one.` : `This pact is only for ${domain} emails. Use yours.` }, { status: 400 });
   }
   email = email.slice(0, 200);
   // This phone's id lives in a cookie for two years
@@ -40,7 +39,7 @@ export async function POST(req: Request) {
   const device = known && /^[0-9a-f-]{36}$/.test(known) ? known : randomUUID();
 
   const saved = await saveEntry({ pact, questions, about, answers, email: email || null, userId: user?.id ?? null, token: typeof body.token === "string" ? body.token : null, device });
-  const res = NextResponse.json("error" in saved ? { error: saved.error } : { token: saved.token }, { status: "error" in saved ? 400 : 200 });
+  const res = NextResponse.json("error" in saved ? { error: saved.error } : { token: saved.token, confirm: !!saved.confirm }, { status: "error" in saved ? 400 : 200 });
   if (device !== known) res.cookies.set(DEVICE, device, { httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 730 });
   return res;
 }

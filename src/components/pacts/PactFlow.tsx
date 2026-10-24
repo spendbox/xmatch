@@ -57,6 +57,8 @@ export function PactFlow({
   const [error, setError] = useState<string | null>(null);
   const [taken, setTaken] = useState<boolean>(!!mine);
   const [joined, setJoined] = useState(count);
+  // School and company pacts: the inbox we sent a confirmation link to
+  const [confirmTo, setConfirmTo] = useState<string | null>(null);
   const form = useRef<HTMLFormElement>(null);
 
   // Pick up where you left off (on this phone)
@@ -122,6 +124,7 @@ export function PactFlow({
     setBusy(false);
     if (!res?.ok || !data.token) return setError(data.error ?? "Something went wrong. Please try again.");
     rememberToken(pact.slug, data.token);
+    setConfirmTo(data.confirm ? (signedIn ? null : email) ?? "your" : null);
     try {
       localStorage.removeItem(draftKey);
     } catch {
@@ -217,6 +220,14 @@ export function PactFlow({
             <b className="tabular-nums" style={{ color: accent }}>{people(joined)}</b> so far. Your match arrives {pactDate(pact.reveal_at)}.
           </p>
         </div>
+        {confirmTo && (
+          <p className="mx-5 mt-5 flex items-start gap-2.5 rounded-2xl border px-4 py-3.5 text-left text-[14px] leading-relaxed" style={{ borderColor: `${accent}66`, background: `${accent}14` }}>
+            <Bell size={18} className="mt-0.5 shrink-0" style={{ color: accent }} />
+            <span>
+              <b>One more step:</b> we sent a link to {confirmTo === "your" ? "your email" : <b>{confirmTo}</b>}. Tap it to confirm it&apos;s yours. You&apos;ll only be matched once you do.
+            </span>
+          </p>
+        )}
         {signedIn ? (
           <div className="mx-5 mt-6 grid gap-3 text-center">
             <p className="rounded-2xl bg-white/[0.07] px-4 py-3.5 text-[14.5px] leading-relaxed text-white/85">We&apos;ll send you a notification the moment your match drops. It also shows on your profile.</p>
@@ -295,7 +306,7 @@ export function PactFlow({
                   autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@email.com"
+                  placeholder={pact.email_domain ? `you@${pact.email_domain.replace(/^@/, "")}` : "you@email.com"}
                   className="h-13 rounded-2xl border border-white/20 bg-white/[0.06] px-4 text-[16px] outline-none focus:border-white/50"
                   style={{ height: 52 }}
                 />
@@ -306,9 +317,9 @@ export function PactFlow({
                 <Turnstile />
               </div>
             )}
-            {pact.email_domain && !signedIn && (
+            {pact.email_domain && (
               <p className="mt-4 rounded-2xl bg-white/[0.07] px-4 py-3 text-[13.5px] text-white/80">
-                This pact is for {pact.email_domain.replace(/^@/, "")} emails. <Link href={`/login`} className="font-bold underline">Log in</Link> with yours to join.
+                This pact is for {pact.email_domain.replace(/^@/, "")} emails{signedIn ? "" : ". Use yours"}. We&apos;ll send a link to confirm it&apos;s yours.
               </p>
             )}
           </div>

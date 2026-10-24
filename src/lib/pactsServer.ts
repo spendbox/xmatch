@@ -45,19 +45,17 @@ async function addThings(userId: string, questions: PactQuestion[], answers: Ans
 }
 
 /**
- * Attaches pact answers to a Dashpad account: the ones taken on this phone (their private
- * tokens) and the ones taken with the account's email. Starts any matches' masked chats.
+ * Attaches pact answers to a Dashpad account, from their private tokens: kept on the phone
+ * that took the pact, or in the link emailed to them. Never by email address alone: Dashpad
+ * doesn't confirm account emails, so anyone could sign up with someone else's. Starts any
+ * matches' masked chats.
  */
-export async function claimEntries(userId: string, email: string | null, tokens: string[] = []) {
+export async function claimEntries(userId: string, tokens: string[] = []) {
   const db = createAdminClient();
   const found = new Map<string, { id: string; pact_id: string; user_id: string | null; answers: Answers }>();
   const cleanTokens = tokens.filter((t) => /^[0-9a-f]{64}$/.test(t)).slice(0, 20);
   if (cleanTokens.length) {
     const { data } = await db.from("pact_entries").select("id, pact_id, user_id, answers").in("token", cleanTokens);
-    (data ?? []).forEach((e) => found.set(e.id as string, e as never));
-  }
-  if (email) {
-    const { data } = await db.from("pact_entries").select("id, pact_id, user_id, answers").eq("email_key", emailKey(email));
     (data ?? []).forEach((e) => found.set(e.id as string, e as never));
   }
   let claimed = 0;
@@ -91,11 +89,46 @@ type SubmitInput = {
   device: string | null;
 };
 
-const SAME_EMAIL = "Someone already took this pact with that email. If it was you, open the Pact on the phone you used, or log in to Dashpad with that email to change your answers.";
+const SAME_EMAIL = "Someone already took this pact with that email. If it was you, open the Pact on the phone you used to change your answers.";
+const SAME_EMAIL_MINE = "You already took this pact with this email, on another phone or before you joined. We've emailed you a link: open it here to add those answers to your account.";
 const SAME_PHONE = "This pact has already been taken on this phone. One entry per person keeps the matches real. Tap “Edit my answers” to change yours.";
 
 /** Saves someone's answers. Returns their private token, or a message saying what went wrong. */
-export async function saveEntry(i: SubmitInput): Promise<{ token: string } | { error: string }> {
+export async function saveEntry(i: SubmitInput): Promise<{ token: string; confirm?: boolean } | { error: string }> {
+  const r = await saveEntryInner(i);
+  // School and company pacts: the email is confirmed with a link before anyone is matched
+  if ("token" in r && i.pact.email_domain) return { ...r, confirm: await askToConfirm(i.pact, r.token) };
+  return r;
+}
+
+/** Emails a confirmation link unless the entry is already confirmed. Returns true while it still needs confirming. */
+async function askToConfirm(pact: Pact, token: string) {
+  const db = createAdminClient();
+  const { data: e } = await db.from("pact_entries").select("id, email, verified_at, verify_token, link_sent_at").eq("pact_id", pact.id).eq("token", token).maybeSingle();
+  if (!e || e.verified_at) return false;
+  if (!e.email) return true;
+  if (!e.link_sent_at || Date.now() - new Date(e.link_sent_at as string).getTime() > 10 * 60_000) {
+    await db.from("pact_entries").update({ link_sent_at: new Date().toISOString() }).eq("id", e.id);
+    const link = `${site()}/pact/${pact.slug}/confirm?c=${e.verify_token}`;
+    const m = eventEmail({ heading: "Confirm your email", message: `Tap below to confirm this is your email. You'll only be matched in ${pact.name} once you do.`, title: pact.name, when: "Before answers close", kind: "Pact", link, button: "Confirm my email", footer: "You're getting this because this email was used to take this pact. If it wasn't you, ignore this." });
+    await sendEmailsEach([{ to: e.email as string, subject: `Confirm your email for ${pact.name}`, ...m }]);
+  }
+  return true;
+}
+
+/** The link from the confirmation email */
+export async function confirmEntry(slug: string, code: string) {
+  if (!/^[0-9a-f]{64}$/.test(code)) return null;
+  const loaded = await loadPact(slug);
+  if (!loaded) return null;
+  const db = createAdminClient();
+  const { data: e } = await db.from("pact_entries").select("id, verified_at").eq("pact_id", loaded.pact.id).eq("verify_token", code).maybeSingle();
+  if (!e) return null;
+  if (!e.verified_at) await db.from("pact_entries").update({ verified_at: new Date().toISOString() }).eq("id", e.id);
+  return loaded.pact;
+}
+
+async function saveEntryInner(i: SubmitInput): Promise<{ token: string } | { error: string }> {
   const db = createAdminClient();
   if (pactPhase(i.pact) !== "open") return { error: "This pact has closed. Reveal night is coming." };
   const row = { pact_id: i.pact.id, about: i.about, answers: i.answers, updated_at: new Date().toISOString() };
@@ -113,7 +146,9 @@ export async function saveEntry(i: SubmitInput): Promise<{ token: string } | { e
     // Editing from the phone that took it (it keeps the private link), maybe with a new email
     const { data: own } = await db.from("pact_entries").select("id, user_id").eq("pact_id", i.pact.id).eq("token", i.token).maybeSingle();
     if (own && !own.user_id) {
-      const { error } = await db.from("pact_entries").update({ ...row, ...(key ? { email, email_key: key } : {}) }).eq("id", own.id);
+      const { data: was } = await db.from("pact_entries").select("email_key").eq("id", own.id).single();
+      const changed = !!key && key !== was?.email_key;
+      const { error } = await db.from("pact_entries").update({ ...row, ...(changed ? { email, email_key: key, verified_at: null, link_sent_at: null } : {}) }).eq("id", own.id);
       if (error) return { error: error.code === "23505" ? SAME_EMAIL : "We couldn't save your answers. Please try again." };
       return { token: i.token };
     }
@@ -123,8 +158,15 @@ export async function saveEntry(i: SubmitInput): Promise<{ token: string } | { e
     const { data: same } = await db.from("pact_entries").select("id, token, user_id").eq("pact_id", i.pact.id).eq("email_key", key).maybeSingle();
     if (same) {
       // Only the person who took it (their phone has the token, or it's their account) can change it
-      const theirs = (i.token && i.token === same.token) || (i.userId && same.user_id === i.userId) || (i.userId && !same.user_id);
-      if (!theirs) return { error: SAME_EMAIL };
+      const theirs = (i.token && i.token === same.token) || (i.userId && same.user_id === i.userId);
+      if (!theirs) {
+        // Signed in with that email: prove it's their inbox with the emailed link (account emails aren't confirmed)
+        if (i.userId && !same.user_id) {
+          await resendLink(i.pact, email!);
+          return { error: SAME_EMAIL_MINE };
+        }
+        return { error: SAME_EMAIL };
+      }
       await db.from("pact_entries").update({ ...row, ...(i.userId ? { user_id: i.userId } : {}) }).eq("id", same.id);
       if (i.userId) await addThings(i.userId, i.questions, i.answers);
       return { token: same.token as string };
@@ -299,16 +341,21 @@ export async function runReveal(pactId: string, deadline: number): Promise<Revea
 }
 
 /** Everyone in the pact, in the same order every time, loaded 1,000 at a time (10 pages at once) */
-async function loadEntries(pactId: string) {
+async function loadEntries(pactId: string, confirmedOnly: boolean) {
   const db = createAdminClient();
-  const { count } = await db.from("pact_entries").select("id", { count: "exact", head: true }).eq("pact_id", pactId);
+  // School and company pacts only match people who confirmed their email
+  let counting = db.from("pact_entries").select("id", { count: "exact", head: true }).eq("pact_id", pactId);
+  if (confirmedOnly) counting = counting.not("verified_at", "is", null);
+  const { count } = await counting;
   const pages = Math.ceil((count ?? 0) / 1000);
   const out: Entry[] = [];
   for (let p = 0; p < pages; p += 10) {
     const got = await Promise.all(
-      Array.from({ length: Math.min(10, pages - p) }, (_, k) =>
-        db.from("pact_entries").select("id, about, answers").eq("pact_id", pactId).order("id").range((p + k) * 1000, (p + k) * 1000 + 999),
-      ),
+      Array.from({ length: Math.min(10, pages - p) }, (_, k) => {
+        let q = db.from("pact_entries").select("id, about, answers").eq("pact_id", pactId);
+        if (confirmedOnly) q = q.not("verified_at", "is", null);
+        return q.order("id").range((p + k) * 1000, (p + k) * 1000 + 999);
+      }),
     );
     for (const g of got) {
       if (g.error) throw g.error;
@@ -329,7 +376,7 @@ async function matchStep(pact: Pact, left: () => number): Promise<{ people: numb
   // About 15 seconds per 100,000 people to load and match, more to save: wait for a run with enough time
   const need = 6000 + (count ?? 0) * 0.3;
   if (left() < need) return null;
-  const [{ data: qs }, entries] = await Promise.all([db.from("pact_questions").select(Q_COLS).eq("pact_id", pact.id).order("position"), loadEntries(pact.id)]);
+  const [{ data: qs }, entries] = await Promise.all([db.from("pact_questions").select(Q_COLS).eq("pact_id", pact.id).order("position"), loadEntries(pact.id, !!pact.email_domain)]);
   const pairs = matchEveryone((qs ?? []) as PactQuestion[], entries);
 
   // Matches a stopped run already saved
@@ -485,8 +532,11 @@ async function rematchPact(pact: Pact) {
 /** Emails someone their private result link again */
 export async function resendLink(pact: Pact, email: string) {
   const db = createAdminClient();
-  const { data: e } = await db.from("pact_entries").select("token, email").eq("pact_id", pact.id).eq("email_key", emailKey(email)).maybeSingle();
+  const { data: e } = await db.from("pact_entries").select("id, token, email, link_sent_at").eq("pact_id", pact.id).eq("email_key", emailKey(email)).maybeSingle();
   if (!e?.email) return;
+  // At most once every 10 minutes, so nobody can flood someone's inbox
+  if (e.link_sent_at && Date.now() - new Date(e.link_sent_at as string).getTime() < 10 * 60_000) return;
+  await db.from("pact_entries").update({ link_sent_at: new Date().toISOString() }).eq("id", e.id);
   const link = `${site()}/pact/${pact.slug}/match?t=${e.token}`;
   const m = eventEmail({ heading: "Your Pact link", message: "Here's your private link. Keep it safe: it shows your match on reveal night.", title: pact.name, when: "Reveal night", kind: "Pact", link, button: "Open my Pact", footer: "You're getting this because you asked for your pact link." });
   await sendEmailsEach([{ to: e.email as string, subject: `Your link for ${pact.name}`, ...m }]);

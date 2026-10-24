@@ -4,7 +4,7 @@ import { getAuth } from "@/lib/auth";
 import { isAdmin } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/server";
 import { pactPhase, type About, type Answers } from "@/lib/pacts";
-import { claimEntries, loadPact, resultFor } from "@/lib/pactsServer";
+import { loadPact, resultFor } from "@/lib/pactsServer";
 import { PactFlow } from "@/components/pacts/PactFlow";
 import { AdminPreview } from "@/components/pacts/AdminPreview";
 
@@ -39,7 +39,6 @@ export default async function PactPage({ params, searchParams }: { params: Promi
   let mine: { about: About; answers: Answers } | null = null;
   let result = null;
   if (user) {
-    await claimEntries(user.id, user.email);
     const { data } = await createAdminClient().from("pact_entries").select("about, answers").eq("pact_id", pact.id).eq("user_id", user.id).maybeSingle();
     if (data) mine = data as { about: About; answers: Answers };
     if (pactPhase(pact) === "revealed" && mine) result = await resultFor(pact.id, { userId: user.id });
