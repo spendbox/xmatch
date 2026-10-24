@@ -54,8 +54,24 @@ export function MasqueradeRoom({
   const [state, setState] = useState(initial);
   // A chat you paid to start on Meet: you saw their name and photo there, so their name shows (photo blurred)
   const paidPeople = usePaidChatPeople(!!demo);
-  const known = paidPeople[state.id];
+  const paidChat = paidPeople[state.id];
+  // You paid: their name and blurred photo. They paid: they can see your name, you can't see theirs.
+  const known = paidChat?.started_by_me === false ? undefined : paidChat;
+  const theyPaid = paidChat?.started_by_me === false;
   const theirName = known?.name || state.them.alias;
+  const whoSees = known?.name ? (
+    <>
+      You&apos;re <span className="font-semibold text-ink">{state.me.alias}</span>. You found {known.name} on Meet, so you can see their name. They only see your mask name until you both unmask.
+    </>
+  ) : theyPaid ? (
+    <>
+      You&apos;re <span className="font-semibold text-ink">{state.me.alias}</span>. They found you on Meet, so they know who you are. Their name and photos stay hidden until you both unmask.
+    </>
+  ) : (
+    <>
+      You&apos;re <span className="font-semibold text-ink">{state.me.alias}</span>. Names and photos stay hidden until you both unmask.
+    </>
+  );
   const [messages, setMessages] = useState(initialMessages);
   const [menu, setMenu] = useState(false);
   const [reporting, setReporting] = useState(false);
@@ -376,8 +392,7 @@ export function MasqueradeRoom({
       {/* Messages */}
       <div data-chat-scroll className="flex-1 overflow-y-auto overscroll-contain">
         <p className="px-6 pt-5 text-center text-[13px] leading-relaxed text-muted">
-          You&apos;re <span className="font-semibold text-ink">{state.me.alias}</span>. Names and photos stay hidden
-          until you both unmask.
+          {whoSees}
           {(them.shared_interests ?? []).length > 0 && (
             <span className="mt-2 block font-semibold text-brand">
               You both like {formatList(them.shared_interests)} ✓
@@ -584,7 +599,7 @@ export function MasqueradeRoom({
       )}
 
       <p className="mt-auto rounded-2xl bg-cream p-4 text-[13px] leading-relaxed text-muted">
-        You&apos;re <span className="font-semibold text-ink">{state.me.alias}</span>. Names and photos stay hidden until you both unmask.
+        {whoSees}
       </p>
     </aside>
         </div>
