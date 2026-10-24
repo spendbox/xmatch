@@ -469,7 +469,7 @@ async function tellPage(pact: Pact, page: { user_id: string | null; email: strin
 /** For the every-minute job: matches pacts whose answers have closed, and reveals them at reveal time, until the deadline */
 export async function revealDuePacts(deadline: number) {
   const db = createAdminClient();
-  // "4,127 people have taken the Pact": recounted here, once a minute
+  // "4,127 people have answered": recounted here, once a minute
   await db.rpc("refresh_pact_counts");
   const now = new Date().toISOString();
   const { data } = await db
