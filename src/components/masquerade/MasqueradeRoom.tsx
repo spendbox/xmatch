@@ -18,6 +18,7 @@ import { distanceLabel, GENDERS, intentLabel, MASQUERADE_MINUTES, spiceLabel } f
 import type { ChatMessage, MasqueradeState } from "@/lib/types";
 import { MessageList } from "@/components/chat/MessageList";
 import { Composer } from "@/components/chat/Composer";
+import { refreshMenuBadges } from "@/components/app/useMenuBadges";
 import { usePaidChatPeople } from "./usePaidChatPeople";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { Chilis } from "@/components/ui/Spice";
@@ -122,6 +123,12 @@ export function MasqueradeRoom({
     const t = setInterval(() => setRemaining(remainingNow()), 500);
     return () => clearInterval(t);
   }, [remainingNow]);
+
+  // Being in the chat (and anything that arrives or you send while it's open) counts as read
+  useEffect(() => {
+    if (demo) return;
+    supabase.rpc("mark_masked_read", { p_session: initial.id }).then(() => refreshMenuBadges());
+  }, [supabase, initial.id, messages.length, demo]);
 
   // Live messages and status changes
   useEffect(() => {
