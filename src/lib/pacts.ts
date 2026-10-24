@@ -31,7 +31,7 @@ export type Pact = {
   intents: PactIntent[];
   areas: string[];
   email_domain: string | null;
-  /** Text on the main button of the pact page; empty means "Find my Twin" */
+  /** Text on the main button of the pact page; empty means "Join the Link-Up" */
   button_text?: string;
   closes_at: string;
   reveal_at: string;
@@ -187,7 +187,7 @@ export function cleanAbout(pact: Pick<Pact, "intents" | "areas">, raw: unknown):
   const romantic = intents.includes("love") || intents.includes("spicy");
   if (romantic && !seeking.length) return "Tell us who you'd like to meet.";
   const age = Math.round(Number(a.age));
-  if (!Number.isFinite(age) || age < 18 || age > 99) return "You need to be 18 or older to join Twin.";
+  if (!Number.isFinite(age) || age < 18 || age > 99) return "You need to be 18 or older to join the Link-Up.";
   let ageMin = Math.round(Number(a.ageMin)), ageMax = Math.round(Number(a.ageMax));
   if (!Number.isFinite(ageMin)) ageMin = 18;
   if (!Number.isFinite(ageMax)) ageMax = 99;

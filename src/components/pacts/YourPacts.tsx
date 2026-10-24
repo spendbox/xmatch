@@ -38,12 +38,12 @@ export function YourPacts({ demo }: { demo?: MyPact[] }) {
 
   return (
     <section className="mt-7">
-      <h2 className="mb-1 text-[15px] font-semibold">Your Twins</h2>
+      <h2 className="mb-1 text-[15px] font-semibold">Your Link-Ups</h2>
       <p className="mb-3 text-[13.5px] text-muted">Only you can see these. Your answers are also in the things we know about you.</p>
       <ul className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
         {list.map((p) => {
           const revealed = p.status === "revealed";
-          const href = p.session_id ? `/masquerade/${p.session_id}` : `/twin/${p.slug}`;
+          const href = p.session_id ? `/masquerade/${p.session_id}` : `/link-up/${p.slug}`;
           return (
             <li key={p.slug} className="min-w-0">
               <Link href={href} className="flex items-center gap-3 rounded-3xl border border-line bg-surface p-3 pr-4 shadow-card transition active:scale-[0.98]">

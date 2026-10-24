@@ -41,7 +41,7 @@ function NoMatch({ pact, lost, signedIn, total }: { pact: Pact; lost: boolean; s
 /** The gold star every pact match carries */
 export function GoldStar({ size = 22, className }: { size?: number; className?: string }) {
   return (
-    <span className={"grid shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#ffe08a] to-[#e3a21a] text-[#7a4a00] shadow-[0_0_0_2px_rgba(255,224,138,.35)] " + (className ?? "")} style={{ width: size, height: size }} aria-label="Twin match">
+    <span className={"grid shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#ffe08a] to-[#e3a21a] text-[#7a4a00] shadow-[0_0_0_2px_rgba(255,224,138,.35)] " + (className ?? "")} style={{ width: size, height: size }} aria-label="Link-Up match">
       <Star size={size * 0.6} fill="currentColor" strokeWidth={0} />
     </span>
   );
@@ -88,7 +88,7 @@ function Teaser({ pact, view, signedIn, total, preview }: { pact: Pact; view: Ex
       <div className="flex-1" />
       <div className="mt-8 grid gap-2">
         {preview ? (
-          <Link href={`/twin/${pact.slug}?preview=1&as=revealed`} className="flex h-14 items-center justify-center rounded-full text-[16.5px] font-extrabold text-[#1c1310]" style={{ background: accent }}>
+          <Link href={`/link-up/${pact.slug}?preview=1&as=revealed`} className="flex h-14 items-center justify-center rounded-full text-[16.5px] font-extrabold text-[#1c1310]" style={{ background: accent }}>
             Join Dashpad to reveal
           </Link>
         ) : signedIn ? (
@@ -100,7 +100,7 @@ function Teaser({ pact, view, signedIn, total, preview }: { pact: Pact; view: Ex
             href={`/signup?pact=${pact.slug}`}
             onClick={() => {
               try {
-                localStorage.setItem(AFTER_JOIN, `/twin/${pact.slug}`);
+                localStorage.setItem(AFTER_JOIN, `/link-up/${pact.slug}`);
               } catch {
                 /* private mode */
               }

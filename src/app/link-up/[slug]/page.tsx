@@ -15,7 +15,7 @@ type Search = Promise<{ preview?: string; as?: string; edit?: string }>;
 export async function generateMetadata({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Search }): Promise<Metadata> {
   const [{ slug }, { preview }] = await Promise.all([params, searchParams]);
   const loaded = await loadPact(slug, { drafts: !!preview && (await isAdmin()) });
-  if (!loaded) return { title: "Twin" };
+  if (!loaded) return { title: "Link-Up" };
   const { pact } = loaded;
   const description = pact.tagline || `Answer a few questions. On reveal night, everyone gets their one best match.`;
   return {

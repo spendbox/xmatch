@@ -237,11 +237,11 @@ export function PactFlow({
         <div className="grid gap-2.5 px-5 pt-6 pb-[max(1.6rem,env(safe-area-inset-bottom))]">
           {closed ? (
             <p className="rounded-2xl bg-white/[0.07] px-4 py-3.5 text-center text-[14.5px] text-white/85">
-              {taken ? "You're in. Answers are closed, and your match arrives on reveal night." : "Answers are closed for this Twin. Reveal night is coming."}
+              {taken ? "You're in. Answers are closed, and your match arrives on reveal night." : "Answers are closed for this Link-Up. Reveal night is coming."}
             </p>
           ) : (
             <button onClick={next} className="h-14 rounded-full text-[16.5px] font-extrabold text-[#1c1310] transition active:scale-[0.98]" style={{ background: accent }}>
-              {taken ? "Edit my answers" : pact.button_text?.trim() || "Find my Twin"}
+              {taken ? "Edit my answers" : pact.button_text?.trim() || "Join the Link-Up"}
             </button>
           )}
           <p className="text-center text-[12px] text-white/55">Free with a Dashpad account · answers stay private · 18+</p>
@@ -365,7 +365,7 @@ export function PactFlow({
     }
     try {
       localStorage.setItem(draftKey, JSON.stringify({ answers, about }));
-      localStorage.setItem(AFTER_JOIN, `/twin/${pact.slug}?resume=1`);
+      localStorage.setItem(AFTER_JOIN, `/link-up/${pact.slug}?resume=1`);
     } catch {
       /* private mode */
     }
@@ -405,7 +405,7 @@ export function PactFlow({
                   className="rounded-2xl border border-white/20 bg-white/[0.06] px-4 text-[16px] outline-none focus:border-white/50"
                   style={{ height: 52 }}
                 />
-                <span className="text-[12.5px] text-white/60">This Twin is only for {pact.email_domain.replace(/^@/, "")} emails. We&apos;ll send a link there to confirm it&apos;s yours.</span>
+                <span className="text-[12.5px] text-white/60">This Link-Up is only for {pact.email_domain.replace(/^@/, "")} emails. We&apos;ll send a link there to confirm it&apos;s yours.</span>
               </label>
             )}
           </div>
@@ -414,7 +414,7 @@ export function PactFlow({
           <div className="mt-6 px-1">
             <p className="text-[12px] font-extrabold tracking-[0.12em] uppercase" style={{ color: accent }}>Last step</p>
             <h1 className="mt-1 font-display text-[30px] leading-tight font-bold">Create your free account to join</h1>
-            <p className="mt-2 text-[14.5px] leading-relaxed text-white/72">Your answers are kept on this phone. Once you&apos;re in, they&apos;re added to Twin straight away, and your match shows up in Dashpad on reveal night.</p>
+            <p className="mt-2 text-[14.5px] leading-relaxed text-white/72">Your answers are kept on this phone. Once you&apos;re in, they&apos;re added to the Link-Up straight away, and your match shows up in Dashpad on reveal night.</p>
             <p className="mt-5 text-[13px] font-bold">While you wait for reveal night, meet people masked every hour, for</p>
             <div className="mt-2.5 grid grid-cols-2 gap-2.5">
               {[
@@ -449,7 +449,7 @@ export function PactFlow({
             </span>
           ) : step === "finish" ? (
             <button type="submit" disabled={busy} className="inline-flex h-[52px] items-center gap-2 rounded-full px-6 text-[16px] font-extrabold text-[#1c1310] disabled:opacity-60" style={{ background: accent }}>
-              {busy ? "Saving…" : "Join Twin"}
+              {busy ? "Saving…" : "Join the Link-Up"}
             </button>
           ) : (
             <button
@@ -532,7 +532,7 @@ function Seal({ accent }: { accent: string }) {
 function ShareButton({ pact }: { pact: Pact }) {
   const [copied, setCopied] = useState(false);
   async function share() {
-    const url = `${location.origin}/twin/${pact.slug}`;
+    const url = `${location.origin}/link-up/${pact.slug}`;
     const text = `I just answered ${pact.name}. Answer it too and see who you match with on reveal night.`;
     try {
       if (navigator.share) return await navigator.share({ title: pact.name, text, url });
@@ -549,7 +549,7 @@ function ShareButton({ pact }: { pact: Pact }) {
   }
   return (
     <button onClick={share} className="flex h-12 items-center justify-center gap-2 rounded-full border border-white/20 text-[14.5px] font-bold">
-      <Share2 size={17} /> {copied ? "Link copied" : "Share Twin"}
+      <Share2 size={17} /> {copied ? "Link copied" : "Share the Link-Up"}
     </button>
   );
 }
@@ -899,7 +899,7 @@ function RevealLookup({ pact }: { pact: Pact }) {
       </div>
       <div className="mx-5 mt-7 grid gap-3">
         {mine && (
-          <Link href={`/twin/${pact.slug}/match?t=${mine}`} className="flex h-14 items-center justify-center rounded-full text-[16px] font-extrabold text-[#1c1310]" style={{ background: pact.accent }}>See my match</Link>
+          <Link href={`/link-up/${pact.slug}/match?t=${mine}`} className="flex h-14 items-center justify-center rounded-full text-[16px] font-extrabold text-[#1c1310]" style={{ background: pact.accent }}>See my match</Link>
         )}
         <Link href={`/login`} className="flex h-12 items-center justify-center rounded-full border border-white/20 text-[15px] font-bold">Log in to Dashpad</Link>
         {sent ? (

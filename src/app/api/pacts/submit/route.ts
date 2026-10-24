@@ -13,10 +13,10 @@ export async function POST(req: Request) {
   const body = (await req.json().catch(() => null)) as { slug?: string; about?: unknown; answers?: unknown; email?: string } | null;
   if (!body?.slug) return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 400 });
   const loaded = await loadPact(body.slug);
-  if (!loaded) return NextResponse.json({ error: "This Twin doesn't exist." }, { status: 404 });
+  if (!loaded) return NextResponse.json({ error: "This Link-Up doesn't exist." }, { status: 404 });
   const { pact, questions } = loaded;
   const { user } = await getAuth();
-  if (!user) return NextResponse.json({ error: "Create a free Dashpad account to join Twin.", signup: true }, { status: 401 });
+  if (!user) return NextResponse.json({ error: "Create a free Dashpad account to join the Link-Up.", signup: true }, { status: 401 });
 
   const answers = cleanAnswers(questions, body.answers);
   if (typeof answers === "string") return NextResponse.json({ error: answers }, { status: 400 });
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
   if (pact.email_domain) {
     const domain = pact.email_domain.replace(/^@/, "").toLowerCase();
     email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
-    if (!email.endsWith("@" + domain) || !/^[^\s@]+@[^\s@]+$/.test(email)) return NextResponse.json({ error: `Enter your ${domain} email. This Twin is only for ${domain} emails.` }, { status: 400 });
+    if (!email.endsWith("@" + domain) || !/^[^\s@]+@[^\s@]+$/.test(email)) return NextResponse.json({ error: `Enter your ${domain} email. This Link-Up is only for ${domain} emails.` }, { status: 400 });
     if (isThrowaway(email)) return NextResponse.json({ error: `Enter your ${domain} email.` }, { status: 400 });
   }
   email = email.slice(0, 200);

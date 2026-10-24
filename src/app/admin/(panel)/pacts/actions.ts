@@ -14,15 +14,15 @@ export async function createPact(name: string, slug: string): Promise<{ id?: str
   await requireAdmin();
   const n = clean(name, 60);
   const s = slugify(slug || n);
-  if (n.length < 2) return { error: "Give the Twin a name." };
-  if (s.length < 2) return { error: "Choose a link for the Twin." };
+  if (n.length < 2) return { error: "Give the Link-Up a name." };
+  if (s.length < 2) return { error: "Choose a link for the Link-Up." };
   const db = createAdminClient();
   const { data: taken } = await db.from("pacts").select("id").eq("slug", s).maybeSingle();
-  if (taken) return { error: `dashpad.site/twin/${s} is already taken. Try another link.` };
+  if (taken) return { error: `dashpad.site/link-up/${s} is already taken. Try another link.` };
   const closes = new Date(Date.now() + 12 * 86400_000);
   const reveal = new Date(Date.now() + 14 * 86400_000);
   const { data, error } = await db.from("pacts").insert({ name: n, slug: s, areas: [], closes_at: closes.toISOString(), reveal_at: reveal.toISOString() }).select("id").single();
-  if (error || !data) return { error: "Couldn't create the Twin. Please try again." };
+  if (error || !data) return { error: "Couldn't create the Link-Up. Please try again." };
   await db.from("pact_questions").insert(SEED_QUESTIONS.map((q, i) => ({ ...q, pact_id: data.id, position: i })));
   revalidatePath("/admin/pacts");
   return { id: data.id as string };
@@ -47,8 +47,8 @@ export async function savePactDetails(id: string, d: PactDetails): Promise<{ err
   await requireAdmin();
   const name = clean(d.name, 60);
   const slug = slugify(d.slug);
-  if (name.length < 2) return { error: "Give the Twin a name." };
-  if (slug.length < 2) return { error: "Choose a link for the Twin." };
+  if (name.length < 2) return { error: "Give the Link-Up a name." };
+  if (slug.length < 2) return { error: "Choose a link for the Link-Up." };
   const intents = INTENTS.map((i) => i.id).filter((i) => d.intents.includes(i));
   if (!intents.length) return { error: "Pick at least one thing people can be matched for." };
   const closes = new Date(d.closes_at), reveal = new Date(d.reveal_at);
@@ -60,7 +60,7 @@ export async function savePactDetails(id: string, d: PactDetails): Promise<{ err
   const url = (u: string | null) => (u && /^https:\/\//.test(u) ? u.slice(0, 500) : null);
   const db = createAdminClient();
   const { data: taken } = await db.from("pacts").select("id").eq("slug", slug).neq("id", id).maybeSingle();
-  if (taken) return { error: `dashpad.site/twin/${slug} is already taken. Try another link.` };
+  if (taken) return { error: `dashpad.site/link-up/${slug} is already taken. Try another link.` };
   const { error } = await db
     .from("pacts")
     .update({ name, slug, tagline: clean(d.tagline, 160), logo_url: url(d.logo_url), header_url: url(d.header_url), accent, intents, areas, email_domain: domain, button_text: clean(d.button_text, 30), closes_at: closes.toISOString(), reveal_at: reveal.toISOString() })
@@ -78,7 +78,7 @@ const WEIGHTS: Weight[] = ["normal", "strong", "dealbreaker"];
 export async function savePactQuestions(id: string, list: PactQuestion[]): Promise<{ error?: string }> {
   await requireAdmin();
   if (!list.length) return { error: "Add at least one question." };
-  if (list.length > MAX_QUESTIONS) return { error: `A Twin can have up to ${MAX_QUESTIONS} questions.` };
+  if (list.length > MAX_QUESTIONS) return { error: `A Link-Up can have up to ${MAX_QUESTIONS} questions.` };
   const rows = [];
   for (const [i, q] of list.entries()) {
     const kind = KINDS.includes(q.kind) ? q.kind : "this_or_that";
@@ -130,7 +130,7 @@ export async function setPactStatus(id: string, status: "draft" | "live"): Promi
   await requireAdmin();
   const db = createAdminClient();
   const { data: p } = await db.from("pacts").select("status").eq("id", id).single();
-  if (p?.status === "revealed") return { error: "This Twin has already been revealed." };
+  if (p?.status === "revealed") return { error: "This Link-Up has already been revealed." };
   if (status === "live") {
     const { count } = await db.from("pact_questions").select("id", { count: "exact", head: true }).eq("pact_id", id);
     if (!count) return { error: "Add questions before publishing." };
@@ -149,12 +149,12 @@ export async function revealPactNow(id: string): Promise<{ error?: string; summa
   const now = new Date().toISOString();
   // Reveal time becomes now (answers close too); the every-minute job finishes anything this run doesn't
   const { data: p } = await db.from("pacts").select("status, closes_at").eq("id", id).maybeSingle();
-  if (!p || p.status !== "live") return { error: "This Twin has already been revealed (or isn't published)." };
+  if (!p || p.status !== "live") return { error: "This Link-Up has already been revealed (or isn't published)." };
   await db.from("pacts").update({ reveal_at: now, ...(p.closes_at > now ? { closes_at: now } : {}) }).eq("id", id);
   const r = await runReveal(id, Date.now() + 40_000);
   revalidatePath(`/admin/pacts/${id}`);
   if (!r) return { summary: "Revealing now. Refresh in a minute to see progress." };
-  if (r.step === "match" || r.step === "ready") return { summary: "Big Twin: matching will finish within a few minutes, then it reveals." };
+  if (r.step === "match" || r.step === "ready") return { summary: "Big Link-Up: matching will finish within a few minutes, then it reveals." };
   return { summary: `${(r.pairs ?? 0).toLocaleString()} matches made from ${(r.people ?? 0).toLocaleString()} people.${r.step === "done" ? " Everyone has been told." : " Telling everyone now, this can take a few minutes."}` };
 }
 
@@ -163,7 +163,7 @@ export async function retryPactReveal(id: string): Promise<{ error?: string; sum
   await requireAdmin();
   const r = await runReveal(id, Date.now() + 40_000);
   revalidatePath(`/admin/pacts/${id}`);
-  if (!r) return { summary: "It's already working on this Twin. Refresh in a minute." };
+  if (!r) return { summary: "It's already working on this Link-Up. Refresh in a minute." };
   if (r.error) return { error: `Still not working: ${r.error}` };
   return { summary: r.step === "done" ? "Done. Everyone has been told." : "It's moving again. Refresh in a minute to see progress." };
 }
@@ -173,7 +173,7 @@ export async function deletePact(id: string, typedName: string): Promise<{ error
   await requireAdmin();
   const db = createAdminClient();
   const { data: p } = await db.from("pacts").select("name").eq("id", id).maybeSingle();
-  if (!p) return { error: "This Twin was already deleted." };
+  if (!p) return { error: "This Link-Up was already deleted." };
   if (clean(typedName, 60).toLowerCase() !== clean(p.name, 60).toLowerCase()) return { error: "The name doesn't match. Type it exactly to delete." };
   // Answers and matches go with it; chats that already started stay open
   const { error } = await db.from("pacts").delete().eq("id", id);

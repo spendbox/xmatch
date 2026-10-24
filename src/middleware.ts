@@ -22,6 +22,6 @@ export const config = {
     "/profile/:path*",
     "/onboarding/:path*",
     "/wallet/:path*",
-    "/twin/:path*",
+    "/link-up/:path*",
   ],
 };

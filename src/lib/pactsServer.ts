@@ -126,7 +126,7 @@ type SubmitInput = {
   device: string | null;
 };
 
-const SAME_EMAIL = "Someone already answered with that email. If it was you, open this Twin on the phone you used to change your answers.";
+const SAME_EMAIL = "Someone already answered with that email. If it was you, open this Link-Up on the phone you used to change your answers.";
 const SAME_EMAIL_MINE = "You already answered with this email, on another phone or before you joined. We've emailed you a link: open it here to add those answers to your account.";
 const SAME_PHONE = "Someone already answered on this phone. One entry per person keeps the matches real. Tap “Edit my answers” to change yours.";
 
@@ -146,8 +146,8 @@ async function askToConfirm(pact: Pact, token: string) {
   if (!e.email) return true;
   if (!e.link_sent_at || Date.now() - new Date(e.link_sent_at as string).getTime() > 10 * 60_000) {
     await db.from("pact_entries").update({ link_sent_at: new Date().toISOString() }).eq("id", e.id);
-    const link = `${site()}/twin/${pact.slug}/confirm?c=${e.verify_token}`;
-    const m = eventEmail({ heading: "Confirm your email", message: `Tap below to confirm this is your email. You'll only be matched in ${pact.name} once you do.`, title: pact.name, when: "Before answers close", kind: "Twin", link, button: "Confirm my email", footer: "You're getting this because this email was used to take this pact. If it wasn't you, ignore this." });
+    const link = `${site()}/link-up/${pact.slug}/confirm?c=${e.verify_token}`;
+    const m = eventEmail({ heading: "Confirm your email", message: `Tap below to confirm this is your email. You'll only be matched in ${pact.name} once you do.`, title: pact.name, when: "Before answers close", kind: "Link-Up", link, button: "Confirm my email", footer: "You're getting this because this email was used to join this Link-Up. If it wasn't you, ignore this." });
     await sendEmailsEach([{ to: e.email as string, subject: `Confirm your email for ${pact.name}`, ...m }]);
   }
   return true;
@@ -167,7 +167,7 @@ export async function confirmEntry(slug: string, code: string) {
 
 async function saveEntryInner(i: SubmitInput): Promise<{ token: string } | { error: string }> {
   const db = createAdminClient();
-  if (pactPhase(i.pact) !== "open") return { error: "This Twin has closed. Reveal night is coming." };
+  if (pactPhase(i.pact) !== "open") return { error: "This Link-Up has closed. Reveal night is coming." };
   const row = { pact_id: i.pact.id, about: i.about, answers: i.answers, updated_at: new Date().toISOString() };
   if (i.userId) {
     const { data: mine } = await db.from("pact_entries").select("id, token").eq("pact_id", i.pact.id).eq("user_id", i.userId).maybeSingle();
@@ -281,7 +281,7 @@ export async function revealMyMatch(userId: string, pact: Pact) {
   if (pact.status !== "revealed") return { error: "Matches aren't out yet." };
   const db = createAdminClient();
   const { data: me } = await db.from("pact_entries").select("id").eq("pact_id", pact.id).eq("user_id", userId).maybeSingle();
-  if (!me) return { error: "You didn't answer this Twin." };
+  if (!me) return { error: "You didn't answer this Link-Up." };
   await db.from("pact_entries").update({ match_seen_at: new Date().toISOString() }).eq("id", me.id).is("match_seen_at", null);
   const { data: m } = await db.from("pact_matches").select("id, session_id").or(`a.eq.${me.id},b.eq.${me.id}`).maybeSingle();
   if (m && !m.session_id) await startChat(m.id as number);
@@ -451,8 +451,8 @@ async function tellPage(pact: Pact, page: { user_id: string | null; email: strin
   const withMatch = page.filter((e) => e.user_id && e.matched).map((e) => e.user_id!);
   const without = page.filter((e) => e.user_id && !e.matched).map((e) => e.user_id!);
   const [a, b] = await Promise.all([
-    pushToUsers(withMatch, { title: `${pact.name}: you have a match ⭐`, body: "Out of everyone who answered, you two fit best. Tap to reveal who it is.", url: `/twin/${pact.slug}`, tag: `pact-${pact.id}` }),
-    pushToUsers(without, { title: `${pact.name} has been revealed`, body: "No match for you this time. Meet new people on Dashpad every hour.", url: `/twin/${pact.slug}`, tag: `pact-${pact.id}` }),
+    pushToUsers(withMatch, { title: `${pact.name}: you have a match ⭐`, body: "Out of everyone who answered, you two fit best. Tap to reveal who it is.", url: `/link-up/${pact.slug}`, tag: `pact-${pact.id}` }),
+    pushToUsers(without, { title: `${pact.name} has been revealed`, body: "No match for you this time. Meet new people on Dashpad every hour.", url: `/link-up/${pact.slug}`, tag: `pact-${pact.id}` }),
   ]);
   // People with an account but no phone notifications switched on get an email instead
   const accounts = page.filter((e) => e.user_id).map((e) => e.user_id!);
@@ -464,7 +464,7 @@ async function tellPage(pact: Pact, page: { user_id: string | null; email: strin
   const mails = page
     .filter((e) => e.email && (!e.user_id || !reachable.has(e.user_id)))
     .map((e) => {
-      const link = e.user_id ? `${site()}/twin/${pact.slug}` : `${site()}/twin/${pact.slug}/match?t=${e.token}`;
+      const link = e.user_id ? `${site()}/link-up/${pact.slug}` : `${site()}/link-up/${pact.slug}/match?t=${e.token}`;
       const m = eventEmail({
         heading: e.matched ? "You have a match" : "Matches are out",
         message: e.matched
@@ -472,10 +472,10 @@ async function tellPage(pact: Pact, page: { user_id: string | null; email: strin
           : `We couldn't find you a match this time, but there are people like you on Dashpad for business, friendship, love or something spicy.`,
         title: pact.name,
         when: "Reveal night",
-        kind: "Twin",
+        kind: "Link-Up",
         link,
         button: e.matched ? "Reveal my match" : "Open Dashpad",
-        footer: "You're getting this because you answered this Twin.",
+        footer: "You're getting this because you answered this Link-Up.",
       });
       return { to: e.email!, subject: e.matched ? `${pact.name}: you have a match` : `${pact.name} has been revealed`, ...m };
     });
@@ -575,7 +575,7 @@ async function rematchPact(pact: Pact) {
     if (!got || got.done < 300) break;
     after = got.last;
   }
-  await pushToUsers(users, { title: `${pact.name}: you have a new match ⭐`, body: "Your first match didn't join, so we found you someone new. Tap to reveal them.", url: `/twin/${pact.slug}`, tag: `pact-${pact.id}` });
+  await pushToUsers(users, { title: `${pact.name}: you have a new match ⭐`, body: "Your first match didn't join, so we found you someone new. Tap to reveal them.", url: `/link-up/${pact.slug}`, tag: `pact-${pact.id}` });
   return pairs.length;
 }
 
@@ -587,7 +587,7 @@ export async function resendLink(pact: Pact, email: string) {
   // At most once every 10 minutes, so nobody can flood someone's inbox
   if (e.link_sent_at && Date.now() - new Date(e.link_sent_at as string).getTime() < 10 * 60_000) return;
   await db.from("pact_entries").update({ link_sent_at: new Date().toISOString() }).eq("id", e.id);
-  const link = `${site()}/twin/${pact.slug}/match?t=${e.token}`;
-  const m = eventEmail({ heading: "Your Twin link", message: "Here's your private link. Keep it safe: it shows your match on reveal night.", title: pact.name, when: "Reveal night", kind: "Twin", link, button: "Open my Twin", footer: "You're getting this because you asked for your Twin link." });
+  const link = `${site()}/link-up/${pact.slug}/match?t=${e.token}`;
+  const m = eventEmail({ heading: "Your Link-Up link", message: "Here's your private link. Keep it safe: it shows your match on reveal night.", title: pact.name, when: "Reveal night", kind: "Link-Up", link, button: "Open my Link-Up", footer: "You're getting this because you asked for your Link-Up link." });
   await sendEmailsEach([{ to: e.email as string, subject: `Your link for ${pact.name}`, ...m }]);
 }

@@ -12,7 +12,7 @@ export default async function EventsPage() {
     livePacts(),
     user ? supabase.from("pact_entries").select("pact_id").eq("user_id", user.id) : Promise.resolve({ data: [] as { pact_id: string }[] }),
   ]);
-  // Twins you've answered open your answers to change them
+  // Link-Ups you've answered open your answers to change them
   const taken = new Set((mine ?? []).map((r) => r.pact_id as string));
   const pacts = live.map((p) => ({ ...p, taken: taken.has(p.id) }));
   return <EventsScreen events={(data ?? []) as DashpadEvent[]} pacts={pacts} />;

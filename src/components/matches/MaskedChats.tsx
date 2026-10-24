@@ -46,7 +46,7 @@ export function MaskedChats({ term = "", demo }: { term?: string; demo?: MaskedC
           c.pact && c.pact_slug && !c.pact_seen ? (
             // A pact match you haven't revealed yet: no name, just the teaser
             <li key={c.id}>
-              <Link href={`/twin/${c.pact_slug}`} className="flex items-center gap-3.5 rounded-3xl border border-[#f2c45a]/60 bg-surface p-3 pr-4 shadow-card transition active:scale-[0.98]">
+              <Link href={`/link-up/${c.pact_slug}`} className="flex items-center gap-3.5 rounded-3xl border border-[#f2c45a]/60 bg-surface p-3 pr-4 shadow-card transition active:scale-[0.98]">
                 <span className="relative grid h-14 w-14 shrink-0 place-items-center rounded-full" style={{ background: "linear-gradient(135deg, #e5484d, #f2b33d)" }}>
                   <MaskIcon className="w-8 text-white blur-[2px]" eyes="#e5484d" />
                   <GoldStar size={20} className="absolute -top-0.5 -right-0.5" />
