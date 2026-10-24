@@ -16,7 +16,7 @@ const NAV = [
   { href: "/admin/masquerade", label: "Masquerade", icon: Activity },
   { href: "/admin/games", label: "Games", icon: Gamepad2 },
   { href: "/admin/nights", label: "Events", icon: CalendarDays },
-  { href: "/admin/pacts", label: "Link-Ups", icon: Stamp },
+  { href: "/admin/link-ups", label: "Link-Ups", icon: Stamp },
   ...(FEATURES.feed ? [{ href: "/admin/prompts", label: "Daily prompts", icon: Sparkles }] : []),
   { href: "/admin/icebreakers", label: "Icebreakers", icon: MessageCircleQuestion },
   { href: "/admin/prices", label: "Prices", icon: Tag },

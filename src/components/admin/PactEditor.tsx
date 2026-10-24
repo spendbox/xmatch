@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { ArrowDown, ArrowLeft, ArrowUp, BarChart3, ExternalLink, Eye, ImagePlus, Plus, Trash2, X } from "lucide-react";
-import { deletePact, retryPactReveal, revealPactNow, savePactDetails, savePactQuestions, setPactStatus, type PactDetails } from "@/app/admin/(panel)/pacts/actions";
+import { deletePact, retryPactReveal, revealPactNow, savePactDetails, savePactQuestions, setPactStatus, type PactDetails } from "@/app/admin/(panel)/link-ups/actions";
 import { ART_LIBRARY, INTENTS, KIND_LABEL, art, MAX_QUESTIONS, SEED_QUESTIONS, WEIGHT_LABEL, pactPhase, people, plural, type Pact, type PactIntent, type PactQuestion, type QuestionKind, type Weight } from "@/lib/pacts";
 import { uploadEventFile } from "./eventUpload";
 import { AdminAutoRefresh } from "./AdminAutoRefresh";
@@ -109,7 +109,7 @@ export function PactEditor({ pact, questions: initial, count, matches }: { pact:
   return (
     <div className="pb-24">
       {pact.status !== "draft" && new Date(pact.closes_at).getTime() <= Date.now() && step !== "done" && <AdminAutoRefresh seconds={10} />}
-      <Link href="/admin/pacts" className="mb-3 inline-flex items-center gap-1.5 text-[14px] font-semibold text-muted"><ArrowLeft size={16} /> Link-Ups</Link>
+      <Link href="/admin/link-ups" className="mb-3 inline-flex items-center gap-1.5 text-[14px] font-semibold text-muted"><ArrowLeft size={16} /> Link-Ups</Link>
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-[32px] leading-tight font-semibold">{pact.name}</h1>
@@ -129,10 +129,10 @@ export function PactEditor({ pact, questions: initial, count, matches }: { pact:
           )}
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link href={`/admin/pacts/${pact.id}/answers`} className="inline-flex h-11 items-center gap-2 rounded-full border border-line-strong bg-white px-4 text-[14px] font-semibold"><BarChart3 size={16} /> Answers</Link>
-          <a href={`/link-up/${pact.slug}?preview=1`} target="_blank" className="inline-flex h-11 items-center gap-2 rounded-full border border-line-strong bg-white px-4 text-[14px] font-semibold"><Eye size={16} /> Preview</a>
+          <Link href={`/admin/link-ups/${pact.id}/answers`} className="inline-flex h-11 items-center gap-2 rounded-full border border-line-strong bg-white px-4 text-[14px] font-semibold"><BarChart3 size={16} /> Answers</Link>
+          <a href={`/link/${pact.slug}?preview=1`} target="_blank" className="inline-flex h-11 items-center gap-2 rounded-full border border-line-strong bg-white px-4 text-[14px] font-semibold"><Eye size={16} /> Preview</a>
           {pact.status !== "draft" && (
-            <a href={`/link-up/${pact.slug}`} target="_blank" className="inline-flex h-11 items-center gap-2 rounded-full border border-line-strong bg-white px-4 text-[14px] font-semibold"><ExternalLink size={16} /> Open page</a>
+            <a href={`/link/${pact.slug}`} target="_blank" className="inline-flex h-11 items-center gap-2 rounded-full border border-line-strong bg-white px-4 text-[14px] font-semibold"><ExternalLink size={16} /> Open page</a>
           )}
           {pact.status === "draft" && (
             <button disabled={!!busy} onClick={() => run("publish", () => setPactStatus(pact.id, "live"), "Published. The Link-Up is live.")} className="h-11 rounded-full bg-brand px-5 text-[14px] font-semibold text-white disabled:opacity-60">Publish Link-Up</button>
@@ -169,7 +169,7 @@ export function PactEditor({ pact, questions: initial, count, matches }: { pact:
           <label className="grid gap-1.5">
             <span className="text-[13px] font-semibold">Link</span>
             <span className="flex h-11 items-center overflow-hidden rounded-xl border border-line-strong bg-white focus-within:border-brand">
-              <span className="pl-3.5 text-[14px] text-muted">/link-up/</span>
+              <span className="pl-3.5 text-[14px] text-muted">/link/</span>
               <input id="d-slug" className="h-full min-w-0 flex-1 px-1 text-[15px] font-semibold text-brand outline-none" value={d.slug} onChange={(e) => setD({ ...d, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") })} />
             </span>
           </label>
@@ -282,7 +282,7 @@ export function PactEditor({ pact, questions: initial, count, matches }: { pact:
         </div>
       </section>
 
-      {deleting && <DeletePact pact={pact} count={count} onClose={() => setDeleting(false)} onDeleted={() => router.push("/admin/pacts")} />}
+      {deleting && <DeletePact pact={pact} count={count} onClose={() => setDeleting(false)} onDeleted={() => router.push("/admin/link-ups")} />}
 
       {msg && (
         <div className={clsx("fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full px-5 py-3 text-[14px] font-semibold text-white shadow-lift", msg.bad ? "bg-chili" : "bg-ink")} role="status">{msg.text}</div>

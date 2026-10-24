@@ -88,7 +88,7 @@ function Teaser({ pact, view, signedIn, total, preview }: { pact: Pact; view: Ex
       <div className="flex-1" />
       <div className="mt-8 grid gap-2">
         {preview ? (
-          <Link href={`/link-up/${pact.slug}?preview=1&as=revealed`} className="flex h-14 items-center justify-center rounded-full text-[16.5px] font-extrabold text-[#1c1310]" style={{ background: accent }}>
+          <Link href={`/link/${pact.slug}?preview=1&as=revealed`} className="flex h-14 items-center justify-center rounded-full text-[16.5px] font-extrabold text-[#1c1310]" style={{ background: accent }}>
             Join Dashpad to reveal
           </Link>
         ) : signedIn ? (
@@ -100,7 +100,7 @@ function Teaser({ pact, view, signedIn, total, preview }: { pact: Pact; view: Ex
             href={`/signup?pact=${pact.slug}`}
             onClick={() => {
               try {
-                localStorage.setItem(AFTER_JOIN, `/link-up/${pact.slug}`);
+                localStorage.setItem(AFTER_JOIN, `/link/${pact.slug}`);
               } catch {
                 /* private mode */
               }
