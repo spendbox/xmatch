@@ -9298,3 +9298,22 @@ insert into public.tot_questions (prompt, a, b, spice) values
   ('Rather', 'One wild night', 'A week of teasing', 3),
   ('Rather', 'Make-up sex', 'Birthday sex', 3)
 on conflict (a, b) do nothing;
+
+-- ---------------------------------------------------------------------------
+-- Part 48: When you pay to message someone from Meet, you already saw their name and
+-- main photo there. So in that masked chat you see their name, with their photo
+-- blurred. They still see only your mask name until you both unmask.
+-- ---------------------------------------------------------------------------
+create or replace function public.paid_chat_people() returns json
+language sql stable security definer set search_path = public as $$
+  select coalesce(json_object_agg(s.id, json_build_object('name', p.display_name, 'photo', p.photos[1])), '{}'::json)
+  from masquerade_sessions s
+  join profiles p on p.id = s.user_b
+  where s.user_a = auth.uid()
+    and s.source = 'explore'
+    and s.pact_id is null
+    and s.meet_id is null
+    and s.status = 'active'
+$$;
+revoke execute on function public.paid_chat_people() from public, anon;
+grant execute on function public.paid_chat_people() to authenticated;
