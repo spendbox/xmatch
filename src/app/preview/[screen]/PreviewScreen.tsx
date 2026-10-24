@@ -703,6 +703,10 @@ function ScreenBody({ screen }: { screen: string }) {
       const demoStep = st === "intro" ? { step: "intro" as const } : st === "q1" ? { step: "q" as const, qi: 0 } : st === "artists" ? { step: "q" as const, qi: 5 } : st === "scale" ? { step: "q" as const, qi: 7 } : { step: st as "about" | "finish" | "done" };
       return pactWrap(<PactFlow pact={demoPact} questions={demoQs} count={4127} signedIn={false} mine={null} result={null} demoStep={demoStep} />);
     }
+    case "pact-finish-in":
+      return pactWrap(<PactFlow pact={demoPact} questions={demoQs} count={4127} signedIn mine={null} result={null} demoStep={{ step: "finish" }} />);
+    case "pact-finish-school":
+      return pactWrap(<PactFlow pact={{ ...demoPact, name: "UNILAG Pact", email_domain: "unilag.edu.ng" }} questions={demoQs} count={1290} signedIn mine={null} result={null} demoStep={{ step: "finish" }} />);
     case "pact-closed":
       return pactWrap(<PactFlow pact={{ ...demoPact, closes_at: iso(3600), reveal_at: new Date(now + 9 * 3600_000).toISOString() }} questions={demoQs} count={1} signedIn={false} mine={null} result={null} />);
     case "pact-sunday":

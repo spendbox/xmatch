@@ -9,7 +9,7 @@ import { Turnstile } from "@/components/ui/Turnstile";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { Countdown, OptionArt, PactLogo, PactMatching, pactDate } from "./PactBits";
 import { PactReveal } from "./PactReveal";
-import { rememberToken, savedPactTokens } from "./pactTokens";
+import { AFTER_JOIN, savedPactTokens } from "./pactTokens";
 
 type Step = "intro" | "q" | "about" | "finish" | "done";
 
@@ -61,6 +61,27 @@ export function PactFlow({
   const [confirmTo, setConfirmTo] = useState<string | null>(null);
   const form = useRef<HTMLFormElement>(null);
 
+  // Back from creating an account (or logging in) to join: save the answers kept on this phone
+  useEffect(() => {
+    if (!signedIn || sample || mine) return;
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has("resume")) return;
+    url.searchParams.delete("resume");
+    window.history.replaceState(null, "", url.pathname + url.search);
+    try {
+      const d = JSON.parse(localStorage.getItem(draftKey) ?? "null") as { answers?: Answers; about?: Partial<About> } | null;
+      if (!d?.answers || !d.about || aboutProblem(d.about, pact)) return;
+      setAnswers(d.answers);
+      setAbout(d.about);
+      setStep("finish");
+      // School and company pacts still need the school email typed in; everyone else joins straight away
+      if (!pact.email_domain) submit(undefined, { answers: d.answers, about: d.about });
+    } catch {
+      /* nothing kept */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Pick up where you left off (on this phone)
   useEffect(() => {
     if (mine || sample) return;
@@ -108,23 +129,21 @@ export function PactFlow({
     if (step === "finish") return setStep("about");
   }
 
-  async function submit(e?: React.FormEvent) {
+  async function submit(e?: React.FormEvent, draft?: { answers: Answers; about: Partial<About> }) {
     e?.preventDefault();
     if (sample) return setStep("done");
+    if (!signedIn) return;
     setBusy(true);
     setError(null);
-    const human = form.current ? (new FormData(form.current).get("cf-turnstile-response") as string | null) : null;
-    const token = savedPactTokens().find((t) => t.slug === pact.slug)?.token ?? null;
     const res = await fetch("/api/pacts/submit", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ slug: pact.slug, about, answers, email, token, human }),
+      body: JSON.stringify({ slug: pact.slug, about: draft?.about ?? about, answers: draft?.answers ?? answers, email: pact.email_domain ? email : undefined }),
     }).catch(() => null);
     const data = res ? await res.json().catch(() => ({})) : { error: "Check your connection and try again." };
     setBusy(false);
     if (!res?.ok || !data.token) return setError(data.error ?? "Something went wrong. Please try again.");
-    rememberToken(pact.slug, data.token);
-    setConfirmTo(data.confirm ? (signedIn ? null : email) ?? "your" : null);
+    setConfirmTo(data.confirm ? email || "your" : null);
     try {
       localStorage.removeItem(draftKey);
     } catch {
@@ -203,7 +222,7 @@ export function PactFlow({
               {taken ? "Edit my answers" : "Take the Pact"}
             </button>
           )}
-          <p className="text-center text-[12px] text-white/55">Free · your answers stay private · 18+ only</p>
+          <p className="text-center text-[12px] text-white/55">Free with a Dashpad account · answers stay private · 18+</p>
         </div>
       </Shell>
     );
@@ -228,44 +247,13 @@ export function PactFlow({
             </span>
           </p>
         )}
-        {signedIn ? (
-          <div className="mx-5 mt-6 grid gap-3 text-center">
-            <p className="rounded-2xl bg-white/[0.07] px-4 py-3.5 text-[14.5px] leading-relaxed text-white/85">We&apos;ll send you a notification the moment your match drops. It also shows on your profile.</p>
-            <button onClick={() => (setStep("q"), setQi(0))} className="h-12 rounded-full border border-white/20 text-[15px] font-bold">Change my answers</button>
-          </div>
-        ) : (
-          <>
-            <div className="mx-5 mt-6 flex items-baseline justify-between">
-              <h2 className="font-display text-[21px] font-bold">Meet people like you, now</h2>
-              <span className="text-[12px] text-white/55">Free on Dashpad</span>
-            </div>
-            <p className="mx-5 mt-1 text-[13.5px] text-white/70">Why wait for reveal night? Meet people masked, every hour, for whatever you&apos;re into.</p>
-            <div className="mx-5 mt-3 grid grid-cols-2 gap-2.5">
-              {[
-                { icon: <Briefcase size={20} />, t: "Business", d: "Partners, clients and mentors who think like you.", g: "#1f4a7a" },
-                { icon: <Users size={20} />, t: "Friendship", d: "Your kind of people, for brunch, games or the gym.", g: "#1f5a5a" },
-                { icon: <Heart size={20} />, t: "Love", d: "Someone special, matched on who you are.", g: "#6e2a4a" },
-                { icon: <Flame size={20} />, t: "Something spicy", d: "Keep it fun. Masked until you both say so.", g: "#7a3a12" },
-              ].map((c) => (
-                <div key={c.t} className="rounded-[18px] p-3.5" style={{ background: `linear-gradient(160deg, ${c.g}, #22163f)` }}>
-                  <span style={{ color: accent }}>{c.icon}</span>
-                  <p className="mt-2 text-[14px] leading-tight font-bold">{c.t}</p>
-                  <p className="mt-1 text-[12.5px] leading-snug text-white/72">{c.d}</p>
-                </div>
-              ))}
-            </div>
-            <p className="mx-5 mt-3 flex items-center gap-2 text-[12.5px] text-white/70">
-              <Check size={15} style={{ color: accent }} /> Your Pact answers carry over to your profile. Change them anytime.
-            </p>
-          </>
-        )}
+        <div className="mx-5 mt-6 grid gap-3 text-center">
+          <p className="rounded-2xl bg-white/[0.07] px-4 py-3.5 text-[14.5px] leading-relaxed text-white/85">We&apos;ll send you a notification the moment your match drops. It also shows on your profile.</p>
+          <button onClick={() => (setStep("q"), setQi(0))} className="h-12 rounded-full border border-white/20 text-[15px] font-bold">Change my answers</button>
+        </div>
         <div className="flex-1" />
         <div className="grid gap-2 px-5 pt-5 pb-[max(1.4rem,env(safe-area-inset-bottom))]">
-          {signedIn ? (
-            <Link href="/home" className="flex h-14 items-center justify-center rounded-full text-[16px] font-extrabold text-[#1c1310]" style={{ background: accent }}>Back to Dashpad</Link>
-          ) : (
-            <Link href={`/signup?pact=${pact.slug}`} className="flex h-14 items-center justify-center rounded-full text-[16px] font-extrabold text-[#1c1310]" style={{ background: accent }}>Join Dashpad, it&apos;s free</Link>
-          )}
+          <Link href="/home" className="flex h-14 items-center justify-center rounded-full text-[16px] font-extrabold text-[#1c1310]" style={{ background: accent }}>Back to Dashpad</Link>
           <ShareButton pact={pact} />
         </div>
       </Shell>
@@ -273,6 +261,20 @@ export function PactFlow({
   }
 
   // ---------------------------------------------------------------- questions, about you, finish
+  /** After signing up or logging in, come back here and join with the answers kept on this phone */
+  const backAfterJoin = (e: React.MouseEvent) => {
+    // Previews just move on
+    if (sample) {
+      e.preventDefault();
+      return setStep("done");
+    }
+    try {
+      localStorage.setItem(draftKey, JSON.stringify({ answers, about }));
+      localStorage.setItem(AFTER_JOIN, `/pact/${pact.slug}?resume=1`);
+    } catch {
+      /* private mode */
+    }
+  };
   const progress = step === "q" ? (qi + 1) / (total + 2) : step === "about" ? (total + 1) / (total + 2) : 1;
   return (
     <Shell pact={pact}>
@@ -289,16 +291,14 @@ export function PactFlow({
 
         {step === "q" && q && <QuestionView key={q.id} q={q} value={answers[q.id]} accent={accent} onAnswer={answer} />}
         {step === "about" && <AboutView pact={pact} about={about} setAbout={setAbout} />}
-        {step === "finish" && (
+        {step === "finish" && signedIn && (
           <div className="mt-6 px-1">
             <p className="text-[12px] font-extrabold tracking-[0.12em] uppercase" style={{ color: accent }}>Last step</p>
-            <h1 className="mt-1 font-display text-[30px] leading-tight font-bold">{signedIn ? "Ready to join?" : "Where should we send your match?"}</h1>
-            <p className="mt-2 text-[14.5px] leading-relaxed text-white/72">
-              {signedIn ? "Your match will show up on your profile and as a notification on reveal night." : "We'll email your private link on reveal night. Nobody else sees your email."}
-            </p>
-            {!signedIn && (
+            <h1 className="mt-1 font-display text-[30px] leading-tight font-bold">{busy ? "Joining…" : "Ready to join?"}</h1>
+            <p className="mt-2 text-[14.5px] leading-relaxed text-white/72">Your match shows up in Dashpad on reveal night, with a notification. Your answers also go into your profile, and you can change them anytime.</p>
+            {pact.email_domain && (
               <label className="mt-5 grid gap-2">
-                <span className="text-[13px] font-bold">Your email</span>
+                <span className="text-[13px] font-bold">Your {pact.email_domain.replace(/^@/, "")} email</span>
                 <input
                   id="pact-email"
                   type="email"
@@ -306,22 +306,38 @@ export function PactFlow({
                   autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder={pact.email_domain ? `you@${pact.email_domain.replace(/^@/, "")}` : "you@email.com"}
-                  className="h-13 rounded-2xl border border-white/20 bg-white/[0.06] px-4 text-[16px] outline-none focus:border-white/50"
+                  placeholder={`you@${pact.email_domain.replace(/^@/, "")}`}
+                  className="rounded-2xl border border-white/20 bg-white/[0.06] px-4 text-[16px] outline-none focus:border-white/50"
                   style={{ height: 52 }}
                 />
+                <span className="text-[12.5px] text-white/60">This pact is only for {pact.email_domain.replace(/^@/, "")} emails. We&apos;ll send a link there to confirm it&apos;s yours.</span>
               </label>
             )}
-            {!signedIn && (
-              <div className="mt-4">
-                <Turnstile />
-              </div>
-            )}
-            {pact.email_domain && (
-              <p className="mt-4 rounded-2xl bg-white/[0.07] px-4 py-3 text-[13.5px] text-white/80">
-                This pact is for {pact.email_domain.replace(/^@/, "")} emails{signedIn ? "" : ". Use yours"}. We&apos;ll send a link to confirm it&apos;s yours.
-              </p>
-            )}
+          </div>
+        )}
+        {step === "finish" && !signedIn && (
+          <div className="mt-6 px-1">
+            <p className="text-[12px] font-extrabold tracking-[0.12em] uppercase" style={{ color: accent }}>Last step</p>
+            <h1 className="mt-1 font-display text-[30px] leading-tight font-bold">Create your free account to join</h1>
+            <p className="mt-2 text-[14.5px] leading-relaxed text-white/72">Your answers are kept on this phone. Once you&apos;re in, they&apos;re added to the Pact straight away, and your match shows up in Dashpad on reveal night.</p>
+            <p className="mt-5 text-[13px] font-bold">While you wait for reveal night, meet people masked every hour, for</p>
+            <div className="mt-2.5 grid grid-cols-2 gap-2.5">
+              {[
+                { icon: <Briefcase size={20} />, t: "Business", d: "Partners, clients and mentors who think like you.", g: "#1f4a7a" },
+                { icon: <Users size={20} />, t: "Friendship", d: "Your kind of people, for brunch, games or the gym.", g: "#1f5a5a" },
+                { icon: <Heart size={20} />, t: "Love", d: "Someone special, matched on who you are.", g: "#6e2a4a" },
+                { icon: <Flame size={20} />, t: "Something spicy", d: "Keep it fun. Masked until you both say so.", g: "#7a3a12" },
+              ].map((c) => (
+                <div key={c.t} className="rounded-[18px] p-3.5" style={{ background: `linear-gradient(160deg, ${c.g}, #22163f)` }}>
+                  <span style={{ color: accent }}>{c.icon}</span>
+                  <p className="mt-2 text-[14px] leading-tight font-bold">{c.t}</p>
+                  <p className="mt-1 text-[12.5px] leading-snug text-white/72">{c.d}</p>
+                </div>
+              ))}
+            </div>
+            <p className="mt-3 flex items-start gap-2 text-[12.5px] text-white/70">
+              <Check size={15} className="mt-0.5 shrink-0" style={{ color: accent }} /> Your answers also fill in your profile: things about you and who you&apos;d like to meet. Change them anytime.
+            </p>
           </div>
         )}
 
@@ -329,7 +345,14 @@ export function PactFlow({
         {error && <p className="mb-3 rounded-2xl bg-[#e5484d]/15 px-4 py-3 text-[14px] font-semibold text-[#ffb4b4]" role="alert">{error}</p>}
         <div className="flex items-center justify-between gap-3 px-1 pt-3">
           <span className="text-[13px] text-white/55">{step === "q" ? (q?.kind === "choose_many" ? `${(answers[q.id] as string[] | undefined)?.length ?? 0} of up to ${q.max_pick}` : "No wrong answers") : ""}</span>
-          {step === "finish" ? (
+          {step === "finish" && !signedIn ? (
+            <span className="grid justify-items-end gap-2">
+              <Link href={`/signup?pact=${pact.slug}`} onClick={backAfterJoin} className="inline-flex h-[52px] items-center gap-2 rounded-full px-6 text-[16px] font-extrabold text-[#1c1310]" style={{ background: accent }}>
+                Create my account <ArrowRight size={17} />
+              </Link>
+              <Link href="/login" onClick={backAfterJoin} className="text-[13px] font-bold text-white/75 underline-offset-2 hover:underline">I have an account · Log in</Link>
+            </span>
+          ) : step === "finish" ? (
             <button type="submit" disabled={busy} className="inline-flex h-[52px] items-center gap-2 rounded-full px-6 text-[16px] font-extrabold text-[#1c1310] disabled:opacity-60" style={{ background: accent }}>
               {busy ? "Saving…" : "Join the Pact"}
             </button>

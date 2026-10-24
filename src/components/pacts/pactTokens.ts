@@ -38,7 +38,7 @@ export function takeAfterJoin(): string | null {
   try {
     const v = localStorage.getItem(AFTER_JOIN);
     if (v) localStorage.removeItem(AFTER_JOIN);
-    return v && /^\/pact\/[a-z0-9-]+$/.test(v) ? v : null;
+    return v && /^\/pact\/[a-z0-9-]+(\?resume=1)?$/.test(v) ? v : null;
   } catch {
     return null;
   }

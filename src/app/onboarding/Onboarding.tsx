@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
 import { ArrowLeft, ArrowRight, Camera, Check, Lightbulb, MapPin, Mars, PenLine, Shapes, Smile, UserRound, Venus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -49,6 +49,20 @@ export function Onboarding({ profile, demoStep, demoDone }: { profile: Profile; 
   const [saving, setSaving] = useState(false);
   const [place, setPlace] = useState<string | null>(profile.place_label ?? null);
   const [placeOpen, setPlaceOpen] = useState(false);
+
+  // Just took a pact? Start from what they told it (they still check and finish it)
+  useEffect(() => {
+    if (demoStep !== undefined) return;
+    try {
+      const key = Object.keys(localStorage).find((k) => k.startsWith("dp_pact_draft_"));
+      const about = key ? (JSON.parse(localStorage.getItem(key) ?? "null")?.about as { gender?: Gender; age?: number } | undefined) : undefined;
+      if (!about) return;
+      if (about.gender && !profile.gender) setGender(about.gender);
+      if (about.age && !profile.birthdate) setYear(new Date().getFullYear() - about.age);
+    } catch {
+      /* nothing kept */
+    }
+  }, [demoStep, profile.gender, profile.birthdate]);
 
   const birthdate = year && month && day ? `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}` : "";
   const age = ageFromBirthdate(birthdate || null);

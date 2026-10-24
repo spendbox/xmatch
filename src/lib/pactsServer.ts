@@ -27,6 +27,26 @@ export async function livePacts() {
   return ((data ?? []) as (Pact & { entries_count: number })[]).map(({ entries_count, ...p }) => ({ ...p, count: entries_count ?? 0 }));
 }
 
+/**
+ * What someone said about themselves in a pact fills the gaps in their Dashpad profile: their
+ * gender if it's empty, and who they'd like to meet if they haven't set it yet (still the defaults).
+ */
+async function fillProfile(userId: string, about: About) {
+  const db = createAdminClient();
+  const { data: p } = await db.from("profiles").select("gender, pref_intent, pref_seeking, pref_age_min, pref_age_max").eq("id", userId).maybeSingle();
+  if (!p) return;
+  const patch: Record<string, unknown> = {};
+  if (!p.gender) patch.gender = about.gender;
+  const untouched = p.pref_intent === "dating" && p.pref_seeking === "anyone" && p.pref_age_min === 18 && p.pref_age_max === 40;
+  if (untouched) {
+    patch.pref_intent = about.intents.includes("love") ? "dating" : about.intents.includes("spicy") ? "spicy" : "friends";
+    if (about.seeking.length) patch.pref_seeking = about.seeking.map((g) => (g === "woman" ? "women" : "men")).join(",");
+    patch.pref_age_min = Math.max(18, about.ageMin);
+    patch.pref_age_max = Math.min(99, Math.max(about.ageMax, Math.max(18, about.ageMin)));
+  }
+  if (Object.keys(patch).length) await db.from("profiles").update(patch).eq("id", userId);
+}
+
 /** Adds someone's pact answers to their "things about you" (no repeats, 40 at most) */
 async function addThings(userId: string, questions: PactQuestion[], answers: Answers) {
   const db = createAdminClient();
@@ -135,7 +155,12 @@ async function saveEntryInner(i: SubmitInput): Promise<{ token: string } | { err
   if (i.userId) {
     const { data: mine } = await db.from("pact_entries").select("id, token").eq("pact_id", i.pact.id).eq("user_id", i.userId).maybeSingle();
     if (mine) {
-      await db.from("pact_entries").update(row).eq("id", mine.id);
+      const key = i.email ? emailKey(i.email) : null;
+      const { data: was } = await db.from("pact_entries").select("email_key").eq("id", mine.id).single();
+      const changed = !!key && key !== was?.email_key;
+      const { error } = await db.from("pact_entries").update({ ...row, ...(changed ? { email: i.email, email_key: key, verified_at: null, link_sent_at: null } : {}) }).eq("id", mine.id);
+      if (error) return { error: error.code === "23505" ? SAME_EMAIL : "We couldn't save your answers. Please try again." };
+      await fillProfile(i.userId, i.about);
       await addThings(i.userId, i.questions, i.answers);
       return { token: mine.token as string };
     }
@@ -180,6 +205,7 @@ async function saveEntryInner(i: SubmitInput): Promise<{ token: string } | { err
   const { data, error } = await db.from("pact_entries").insert({ ...row, email, email_key: key, user_id: i.userId, device: i.device }).select("token").single();
   if (error?.code === "23505") return { error: /device/.test(error.message) ? SAME_PHONE : SAME_EMAIL };
   if (error || !data) return { error: "We couldn't save your answers. Please try again." };
+  if (i.userId) await fillProfile(i.userId, i.about);
   if (i.userId) await addThings(i.userId, i.questions, i.answers);
   return { token: data.token as string };
 }
@@ -411,14 +437,21 @@ async function tellPage(pact: Pact, page: { user_id: string | null; email: strin
     pushToUsers(withMatch, { title: `${pact.name}: you have a match ⭐`, body: "Out of everyone in the Pact, you two fit best. Tap to reveal who it is.", url: `/pact/${pact.slug}`, tag: `pact-${pact.id}` }),
     pushToUsers(without, { title: `${pact.name} has been revealed`, body: "No match for you this time. Meet new people on Dashpad every hour.", url: `/pact/${pact.slug}`, tag: `pact-${pact.id}` }),
   ]);
+  // People with an account but no phone notifications switched on get an email instead
+  const accounts = page.filter((e) => e.user_id).map((e) => e.user_id!);
+  const reachable = new Set<string>();
+  for (const ids of chunks(accounts)) {
+    const { data } = await createAdminClient().from("push_subscriptions").select("user_id").in("user_id", ids);
+    (data ?? []).forEach((r) => reachable.add(r.user_id as string));
+  }
   const mails = page
-    .filter((e) => !e.user_id && e.email)
+    .filter((e) => e.email && (!e.user_id || !reachable.has(e.user_id)))
     .map((e) => {
-      const link = `${site()}/pact/${pact.slug}/match?t=${e.token}`;
+      const link = e.user_id ? `${site()}/pact/${pact.slug}` : `${site()}/pact/${pact.slug}/match?t=${e.token}`;
       const m = eventEmail({
         heading: e.matched ? "You have a match" : "The Pact has been revealed",
         message: e.matched
-          ? `Out of everyone who took ${pact.name}, you two fit best. Join Dashpad (it's free) to reveal who it is and start chatting, masked.`
+          ? `Out of everyone who took ${pact.name}, you two fit best. ${e.user_id ? "Open Dashpad" : "Join Dashpad (it's free)"} to reveal who it is and start chatting, masked.`
           : `We couldn't find you a match this time, but there are people like you on Dashpad for business, friendship, love or something spicy.`,
         title: pact.name,
         when: "Reveal night",
