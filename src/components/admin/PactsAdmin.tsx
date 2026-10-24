@@ -99,7 +99,7 @@ export function PactsAdmin({ pacts }: { pacts: AdminPact[] }) {
         <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {pacts.map((p) => {
             const phase = p.status === "draft" ? "draft" : pactPhase(p);
-            const badge = { draft: ["Draft", "bg-cream text-ink-soft"], open: ["Live", "bg-mint text-white"], closed: ["Answers closed", "bg-gold-soft text-[#9a6a0c]"], revealed: ["Revealed", "bg-line text-muted"] }[phase];
+            const badge = { draft: ["Draft", "bg-cream text-ink-soft"], open: ["Live", "bg-mint text-white"], closed: ["Answers closed", "bg-gold-soft text-[#9a6a0c]"], matching: ["Matching now", "bg-brand-soft text-brand"], revealed: ["Revealed", "bg-line text-muted"] }[phase];
             return (
               <li key={p.id}>
                 <Link href={`/admin/pacts/${p.id}`} className="flex gap-4 rounded-3xl border border-line bg-surface p-4 shadow-card transition hover:border-brand/40">

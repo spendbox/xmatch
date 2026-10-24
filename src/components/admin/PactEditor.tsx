@@ -34,6 +34,14 @@ function blank(kind: QuestionKind): PactQuestion {
 export function PactEditor({ pact, questions: initial, count, matches }: { pact: Pact; questions: PactQuestion[]; count: number; matches: number }) {
   const router = useRouter();
   const phase = pact.status === "draft" ? "draft" : pactPhase(pact);
+  // Reveal night runs in steps; show where it's up to
+  const { reveal_step: step, reveal_stats: st = {} } = pact as Pact & { reveal_step?: string | null; reveal_stats?: Record<string, number> };
+  const progress =
+    pact.status === "revealed" && step && step !== "done"
+      ? `${(st.pairs ?? 0).toLocaleString()} matches made. ${step === "chats" ? "Starting masked chats…" : `Telling everyone: ${(st.told ?? 0).toLocaleString()} notified, ${(st.emailed ?? 0).toLocaleString()} emailed so far…`}`
+      : pact.status === "revealed" && step === "done"
+        ? `${(st.pairs ?? 0).toLocaleString()} matches from ${(st.people ?? count).toLocaleString()} people · ${(st.told ?? 0).toLocaleString()} notified · ${(st.emailed ?? 0).toLocaleString()} emailed`
+        : null;
   const [d, setD] = useState<PactDetails>({
     name: pact.name,
     slug: pact.slug,
@@ -96,8 +104,9 @@ export function PactEditor({ pact, questions: initial, count, matches }: { pact:
           <h1 className="font-display text-[32px] leading-tight font-semibold">{pact.name}</h1>
           <p className="mt-1 text-[15px] text-muted">
             <b className="text-ink tabular-nums">{count.toLocaleString()}</b> answered{matches ? <> · <b className="text-ink tabular-nums">{matches.toLocaleString()}</b> matches</> : null} ·{" "}
-            {{ draft: "Draft: only you can see it", open: "Live: taking answers", closed: "Answers closed: waiting for reveal night", revealed: "Revealed" }[phase]}
+            {{ draft: "Draft: only you can see it", open: "Live: taking answers", closed: "Answers closed: waiting for reveal night", matching: "Reveal night: matching everyone now", revealed: "Revealed" }[phase]}
           </p>
+          {progress && <p className="mt-1 text-[13.5px] font-semibold text-brand">{progress}</p>}
         </div>
         <div className="flex flex-wrap gap-2">
           {pact.status !== "draft" && (

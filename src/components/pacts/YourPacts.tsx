@@ -53,6 +53,8 @@ export function YourPacts({ demo }: { demo?: MyPact[] }) {
                       </>
                     ) : revealed ? (
                       "No match this time"
+                    ) : new Date(p.reveal_at).getTime() <= Date.now() ? (
+                      "Matching everyone now · your match arrives in minutes"
                     ) : new Date(p.closes_at).getTime() > Date.now() ? (
                       `Answered · you can change answers until ${pactDate(p.closes_at)}`
                     ) : (

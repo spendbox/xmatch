@@ -92,6 +92,20 @@ export const MAX_QUESTIONS = 25;
 
 // ---------------------------------------------------------------- checking what people send
 
+/** The same inbox written differently counts once: lower case, no +tags, and no dots for Gmail (matches pact_email_key in the database) */
+export function emailKey(email: string) {
+  const e = email.trim().toLowerCase();
+  const [user, domain] = [e.slice(0, e.lastIndexOf("@")), e.slice(e.lastIndexOf("@") + 1)];
+  const local = user.split("+")[0];
+  return domain === "gmail.com" || domain === "googlemail.com" ? `${local.replace(/\./g, "")}@gmail.com` : `${local}@${domain}`;
+}
+
+/** Throwaway inboxes people use to sign up many times */
+const THROWAWAY = new Set(["mailinator.com", "guerrillamail.com", "guerrillamail.net", "sharklasers.com", "10minutemail.com", "10minutemail.net", "tempmail.com", "temp-mail.org", "temp-mail.io", "tempmail.net", "tempmailo.com", "yopmail.com", "yopmail.net", "trashmail.com", "getnada.com", "nada.email", "dispostable.com", "maildrop.cc", "mailnesia.com", "mintemail.com", "throwawaymail.com", "fakeinbox.com", "emailondeck.com", "moakt.com", "mohmal.com", "tempail.com", "burnermail.io", "inboxkitten.com", "spamgourmet.com", "mailcatch.com", "tmail.ws", "tmpmail.org", "tmpmail.net", "1secmail.com", "1secmail.org", "1secmail.net", "emailfake.com", "fakemail.net", "luxusmail.org", "mail.tm", "mailpoof.com", "dropmail.me", "minuteinbox.com", "tempinbox.com", "discard.email", "spambox.us", "mytemp.email", "33mail.com", "harakirimail.com", "grr.la", "pokemail.net", "spam4.me"]);
+export function isThrowaway(email: string) {
+  return THROWAWAY.has(email.trim().toLowerCase().split("@")[1] ?? "");
+}
+
 /** Returns the cleaned answers, or a message saying what's wrong */
 export function cleanAnswers(questions: PactQuestion[], raw: unknown): Answers | string {
   if (!raw || typeof raw !== "object") return "Please answer the questions.";
@@ -207,49 +221,307 @@ export function compare(questions: PactQuestion[], x: Entry, y: Entry, intent: P
 
 /**
  * Pairs everyone up so the pact as a whole gets the best matches: each person's 25 best
- * candidates are found, then the strongest pairs are taken first.
+ * candidates are found, then the strongest pairs are taken first. Small pacts compare
+ * everyone with everyone; big ones only compare each person with the people whose answers
+ * are closest to theirs, which keeps 100,000 people to a few seconds.
  */
 export function matchEveryone(questions: PactQuestion[], entries: Entry[]): Pair[] {
-  const KEEP = 25;
-  const best = new Map<string, { other: number; score: number }[]>();
-  const edges: { i: number; j: number; score: number }[] = [];
+  return entries.length <= EXACT_UP_TO ? matchExact(questions, entries) : matchLarge(questions, entries);
+}
+
+const KEEP = 25;
+const EXACT_UP_TO = 3000;
+
+/** Every pair is compared (about 4.5 million comparisons at 3,000 people) */
+export function matchExact(questions: PactQuestion[], entries: Entry[]): Pair[] {
+  const code = encode(questions, entries);
+  const tops = new TopLists(entries.length);
   for (let i = 0; i < entries.length; i++) {
     for (let j = i + 1; j < entries.length; j++) {
-      const intent = matchIntent(entries[i].about, entries[j].about);
+      const intent = code.intentOf(i, j);
       if (!intent) continue;
-      const c = compare(questions, entries[i], entries[j], intent);
-      if (!c) continue;
-      for (const [me, other] of [[i, j], [j, i]] as const) {
-        const list = best.get(entries[me].id) ?? [];
-        list.push({ other, score: c.score });
-        if (list.length > KEEP * 2) { list.sort((p, q) => q.score - p.score); list.length = KEEP; }
-        best.set(entries[me].id, list);
+      const s = code.score(i, j, intent);
+      if (s >= 0) tops.add(i, j, s);
+    }
+  }
+  return pairUp(questions, entries, tops);
+}
+
+/** Only the closest few hundred people are compared with each person */
+export function matchLarge(questions: PactQuestion[], entries: Entry[], opts: { rounds?: number; window?: number } = {}): Pair[] {
+  const n = entries.length;
+  const rounds = opts.rounds ?? 8;
+  const window = opts.window ?? 16;
+  const code = encode(questions, entries);
+  const rand = seeded(n * 7919 + questions.length);
+
+  // Groups of people by what they can be matched for (love and spicy also by their gender)
+  const groups = new Map<string, number[]>();
+  const join = (k: string, i: number) => (groups.get(k) ?? groups.set(k, []).get(k)!).push(i);
+  for (let i = 0; i < n; i++) {
+    const a = entries[i].about;
+    for (const t of a.intents) join(t === "love" || t === "spicy" ? `${t}:${a.gender}` : t, i);
+  }
+  const targets = (i: number) => {
+    const a = entries[i].about;
+    return a.intents.flatMap((t) => (t === "love" || t === "spicy" ? a.seeking.map((g) => `${t}:${g}`) : [t]));
+  };
+
+  // Each round sorts everyone along a random mix of their answers; people next to you in
+  // that order answered a lot like you. Several rounds catch different kinds of alike.
+  const orders: Map<string, { idx: Int32Array; keys: Float64Array }>[] = [];
+  const keysByRound: Float64Array[] = [];
+  for (let r = 0; r < rounds; r++) {
+    const keys = code.project(rand);
+    keysByRound.push(keys);
+    const m = new Map<string, { idx: Int32Array; keys: Float64Array }>();
+    for (const [k, list] of groups) {
+      const idx = Int32Array.from(list).sort((x, y) => keys[x] - keys[y]);
+      m.set(k, { idx, keys: Float64Array.from(idx, (x) => keys[x]) });
+    }
+    orders.push(m);
+  }
+
+  const tops = new TopLists(n);
+  const seen = new Int32Array(n).fill(-1);
+  const consider = (i: number, j: number) => {
+    if (j === i || seen[j] === i) return;
+    seen[j] = i;
+    const intent = code.intentOf(i, j);
+    if (!intent) return;
+    const s = code.score(i, j, intent);
+    if (s >= 0) tops.add(i, j, s);
+  };
+  for (let i = 0; i < n; i++) {
+    for (const k of targets(i)) {
+      for (let r = 0; r < rounds; r++) {
+        const o = orders[r].get(k);
+        if (!o) continue;
+        const at = lowerBound(o.keys, keysByRound[r][i]);
+        const from = Math.max(0, at - window), to = Math.min(o.idx.length, at + window);
+        for (let p = from; p < to; p++) consider(i, o.idx[p]);
       }
+      // A few people at random too, so nobody is boxed in
+      const g = groups.get(k);
+      if (g) for (let x = 0; x < 6; x++) consider(i, g[Math.floor(rand() * g.length)]);
     }
   }
-  const seen = new Set<string>();
-  for (let i = 0; i < entries.length; i++) {
-    const list = (best.get(entries[i].id) ?? []).sort((p, q) => q.score - p.score).slice(0, KEEP);
-    for (const { other, score } of list) {
-      const key = i < other ? `${i}:${other}` : `${other}:${i}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      edges.push({ i: Math.min(i, other), j: Math.max(i, other), score });
-    }
-  }
-  edges.sort((p, q) => q.score - p.score);
-  const taken = new Set<number>();
+  return pairUp(questions, entries, tops);
+}
+
+/** Strongest pairs first; each person is in one pair at most */
+function pairUp(questions: PactQuestion[], entries: Entry[], tops: TopLists): Pair[] {
+  const edges = tops.edges();
+  const taken = new Uint8Array(entries.length);
   const pairs: Pair[] = [];
-  for (const e of edges) {
-    if (taken.has(e.i) || taken.has(e.j)) continue;
-    taken.add(e.i);
-    taken.add(e.j);
-    const x = entries[e.i], y = entries[e.j];
+  for (const [i, j] of edges) {
+    if (taken[i] || taken[j]) continue;
+    taken[i] = taken[j] = 1;
+    const x = entries[i], y = entries[j];
     const intent = matchIntent(x.about, y.about)!;
     const c = compare(questions, x, y, intent)!;
     pairs.push({ a: x.id, b: y.id, score: c.score, intent, shared: c.shared, differ: c.differ });
   }
   return pairs;
+}
+
+/** Each person's best candidates so far (25 each, kept in flat number arrays so 100,000 people stay light) */
+class TopLists {
+  private score: Int16Array;
+  private other: Int32Array;
+  private count: Uint8Array;
+  private low: Int16Array; // the weakest score kept, once full
+  constructor(private n: number) {
+    this.score = new Int16Array(n * KEEP);
+    this.other = new Int32Array(n * KEEP);
+    this.count = new Uint8Array(n);
+    this.low = new Int16Array(n).fill(-1);
+  }
+  add(i: number, j: number, score: number) {
+    this.push(i, j, score);
+    this.push(j, i, score);
+  }
+  private push(me: number, other: number, score: number) {
+    const c = this.count[me];
+    if (c === KEEP && score <= this.low[me]) return;
+    const base = me * KEEP;
+    for (let k = 0; k < c; k++) if (this.other[base + k] === other) return;
+    if (c < KEEP) {
+      this.score[base + c] = score;
+      this.other[base + c] = other;
+      this.count[me] = c + 1;
+      if (c + 1 < KEEP) return;
+    } else {
+      // Replace the weakest
+      let at = 0;
+      for (let k = 1; k < KEEP; k++) if (this.score[base + k] < this.score[base + at]) at = k;
+      this.score[base + at] = score;
+      this.other[base + at] = other;
+    }
+    let low = this.score[base];
+    for (let k = 1; k < KEEP; k++) if (this.score[base + k] < low) low = this.score[base + k];
+    this.low[me] = low;
+  }
+  /** All kept pairs, best first */
+  edges(): [number, number, number][] {
+    const out: [number, number, number][] = [];
+    for (let i = 0; i < this.n; i++) {
+      const base = i * KEEP;
+      for (let k = 0; k < this.count[i]; k++) {
+        const o = this.other[base + k];
+        // Each pair once: from the lower number's side, or from the higher side if the lower one didn't keep it
+        if (o > i || !this.has(o, i)) out.push([Math.min(i, o), Math.max(i, o), this.score[base + k]]);
+      }
+    }
+    return out.sort((p, q) => q[2] - p[2]);
+  }
+  private has(me: number, other: number) {
+    const base = me * KEEP;
+    for (let k = 0; k < this.count[me]; k++) if (this.other[base + k] === other) return true;
+    return false;
+  }
+}
+
+/**
+ * Everyone's answers as numbers, so comparing two people is quick. The score is worked out
+ * exactly as compare() does it (compare() also says what they share, for the final pairs).
+ */
+function encode(questions: PactQuestion[], entries: Entry[]) {
+  const n = entries.length;
+  const Q = questions.length;
+  const val = new Int32Array(n * Q).fill(-1); // option number, or 1 to 5 on a scale
+  const lo = new Uint32Array(n * Q), hi = new Uint32Array(n * Q); // picks for "pick a few", as bits
+  const area = new Int32Array(n).fill(-1), work = new Int32Array(n).fill(-1);
+  const names = new Map<string, number>();
+  const nameId = (s: string | undefined) => (s ? (names.get(s) ?? names.set(s, names.size).get(s)!) : -1);
+  const optIndex = questions.map((q) => new Map(q.options.map((o, k) => [o.id, k])));
+  for (let i = 0; i < n; i++) {
+    const e = entries[i];
+    area[i] = nameId(e.about.area);
+    work[i] = nameId(e.about.work);
+    for (let qi = 0; qi < Q; qi++) {
+      const q = questions[qi];
+      const v = e.answers[q.id];
+      if (v === undefined) continue;
+      const at = i * Q + qi;
+      if (q.kind === "scale") val[at] = Number(v);
+      else if (q.kind === "choose_many") {
+        val[at] = 0;
+        for (const id of v as string[]) {
+          const k = optIndex[qi].get(id);
+          if (k === undefined) continue;
+          if (k < 32) lo[at] |= 1 << k;
+          else hi[at] |= 1 << (k - 32);
+        }
+      } else {
+        const k = optIndex[qi].get(v as string);
+        if (k !== undefined) val[at] = k;
+      }
+    }
+  }
+  // Who they are and what they want, as numbers, for a quick matchIntent()
+  const age = new Int16Array(n), ageMin = new Int16Array(n), ageMax = new Int16Array(n);
+  const gender = new Uint8Array(n), seeks = new Uint8Array(n), wantsBits = new Uint8Array(n);
+  const G = { woman: 1, man: 2 } as const;
+  for (let i = 0; i < n; i++) {
+    const a = entries[i].about;
+    age[i] = a.age;
+    ageMin[i] = a.ageMin;
+    ageMax[i] = a.ageMax;
+    gender[i] = G[a.gender];
+    for (const g of a.seeking) seeks[i] |= G[g];
+    PRIORITY.forEach((p, k) => a.intents.includes(p) && (wantsBits[i] |= 1 << k));
+  }
+  /** Same answer as matchIntent(), from the numbers */
+  function intentOf(i: number, j: number): PactIntent | null {
+    if (age[i] < ageMin[j] || age[i] > ageMax[j] || age[j] < ageMin[i] || age[j] > ageMax[i]) return null;
+    const both = wantsBits[i] & wantsBits[j];
+    if (!both) return null;
+    const mutual = (seeks[i] & gender[j]) !== 0 && (seeks[j] & gender[i]) !== 0;
+    for (let k = 0; k < 4; k++) {
+      if (!(both & (1 << k))) continue;
+      if (k < 2 && !mutual) continue; // love and spicy need both to want each other
+      return PRIORITY[k];
+    }
+    return null;
+  }
+
+  const kind = questions.map((q) => q.kind);
+  const w = questions.map((q) => WEIGHT_VALUE[q.weight]);
+  const breaker = questions.map((q) => q.weight === "dealbreaker");
+
+  /** 0 to 100, or -1 if a deal-breaker rules them out */
+  function score(i: number, j: number, intent: PactIntent) {
+    const romantic = intent === "love" || intent === "spicy";
+    let got = 0, max = 0;
+    const bi = i * Q, bj = j * Q;
+    for (let qi = 0; qi < Q; qi++) {
+      const x = val[bi + qi], y = val[bj + qi];
+      if (x < 0 || y < 0) continue;
+      max += w[qi];
+      const k = kind[qi];
+      if (k === "scale") got += w[qi] * (1 - Math.abs(x - y) / 4);
+      else if (k === "choose_many") {
+        const both = bits(lo[bi + qi] & lo[bj + qi]) + bits(hi[bi + qi] & hi[bj + qi]);
+        const union = bits(lo[bi + qi] | lo[bj + qi]) + bits(hi[bi + qi] | hi[bj + qi]) || 1;
+        got += w[qi] * Math.min(1, (both / union) * 1.6);
+      } else if (x === y) got += w[qi];
+      else if (breaker[qi] && romantic) return -1;
+    }
+    let bonus = 0;
+    if (area[i] >= 0 && area[i] === area[j]) bonus += 0.04;
+    if (intent === "business" && work[i] >= 0 && work[i] === work[j]) bonus += 0.03;
+    return Math.round(Math.min(1, (max ? got / max : 0.5) + bonus) * 100);
+  }
+
+  /** A random mix of everyone's answers (one number each), for sorting people who answered alike next to each other */
+  function project(rand: () => number) {
+    const weights = questions.map((q) => Float64Array.from({ length: Math.max(q.options.length, 2) }, () => (rand() * 2 - 1) * WEIGHT_VALUE[q.weight]));
+    const keys = new Float64Array(n);
+    for (let i = 0; i < n; i++) {
+      let s = 0;
+      for (let qi = 0; qi < Q; qi++) {
+        const at = i * Q + qi;
+        const x = val[at];
+        if (x < 0) continue;
+        const wt = weights[qi];
+        if (kind[qi] === "scale") s += wt[0] * (x - 3);
+        else if (kind[qi] === "choose_many") {
+          for (let k = 0; k < wt.length; k++) if (k < 32 ? lo[at] & (1 << k) : hi[at] & (1 << (k - 32))) s += wt[k] / 2;
+        } else s += wt[x] ?? 0;
+      }
+      keys[i] = s;
+    }
+    return keys;
+  }
+  return { score, project, intentOf };
+}
+
+function bits(v: number) {
+  v = v - ((v >>> 1) & 0x55555555);
+  v = (v & 0x33333333) + ((v >>> 2) & 0x33333333);
+  return (((v + (v >>> 4)) & 0x0f0f0f0f) * 0x01010101) >>> 24;
+}
+
+function lowerBound(a: Float64Array, x: number) {
+  let l = 0, h = a.length;
+  while (l < h) {
+    const m = (l + h) >>> 1;
+    if (a[m] < x) l = m + 1;
+    else h = m;
+  }
+  return l;
+}
+
+/** The same "random" numbers every time for the same pact, so a retried reveal gives the same pairs */
+function seeded(seed: number) {
+  let t = seed >>> 0;
+  return () => {
+    t = (t + 0x6d2b79f5) >>> 0;
+    let r = Math.imul(t ^ (t >>> 15), 1 | t);
+    r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
 }
 
 // ---------------------------------------------------------------- answers as "things about you"
@@ -271,9 +543,11 @@ export function answersAsThings(questions: PactQuestion[], answers: Answers): st
 
 // ---------------------------------------------------------------- dates
 
-export type Phase = "open" | "closed" | "revealed";
+export type Phase = "open" | "closed" | "matching" | "revealed";
 export function pactPhase(p: Pick<Pact, "closes_at" | "reveal_at" | "status">, now = Date.now()): Phase {
-  if (p.status === "revealed" || now >= new Date(p.reveal_at).getTime()) return "revealed";
+  if (p.status === "revealed") return "revealed";
+  // Reveal time has come and everyone is being matched (a few minutes for big pacts)
+  if (now >= new Date(p.reveal_at).getTime()) return "matching";
   if (now >= new Date(p.closes_at).getTime()) return "closed";
   return "open";
 }

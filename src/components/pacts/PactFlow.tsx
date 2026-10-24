@@ -7,7 +7,7 @@ import { ArrowLeft, ArrowRight, Bell, Briefcase, Check, Flame, Heart, Minus, Plu
 import { INTENTS, WORK, pactPhase, type About, type Answer, type Answers, type Pact, type PactIntent, type PactQuestion } from "@/lib/pacts";
 import { Turnstile } from "@/components/ui/Turnstile";
 import { MaskIcon } from "@/components/ui/MaskIcon";
-import { Countdown, OptionArt, PactLogo, pactDate } from "./PactBits";
+import { Countdown, OptionArt, PactLogo, PactMatching, pactDate } from "./PactBits";
 import { PactReveal, type RevealMatch } from "./PactReveal";
 import { rememberToken, savedPactTokens } from "./pactTokens";
 
@@ -129,6 +129,13 @@ export function PactFlow({
   }
 
   // ---------------------------------------------------------------- reveal night
+  if (phase === "matching" && !demoStep) {
+    return (
+      <Shell pact={pact}>
+        <PactMatching pact={pact} count={joined} />
+      </Shell>
+    );
+  }
   if (phase === "revealed" && !demoStep) {
     return (
       <Shell pact={pact}>

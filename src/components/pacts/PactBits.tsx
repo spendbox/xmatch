@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { MaskIcon } from "@/components/ui/MaskIcon";
 import clsx from "clsx";
 import type { Pact, PactOption } from "@/lib/pacts";
 
@@ -52,6 +54,31 @@ function useNow(ms = 1000) {
     return () => clearInterval(t);
   }, [ms]);
   return now;
+}
+
+/** Reveal night while everyone is being matched: checks again every 20 seconds until the matches are out */
+export function PactMatching({ pact, count }: { pact: Pick<Pact, "name" | "accent" | "logo_url">; count: number }) {
+  const router = useRouter();
+  useEffect(() => {
+    // Spread out, so thousands of phones don't all ask at the same second
+    const t = setInterval(() => router.refresh(), 25_000 + Math.random() * 15_000);
+    return () => clearInterval(t);
+  }, [router]);
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center px-6 py-16 text-center">
+      <span className="relative grid h-28 w-28 place-items-center">
+        <span className="absolute inset-0 animate-ping rounded-full opacity-25" style={{ background: pact.accent }} />
+        <span className="relative grid h-24 w-24 place-items-center rounded-full" style={{ background: "linear-gradient(135deg, #e5484d, #f2b33d)" }}>
+          <MaskIcon className="w-14" eyes="#1c1828" />
+        </span>
+      </span>
+      <p className="mt-7 text-[12.5px] font-extrabold tracking-[0.12em] uppercase" style={{ color: pact.accent }}>Reveal night · {pact.name}</p>
+      <h1 className="mt-2 font-display text-[30px] leading-tight font-bold">Matching everyone now</h1>
+      <p className="mt-2 max-w-xs text-[15px] leading-relaxed text-white/75">
+        We&apos;re finding the best match for all {count.toLocaleString()} people. This takes a few minutes. Stay here, or we&apos;ll let you know.
+      </p>
+    </div>
+  );
 }
 
 /** Days, hours, minutes and seconds until a time */

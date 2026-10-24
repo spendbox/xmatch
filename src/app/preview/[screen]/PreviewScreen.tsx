@@ -698,6 +698,8 @@ function ScreenBody({ screen }: { screen: string }) {
       const demoStep = st === "intro" ? { step: "intro" as const } : st === "q1" ? { step: "q" as const, qi: 0 } : st === "artists" ? { step: "q" as const, qi: 5 } : st === "scale" ? { step: "q" as const, qi: 7 } : { step: st as "about" | "finish" | "done" };
       return pactWrap(<PactFlow pact={demoPact} questions={demoQs} count={4127} signedIn={false} mine={null} result={null} demoStep={demoStep} />);
     }
+    case "pact-matching":
+      return pactWrap(<PactFlow pact={{ ...demoPact, closes_at: iso(86400), reveal_at: iso(60) }} questions={demoQs} count={104219} signedIn={false} mine={null} result={null} />);
     case "pact-reveal":
       return pactWrap(
         <PactFlow

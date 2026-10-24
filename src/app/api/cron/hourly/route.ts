@@ -17,6 +17,7 @@ async function handle(req: Request) {
   if (!secret || req.headers.get("authorization") !== `Bearer ${secret}`) {
     return NextResponse.json({ error: "Not allowed" }, { status: 401 });
   }
+  const started = Date.now();
   const db = createAdminClient();
   // Keep "usually replies in…" fresh: this runs every 5 minutes, 200 people at a time (it pairs quick repliers first)
   await db.rpc("refresh_reply_stats", { p_limit: 200 });
@@ -58,10 +59,10 @@ async function handle(req: Request) {
       ),
     ),
   );
-  // Pacts whose reveal night has come: match everyone and tell them
+  // Pacts whose reveal night has come (the every-minute pacts job does this too, if it's set up)
   let pacts: unknown[] = [];
   try {
-    pacts = await revealDuePacts();
+    pacts = await revealDuePacts(started + 50_000);
   } catch (e) {
     console.error("pact reveal failed", e);
   }
