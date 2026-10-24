@@ -31,7 +31,7 @@ export function EventsScreen({ events, pacts = [], embedded }: { events: Dashpad
 
       {pacts.length > 0 && (
         <section className="mt-8">
-          <h2 className="text-[15px] font-semibold">Pacts</h2>
+          <h2 className="text-[15px] font-semibold">Link-Ups</h2>
           <p className="mb-3 text-[14px] text-muted">Answer a few questions. On reveal night, meet the person most like you, for business, friendship, love or something spicy.</p>
           <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
             {pacts.map((p) => (

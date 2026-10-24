@@ -151,7 +151,7 @@ export function HomeScreen({
 
         {pact && (
           <section className="mt-6">
-            <h2 className="mb-3 text-[15px] font-semibold">Pact open now</h2>
+            <h2 className="mb-3 text-[15px] font-semibold">Link-Up open now</h2>
             <PactCard pact={pact} compact />
           </section>
         )}

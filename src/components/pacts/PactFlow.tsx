@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { ArrowLeft, ArrowRight, Bell, Briefcase, Check, Flame, Heart, Minus, Plus, Share2, Users } from "lucide-react";
 import { INTENTS, WORK, pactPhase, people, type PactView, type About, type Answer, type Answers, type Pact, type PactIntent, type PactQuestion } from "@/lib/pacts";
@@ -11,7 +12,7 @@ import { pactDate } from "@/lib/pacts";
 import { PactReveal } from "./PactReveal";
 import { AFTER_JOIN, savedPactTokens } from "./pactTokens";
 
-type Step = "intro" | "q" | "about" | "finish" | "done";
+type Step = "intro" | "q" | "about" | "finish" | "done" | "edit";
 
 /** Pacts taken on this phone: their private links, so they can be added to an account later */
 const INTENT_ICONS: Record<PactIntent, React.ReactNode> = {
@@ -30,6 +31,7 @@ export function PactFlow({
   result,
   demoStep,
   preview,
+  edit,
 }: {
   pact: Pact;
   questions: PactQuestion[];
@@ -43,12 +45,15 @@ export function PactFlow({
   demoStep?: { step: Step; qi?: number };
   /** Admin preview: everything works, but nothing is saved */
   preview?: boolean;
+  /** Opened from your "You're in" card: go straight to your answers to change them */
+  edit?: boolean;
 }) {
   const sample = !!demoStep || !!preview;
   const accent = pact.accent;
   const phase = pactPhase(pact);
   const draftKey = `dp_pact_draft_${pact.slug}`;
-  const [step, setStep] = useState<Step>(demoStep?.step ?? "intro");
+  const router = useRouter();
+  const [step, setStep] = useState<Step>(demoStep?.step ?? (edit && pactPhase(pact) === "open" ? "edit" : "intro"));
   const [qi, setQi] = useState(demoStep?.qi ?? 0);
   const [answers, setAnswers] = useState<Answers>(mine?.answers ?? {});
   const [about, setAbout] = useState<Partial<About>>(mine?.about ? { ...mine.about, intents: (mine.about.intents ?? []).slice(0, 1) } : { intents: [], seeking: [], age: 25, ageMin: 21, ageMax: 35 });
@@ -57,6 +62,9 @@ export function PactFlow({
   const [error, setError] = useState<string | null>(null);
   const [taken, setTaken] = useState<boolean>(!!mine);
   const [joined, setJoined] = useState(count);
+  // Changing saved answers: one screen with everything, tap a question to change it
+  const [editing, setEditing] = useState(!!edit);
+  const [savedEdit, setSavedEdit] = useState(false);
   // School and company pacts: the inbox we sent a confirmation link to
   const [confirmTo, setConfirmTo] = useState<string | null>(null);
   const form = useRef<HTMLFormElement>(null);
@@ -111,7 +119,16 @@ export function PactFlow({
   };
   function next() {
     setError(null);
-    if (step === "intro") return setStep(questions.length ? "q" : "about");
+    if (step === "intro") {
+      if (taken && signedIn) return (setEditing(true), setStep("edit"));
+      return setStep(questions.length ? "q" : "about");
+    }
+    if (editing && step === "q") return setStep("edit");
+    if (editing && step === "about") {
+      const msg = aboutProblem(about, pact);
+      if (msg) return setError(msg);
+      return setStep("edit");
+    }
     if (step === "q") {
       if (qi < total - 1) return setQi((i) => i + 1);
       return setStep("about");
@@ -124,6 +141,8 @@ export function PactFlow({
   }
   function back() {
     setError(null);
+    if (step === "edit") return setStep("intro");
+    if (editing && (step === "q" || step === "about")) return setStep("edit");
     if (step === "q") return qi > 0 ? setQi((i) => i - 1) : setStep("intro");
     if (step === "about") return questions.length ? (setStep("q"), setQi(total - 1)) : setStep("intro");
     if (step === "finish") return setStep("about");
@@ -150,8 +169,11 @@ export function PactFlow({
       /* private mode */
     }
     if (!taken) setJoined((n) => n + 1);
+    setSavedEdit(editing && taken);
     setTaken(true);
     setStep("done");
+    // So Home and this page show your saved answers next time
+    router.refresh();
   }
 
   // ---------------------------------------------------------------- reveal night
@@ -215,11 +237,11 @@ export function PactFlow({
         <div className="grid gap-2.5 px-5 pt-6 pb-[max(1.6rem,env(safe-area-inset-bottom))]">
           {closed ? (
             <p className="rounded-2xl bg-white/[0.07] px-4 py-3.5 text-center text-[14.5px] text-white/85">
-              {taken ? "You're in. Answers are closed, and your match arrives on reveal night." : "Answers are closed for this pact. Reveal night is coming."}
+              {taken ? "You're in. Answers are closed, and your match arrives on reveal night." : "Answers are closed for this Link-Up. Reveal night is coming."}
             </p>
           ) : (
             <button onClick={next} className="h-14 rounded-full text-[16.5px] font-extrabold text-[#1c1310] transition active:scale-[0.98]" style={{ background: accent }}>
-              {taken ? "Edit my answers" : pact.button_text?.trim() || "Take the Pact"}
+              {taken ? "Edit my answers" : pact.button_text?.trim() || "Join the Link-Up"}
             </button>
           )}
           <p className="text-center text-[12px] text-white/55">Free with a Dashpad account · answers stay private · 18+</p>
@@ -234,7 +256,7 @@ export function PactFlow({
       <Shell pact={pact}>
         <div className="flex flex-col items-center px-6 pt-8 text-center">
           <Seal accent={accent} />
-          <h1 className="mt-3 font-display text-[30px] font-bold">You&apos;re in the Pact</h1>
+          <h1 className="mt-3 font-display text-[30px] font-bold">{savedEdit ? "Changes saved" : "You\u2019re in"}</h1>
           <p className="mt-1.5 text-[14.5px] text-white/75">
             <b className="tabular-nums" style={{ color: accent }}>{people(joined)}</b> so far. Your match arrives {pactDate(pact.reveal_at)}.
           </p>
@@ -249,13 +271,86 @@ export function PactFlow({
         )}
         <div className="mx-5 mt-6 grid gap-3 text-center">
           <p className="rounded-2xl bg-white/[0.07] px-4 py-3.5 text-[14.5px] leading-relaxed text-white/85">We&apos;ll send you a notification the moment your match drops. It also shows on your profile.</p>
-          <button onClick={() => (setStep("q"), setQi(0))} className="h-12 rounded-full border border-white/20 text-[15px] font-bold">Change my answers</button>
+          <button onClick={() => (setEditing(true), setError(null), setStep("edit"))} className="h-12 rounded-full border border-white/20 text-[15px] font-bold">Change my answers</button>
         </div>
         <div className="flex-1" />
         <div className="grid gap-2 px-5 pt-5 pb-[max(1.4rem,env(safe-area-inset-bottom))]">
           <Link href="/home" className="flex h-14 items-center justify-center rounded-full text-[16px] font-extrabold text-[#1c1310]" style={{ background: accent }}>Back to Dashpad</Link>
           <ShareButton pact={pact} />
         </div>
+      </Shell>
+    );
+  }
+
+  // ---------------------------------------------------------------- your answers, to change
+  if (step === "edit") {
+    const domain = pact.email_domain?.replace(/^@/, "");
+    const aboutLine = [
+      INTENTS.find((i) => i.id === about.intents?.[0])?.label,
+      about.gender === "woman" ? "Woman" : about.gender === "man" ? "Man" : null,
+      about.age,
+      about.area,
+      about.work,
+    ].filter(Boolean).join(" · ");
+    return (
+      <Shell pact={pact}>
+        <form onSubmit={submit} className="flex min-h-full flex-1 flex-col px-[18px] pt-4 pb-[max(1.3rem,env(safe-area-inset-bottom))]">
+          <div className="flex items-center gap-2.5 px-1">
+            <button type="button" onClick={back} aria-label="Back" className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/[0.08]">
+              <ArrowLeft size={20} />
+            </button>
+            <PactLogo pact={pact} size={32} />
+            <span className="min-w-0 flex-1 truncate text-[14px] font-bold text-white/80">{pact.name}</span>
+          </div>
+          <h1 className="mt-5 px-1 font-display text-[29px] leading-tight font-bold">Your answers</h1>
+          <p className="mt-1 px-1 text-[14px] text-white/65">Tap any answer to change it, then save.</p>
+          <ul className="mt-4 grid gap-2">
+            {questions.map((qq, i) => (
+              <li key={qq.id}>
+                <button type="button" onClick={() => (setError(null), setQi(i), setStep("q"))} className="flex w-full items-center gap-3 rounded-2xl bg-white/[0.06] px-4 py-3 text-left transition active:bg-white/[0.1]">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[12.5px] font-semibold text-white/55">{qq.title}</span>
+                    <span className="block truncate text-[15px] font-bold">{answerLabel(qq, answers[qq.id]) || <span className="text-[#ffb4b4]">Not answered</span>}</span>
+                  </span>
+                  <ArrowRight size={16} className="shrink-0 text-white/40" />
+                </button>
+              </li>
+            ))}
+            <li>
+              <button type="button" onClick={() => (setError(null), setStep("about"))} className="flex w-full items-center gap-3 rounded-2xl bg-white/[0.06] px-4 py-3 text-left transition active:bg-white/[0.1]">
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[12.5px] font-semibold text-white/55">About you</span>
+                  <span className="block truncate text-[15px] font-bold">{aboutLine || "Not filled in"}</span>
+                </span>
+                <ArrowRight size={16} className="shrink-0 text-white/40" />
+              </button>
+            </li>
+          </ul>
+          {domain && (
+            <label className="mt-4 grid gap-2 px-1">
+              <span className="text-[13px] font-bold">Your {domain} email</span>
+              <input type="email" inputMode="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={`you@${domain}`} className="rounded-2xl border border-white/20 bg-white/[0.06] px-4 text-[16px] outline-none focus:border-white/50" style={{ height: 52 }} />
+            </label>
+          )}
+          <div className="flex-1" />
+          {error && <p className="mt-4 rounded-2xl bg-[#e5484d]/15 px-4 py-3 text-[14px] font-semibold text-[#ffb4b4]" role="alert">{error}</p>}
+          <button
+            type="submit"
+            disabled={busy}
+            onClick={(e) => {
+              const missing = questions.find((qq) => !answered(qq, answers[qq.id]));
+              const msg = missing ? `Answer "${missing.title}".` : aboutProblem(about, pact);
+              if (msg) {
+                e.preventDefault();
+                setError(msg);
+              }
+            }}
+            className="mt-5 h-14 rounded-full text-[16.5px] font-extrabold text-[#1c1310] disabled:opacity-60"
+            style={{ background: accent }}
+          >
+            {busy ? "Saving…" : "Save changes"}
+          </button>
+        </form>
       </Shell>
     );
   }
@@ -270,7 +365,7 @@ export function PactFlow({
     }
     try {
       localStorage.setItem(draftKey, JSON.stringify({ answers, about }));
-      localStorage.setItem(AFTER_JOIN, `/pact/${pact.slug}?resume=1`);
+      localStorage.setItem(AFTER_JOIN, `/link-up/${pact.slug}?resume=1`);
     } catch {
       /* private mode */
     }
@@ -310,7 +405,7 @@ export function PactFlow({
                   className="rounded-2xl border border-white/20 bg-white/[0.06] px-4 text-[16px] outline-none focus:border-white/50"
                   style={{ height: 52 }}
                 />
-                <span className="text-[12.5px] text-white/60">This pact is only for {pact.email_domain.replace(/^@/, "")} emails. We&apos;ll send a link there to confirm it&apos;s yours.</span>
+                <span className="text-[12.5px] text-white/60">This Link-Up is only for {pact.email_domain.replace(/^@/, "")} emails. We&apos;ll send a link there to confirm it&apos;s yours.</span>
               </label>
             )}
           </div>
@@ -319,7 +414,7 @@ export function PactFlow({
           <div className="mt-6 px-1">
             <p className="text-[12px] font-extrabold tracking-[0.12em] uppercase" style={{ color: accent }}>Last step</p>
             <h1 className="mt-1 font-display text-[30px] leading-tight font-bold">Create your free account to join</h1>
-            <p className="mt-2 text-[14.5px] leading-relaxed text-white/72">Your answers are kept on this phone. Once you&apos;re in, they&apos;re added to the Pact straight away, and your match shows up in Dashpad on reveal night.</p>
+            <p className="mt-2 text-[14.5px] leading-relaxed text-white/72">Your answers are kept on this phone. Once you&apos;re in, they&apos;re added to the Link-Up straight away, and your match shows up in Dashpad on reveal night.</p>
             <p className="mt-5 text-[13px] font-bold">While you wait for reveal night, meet people masked every hour, for</p>
             <div className="mt-2.5 grid grid-cols-2 gap-2.5">
               {[
@@ -354,7 +449,7 @@ export function PactFlow({
             </span>
           ) : step === "finish" ? (
             <button type="submit" disabled={busy} className="inline-flex h-[52px] items-center gap-2 rounded-full px-6 text-[16px] font-extrabold text-[#1c1310] disabled:opacity-60" style={{ background: accent }}>
-              {busy ? "Saving…" : "Join the Pact"}
+              {busy ? "Saving…" : "Join the Link-Up"}
             </button>
           ) : (
             <button
@@ -364,13 +459,24 @@ export function PactFlow({
               className="inline-flex h-12 items-center gap-1.5 rounded-full px-5 text-[15px] font-extrabold text-[#1c1310] transition disabled:opacity-35"
               style={{ background: accent }}
             >
-              Next <ArrowRight size={17} />
+              {editing && (step === "q" || step === "about") ? <>Done <Check size={17} /></> : <>Next <ArrowRight size={17} /></>}
             </button>
           )}
         </div>
       </form>
     </Shell>
   );
+}
+
+/** An answer in words, for the "Your answers" screen */
+function answerLabel(q: PactQuestion, v: Answer | undefined) {
+  if (v === undefined) return "";
+  if (q.kind === "scale") {
+    const n = Number(v);
+    return n <= 2 ? `${q.options[0]?.label ?? ""} (${n}/5)` : n >= 4 ? `${q.options[1]?.label ?? ""} (${n}/5)` : `In the middle (${n}/5)`;
+  }
+  const label = (id: string) => q.options.find((o) => o.id === id)?.label ?? "";
+  return Array.isArray(v) ? v.map(label).filter(Boolean).join(", ") : label(String(v));
 }
 
 function answered(q: PactQuestion | undefined, v: Answer | undefined) {
@@ -426,8 +532,8 @@ function Seal({ accent }: { accent: string }) {
 function ShareButton({ pact }: { pact: Pact }) {
   const [copied, setCopied] = useState(false);
   async function share() {
-    const url = `${location.origin}/pact/${pact.slug}`;
-    const text = `I just took ${pact.name}. Take it too and see who you match with on reveal night.`;
+    const url = `${location.origin}/link-up/${pact.slug}`;
+    const text = `I just answered ${pact.name}. Answer it too and see who you match with on reveal night.`;
     try {
       if (navigator.share) return await navigator.share({ title: pact.name, text, url });
     } catch {
@@ -443,7 +549,7 @@ function ShareButton({ pact }: { pact: Pact }) {
   }
   return (
     <button onClick={share} className="flex h-12 items-center justify-center gap-2 rounded-full border border-white/20 text-[14.5px] font-bold">
-      <Share2 size={17} /> {copied ? "Link copied" : "Share the Pact"}
+      <Share2 size={17} /> {copied ? "Link copied" : "Share the Link-Up"}
     </button>
   );
 }
@@ -793,11 +899,11 @@ function RevealLookup({ pact }: { pact: Pact }) {
       </div>
       <div className="mx-5 mt-7 grid gap-3">
         {mine && (
-          <Link href={`/pact/${pact.slug}/match?t=${mine}`} className="flex h-14 items-center justify-center rounded-full text-[16px] font-extrabold text-[#1c1310]" style={{ background: pact.accent }}>See my match</Link>
+          <Link href={`/link-up/${pact.slug}/match?t=${mine}`} className="flex h-14 items-center justify-center rounded-full text-[16px] font-extrabold text-[#1c1310]" style={{ background: pact.accent }}>See my match</Link>
         )}
         <Link href={`/login`} className="flex h-12 items-center justify-center rounded-full border border-white/20 text-[15px] font-bold">Log in to Dashpad</Link>
         {sent ? (
-          <p className="flex items-center gap-2 rounded-2xl bg-white/[0.07] px-4 py-3 text-[14px] text-white/85"><Bell size={16} /> If you took the Pact with that email, your link is on its way.</p>
+          <p className="flex items-center gap-2 rounded-2xl bg-white/[0.07] px-4 py-3 text-[14px] text-white/85"><Bell size={16} /> If you answered with that email, your link is on its way.</p>
         ) : (
           <form ref={form} onSubmit={send} className="grid gap-2 rounded-[20px] bg-white/[0.06] p-4">
             <label htmlFor="resend-email" className="text-[13.5px] font-bold">Lost your link? We&apos;ll email it again.</label>

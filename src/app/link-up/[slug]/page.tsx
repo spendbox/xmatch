@@ -10,12 +10,12 @@ import { AdminPreview } from "@/components/pacts/AdminPreview";
 
 export const dynamic = "force-dynamic";
 
-type Search = Promise<{ preview?: string; as?: string }>;
+type Search = Promise<{ preview?: string; as?: string; edit?: string }>;
 
 export async function generateMetadata({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Search }): Promise<Metadata> {
   const [{ slug }, { preview }] = await Promise.all([params, searchParams]);
   const loaded = await loadPact(slug, { drafts: !!preview && (await isAdmin()) });
-  if (!loaded) return { title: "Pact" };
+  if (!loaded) return { title: "Link-Up" };
   const { pact } = loaded;
   const description = pact.tagline || `Answer a few questions. On reveal night, everyone gets their one best match.`;
   return {
@@ -43,5 +43,5 @@ export default async function PactPage({ params, searchParams }: { params: Promi
     if (data) mine = data as { about: About; answers: Answers };
     if (pactPhase(pact) === "revealed" && mine) result = await resultFor(pact.id, { userId: user.id });
   }
-  return <PactFlow pact={pact} questions={questions} count={count} signedIn={!!user} mine={mine} result={result?.view ?? null} />;
+  return <PactFlow pact={pact} questions={questions} count={count} signedIn={!!user} mine={mine} result={result?.view ?? null} edit={!!sp.edit && !!mine} />;
 }

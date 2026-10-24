@@ -18,8 +18,8 @@ export default async function PactConfirmPage({ params, searchParams }: { params
         <PactLogo pact={pact} size={80} />
         <h1 className="mt-6 font-display text-[32px] leading-tight font-bold">Email confirmed</h1>
         <p className="mt-2 max-w-xs text-[15px] leading-relaxed text-white/75">You&apos;re in {pact.name}. Your match arrives on reveal night, {pactDate(pact.reveal_at)}.</p>
-        <Link href={`/pact/${pact.slug}`} className="mt-8 flex h-14 w-full max-w-sm items-center justify-center rounded-full text-[16px] font-extrabold text-[#1c1310]" style={{ background: pact.accent }}>
-          Back to the Pact
+        <Link href={`/link-up/${pact.slug}`} className="mt-8 flex h-14 w-full max-w-sm items-center justify-center rounded-full text-[16px] font-extrabold text-[#1c1310]" style={{ background: pact.accent }}>
+          Go back
         </Link>
       </div>
     </div>
