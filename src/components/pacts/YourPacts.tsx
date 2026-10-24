@@ -20,6 +20,9 @@ export type MyPact = {
   shared: { q: string; a: string }[] | null;
   session_id: string | null;
   match_alias: string | null;
+  /** You have a match, and whether you've revealed it */
+  has_match?: boolean;
+  seen?: boolean;
 };
 
 /** Profile: the pacts you took, and who you matched with */
@@ -47,16 +50,20 @@ export function YourPacts({ demo }: { demo?: MyPact[] }) {
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[15.5px] font-semibold">{p.name}</span>
                   <span className="mt-0.5 block truncate text-[13px] text-muted">
-                    {revealed && p.match_alias ? (
+                    {revealed && p.has_match && !p.seen ? (
+                      <b className="text-brand">You have a match · tap to reveal</b>
+                    ) : revealed && p.match_alias ? (
                       <>
                         Matched with <b className="text-ink">{p.match_alias}</b> · {p.score}% · {intentLabel(p.intent ?? "friendship")}
                       </>
                     ) : revealed ? (
                       "No match this time"
+                    ) : new Date(p.reveal_at).getTime() <= Date.now() ? (
+                      "Matching everyone now · your match arrives in minutes"
                     ) : new Date(p.closes_at).getTime() > Date.now() ? (
                       `Answered · you can change answers until ${pactDate(p.closes_at)}`
                     ) : (
-                      `Reveal night ${pactDate(p.reveal_at)}`
+                      `Matching now · revealed ${pactDate(p.reveal_at)}`
                     )}
                   </span>
                 </span>

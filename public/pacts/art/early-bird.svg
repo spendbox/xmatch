@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" aria-label="Sunrise and a bird">
+<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff7a59"/><stop offset="1" stop-color="#ffd27a"/></linearGradient></defs>
+<rect width="400" height="400" fill="url(#g)"/>
+<circle cx="340" cy="60" r="90" fill="#fff" opacity=".08"/><circle cx="40" cy="330" r="70" fill="#fff" opacity=".06"/>
+
+<circle cx="200" cy="250" r="90" fill="#fff3c4"/>
+<g stroke="#fff3c4" stroke-width="8" stroke-linecap="round"><line x1="90" y1="250" x2="60" y2="250"/><line x1="105" y1="195" x2="79" y2="180"/><line x1="145" y1="155" x2="130" y2="129"/><line x1="200" y1="140" x2="200" y2="110"/><line x1="255" y1="155" x2="270" y2="129"/><line x1="295" y1="195" x2="321" y2="180"/><line x1="310" y1="250" x2="340" y2="250"/></g>
+<rect x="0" y="250" width="400" height="150" fill="#ff9a6a"/><path d="M0 270 q100-30 200 0 t200 0 v130 h-400z" fill="#e8644a"/>
+<g transform="translate(280 120)"><ellipse cx="0" cy="0" rx="26" ry="20" fill="#7cc8ff"/><circle cx="20" cy="-14" r="12" fill="#7cc8ff"/><path d="M30 -16 l12 4 -12 4z" fill="#f2c45a"/><circle cx="23" cy="-17" r="2.5" fill="#1c1828"/><path d="M-10 -4 q-14-20-30-10 q14 4 30 10z" fill="#5aa8e0"/></g>
+</svg>

@@ -4,11 +4,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
 import { ArrowLeft, ArrowRight, Bell, Briefcase, Check, Flame, Heart, Minus, Plus, Share2, Users } from "lucide-react";
-import { INTENTS, WORK, pactPhase, type About, type Answer, type Answers, type Pact, type PactIntent, type PactQuestion } from "@/lib/pacts";
+import { INTENTS, WORK, pactPhase, people, type PactView, type About, type Answer, type Answers, type Pact, type PactIntent, type PactQuestion } from "@/lib/pacts";
 import { Turnstile } from "@/components/ui/Turnstile";
 import { MaskIcon } from "@/components/ui/MaskIcon";
-import { Countdown, OptionArt, PactLogo, pactDate } from "./PactBits";
-import { PactReveal, type RevealMatch } from "./PactReveal";
+import { Countdown, OptionArt, PactLogo, PactMatching, pactDate } from "./PactBits";
+import { PactReveal } from "./PactReveal";
 import { rememberToken, savedPactTokens } from "./pactTokens";
 
 type Step = "intro" | "q" | "about" | "finish" | "done";
@@ -36,8 +36,8 @@ export function PactFlow({
   signedIn: boolean;
   /** Your answers, if you've already taken it with your account */
   mine: { about: About; answers: Answers } | null;
-  /** Reveal night: your match (for people logged in) */
-  result: { match: RevealMatch | null } | null;
+  /** Reveal night: your teaser or match (for people logged in) */
+  result: PactView | null;
   /** Previews only */
   demoStep?: { step: Step; qi?: number };
 }) {
@@ -129,11 +129,19 @@ export function PactFlow({
   }
 
   // ---------------------------------------------------------------- reveal night
+  // Answers closed: matching until reveal night
+  if ((phase === "closed" || phase === "matching") && !demoStep) {
+    return (
+      <Shell pact={pact}>
+        <PactMatching pact={pact} count={joined} taken={taken} />
+      </Shell>
+    );
+  }
   if (phase === "revealed" && !demoStep) {
     return (
       <Shell pact={pact}>
         {result ? (
-          <PactReveal pact={pact} match={result.match} signedIn={signedIn} total={joined} />
+          <PactReveal pact={pact} view={result} signedIn={signedIn} total={joined} />
         ) : (
           <RevealLookup pact={pact} />
         )}
@@ -157,7 +165,7 @@ export function PactFlow({
           </p>
         </div>
         <div className="mx-5 mt-6 rounded-[22px] border p-4" style={{ background: "#22163f", borderColor: `${accent}40` }}>
-          <Countdown to={closed ? pact.reveal_at : pact.reveal_at} accent={accent} label="Reveal night in" />
+          <Countdown to={pact.closes_at} accent={accent} label="Answers close in" />
           <div className="mt-3.5 flex items-center justify-center gap-2.5 border-t border-white/10 pt-3 text-[14px] font-semibold">
             <span className="flex">
               {["#5b3fd9,#1f9d6b", "#e5484d,#f2b33d", "#7cc8ff,#2b2066"].map((g, i) => (
@@ -202,7 +210,7 @@ export function PactFlow({
           <Seal accent={accent} />
           <h1 className="mt-3 font-display text-[30px] font-bold">You&apos;re in the Pact</h1>
           <p className="mt-1.5 text-[14.5px] text-white/75">
-            <b className="tabular-nums" style={{ color: accent }}>{joined.toLocaleString()}</b> people so far. Your match arrives {pactDate(pact.reveal_at)}.
+            <b className="tabular-nums" style={{ color: accent }}>{people(joined)}</b> so far. Your match arrives {pactDate(pact.reveal_at)}.
           </p>
         </div>
         {signedIn ? (
@@ -536,12 +544,105 @@ function Chip({ on, onClick, children, accent }: { on: boolean; onClick: () => v
   );
 }
 
-function Stepper({ value, onChange, min = 18, max = 99, label }: { value: number; onChange: (n: number) => void; min?: number; max?: number; label: string }) {
+const AGE_LO = 18;
+const AGE_HI = 65; // the top of the slider means "65 and over"
+
+/** Your age: a big number with − and +, and a row of ages to swipe and tap */
+function AgePicker({ value, onChange, accent }: { value: number; onChange: (n: number) => void; accent: string }) {
+  const strip = useRef<HTMLDivElement>(null);
+  const ages = useMemo(() => Array.from({ length: 80 - AGE_LO + 1 }, (_, i) => AGE_LO + i), []);
+  // Keep the chosen age in the middle of the row
+  useEffect(() => {
+    const row = strip.current;
+    const el = row?.querySelector<HTMLElement>(`[data-age="${value}"]`);
+    if (row && el) row.scrollTo({ left: el.offsetLeft - row.clientWidth / 2 + el.clientWidth / 2, behavior: "smooth" });
+  }, [value]);
+  const step = (by: number) => onChange(Math.min(80, Math.max(AGE_LO, value + by)));
   return (
-    <div className="flex h-[50px] items-center justify-between rounded-2xl border border-white/18 px-1.5" style={{ borderColor: "rgba(255,255,255,.18)" }}>
-      <button type="button" aria-label={`${label}: less`} onClick={() => onChange(Math.max(min, value - 1))} className="grid h-[38px] w-[38px] place-items-center rounded-xl bg-white/[0.08]"><Minus size={17} /></button>
-      <span className="text-[17px] font-extrabold tabular-nums">{value}</span>
-      <button type="button" aria-label={`${label}: more`} onClick={() => onChange(Math.min(max, value + 1))} className="grid h-[38px] w-[38px] place-items-center rounded-xl bg-white/[0.08]"><Plus size={17} /></button>
+    <div className="min-w-0 overflow-hidden rounded-[22px] border border-white/12 bg-white/[0.04] pt-4 pb-3">
+      <div className="flex items-center justify-center gap-5">
+        <button type="button" aria-label="Younger" onClick={() => step(-1)} className="grid h-12 w-12 place-items-center rounded-full bg-white/[0.09] transition active:scale-90"><Minus size={20} /></button>
+        <div className="w-24 text-center">
+          <div className="font-display text-[46px] leading-none font-bold tabular-nums" style={{ color: accent }}>{value}</div>
+          <div className="mt-1 text-[12.5px] font-semibold text-white/60">years old</div>
+        </div>
+        <button type="button" aria-label="Older" onClick={() => step(1)} className="grid h-12 w-12 place-items-center rounded-full bg-white/[0.09] transition active:scale-90"><Plus size={20} /></button>
+      </div>
+      <div className="relative mt-3">
+        <div ref={strip} className="no-scrollbar flex snap-x gap-1.5 overflow-x-auto px-[45%] py-1.5">
+          {ages.map((n) => {
+            const on = n === value;
+            return (
+              <button
+                key={n}
+                type="button"
+                data-age={n}
+                aria-label={`${n} years old`}
+                aria-pressed={on}
+                onClick={() => onChange(n)}
+                className="grid h-11 w-11 shrink-0 snap-center place-items-center rounded-full text-[15px] font-bold tabular-nums transition"
+                style={on ? { background: accent, color: "#1c1310" } : { color: "rgba(255,255,255,.65)" }}
+              >
+                {n}
+              </button>
+            );
+          })}
+        </div>
+        <span aria-hidden className="pointer-events-none absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-[#1c1338] to-transparent" />
+        <span aria-hidden className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-[#1c1338] to-transparent" />
+      </div>
+    </div>
+  );
+}
+
+const thumb =
+  "pointer-events-none absolute inset-0 h-8 w-full appearance-none bg-transparent outline-none [&::-webkit-slider-runnable-track]:bg-transparent [&::-moz-range-track]:bg-transparent " +
+  "[&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:h-8 [&::-webkit-slider-thumb]:w-8 [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-[0_0_0_5px_var(--pact),0_4px_14px_rgba(0,0,0,.4)] " +
+  "[&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:h-8 [&::-moz-range-thumb]:w-8 [&::-moz-range-thumb]:cursor-grab [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:shadow-[0_0_0_5px_var(--pact),0_4px_14px_rgba(0,0,0,.4)]";
+
+/** The ages you'd like to meet: one slider with two handles, plus quick picks */
+function AgeRange({ min, max, myAge, onChange, accent }: { min: number; max: number; myAge: number; onChange: (min: number, max: number) => void; accent: string }) {
+  const hi = Math.min(max, AGE_HI);
+  const lo = Math.min(min, AGE_HI - 1);
+  const pct = (v: number) => ((v - AGE_LO) / (AGE_HI - AGE_LO)) * 100;
+  const label = (v: number) => (v >= AGE_HI ? `${AGE_HI}+` : String(v));
+  const around: [number, number] = [Math.max(AGE_LO, myAge - 4), Math.min(AGE_HI, myAge + 5)];
+  const presets: { t: string; v: [number, number] }[] = [
+    { t: "Around my age", v: around },
+    { t: "Any age", v: [AGE_LO, AGE_HI] },
+  ];
+  const isOn = (v: [number, number]) => lo === v[0] && hi === v[1];
+  return (
+    <div className="rounded-[22px] border border-white/12 bg-white/[0.04] px-5 pt-4 pb-5">
+      <div className="text-center font-display text-[34px] leading-none font-bold tabular-nums">
+        <span style={{ color: accent }}>{label(lo)}</span>
+        <span className="mx-2 text-white/40">to</span>
+        <span style={{ color: accent }}>{label(hi)}</span>
+      </div>
+      <div className="relative mx-1 mt-6 h-8">
+        <div className="absolute inset-x-0 top-1/2 h-2 -translate-y-1/2 rounded-full bg-white/15" />
+        <div className="absolute top-1/2 h-2 -translate-y-1/2 rounded-full" style={{ left: `${pct(lo)}%`, width: `${pct(hi) - pct(lo)}%`, background: accent }} />
+        <input type="range" aria-label="Youngest" min={AGE_LO} max={AGE_HI} value={lo} onChange={(e) => onChange(Math.min(Number(e.target.value), hi - 1), max >= AGE_HI ? 99 : hi)} className={thumb} />
+        <input type="range" aria-label="Oldest" min={AGE_LO} max={AGE_HI} value={hi} onChange={(e) => { const v = Math.max(Number(e.target.value), lo + 1); onChange(lo, v >= AGE_HI ? 99 : v); }} className={thumb} />
+      </div>
+      <div className="mt-1 flex justify-between text-[12px] font-semibold text-white/45">
+        <span>{AGE_LO}</span>
+        <span>{AGE_HI}+</span>
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        {presets.map((p) => (
+          <button
+            key={p.t}
+            type="button"
+            onClick={() => onChange(p.v[0], p.v[1] >= AGE_HI ? 99 : p.v[1])}
+            aria-pressed={isOn(p.v)}
+            className="h-11 rounded-full border text-[14px] font-bold transition active:scale-[0.98]"
+            style={isOn(p.v) ? { borderColor: accent, background: `${accent}24` } : { borderColor: "rgba(255,255,255,.16)" }}
+          >
+            {p.t}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -554,7 +655,7 @@ function AboutView({ pact, about, setAbout }: { pact: Pact; about: Partial<About
   const label = "text-[12px] font-extrabold tracking-[0.1em] text-white/60 uppercase";
   const offered = useMemo(() => INTENTS.filter((i) => pact.intents.includes(i.id)), [pact.intents]);
   return (
-    <div className="mt-5 grid gap-5 px-1 animate-fade-in">
+    <div className="mt-5 grid grid-cols-1 gap-5 px-1 animate-fade-in">
       <div>
         <h1 className="font-display text-[29px] leading-tight font-bold">Now, a little about you</h1>
         <p className="mt-1.5 text-[14.5px] text-white/72">So we only match you with people who fit. Nobody sees this.</p>
@@ -601,18 +702,13 @@ function AboutView({ pact, about, setAbout }: { pact: Pact; about: Partial<About
           </div>
         </div>
       )}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="grid gap-2">
-          <span className={label}>My age</span>
-          <Stepper label="My age" value={about.age ?? 25} onChange={(n) => set({ age: n })} />
-        </div>
-        <div className="grid gap-2">
-          <span className={label}>Their age</span>
-          <div className="grid grid-cols-2 gap-1.5">
-            <Stepper label="Youngest" value={about.ageMin ?? 21} max={about.ageMax ?? 99} onChange={(n) => set({ ageMin: n })} />
-            <Stepper label="Oldest" value={about.ageMax ?? 35} min={about.ageMin ?? 18} onChange={(n) => set({ ageMax: n })} />
-          </div>
-        </div>
+      <div className="grid min-w-0 grid-cols-1 gap-2">
+        <span className={label}>My age</span>
+        <AgePicker value={about.age ?? 25} accent={accent} onChange={(n) => set({ age: n })} />
+      </div>
+      <div className="grid gap-2">
+        <span className={label}>I&apos;d like to meet people aged</span>
+        <AgeRange min={about.ageMin ?? 21} max={about.ageMax ?? 35} myAge={about.age ?? 25} accent={accent} onChange={(ageMin, ageMax) => set({ ageMin, ageMax })} />
       </div>
       {pact.areas.length > 0 && (
         <div className="grid gap-2">

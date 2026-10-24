@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" aria-label="The moon and sleep">
+<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#141a44"/><stop offset="1" stop-color="#4a5bb8"/></linearGradient></defs>
+<rect width="400" height="400" fill="url(#g)"/>
+<circle cx="340" cy="60" r="90" fill="#fff" opacity=".08"/><circle cx="40" cy="330" r="70" fill="#fff" opacity=".06"/>
+<g transform="translate(20 -14) scale(.9)">
+<circle cx="230" cy="130" r="70" fill="#fff3c4"/><circle cx="262" cy="110" r="64" fill="#2c3880"/>
+<path d="M90 78 L93.6 86.4 L102 90 L93.6 93.6 L90 102 L86.4 93.6 L78 90 L86.4 86.4Z" fill="#fff3c4" opacity="0.9"/><path d="M120 162 L122.4 167.6 L128 170 L122.4 172.4 L120 178 L117.6 172.4 L112 170 L117.6 167.6Z" fill="#fff3c4" opacity="0.9"/><path d="M320 220 L323.0 227.0 L330 230 L323.0 233.0 L320 240 L317.0 233.0 L310 230 L317.0 227.0Z" fill="#fff3c4" opacity="0.9"/><path d="M70 241 L72.7 247.3 L79 250 L72.7 252.7 L70 259 L67.3 252.7 L61 250 L67.3 247.3Z" fill="#fff3c4" opacity="0.9"/><path d="M330 83 L332.1 87.9 L337 90 L332.1 92.1 L330 97 L327.9 92.1 L323 90 L327.9 87.9Z" fill="#fff3c4" opacity="0.9"/>
+<rect x="80" y="250" width="240" height="60" rx="20" fill="#dfe3ff"/><rect x="96" y="232" width="90" height="40" rx="18" fill="#fff"/>
+<g fill="none" stroke="#fff3c4" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"><path d="M220 220 h26 l-26 26 h26"/><path d="M260 180 h18 l-18 18 h18" stroke-width="5"/><path d="M288 152 h12 l-12 12 h12" stroke-width="4"/></g></g>
+</svg>

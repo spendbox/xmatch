@@ -1,5 +1,7 @@
 // Private links to pacts taken on this phone before having an account. They're attached to the account after sign-up.
 const TOKENS = "dp_pacts";
+/** Where to go once someone joins from a pact (their reveal) */
+export const AFTER_JOIN = "dp_after_join";
 
 export function savedPactTokens(): { slug: string; token: string }[] {
   try {
@@ -28,5 +30,16 @@ export async function claimSavedPacts() {
     if (res.ok) localStorage.removeItem(TOKENS);
   } catch {
     /* try again next time */
+  }
+}
+
+/** After joining from a pact's reveal: the page to go back to, once */
+export function takeAfterJoin(): string | null {
+  try {
+    const v = localStorage.getItem(AFTER_JOIN);
+    if (v) localStorage.removeItem(AFTER_JOIN);
+    return v && /^\/pact\/[a-z0-9-]+$/.test(v) ? v : null;
+  } catch {
+    return null;
   }
 }

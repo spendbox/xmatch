@@ -145,6 +145,13 @@ export function HomeScreen({
       <div className="mt-5 lg:sticky lg:top-24 lg:col-span-7 lg:mt-0">
         <MasqueradeCard userId={profile.id} ctl={ctl} onSettings={() => setMeetOpen(true)} />
 
+        {pact && (
+          <section className="mt-6">
+            <h2 className="mb-3 text-[15px] font-semibold">Pact open now</h2>
+            <PactCard pact={pact} compact />
+          </section>
+        )}
+
         <GettingStarted
           hasPlace={!!place.country}
           onPlace={() => setPlaceOpen(true)}
@@ -159,13 +166,6 @@ export function HomeScreen({
 
       <div className="lg:col-span-5">
       <PastPairs pairs={ctl.hour?.past ?? []} balance={wallet?.balance ?? null} onChanged={ctl.load} />
-
-      {pact && (
-        <div className="mt-7 lg:mt-0 lg:mb-7">
-          <h2 className="mb-3 text-[15px] font-semibold">Pact open now</h2>
-          <PactCard pact={pact} compact />
-        </div>
-      )}
 
       {nextEvent && (
         <div className="mt-7 lg:mt-0 lg:mb-7">

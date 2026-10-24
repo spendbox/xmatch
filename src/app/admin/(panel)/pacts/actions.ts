@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/server";
 import { INTENTS, MAX_QUESTIONS, SEED_QUESTIONS, type PactIntent, type PactQuestion, type QuestionKind, type Weight } from "@/lib/pacts";
-import { revealPact } from "@/lib/pactsServer";
+import { runReveal } from "@/lib/pactsServer";
 
 const clean = (s: unknown, max: number) => (typeof s === "string" ? s.replace(/\s+/g, " ").trim().slice(0, max) : "");
 const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
@@ -85,7 +85,7 @@ export async function savePactQuestions(id: string, list: PactQuestion[]): Promi
     if (title.length < 2) return { error: `Question ${i + 1} needs a title.` };
     const seen = new Set<string>();
     const options = (q.options ?? [])
-      .map((o) => ({ id: clean(o.id, 12) || Math.random().toString(36).slice(2, 8), label: clean(o.label, 60), image: o.image && /^https:\/\//.test(o.image) ? o.image.slice(0, 500) : null }))
+      .map((o) => ({ id: clean(o.id, 12) || Math.random().toString(36).slice(2, 8), label: clean(o.label, 60), image: o.image && (/^https:\/\//.test(o.image) || /^\/pacts\/art\/[a-z-]+\.svg$/.test(o.image)) ? o.image.slice(0, 500) : null }))
       .filter((o) => o.label && !seen.has(o.id) && seen.add(o.id));
     const need = kind === "this_or_that" || kind === "scale" ? 2 : 2;
     if (options.length < need) return { error: `"${title}" needs at least ${need} answers.` };
@@ -144,10 +144,27 @@ export async function setPactStatus(id: string, status: "draft" | "live"): Promi
 /** Reveal right now, instead of waiting for reveal night */
 export async function revealPactNow(id: string): Promise<{ error?: string; summary?: string }> {
   await requireAdmin();
-  const r = await revealPact(id, true);
-  if (!r.done) return { error: "This pact has already been revealed (or isn't published)." };
+  const db = createAdminClient();
+  const now = new Date().toISOString();
+  // Reveal time becomes now (answers close too); the every-minute job finishes anything this run doesn't
+  const { data: p } = await db.from("pacts").select("status, closes_at").eq("id", id).maybeSingle();
+  if (!p || p.status !== "live") return { error: "This pact has already been revealed (or isn't published)." };
+  await db.from("pacts").update({ reveal_at: now, ...(p.closes_at > now ? { closes_at: now } : {}) }).eq("id", id);
+  const r = await runReveal(id, Date.now() + 40_000);
   revalidatePath(`/admin/pacts/${id}`);
-  return { summary: `${r.pairs} matches made from ${r.people} people. ${r.emailed} emails sent.` };
+  if (!r) return { summary: "Revealing now. Refresh in a minute to see progress." };
+  if (r.step === "match" || r.step === "ready") return { summary: "Big pact: matching will finish within a few minutes, then it reveals." };
+  return { summary: `${(r.pairs ?? 0).toLocaleString()} matches made from ${(r.people ?? 0).toLocaleString()} people.${r.step === "done" ? " Everyone has been told." : " Telling everyone now, this can take a few minutes."}` };
+}
+
+/** Runs the next part of matching or revealing right away (it also runs by itself every minute) */
+export async function retryPactReveal(id: string): Promise<{ error?: string; summary?: string }> {
+  await requireAdmin();
+  const r = await runReveal(id, Date.now() + 40_000);
+  revalidatePath(`/admin/pacts/${id}`);
+  if (!r) return { summary: "It's already working on this pact. Refresh in a minute." };
+  if (r.error) return { error: `Still not working: ${r.error}` };
+  return { summary: r.step === "done" ? "Done. Everyone has been told." : "It's moving again. Refresh in a minute to see progress." };
 }
 
 export async function deletePact(id: string): Promise<{ error?: string }> {

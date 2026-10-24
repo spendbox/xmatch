@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { getAuth } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/server";
 import { pactPhase, type About, type Answers } from "@/lib/pacts";
-import { claimEntries, loadPact, resultFor, revealPact } from "@/lib/pactsServer";
+import { claimEntries, loadPact, resultFor } from "@/lib/pactsServer";
 import { PactFlow } from "@/components/pacts/PactFlow";
 
 export const dynamic = "force-dynamic";
@@ -23,13 +23,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 export default async function PactPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  let loaded = await loadPact(slug);
+  const loaded = await loadPact(slug);
   if (!loaded) notFound();
-  // The first visit after reveal time does the matching (the 5-minute job does it too)
-  if (pactPhase(loaded.pact) === "revealed" && !loaded.pact.matched_at) {
-    await revealPact(loaded.pact.id);
-    loaded = (await loadPact(slug))!;
-  }
   const { pact, questions, count } = loaded;
   const { user } = await getAuth();
   let mine: { about: About; answers: Answers } | null = null;
@@ -40,5 +35,5 @@ export default async function PactPage({ params }: { params: Promise<{ slug: str
     if (data) mine = data as { about: About; answers: Answers };
     if (pactPhase(pact) === "revealed" && mine) result = await resultFor(pact.id, { userId: user.id });
   }
-  return <PactFlow pact={pact} questions={questions} count={count} signedIn={!!user} mine={mine} result={result ? { match: result.match } : null} />;
+  return <PactFlow pact={pact} questions={questions} count={count} signedIn={!!user} mine={mine} result={result?.view ?? null} />;
 }

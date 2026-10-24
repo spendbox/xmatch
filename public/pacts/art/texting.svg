@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" aria-label="A phone with messages">
+<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1b3f8a"/><stop offset="1" stop-color="#c48bff"/></linearGradient></defs>
+<rect width="400" height="400" fill="url(#g)"/>
+<circle cx="340" cy="60" r="90" fill="#fff" opacity=".08"/><circle cx="40" cy="330" r="70" fill="#fff" opacity=".06"/>
+<g transform="translate(20 -14) scale(.9)">
+<rect x="130" y="60" width="140" height="270" rx="26" fill="#1c1828"/><rect x="142" y="80" width="116" height="232" rx="14" fill="#f2f0ff"/>
+<rect x="152" y="100" width="76" height="28" rx="14" fill="#d9d4ef"/><rect x="172" y="140" width="76" height="28" rx="14" fill="#c48bff"/><rect x="152" y="180" width="60" height="28" rx="14" fill="#d9d4ef"/><rect x="182" y="220" width="66" height="28" rx="14" fill="#c48bff"/>
+<circle cx="168" cy="276" r="5" fill="#9a90c8"/><circle cx="184" cy="276" r="5" fill="#9a90c8"/><circle cx="200" cy="276" r="5" fill="#9a90c8"/></g>
+</svg>

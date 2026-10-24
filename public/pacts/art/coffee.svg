@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" aria-label="A cup of coffee">
+<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5a2e14"/><stop offset="1" stop-color="#c98a5a"/></linearGradient></defs>
+<rect width="400" height="400" fill="url(#g)"/>
+<circle cx="340" cy="60" r="90" fill="#fff" opacity=".08"/><circle cx="40" cy="330" r="70" fill="#fff" opacity=".06"/>
+<g transform="translate(20 -14) scale(.9)">
+<ellipse cx="200" cy="300" rx="120" ry="20" fill="#fff" opacity=".9"/>
+<path d="M120 160 h160 v80 a60 60 0 0 1-60 60 h-40 a60 60 0 0 1-60-60z" fill="#fff"/><path d="M280 180 a30 30 0 0 1 0 60" stroke="#fff" stroke-width="14" fill="none"/>
+<ellipse cx="200" cy="162" rx="76" ry="12" fill="#6a3a1a"/><path d="M186 162 q14-10 28 0 q-14 8-28 0z" fill="#e8c9a0"/>
+<path d="M170 130 q-10-16 0-30 q10-14 0-30 M210 130 q-10-16 0-30 q10-14 0-30" stroke="#fff" stroke-width="6" fill="none" stroke-linecap="round" opacity=".6"/></g>
+</svg>

@@ -1,4 +1,6 @@
 export const dynamic = "force-dynamic";
+// "Reveal now" matches people right here, which can take a while for a big pact
+export const maxDuration = 60;
 
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/server";

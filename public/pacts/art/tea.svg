@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" aria-label="A cup of tea">
+<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0f5a46"/><stop offset="1" stop-color="#9be0b0"/></linearGradient></defs>
+<rect width="400" height="400" fill="url(#g)"/>
+<circle cx="340" cy="60" r="90" fill="#fff" opacity=".08"/><circle cx="40" cy="330" r="70" fill="#fff" opacity=".06"/>
+<g transform="translate(20 -14) scale(.9)">
+<path d="M110 180 h170 v60 a70 70 0 0 1-70 70 h-30 a70 70 0 0 1-70-70z" fill="#fff"/><path d="M280 196 a28 28 0 0 1 0 56" stroke="#fff" stroke-width="12" fill="none"/>
+<line x1="230" y1="180" x2="250" y2="120" stroke="#fff" stroke-width="3"/><rect x="238" y="112" width="26" height="22" rx="3" fill="#f2c45a" transform="rotate(15 251 123)"/>
+<path d="M150 150 q-10-16 0-30 q10-14 0-30 M190 150 q-10-16 0-30 q10-14 0-30" stroke="#fff" stroke-width="6" fill="none" stroke-linecap="round" opacity=".6"/>
+<path d="M300 280 q30-40 60-20 q-20 40-60 20z" fill="#1f9d6b"/></g>
+</svg>
