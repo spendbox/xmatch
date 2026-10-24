@@ -221,7 +221,7 @@ export function MasqueradeRoom({
     await refresh();
   }
 
-  // Games: hourly and reopened pairs and meet chats, while the chat is open.
+  // Games: every masked chat, while it's open.
   // In a game meet the first game comes from the line, so the game button waits for it.
   const meet = state.meet ?? null;
   const lastFromThem = [...messages].reverse().find((m) => m.sender_id && m.sender_id !== state.me.id && m.kind === "text");
@@ -229,7 +229,7 @@ export function MasqueradeRoom({
     sessionId: state.id,
     names: { me: state.me.alias, them: theirName },
     masked: true,
-    disabled: !state.hourly || state.status !== "active" || remaining <= 0,
+    disabled: state.status !== "active" || remaining <= 0,
     noLauncher: !!meet?.turn_pending,
     offline: !!demo,
     peek: lastFromThem?.body ?? null,
@@ -394,7 +394,7 @@ export function MasqueradeRoom({
           myId={state.me.id}
           nameOf={(id) => (id === state.me.id ? "You" : theirName)}
           onReply={setReplyTo}
-          onGameAgain={state.hourly && chatting ? games.rematch : undefined}
+          onGameAgain={chatting ? games.rematch : undefined}
         />
       </div>
 
@@ -460,7 +460,7 @@ export function MasqueradeRoom({
       )}
 
       {meet && chatting && !(games.game && (games.game.status === "invited" || games.game.status === "active")) && <MeetLine meet={meet} them={theirName} />}
-      {state.hourly && chatting && games.banner}
+      {chatting && games.banner}
       {chatting ? (
         <Composer
           onSend={send}
@@ -468,9 +468,9 @@ export function MasqueradeRoom({
           replyTo={replyTo}
           replyName={replyTo ? (replyTo.sender_id === state.me.id ? "yourself" : replyTo.sender_id ? theirName : replyTo.kind === "game" ? "the game" : "the icebreaker") : undefined}
           onCancelReply={() => setReplyTo(null)}
-          plusDot={state.hourly && games.live}
+          plusDot={games.live}
           actions={[
-            ...(state.hourly && games.canPlay
+            ...(games.canPlay
               ? [{ key: "game", label: games.live ? "Back to game" : "Play a game", icon: <Gamepad2 size={24} strokeWidth={1.75} />, tone: "bg-brand-soft text-brand", onClick: games.play }]
               : []),
             { key: "ice", label: "Icebreaker", icon: <Dices size={24} strokeWidth={1.75} />, tone: "bg-gold-soft text-[#9a6a0c]", onClick: () => void nextQuestion() },
@@ -517,7 +517,7 @@ export function MasqueradeRoom({
       />
       {timeUp && !state.hourly && <DecisionSheet state={state} voting={voting} onVote={vote} />}
       {reporting && <ReportSheet onClose={() => setReporting(false)} onReport={report} />}
-      {state.hourly && games.overlay}
+      {games.overlay}
     </div>
 
     {/* About them — side panel on computers */}
