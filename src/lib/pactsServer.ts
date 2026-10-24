@@ -183,16 +183,18 @@ const ALIAS_A = ["Velvet", "Quiet", "Golden", "Midnight", "Silver", "Crimson", "
 const ALIAS_B = ["Heron", "Moth", "Fox", "Owl", "Lynx", "Falcon", "Panther", "Dove", "Tiger", "Swan", "Raven", "Wolf", "Hare", "Ibis", "Kestrel", "Gazelle"];
 const alias = () => `${ALIAS_A[Math.floor(Math.random() * ALIAS_A.length)]} ${ALIAS_B[Math.floor(Math.random() * ALIAS_B.length)]}`;
 
-type RevealStep = "match" | "chats" | "notify" | "done";
+type RevealStep = "match" | "ready" | "chats" | "notify" | "done";
 type RevealRow = Pact & { reveal_step: RevealStep; reveal_cursor: string | null; reveal_stats: Record<string, number> };
 export type RevealProgress = { step: RevealStep; people?: number; pairs?: number; told?: number; emailed?: number; waiting?: boolean };
 
 /**
- * Reveal night, in steps that pick up where they stopped, so a pact with 100,000 people
- * never gets stuck halfway:
- *   1. match: everyone is matched and the matches are saved (then the pact shows as revealed)
- *   2. chats: masked chats start for matches where both people have accounts
- *   3. notify: a notification for people with accounts, an email for everyone else
+ * A pact's matching and reveal, in steps that pick up where they stopped, so a pact with
+ * 100,000 people never gets stuck halfway:
+ *   1. match: once answers close, everyone is matched and the matches are saved (hidden).
+ *      There are up to 12 hours before reveal night, so this can take as many runs as it needs.
+ *   2. ready: waiting for reveal time. Then the pact shows as revealed.
+ *   3. chats: masked chats start for matches where both people have accounts
+ *   4. notify: a notification for people with accounts, an email for everyone else
  * Each run works until `deadline` (a time in ms) and saves its place. Only one run works
  * on a pact at a time. The every-minute job keeps calling until the pact is done.
  */
@@ -211,9 +213,15 @@ export async function runReveal(pactId: string, deadline: number): Promise<Revea
       const done = await matchStep(pact, left);
       if (!done) return { step, waiting: true };
       Object.assign(stats, done);
-      step = "chats";
+      step = "ready";
       cursor = null;
-      await save({ status: "revealed", matched_at: new Date().toISOString(), reveal_step: step, reveal_cursor: null, reveal_stats: stats });
+      await save({ reveal_step: step, reveal_cursor: null, reveal_stats: stats });
+    }
+    if (step === "ready") {
+      // Matches stay hidden until reveal time
+      if (Date.now() < new Date(pact.reveal_at).getTime()) return { step, people: stats.people, pairs: stats.pairs };
+      step = "chats";
+      await save({ status: "revealed", matched_at: new Date().toISOString(), reveal_step: step, reveal_cursor: null });
     }
     if (step === "chats") {
       let after = Number(cursor ?? 0);
@@ -342,10 +350,18 @@ async function tellPage(pact: Pact, page: { user_id: string | null; email: strin
   return { pushed: a.sent + b.sent, emailed: mail.sent };
 }
 
-/** For the every-minute job: works on every pact whose reveal time has come, until the deadline */
+/** For the every-minute job: matches pacts whose answers have closed, and reveals them at reveal time, until the deadline */
 export async function revealDuePacts(deadline: number) {
   const db = createAdminClient();
-  const { data } = await db.from("pacts").select("id").neq("status", "draft").lte("reveal_at", new Date().toISOString()).or("reveal_step.is.null,reveal_step.neq.done").order("reveal_at").limit(5);
+  const now = new Date().toISOString();
+  const { data } = await db
+    .from("pacts")
+    .select("id")
+    .neq("status", "draft")
+    .lte("closes_at", now)
+    .or(`reveal_step.is.null,reveal_step.in.(match,chats,notify),and(reveal_step.eq.ready,reveal_at.lte."${now}")`)
+    .order("reveal_at")
+    .limit(5);
   const out: (RevealProgress & { id: string })[] = [];
   for (const p of data ?? []) {
     if (deadline - Date.now() < 5000) break;

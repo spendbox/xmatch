@@ -58,7 +58,7 @@ export function YourPacts({ demo }: { demo?: MyPact[] }) {
                     ) : new Date(p.closes_at).getTime() > Date.now() ? (
                       `Answered · you can change answers until ${pactDate(p.closes_at)}`
                     ) : (
-                      `Reveal night ${pactDate(p.reveal_at)}`
+                      `Matching now · revealed ${pactDate(p.reveal_at)}`
                     )}
                   </span>
                 </span>

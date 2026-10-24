@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
 import { ArrowLeft, ArrowRight, Bell, Briefcase, Check, Flame, Heart, Minus, Plus, Share2, Users } from "lucide-react";
-import { INTENTS, WORK, pactPhase, type About, type Answer, type Answers, type Pact, type PactIntent, type PactQuestion } from "@/lib/pacts";
+import { INTENTS, WORK, pactPhase, people, type About, type Answer, type Answers, type Pact, type PactIntent, type PactQuestion } from "@/lib/pacts";
 import { Turnstile } from "@/components/ui/Turnstile";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { Countdown, OptionArt, PactLogo, PactMatching, pactDate } from "./PactBits";
@@ -129,10 +129,11 @@ export function PactFlow({
   }
 
   // ---------------------------------------------------------------- reveal night
-  if (phase === "matching" && !demoStep) {
+  // Answers closed: matching until reveal night
+  if ((phase === "closed" || phase === "matching") && !demoStep) {
     return (
       <Shell pact={pact}>
-        <PactMatching pact={pact} count={joined} />
+        <PactMatching pact={pact} count={joined} taken={taken} />
       </Shell>
     );
   }
@@ -164,7 +165,7 @@ export function PactFlow({
           </p>
         </div>
         <div className="mx-5 mt-6 rounded-[22px] border p-4" style={{ background: "#22163f", borderColor: `${accent}40` }}>
-          <Countdown to={closed ? pact.reveal_at : pact.reveal_at} accent={accent} label="Reveal night in" />
+          <Countdown to={pact.closes_at} accent={accent} label="Answers close in" />
           <div className="mt-3.5 flex items-center justify-center gap-2.5 border-t border-white/10 pt-3 text-[14px] font-semibold">
             <span className="flex">
               {["#5b3fd9,#1f9d6b", "#e5484d,#f2b33d", "#7cc8ff,#2b2066"].map((g, i) => (
@@ -209,7 +210,7 @@ export function PactFlow({
           <Seal accent={accent} />
           <h1 className="mt-3 font-display text-[30px] font-bold">You&apos;re in the Pact</h1>
           <p className="mt-1.5 text-[14.5px] text-white/75">
-            <b className="tabular-nums" style={{ color: accent }}>{joined.toLocaleString()}</b> people so far. Your match arrives {pactDate(pact.reveal_at)}.
+            <b className="tabular-nums" style={{ color: accent }}>{people(joined)}</b> so far. Your match arrives {pactDate(pact.reveal_at)}.
           </p>
         </div>
         {signedIn ? (

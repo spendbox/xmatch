@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { intentLabel, type Pact, type PactIntent } from "@/lib/pacts";
+import { intentLabel, people, type Pact, type PactIntent } from "@/lib/pacts";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { PactLogo } from "./PactBits";
 
@@ -25,7 +25,7 @@ export function PactReveal({ pact, match, signedIn, total }: { pact: Pact; match
         <PactLogo pact={pact} size={72} />
         <h1 className="mt-5 font-display text-[30px] leading-tight font-bold">No match this time</h1>
         <p className="mt-2 max-w-xs text-[15px] leading-relaxed text-white/75">
-          Out of {total.toLocaleString()} people, nobody fit what you were looking for. There are new people on Dashpad every hour.
+          Out of {people(total)}, nobody fit what you were looking for. There are new people on Dashpad every hour.
         </p>
         <Link href={signedIn ? "/home" : "/signup"} className="mt-8 flex h-14 w-full max-w-sm items-center justify-center rounded-full text-[16px] font-extrabold text-[#1c1310]" style={{ background: accent }}>
           {signedIn ? "Go to Dashpad" : "Meet people on Dashpad"}
@@ -42,7 +42,7 @@ export function PactReveal({ pact, match, signedIn, total }: { pact: Pact; match
         <span className="text-[12.5px] font-extrabold tracking-[0.1em] uppercase" style={{ color: accent }}>Reveal night · {pact.name}</span>
       </div>
       <div className="mt-6 flex flex-col items-center text-center">
-        <p className="text-[14px] text-white/75">Out of {total.toLocaleString()} people, you two fit best</p>
+        <p className="text-[14px] text-white/75">Out of {people(total)}, you two fit best</p>
         <div className="relative mt-4 h-[168px] w-[168px]">
           <svg viewBox="0 0 168 168" className="absolute inset-0" aria-hidden>
             <circle cx="84" cy="84" r="78" fill="none" stroke="rgba(255,255,255,.12)" strokeWidth="8" />

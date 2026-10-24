@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" aria-label="An owl at night">
+<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#141a44"/><stop offset="1" stop-color="#3b2585"/></linearGradient></defs>
+<rect width="400" height="400" fill="url(#g)"/>
+<circle cx="340" cy="60" r="90" fill="#fff" opacity=".08"/><circle cx="40" cy="330" r="70" fill="#fff" opacity=".06"/>
+<g transform="translate(20 -14) scale(.9)">
+<circle cx="310" cy="90" r="40" fill="#fff3c4"/><circle cx="330" cy="78" r="36" fill="#22225a"/>
+<path d="M80 70 L83.0 77.0 L90 80 L83.0 83.0 L80 90 L77.0 83.0 L70 80 L77.0 77.0Z" fill="#fff3c4" opacity="0.9"/><path d="M140 43 L142.1 47.9 L147 50 L142.1 52.1 L140 57 L137.9 52.1 L133 50 L137.9 47.9Z" fill="#fff3c4" opacity="0.9"/><path d="M250 52 L252.4 57.6 L258 60 L252.4 62.4 L250 68 L247.6 62.4 L242 60 L247.6 57.6Z" fill="#fff3c4" opacity="0.9"/><path d="M60 173 L62.1 177.9 L67 180 L62.1 182.1 L60 187 L57.9 182.1 L53 180 L57.9 177.9Z" fill="#fff3c4" opacity="0.9"/>
+<rect x="60" y="290" width="280" height="16" rx="8" fill="#5a3a22"/>
+<ellipse cx="200" cy="220" rx="70" ry="80" fill="#8a6a4a"/><path d="M140 160 l10-34 30 26z M260 160 l-10-34 -30 26z" fill="#8a6a4a"/>
+<ellipse cx="200" cy="246" rx="44" ry="44" fill="#c9a882"/>
+<circle cx="172" cy="196" r="24" fill="#fff"/><circle cx="228" cy="196" r="24" fill="#fff"/><circle cx="172" cy="196" r="11" fill="#1c1828"/><circle cx="228" cy="196" r="11" fill="#1c1828"/>
+<path d="M192 220 l8 14 8-14z" fill="#f2c45a"/></g>
+</svg>

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" aria-label="Pancakes and coffee">
+<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7a3a0c"/><stop offset="1" stop-color="#ff9a6a"/></linearGradient></defs>
+<rect width="400" height="400" fill="url(#g)"/>
+<circle cx="340" cy="60" r="90" fill="#fff" opacity=".08"/><circle cx="40" cy="330" r="70" fill="#fff" opacity=".06"/>
+<g transform="translate(20 -14) scale(.9)">
+<ellipse cx="160" cy="290" rx="110" ry="22" fill="#fff"/>
+<g><rect x="80" y="236" width="160" height="26" rx="13" fill="#e8b46a"/><rect x="86" y="212" width="148" height="26" rx="13" fill="#f0c27a"/><rect x="92" y="188" width="136" height="26" rx="13" fill="#e8b46a"/>
+<path d="M120 188 q40-20 80 0 q-10 26-30 40 q-10-30-50-40z" fill="#8a4a22"/><rect x="146" y="170" width="28" height="22" rx="4" fill="#fff3c4"/></g>
+<path d="M260 160 h80 v80 a40 40 0 0 1-40 40 a40 40 0 0 1-40-40z" fill="#fff"/><path d="M340 180 a22 22 0 0 1 0 44" stroke="#fff" stroke-width="10" fill="none"/><rect x="266" y="166" width="68" height="18" fill="#8a4a22"/>
+<path d="M286 140 q-8-14 0-26 M308 140 q-8-14 0-26" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round" opacity=".7"/></g>
+</svg>

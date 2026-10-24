@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { ArrowDown, ArrowLeft, ArrowUp, ExternalLink, ImagePlus, Plus, Trash2, X } from "lucide-react";
 import { deletePact, revealPactNow, savePactDetails, savePactQuestions, setPactStatus, type PactDetails } from "@/app/admin/(panel)/pacts/actions";
-import { INTENTS, KIND_LABEL, MAX_QUESTIONS, SEED_QUESTIONS, WEIGHT_LABEL, pactPhase, type Pact, type PactIntent, type PactQuestion, type QuestionKind, type Weight } from "@/lib/pacts";
+import { ART_LIBRARY, INTENTS, KIND_LABEL, art, MAX_QUESTIONS, SEED_QUESTIONS, WEIGHT_LABEL, pactPhase, people, plural, type Pact, type PactIntent, type PactQuestion, type QuestionKind, type Weight } from "@/lib/pacts";
 import { uploadEventFile } from "./eventUpload";
 
 const ACCENTS = ["#f2c45a", "#ff7ab0", "#2ee88b", "#7cc8ff", "#c48bff", "#ff8a4c", "#ffffff"];
@@ -37,10 +37,14 @@ export function PactEditor({ pact, questions: initial, count, matches }: { pact:
   // Reveal night runs in steps; show where it's up to
   const { reveal_step: step, reveal_stats: st = {} } = pact as Pact & { reveal_step?: string | null; reveal_stats?: Record<string, number> };
   const progress =
-    pact.status === "revealed" && step && step !== "done"
-      ? `${(st.pairs ?? 0).toLocaleString()} matches made. ${step === "chats" ? "Starting masked chats…" : `Telling everyone: ${(st.told ?? 0).toLocaleString()} notified, ${(st.emailed ?? 0).toLocaleString()} emailed so far…`}`
+    pact.status !== "revealed" && step === "match"
+      ? "Matching everyone… (this can take a few minutes for a big pact)"
+      : pact.status !== "revealed" && step === "ready"
+        ? `${plural(st.pairs ?? 0, "match", "matches")} ready from ${people(st.people ?? count)}. Hidden until reveal night.`
+        : pact.status === "revealed" && step && step !== "done"
+      ? `${plural(st.pairs ?? 0, "match", "matches")} made. ${step === "chats" ? "Starting masked chats…" : `Telling everyone: ${(st.told ?? 0).toLocaleString()} notified, ${(st.emailed ?? 0).toLocaleString()} emailed so far…`}`
       : pact.status === "revealed" && step === "done"
-        ? `${(st.pairs ?? 0).toLocaleString()} matches from ${(st.people ?? count).toLocaleString()} people · ${(st.told ?? 0).toLocaleString()} notified · ${(st.emailed ?? 0).toLocaleString()} emailed`
+        ? `${plural(st.pairs ?? 0, "match", "matches")} from ${people(st.people ?? count)} · ${(st.told ?? 0).toLocaleString()} notified · ${(st.emailed ?? 0).toLocaleString()} emailed`
         : null;
   const [d, setD] = useState<PactDetails>({
     name: pact.name,
@@ -103,8 +107,8 @@ export function PactEditor({ pact, questions: initial, count, matches }: { pact:
         <div>
           <h1 className="font-display text-[32px] leading-tight font-semibold">{pact.name}</h1>
           <p className="mt-1 text-[15px] text-muted">
-            <b className="text-ink tabular-nums">{count.toLocaleString()}</b> answered{matches ? <> · <b className="text-ink tabular-nums">{matches.toLocaleString()}</b> matches</> : null} ·{" "}
-            {{ draft: "Draft: only you can see it", open: "Live: taking answers", closed: "Answers closed: waiting for reveal night", matching: "Reveal night: matching everyone now", revealed: "Revealed" }[phase]}
+            <b className="text-ink tabular-nums">{count.toLocaleString()}</b> answered{matches ? <> · <b className="text-ink tabular-nums">{matches.toLocaleString()}</b> {matches === 1 ? "match" : "matches"}</> : null} ·{" "}
+            {{ draft: "Draft: only you can see it", open: "Live: taking answers", closed: "Answers closed: matching people before reveal night", matching: "Reveal night: finishing the matches", revealed: "Revealed" }[phase]}
           </p>
           {progress && <p className="mt-1 text-[13.5px] font-semibold text-brand">{progress}</p>}
         </div>
@@ -139,7 +143,7 @@ export function PactEditor({ pact, questions: initial, count, matches }: { pact:
 
       <section className="rounded-3xl border border-line bg-surface p-5 shadow-card">
         <h2 className="text-[17px] font-semibold">Details</h2>
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
+        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
           <label className="grid gap-1.5"><span className="text-[13px] font-semibold">Name</span><input id="d-name" className={field} value={d.name} onChange={(e) => setD({ ...d, name: e.target.value })} /></label>
           <label className="grid gap-1.5">
             <span className="text-[13px] font-semibold">Link</span>
@@ -204,7 +208,7 @@ export function PactEditor({ pact, questions: initial, count, matches }: { pact:
           <div className="relative">
             <button onClick={() => setAdding((v) => !v)} disabled={qs.length >= MAX_QUESTIONS} className="inline-flex h-10 items-center gap-1.5 rounded-full bg-brand-soft px-4 text-[14px] font-semibold text-brand disabled:opacity-50"><Plus size={16} /> Add a question</button>
             {adding && (
-              <div className="absolute right-0 z-10 mt-2 w-72 rounded-2xl border border-line bg-white p-2 shadow-lift">
+              <div className="absolute left-0 z-10 mt-2 w-72 max-w-[calc(100vw-3rem)] sm:right-0 sm:left-auto rounded-2xl border border-line bg-white p-2 shadow-lift">
                 {(Object.keys(KIND_LABEL) as QuestionKind[]).map((k) => (
                   <button key={k} onClick={() => { const q = blank(k); setQs((l) => [...l, q]); setOpenQ(q.id); setAdding(false); }} className="block w-full rounded-xl px-3 py-2.5 text-left text-[14px] font-semibold hover:bg-cream">
                     {KIND_LABEL[k]}
@@ -219,14 +223,14 @@ export function PactEditor({ pact, questions: initial, count, matches }: { pact:
             )}
           </div>
         </div>
-        {count > 0 && <p className="mt-3 rounded-2xl bg-gold-soft px-4 py-2.5 text-[13px] text-[#7a5208]">{count.toLocaleString()} people have answered. Editing answers is fine, but removing a question or answer means earlier answers to it won&apos;t count.</p>}
+        {count > 0 && <p className="mt-3 rounded-2xl bg-gold-soft px-4 py-2.5 text-[13px] text-[#7a5208]">{people(count)} {count === 1 ? "has" : "have"} answered. Editing answers is fine, but removing a question or answer means earlier answers to it won&apos;t count.</p>}
 
-        <ol className="mt-4 grid gap-2">
+        <ol className="mt-4 grid grid-cols-1 gap-2">
           {qs.map((q, i) => {
             const open = openQ === q.id;
             return (
-              <li key={q.id} className="rounded-2xl border border-line">
-                <div className="flex items-center gap-3 px-3 py-2.5">
+              <li key={q.id} className="min-w-0 rounded-2xl border border-line">
+                <div className="flex items-center gap-1.5 px-2 py-2.5 sm:gap-3 sm:px-3">
                   <span className="w-6 text-center text-[13px] font-bold text-muted tabular-nums">{i + 1}</span>
                   <button onClick={() => setOpenQ(open ? null : q.id)} className="min-w-0 flex-1 text-left">
                     <span className="block truncate text-[15px] font-semibold">{q.title || <span className="text-muted">Untitled question</span>}</span>
@@ -244,8 +248,8 @@ export function PactEditor({ pact, questions: initial, count, matches }: { pact:
             );
           })}
         </ol>
-        <div className="mt-5 flex justify-end">
-          <button disabled={!!busy} onClick={() => run("questions", () => savePactQuestions(pact.id, qs), "Questions saved.")} className="h-11 rounded-full bg-brand px-6 text-[14px] font-semibold text-white disabled:opacity-60">
+        <div className="sticky bottom-4 z-10 mt-5 flex justify-end">
+          <button disabled={!!busy} onClick={() => run("questions", () => savePactQuestions(pact.id, qs), "Questions saved.")} className="h-11 rounded-full bg-brand px-6 text-[14px] font-semibold text-white shadow-lift disabled:opacity-60">
             {busy === "questions" ? "Saving…" : "Save questions"}
           </button>
         </div>
@@ -284,9 +288,10 @@ function ImageField({ label, hint, value, round, busy, onFile, onClear }: { labe
 
 function QuestionForm({ q, patch, upload, busy }: { q: PactQuestion; patch: (p: Partial<PactQuestion>) => void; upload: (f: File | undefined, set: (url: string) => void) => void; busy: boolean }) {
   const fixed = q.kind === "this_or_that" || q.kind === "scale";
+  const [picking, setPicking] = useState<string | null>(null);
   const setOpt = (id: string, p: Partial<PactQuestion["options"][number]>) => patch({ options: q.options.map((o) => (o.id === id ? { ...o, ...p } : o)) });
   return (
-    <div className="grid gap-4 border-t border-line px-4 py-4 md:grid-cols-2">
+    <div className="grid grid-cols-1 gap-4 border-t border-line px-3 py-4 sm:px-4 md:grid-cols-2">
       <label className="grid gap-1.5 md:col-span-2"><span className="text-[13px] font-semibold">Question</span><input className={field} value={q.title} maxLength={90} placeholder="Your ideal Friday night" onChange={(e) => patch({ title: e.target.value })} /></label>
       <label className="grid gap-1.5">
         <span className="text-[13px] font-semibold">Type</span>
@@ -303,9 +308,10 @@ function QuestionForm({ q, patch, upload, busy }: { q: PactQuestion; patch: (p: 
         <span className="text-[13px] font-semibold">How much it counts</span>
         <select className={field} value={q.weight} onChange={(e) => patch({ weight: e.target.value as Weight })}>
           <option value="normal">Normal</option>
-          <option value="strong">Strong: counts double</option>
-          <option value="dealbreaker">Deal-breaker: different answers never match for love or spicy</option>
+          <option value="strong">Strong (counts double)</option>
+          <option value="dealbreaker">Deal-breaker (love and spicy)</option>
         </select>
+        {q.weight === "dealbreaker" && <span className="text-[12px] text-muted">People who answer differently are never matched for love or something spicy.</span>}
       </label>
       {q.kind === "choose_many" && (
         <div className="grid grid-cols-2 gap-3 md:col-span-2">
@@ -318,18 +324,16 @@ function QuestionForm({ q, patch, upload, busy }: { q: PactQuestion; patch: (p: 
         {q.options.map((o, i) => (
           <div key={o.id} className="flex items-center gap-2">
             {q.kind !== "scale" && (
-              <label className="relative grid h-11 w-11 shrink-0 cursor-pointer place-items-center overflow-hidden rounded-xl border border-line-strong bg-white text-muted" aria-label="Add a picture">
+              <button type="button" onClick={() => setPicking(o.id)} className="relative grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-xl border border-line-strong bg-white text-muted" aria-label={o.image ? "Change picture" : "Add a picture"}>
                 {o.image ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={o.image} alt="" className="h-full w-full object-cover" />
                 ) : (
                   <ImagePlus size={16} />
                 )}
-                <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={busy} onChange={(e) => upload(e.target.files?.[0], (url) => setOpt(o.id, { image: url }))} />
-              </label>
+              </button>
             )}
-            <input className={field} value={o.label} maxLength={60} placeholder={q.kind === "scale" ? (i === 0 ? "Homebody" : "Life of the party") : `Answer ${i + 1}`} onChange={(e) => setOpt(o.id, { label: e.target.value })} />
-            {o.image && <button type="button" onClick={() => setOpt(o.id, { image: null })} className="shrink-0 text-[12px] font-semibold text-muted">No picture</button>}
+            <input className={clsx(field, "min-w-0")} value={o.label} maxLength={60} placeholder={q.kind === "scale" ? (i === 0 ? "Homebody" : "Life of the party") : `Answer ${i + 1}`} onChange={(e) => setOpt(o.id, { label: e.target.value })} />
             {!fixed && q.options.length > 2 && (
               <button type="button" onClick={() => patch({ options: q.options.filter((x) => x.id !== o.id) })} aria-label="Remove answer" className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-chili hover:bg-chili-soft"><X size={16} /></button>
             )}
@@ -338,6 +342,53 @@ function QuestionForm({ q, patch, upload, busy }: { q: PactQuestion; patch: (p: 
         {!fixed && q.options.length < 40 && (
           <button type="button" onClick={() => patch({ options: [...q.options, { id: newId(), label: "" }] })} className="inline-flex h-10 w-fit items-center gap-1.5 rounded-full border border-dashed border-line-strong px-4 text-[13.5px] font-semibold text-ink-soft"><Plus size={15} /> Add an answer</button>
         )}
+      </div>
+      {picking && (
+        <PicturePicker
+          busy={busy}
+          has={!!q.options.find((o) => o.id === picking)?.image}
+          onClose={() => setPicking(null)}
+          onPick={(image) => {
+            setOpt(picking, { image });
+            setPicking(null);
+          }}
+          onUpload={(file) => {
+            const id = picking;
+            setPicking(null);
+            upload(file, (url) => setOpt(id, { image: url }));
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+/** Choose an answer's picture: upload a photo, pick one of Dashpad's drawings, or none */
+function PicturePicker({ busy, has, onClose, onPick, onUpload }: { busy: boolean; has: boolean; onClose: () => void; onPick: (image: string | null) => void; onUpload: (file: File | undefined) => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 sm:items-center" onClick={onClose}>
+      <div role="dialog" aria-label="Choose a picture" className="max-h-[85dvh] w-full overflow-y-auto rounded-t-[28px] bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:max-w-xl sm:rounded-[28px]" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <h3 className="text-[17px] font-semibold">Choose a picture</h3>
+          <button type="button" onClick={onClose} aria-label="Close" className="grid h-9 w-9 place-items-center rounded-full hover:bg-cream"><X size={18} /></button>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <label className="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-full bg-brand px-4 text-[14px] font-semibold text-white">
+            <ImagePlus size={16} /> Upload a photo
+            <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={busy} onChange={(e) => onUpload(e.target.files?.[0])} />
+          </label>
+          {has && <button type="button" onClick={() => onPick(null)} className="h-10 rounded-full border border-line-strong px-4 text-[14px] font-semibold">No picture</button>}
+        </div>
+        <p className="mt-4 mb-2 text-[12px] font-bold tracking-wide text-muted uppercase">Or pick a drawing</p>
+        <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
+          {ART_LIBRARY.map((d) => (
+            <button key={d.name} type="button" onClick={() => onPick(art(d.name))} className="group text-left">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={art(d.name)} alt="" className="aspect-square w-full rounded-xl transition group-hover:scale-[1.03] group-active:scale-95" loading="lazy" />
+              <span className="mt-1 block truncate text-[11.5px] text-muted">{d.label}</span>
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );

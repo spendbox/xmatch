@@ -21,7 +21,8 @@ export function OptionArt({ option, index, className }: { option: PactOption; in
   const [a, b] = ART[index % ART.length];
   if (option.image) {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={option.image} alt="" className={clsx("absolute inset-0 h-full w-full object-cover", className)} loading="lazy" />;
+    // Dashpad's drawings keep their subject near the top, clear of the answer text
+    return <img src={option.image} alt="" className={clsx("absolute inset-0 h-full w-full object-cover", option.image.startsWith("/pacts/art/") && "object-top", className)} loading="lazy" />;
   }
   return (
     <span aria-hidden className={clsx("absolute inset-0", className)} style={{ background: `radial-gradient(120% 90% at 80% 10%, ${b} 0%, ${a} 55%, #120a26 100%)` }}>
@@ -56,27 +57,48 @@ function useNow(ms = 1000) {
   return now;
 }
 
-/** Reveal night while everyone is being matched: checks again every 20 seconds until the matches are out */
-export function PactMatching({ pact, count }: { pact: Pick<Pact, "name" | "accent" | "logo_url">; count: number }) {
+/**
+ * Between answers closing and reveal night: everyone is being matched, with a countdown to
+ * the reveal. Past reveal time (a big pact still finishing), it checks again every half minute.
+ */
+export function PactMatching({ pact, count, taken }: { pact: Pick<Pact, "name" | "accent" | "logo_url" | "reveal_at">; count: number; taken?: boolean }) {
   const router = useRouter();
+  const revealAt = new Date(pact.reveal_at).getTime();
+  const now = useNow();
+  const waiting = now !== null && now < revealAt;
   useEffect(() => {
+    const left = revealAt - Date.now();
     // Spread out, so thousands of phones don't all ask at the same second
-    const t = setInterval(() => router.refresh(), 25_000 + Math.random() * 15_000);
+    const jitter = Math.random() * 15_000;
+    if (left > 0) {
+      if (left > 2 ** 31 - 1) return;
+      const t = setTimeout(() => router.refresh(), left + 2000 + jitter);
+      return () => clearTimeout(t);
+    }
+    const t = setInterval(() => router.refresh(), 25_000 + jitter);
     return () => clearInterval(t);
-  }, [router]);
+  }, [router, revealAt, waiting]);
   return (
-    <div className="flex flex-1 flex-col items-center justify-center px-6 py-16 text-center">
+    <div className="flex flex-1 flex-col items-center justify-center px-6 py-12 text-center">
       <span className="relative grid h-28 w-28 place-items-center">
         <span className="absolute inset-0 animate-ping rounded-full opacity-25" style={{ background: pact.accent }} />
         <span className="relative grid h-24 w-24 place-items-center rounded-full" style={{ background: "linear-gradient(135deg, #e5484d, #f2b33d)" }}>
           <MaskIcon className="w-14" eyes="#1c1828" />
         </span>
       </span>
-      <p className="mt-7 text-[12.5px] font-extrabold tracking-[0.12em] uppercase" style={{ color: pact.accent }}>Reveal night · {pact.name}</p>
-      <h1 className="mt-2 font-display text-[30px] leading-tight font-bold">Matching everyone now</h1>
+      <p className="mt-7 text-[12.5px] font-extrabold tracking-[0.12em] uppercase" style={{ color: pact.accent }}>{pact.name}</p>
+      <h1 className="mt-2 font-display text-[30px] leading-tight font-bold">{waiting || now === null ? "Matching everyone now" : "Almost there"}</h1>
       <p className="mt-2 max-w-xs text-[15px] leading-relaxed text-white/75">
-        We&apos;re finding the best match for all {count.toLocaleString()} people. This takes a few minutes. Stay here, or we&apos;ll let you know.
+        {waiting || now === null
+          ? `${taken ? "You're in. " : ""}Answers are closed, and we're finding everyone's best match (${count === 1 ? "1 person" : `${count.toLocaleString()} people`} took part).`
+          : "Reveal night is here. We're finishing the last matches. Stay here, this page updates by itself."}
       </p>
+      {(waiting || now === null) && (
+        <div className="mt-7 w-full max-w-sm rounded-[22px] border p-4" style={{ background: "#22163f", borderColor: `${pact.accent}40` }}>
+          <Countdown to={pact.reveal_at} accent={pact.accent} label="Matches revealed in" />
+          <p className="mt-3 border-t border-white/10 pt-3 text-[13px] text-white/65">Reveal night: {pactDate(pact.reveal_at)}</p>
+        </div>
+      )}
     </div>
   );
 }

@@ -72,7 +72,33 @@ export const KIND_LABEL: Record<QuestionKind, string> = {
 export const WEIGHT_LABEL: Record<Weight, string> = { normal: "Normal", strong: "Strong", dealbreaker: "Deal-breaker" };
 const WEIGHT_VALUE: Record<Weight, number> = { normal: 1, strong: 2, dealbreaker: 3 };
 
-const opts = (...labels: string[]): PactOption[] => labels.map((label, i) => ({ id: String.fromCharCode(97 + i), label }));
+const opts = (...labels: string[]): PactOption[] => labels.map((label, i) => ({ id: String.fromCharCode(97 + i), label, ...(SEED_ART[label] ? { image: art(SEED_ART[label]) } : {}) }));
+
+/** Drawings that come with Dashpad (in public/pacts/art), for answers. Admins can pick any of them. */
+export const ART_LIBRARY: { name: string; label: string }[] = [
+  { name: "owambe", label: "Party" }, { name: "movie-suya", label: "Movie night" }, { name: "save", label: "Saving" }, { name: "spend", label: "Memories" },
+  { name: "own-thing", label: "Rocket" }, { name: "company", label: "Office" }, { name: "talk-now", label: "Talking" }, { name: "cool-off", label: "Sleep on it" },
+  { name: "lagos", label: "Lagos" }, { name: "abroad", label: "Abroad" }, { name: "faith-big", label: "Glowing heart" }, { name: "faith-private", label: "Candle" },
+  { name: "party-jollof", label: "Party jollof" }, { name: "home-jollof", label: "Home jollof" }, { name: "worship", label: "Worship" }, { name: "brunch", label: "Brunch" },
+  { name: "asleep", label: "Asleep" }, { name: "side-hustle", label: "Side hustle" }, { name: "beach", label: "Beach" }, { name: "coffee", label: "Coffee" },
+  { name: "tea", label: "Tea" }, { name: "dog", label: "Dog" }, { name: "cat", label: "Cat" }, { name: "early-bird", label: "Early bird" },
+  { name: "night-owl", label: "Night owl" }, { name: "texting", label: "Texting" }, { name: "calling", label: "Calling" }, { name: "books", label: "Books" },
+  { name: "gym", label: "Gym" }, { name: "couch", label: "Couch" }, { name: "football", label: "Football" }, { name: "music", label: "Music" },
+  { name: "city", label: "City" }, { name: "village", label: "Village" }, { name: "sweet", label: "Sweet" }, { name: "spicy", label: "Spicy" },
+];
+export const art = (name: string) => `/pacts/art/${name}.svg`;
+
+/** Which drawing goes with each ready-made answer */
+const SEED_ART: Record<string, string> = {
+  "Owambe till 3am": "owambe", "Movie and suya at home": "movie-suya",
+  "Save it for the future": "save", "Spend it on memories": "spend",
+  "Building my own thing": "own-thing", "Rising in a great company": "company",
+  "Talk it out right now": "talk-now", "Cool off, talk tomorrow": "cool-off",
+  "Still in Lagos": "lagos", "Living abroad": "abroad",
+  "A big part of my life": "faith-big", "Personal and private": "faith-private",
+  "Party jollof, smoky": "party-jollof", "Home jollof, mama's way": "home-jollof",
+  "At church or the mosque": "worship", "At brunch with friends": "brunch", "Asleep, recovering": "asleep", "Working on my side hustle": "side-hustle", "At the beach": "beach",
+};
 
 /** The questions every new pact starts with. Admins can remove, reorder, edit and add. */
 export const SEED_QUESTIONS: Omit<PactQuestion, "id" | "position">[] = [
@@ -544,6 +570,12 @@ export function answersAsThings(questions: PactQuestion[], answers: Answers): st
 // ---------------------------------------------------------------- dates
 
 export type Phase = "open" | "closed" | "matching" | "revealed";
+/** "1 person", "2 people", "4,127 people" (and the same for other words) */
+export function plural(n: number, one: string, many: string) {
+  return `${n.toLocaleString()} ${n === 1 ? one : many}`;
+}
+export const people = (n: number) => plural(n, "person", "people");
+
 export function pactPhase(p: Pick<Pact, "closes_at" | "reveal_at" | "status">, now = Date.now()): Phase {
   if (p.status === "revealed") return "revealed";
   // Reveal time has come and everyone is being matched (a few minutes for big pacts)

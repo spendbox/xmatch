@@ -85,7 +85,7 @@ export async function savePactQuestions(id: string, list: PactQuestion[]): Promi
     if (title.length < 2) return { error: `Question ${i + 1} needs a title.` };
     const seen = new Set<string>();
     const options = (q.options ?? [])
-      .map((o) => ({ id: clean(o.id, 12) || Math.random().toString(36).slice(2, 8), label: clean(o.label, 60), image: o.image && /^https:\/\//.test(o.image) ? o.image.slice(0, 500) : null }))
+      .map((o) => ({ id: clean(o.id, 12) || Math.random().toString(36).slice(2, 8), label: clean(o.label, 60), image: o.image && (/^https:\/\//.test(o.image) || /^\/pacts\/art\/[a-z-]+\.svg$/.test(o.image)) ? o.image.slice(0, 500) : null }))
       .filter((o) => o.label && !seen.has(o.id) && seen.add(o.id));
     const need = kind === "this_or_that" || kind === "scale" ? 2 : 2;
     if (options.length < need) return { error: `"${title}" needs at least ${need} answers.` };
@@ -153,7 +153,7 @@ export async function revealPactNow(id: string): Promise<{ error?: string; summa
   const r = await runReveal(id, Date.now() + 40_000);
   revalidatePath(`/admin/pacts/${id}`);
   if (!r) return { summary: "Revealing now. Refresh in a minute to see progress." };
-  if (r.step === "match") return { summary: "Big pact: matching will finish within a few minutes." };
+  if (r.step === "match" || r.step === "ready") return { summary: "Big pact: matching will finish within a few minutes, then it reveals." };
   return { summary: `${(r.pairs ?? 0).toLocaleString()} matches made from ${(r.people ?? 0).toLocaleString()} people.${r.step === "done" ? " Everyone has been told." : " Telling everyone now, this can take a few minutes."}` };
 }
 

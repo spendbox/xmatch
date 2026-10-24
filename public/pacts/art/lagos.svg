@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" aria-label="A yellow Lagos bus">
+<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff9a3c"/><stop offset="1" stop-color="#ff5a5a"/></linearGradient></defs>
+<rect width="400" height="400" fill="url(#g)"/>
+<circle cx="340" cy="60" r="90" fill="#fff" opacity=".08"/><circle cx="40" cy="330" r="70" fill="#fff" opacity=".06"/>
+
+<g fill="#ffffff" opacity=".35"><rect x="40" y="120" width="40" height="160"/><rect x="86" y="80" width="50" height="200"/><rect x="142" y="140" width="34" height="140"/><rect x="250" y="100" width="44" height="180"/><rect x="300" y="60" width="54" height="220"/><path d="M190 280 L190 150 L220 110 L250 150 L250 280Z"/></g>
+<rect x="70" y="190" width="260" height="100" rx="20" fill="#f2c45a"/><rect x="70" y="250" width="260" height="14" fill="#1c1828"/>
+<rect x="88" y="206" width="44" height="36" rx="6" fill="#bfe3ff"/><rect x="142" y="206" width="44" height="36" rx="6" fill="#bfe3ff"/><rect x="196" y="206" width="44" height="36" rx="6" fill="#bfe3ff"/><rect x="250" y="206" width="62" height="36" rx="6" fill="#bfe3ff"/>
+<circle cx="120" cy="292" r="24" fill="#1c1828"/><circle cx="120" cy="292" r="10" fill="#bbb"/><circle cx="280" cy="292" r="24" fill="#1c1828"/><circle cx="280" cy="292" r="10" fill="#bbb"/>
+<rect x="318" y="230" width="16" height="12" rx="3" fill="#fff"/>
+</svg>

@@ -22,8 +22,8 @@ export default async function PactMatchPage({ params, searchParams }: { params: 
   return (
     <div className="min-h-dvh bg-[#0d0820] text-[#fbf4e6]">
       <div className="relative mx-auto flex min-h-dvh max-w-[480px] flex-col overflow-hidden lg:my-6 lg:min-h-[calc(100dvh-3rem)] lg:rounded-[32px]" style={{ background: "radial-gradient(120% 60% at 50% 0%, #3b2585 0%, #160d2e 60%)" }}>
-        {pactPhase(pact) === "matching" ? (
-          <PactMatching pact={pact} count={count} />
+        {pactPhase(pact) === "closed" || pactPhase(pact) === "matching" ? (
+          <PactMatching pact={pact} count={count} taken />
         ) : pactPhase(pact) !== "revealed" ? (
           <div className="flex flex-1 flex-col justify-center gap-6 px-6 text-center">
             <h1 className="font-display text-[30px] font-bold">You&apos;re in {pact.name}</h1>

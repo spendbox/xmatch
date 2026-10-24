@@ -119,7 +119,7 @@ export function PactsAdmin({ pacts }: { pacts: AdminPact[] }) {
                     <span className="block truncate text-[13px] text-brand">/pact/{p.slug}</span>
                     <span className="mt-1 block text-[13px] text-muted">
                       <b className="text-ink tabular-nums">{p.count.toLocaleString()}</b> answered
-                      {p.matches ? <> · <b className="text-ink tabular-nums">{p.matches.toLocaleString()}</b> matches</> : null} · reveal {pactDate(p.reveal_at)}
+                      {p.matches ? <> · <b className="text-ink tabular-nums">{p.matches.toLocaleString()}</b> {p.matches === 1 ? "match" : "matches"}</> : null} · reveal {pactDate(p.reveal_at)}
                     </span>
                   </span>
                 </Link>
