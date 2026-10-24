@@ -69,6 +69,8 @@ To change them, edit the values in Vercel → Settings → Environment Variables
 
 Admin has: an **Overview** (members, online now, masquerades, matches, revenue, gifts, reports), **Masquerade Nights** (create, edit, publish, cancel with automatic refunds, night-specific icebreakers, live preview) and **Icebreakers** (browse by spice level, search, edit, switch off, delete, and bulk-add by pasting one question per line).
 
+**Feedback**: people tap the help button (life ring) at the top of Home, or "Help and feedback" in the side menu on computers, to send feedback, report a problem, ask for help or share an idea. Messages show in admin → Feedback, where you mark them handled or delete them. Run `supabase/updates/45_feedback.sql` once in Supabase to switch it on.
+
 ## Bot protection (Cloudflare Turnstile)
 
 1. In Cloudflare go to **Turnstile → Add widget**. Add the domain `dashpad.site`, choose **Managed**.
