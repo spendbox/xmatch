@@ -48,6 +48,12 @@ import type { Meet, MeetChat, MeetList } from "@/lib/meets";
 import { MeetScreen } from "@/components/meets/MeetScreen";
 import { ExploreScreen } from "@/components/explore/ExploreScreen";
 import { MediaHelp } from "@/components/app/MediaHelp";
+import { SEED_QUESTIONS, type Pact, type PactQuestion } from "@/lib/pacts";
+import { PactFlow } from "@/components/pacts/PactFlow";
+import { PactCard } from "@/components/pacts/PactCard";
+import { MaskedChats } from "@/components/matches/MaskedChats";
+import { PactsAdmin } from "@/components/admin/PactsAdmin";
+import { PactEditor } from "@/components/admin/PactEditor";
 import type { ExploreList, ExploreProfile } from "@/lib/explore";
 
 const photo = (a: string, b: string, letter: string) =>
@@ -92,6 +98,13 @@ const ada: Profile = {
 
 const now = Date.now();
 const iso = (s: number) => new Date(now - s * 1000).toISOString();
+const demoPact: Pact = {
+  id: "00000000-0000-0000-0000-00000000aaaa", slug: "lagos-pact", name: "The Lagos Pact", tagline: "Answer 10 questions. On reveal night, meet the person most like you.",
+  logo_url: null, header_url: null, accent: "#f2c45a", intents: ["business", "friendship", "love", "spicy"], areas: ["Island", "Mainland"], email_domain: null,
+  closes_at: new Date(now + 4 * 86400_000 + 5 * 3600_000).toISOString(), reveal_at: new Date(now + 6 * 86400_000).toISOString(), status: "live", matched_at: null,
+};
+const demoQs: PactQuestion[] = SEED_QUESTIONS.map((q, i) => ({ ...q, id: `q${i}`, position: i }));
+const pactWrap = (el: React.ReactNode) => <div className="min-h-dvh bg-[#140d24] text-white">{el}</div>;
 
 const session = (over: Partial<MasqueradeState> = {}): MasqueradeState => ({
   id: "s1",
@@ -674,6 +687,62 @@ function ScreenBody({ screen }: { screen: string }) {
       return <ProfileSheet profile={ada} shared={["Travel", "Food"]} onClose={() => {}} />;
     case "things-deck":
       return <ThingsDeck open onClose={() => {}} things={me.things ?? []} onSaved={() => {}} demo />;
+    case "pact-intro":
+    case "pact-q1":
+    case "pact-artists":
+    case "pact-scale":
+    case "pact-about":
+    case "pact-finish":
+    case "pact-done": {
+      const st = screen.slice(5);
+      const demoStep = st === "intro" ? { step: "intro" as const } : st === "q1" ? { step: "q" as const, qi: 0 } : st === "artists" ? { step: "q" as const, qi: 5 } : st === "scale" ? { step: "q" as const, qi: 7 } : { step: st as "about" | "finish" | "done" };
+      return pactWrap(<PactFlow pact={demoPact} questions={demoQs} count={4127} signedIn={false} mine={null} result={null} demoStep={demoStep} />);
+    }
+    case "pact-reveal":
+      return pactWrap(
+        <PactFlow
+          pact={{ ...demoPact, status: "revealed", closes_at: iso(2 * 86400), reveal_at: iso(600), matched_at: iso(600) }}
+          questions={demoQs} count={4127} signedIn mine={null}
+          result={{ match: { alias: "Golden Panther", score: 87, intent: "business", age: 27, area: "Island", work: "Tech", shared: [{ q: "Your hustle", a: "Building my own thing" }, { q: "Money", a: "Save it for the future" }, { q: "Your top artists", a: "Tems" }, { q: "Jollof", a: "Party jollof, smoky" }], differ: { q: "Your ideal Friday night", mine: "Owambe till 3am", theirs: "Movie and suya at home" }, sessionId: "s1", theyHaveAccount: true } }}
+        />,
+      );
+    case "pact-events":
+      return (
+        <div className="pb-24">
+          <EventsScreen events={[]} pacts={[{ ...demoPact, count: 4127 }, { ...demoPact, id: "p2", slug: "unilag-pact", name: "UNILAG Pact", accent: "#7cc8ff", count: 1290, closes_at: iso(3600), reveal_at: new Date(now + 2 * 3600_000).toISOString() }]} />
+          <BottomNav />
+        </div>
+      );
+    case "pact-profile":
+      return (
+        <div className="pb-24">
+          <ProfileEditor profile={me} email="tolu@example.com" matchCount={3} demoPacts={[
+            { slug: "lagos-pact", name: "The Lagos Pact", logo_url: null, accent: "#f2c45a", reveal_at: iso(600), closes_at: iso(86400), status: "revealed", score: 87, intent: "business", shared: [], session_id: "s1", match_alias: "Golden Panther" },
+            { slug: "unilag-pact", name: "UNILAG Pact", logo_url: null, accent: "#7cc8ff", reveal_at: new Date(now + 5 * 86400_000).toISOString(), closes_at: new Date(now + 3 * 86400_000).toISOString(), status: "live", score: null, intent: null, shared: null, session_id: null, match_alias: null },
+          ]} />
+          <BottomNav />
+        </div>
+      );
+    case "pact-chats":
+      return (
+        <div className="mx-auto max-w-md px-5 pt-6 pb-24">
+          <h1 className="font-display text-[34px] font-semibold">Chats</h1>
+          <MaskedChats demo={[
+            { id: "s1", alias: "Golden Panther", my_alias: "Silver Lynx", from_meet: false, pact: "The Lagos Pact", my_vote: null, they_unmasked: false, last_message: null, last_mine: null, last_at: iso(300), unread: true },
+            { id: "s2", alias: "Coral Heron", my_alias: "Silver Lynx", from_meet: true, my_vote: null, they_unmasked: false, last_message: "Haha same, I'm on the Island too", last_mine: false, last_at: iso(4000), unread: false },
+          ]} />
+          <BottomNav />
+        </div>
+      );
+    case "admin-pacts":
+      return <AdminShell><PactsAdmin pacts={[
+        { id: demoPact.id, slug: "lagos-pact", name: "The Lagos Pact", accent: "#f2c45a", logo_url: null, status: "live", closes_at: demoPact.closes_at, reveal_at: demoPact.reveal_at, matched_at: null, created_at: iso(86400 * 3), count: 4127, matches: 0 },
+        { id: "p2", slug: "unilag-pact", name: "UNILAG Pact", accent: "#7cc8ff", logo_url: null, status: "draft", closes_at: demoPact.closes_at, reveal_at: demoPact.reveal_at, matched_at: null, created_at: iso(3600), count: 0, matches: 0 },
+      ]} /></AdminShell>;
+    case "admin-pact":
+      return <AdminShell><PactEditor pact={demoPact} questions={demoQs} count={4127} matches={0} /></AdminShell>;
+    case "pact-home-card":
+      return <div className="mx-auto max-w-md p-5"><PactCard pact={{ ...demoPact, count: 4127 }} compact /></div>;
     case "profile":
       return (
         <div className="pb-24">

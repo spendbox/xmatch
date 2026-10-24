@@ -22,5 +22,6 @@ export const config = {
     "/profile/:path*",
     "/onboarding/:path*",
     "/wallet/:path*",
+    "/pact/:path*",
   ],
 };

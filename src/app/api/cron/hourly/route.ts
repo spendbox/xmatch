@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { pushToUsers } from "@/lib/push";
 import { intentLabel } from "@/lib/constants";
 import type { Intent } from "@/lib/types";
+import { revealDuePacts } from "@/lib/pactsServer";
 
 // Called every 5 minutes by a scheduled job in Supabase (see the database setup page),
 // with "Authorization: Bearer CRON_SECRET". Pairs everyone at the top of the hour, tells each new pair, and nudges quiet chats.
@@ -57,7 +58,14 @@ async function handle(req: Request) {
       ),
     ),
   );
-  return NextResponse.json({ ok: true, made, told: pairs.length, sent, nudged: nudges.length });
+  // Pacts whose reveal night has come: match everyone and tell them
+  let pacts: unknown[] = [];
+  try {
+    pacts = await revealDuePacts();
+  } catch (e) {
+    console.error("pact reveal failed", e);
+  }
+  return NextResponse.json({ ok: true, made, told: pairs.length, sent, nudged: nudges.length, pacts });
 }
 
 export const GET = handle;

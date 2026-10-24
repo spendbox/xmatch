@@ -39,6 +39,31 @@ export async function sendEmailBatch({ to, subject, html, text }: { to: string[]
   return { sent, failed };
 }
 
+/** Sends a different email to each person (100 per request), e.g. everyone's own pact result link */
+export async function sendEmailsEach(list: { to: string; subject: string; html: string; text: string }[]) {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) return { sent: 0, failed: list.length, skipped: true };
+  const from = process.env.EMAIL_FROM ?? "Dashpad <no-reply@dashpad.site>";
+  let sent = 0;
+  let failed = 0;
+  for (let i = 0; i < list.length; i += 100) {
+    const chunk = list.slice(i, i + 100);
+    const res = await fetch("https://api.resend.com/emails/batch", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify(chunk.map((m) => ({ from, to: [m.to], subject: m.subject, html: m.html, text: m.text }))),
+      cache: "no-store",
+    });
+    if (res.ok) sent += chunk.length;
+    else {
+      failed += chunk.length;
+      console.error(`Resend batch error ${res.status}: ${await res.text()}`);
+    }
+    if (i + 100 < list.length) await new Promise((r) => setTimeout(r, 600));
+  }
+  return { sent, failed, skipped: false };
+}
+
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 
 /** The password reset email, styled like Dashpad. */
@@ -70,7 +95,7 @@ export function resetEmail(link: string, name?: string | null) {
 }
 
 /** An event email (reminders and "we're live"), styled like the reset email. */
-export function eventEmail(e: { heading: string; message: string; title: string; when: string; kind: string; link: string; button?: string }) {
+export function eventEmail(e: { heading: string; message: string; title: string; when: string; kind: string; link: string; button?: string; footer?: string }) {
   const button = e.button ?? "Open the event";
   const html = `<!doctype html>
 <html><body style="margin:0;background:#faf7f2;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#1c1828">
@@ -93,7 +118,7 @@ export function eventEmail(e: { heading: string; message: string; title: string;
     </table>
     <a href="${esc(e.link)}" style="display:inline-block;background:#5b3fd9;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:14px 28px;border-radius:14px">${esc(button)}</a>
     <p style="margin:24px 0 0;font-size:13px;line-height:1.6;color:#6e687c">If the button doesn't work, copy this link:<br><span style="word-break:break-all;color:#5b3fd9">${esc(e.link)}</span></p>
-    <p style="margin:24px 0 0;font-size:13px;line-height:1.6;color:#6e687c">You're getting this because you said you're going to this event.</p>
+    <p style="margin:24px 0 0;font-size:13px;line-height:1.6;color:#6e687c">${esc(e.footer ?? "You're getting this because you said you're going to this event.")}</p>
   </td></tr>
 </table>
 <p style="font-size:12px;color:#6e687c;margin:16px 0 0">Dashpad · dashpad.site</p>

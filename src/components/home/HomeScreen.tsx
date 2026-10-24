@@ -18,6 +18,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { KeyCoin } from "@/components/keys/KeyIcon";
 import { useWallet } from "@/components/keys/useWallet";
 import { EventCard } from "@/components/events/EventCard";
+import { PactCard, type PactListItem } from "@/components/pacts/PactCard";
 import type { DashpadEvent } from "@/lib/events";
 import { MeetSheet } from "./MeetSheet";
 import { MasqueradeCard, useMasqueradeHour } from "./MasqueradeCard";
@@ -42,6 +43,7 @@ export function HomeScreen({
   profile,
   wallet: initialWallet,
   nextEvent = null,
+  pact = null,
   hour: initialHour = null,
   matches = [],
   meets: initialMeets = null,
@@ -57,6 +59,7 @@ export function HomeScreen({
   /** Your chats: the latest show as circles at the top */
   matches?: MatchSummary[];
   nextEvent?: DashpadEvent | null;
+  pact?: PactListItem | null;
   hour?: MasqueradeHour | null;
   meets?: MeetList | null;
   demoSheet?: "meet" | "post";
@@ -156,6 +159,13 @@ export function HomeScreen({
 
       <div className="lg:col-span-5">
       <PastPairs pairs={ctl.hour?.past ?? []} balance={wallet?.balance ?? null} onChanged={ctl.load} />
+
+      {pact && (
+        <div className="mt-7 lg:mt-0 lg:mb-7">
+          <h2 className="mb-3 text-[15px] font-semibold">Pact open now</h2>
+          <PactCard pact={pact} compact />
+        </div>
+      )}
 
       {nextEvent && (
         <div className="mt-7 lg:mt-0 lg:mb-7">
