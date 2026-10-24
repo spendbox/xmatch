@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import clsx from "clsx";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MessageCircle, Search, Shapes, Users, X } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Sticky } from "@/components/ui/Sticky";
@@ -34,7 +34,23 @@ export function MatchesList({
   variant?: "page" | "sidebar";
 }) {
   const path = usePathname();
+  const router = useRouter();
   const side = variant === "sidebar";
+  // Unread dots stay current: fetch fresh when the list shows (going back can show an old copy),
+  // and again whenever a chat is read or a message arrives
+  const wait = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    const again = () => {
+      if (wait.current) clearTimeout(wait.current);
+      wait.current = setTimeout(() => router.refresh(), 700);
+    };
+    router.refresh();
+    window.addEventListener("dp:badges", again);
+    return () => {
+      window.removeEventListener("dp:badges", again);
+      if (wait.current) clearTimeout(wait.current);
+    };
+  }, [router]);
   const { seen, now } = usePresence(matches.map((m) => m.other_id));
   const online = (id: string) => isOnline(seen[id], now);
   const [q, setQ] = useState("");
