@@ -43,8 +43,10 @@ export type ExploreProfile = {
   photos_cost: number;
   /** A masked chat you already have with them from Meet */
   masked_id?: string | null;
-  /** Their "things about me" */
+  /** Their "things about me" (only once you're connected) */
   things?: { p: string; a: string }[];
+  /** How many things about them there are (shown before you're connected) */
+  things_count?: number;
   /** Words you both used in your things */
   shared_words?: string[];
 };

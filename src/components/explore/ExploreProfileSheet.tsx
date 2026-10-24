@@ -92,7 +92,19 @@ export function ExploreProfileSheet({
       onClose={onClose}
       note={[p.online ? "Online now" : null, p.place, both].filter(Boolean).join(" · ") || undefined}
       extra={
-        !p.photos_unlocked ? (
+        <>
+        {!p.match_id && (p.things_count ?? 0) > 0 && (
+          <section className="flex items-center gap-3 rounded-3xl bg-surface p-4 shadow-card">
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-brand-soft text-brand">
+              <Lock size={20} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[15px] font-semibold">{p.things_count} {p.things_count === 1 ? "thing" : "things"} about {p.name?.split(" ")[0] ?? "them"}</p>
+              <p className="text-[13px] text-muted">Shows once you&apos;ve both unmasked</p>
+            </div>
+          </section>
+        )}
+        {!p.photos_unlocked ? (
           <section className="flex items-center gap-3 rounded-3xl bg-surface p-4 shadow-card">
             <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gold-soft text-[#8a5a00]">
               <Lock size={20} />
@@ -110,7 +122,8 @@ export function ExploreProfileSheet({
               {busy === "photos" ? <Spinner className="h-4 w-4" /> : <KeyCoin size={18} />} Unlock · {p.photos_cost}
             </button>
           </section>
-        ) : null
+        ) : null}
+        </>
       }
       footer={
         <div className="space-y-2">
