@@ -31,6 +31,8 @@ export type Pact = {
   intents: PactIntent[];
   areas: string[];
   email_domain: string | null;
+  /** Text on the main button of the pact page; empty means "Take the Pact" */
+  button_text?: string;
   closes_at: string;
   reveal_at: string;
   status: "draft" | "live" | "revealed";

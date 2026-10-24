@@ -38,6 +38,7 @@ export type PactDetails = {
   intents: PactIntent[];
   areas: string[];
   email_domain: string | null;
+  button_text: string;
   closes_at: string;
   reveal_at: string;
 };
@@ -62,7 +63,7 @@ export async function savePactDetails(id: string, d: PactDetails): Promise<{ err
   if (taken) return { error: `dashpad.site/pact/${slug} is already taken. Try another link.` };
   const { error } = await db
     .from("pacts")
-    .update({ name, slug, tagline: clean(d.tagline, 160), logo_url: url(d.logo_url), header_url: url(d.header_url), accent, intents, areas, email_domain: domain, closes_at: closes.toISOString(), reveal_at: reveal.toISOString() })
+    .update({ name, slug, tagline: clean(d.tagline, 160), logo_url: url(d.logo_url), header_url: url(d.header_url), accent, intents, areas, email_domain: domain, button_text: clean(d.button_text, 30), closes_at: closes.toISOString(), reveal_at: reveal.toISOString() })
     .eq("id", id);
   if (error) return { error: "Couldn't save. Please try again." };
   revalidatePath("/admin/pacts");

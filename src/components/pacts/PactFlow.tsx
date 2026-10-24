@@ -6,7 +6,6 @@ import clsx from "clsx";
 import { ArrowLeft, ArrowRight, Bell, Briefcase, Check, Flame, Heart, Minus, Plus, Share2, Users } from "lucide-react";
 import { INTENTS, WORK, pactPhase, people, type PactView, type About, type Answer, type Answers, type Pact, type PactIntent, type PactQuestion } from "@/lib/pacts";
 import { Turnstile } from "@/components/ui/Turnstile";
-import { MaskIcon } from "@/components/ui/MaskIcon";
 import { Countdown, OptionArt, PactLogo, PactMatching } from "./PactBits";
 import { pactDate } from "@/lib/pacts";
 import { PactReveal } from "./PactReveal";
@@ -220,7 +219,7 @@ export function PactFlow({
             </p>
           ) : (
             <button onClick={next} className="h-14 rounded-full text-[16.5px] font-extrabold text-[#1c1310] transition active:scale-[0.98]" style={{ background: accent }}>
-              {taken ? "Edit my answers" : "Take the Pact"}
+              {taken ? "Edit my answers" : pact.button_text?.trim() || "Take the Pact"}
             </button>
           )}
           <p className="text-center text-[12px] text-white/55">Free with a Dashpad account · answers stay private · 18+</p>
@@ -410,9 +409,6 @@ function Header({ pact }: { pact: Pact }) {
         <div className="absolute inset-0" style={{ background: `radial-gradient(120% 80% at 70% 20%, ${pact.accent}aa 0%, #6a2a6e 40%, #160d2e 85%)` }} />
       )}
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#160d2e]" />
-      <span className="absolute top-[max(14px,env(safe-area-inset-top))] left-4 inline-flex h-[30px] items-center gap-1.5 rounded-full bg-[#160d2e]/60 px-3 text-[12px] font-bold backdrop-blur">
-        <MaskIcon className="w-[18px]" eyes="#160d2e" /> Dashpad Pacts
-      </span>
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { eventEmail, sendEmailsEach } from "@/lib/email";
 import { answersAsThings, emailKey, matchEveryone, pactPhase, type About, type Answers, type Entry, type Pact, type PactIntent, type PactQuestion, type PactView } from "@/lib/pacts";
 
 const site = () => (process.env.NEXT_PUBLIC_SITE_URL ?? "https://dashpad.site").replace(/\/$/, "");
-const PACT_COLS = "id, slug, name, tagline, logo_url, header_url, accent, intents, areas, email_domain, closes_at, reveal_at, status, matched_at";
+const PACT_COLS = "id, slug, name, tagline, logo_url, header_url, accent, intents, areas, email_domain, button_text, closes_at, reveal_at, status, matched_at";
 const Q_COLS = "id, position, kind, title, subtitle, options, min_pick, max_pick, weight";
 
 /** A published pact with its questions and how many people have answered */
