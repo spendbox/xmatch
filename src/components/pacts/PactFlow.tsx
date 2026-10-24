@@ -98,9 +98,12 @@ export function PactFlow({
       if (d?.answers) setAnswers(d.answers);
       if (d?.about) setAbout(d.about);
       if (savedPactTokens().some((t) => t.slug === pact.slug)) setTaken(true);
+      // Answered everything, then signed up, but it wasn't saved: go straight to the last step to join
+      else if (signedIn && phase === "open" && !new URL(window.location.href).searchParams.has("resume") && d?.answers && d?.about && !aboutProblem(d.about, pact) && questions.every((qq) => answered(qq, d.answers[qq.id]))) setStep("finish");
     } catch {
       /* nothing saved */
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draftKey, mine, sample, pact.slug]);
   useEffect(() => {
     if (sample) return;
@@ -416,7 +419,7 @@ export function PactFlow({
             <p className="text-[12px] font-extrabold tracking-[0.12em] uppercase" style={{ color: accent }}>Last step</p>
             <h1 className="mt-1 font-display text-[30px] leading-tight font-bold">Create your free account to join</h1>
             <p className="mt-2 text-[14.5px] leading-relaxed text-white/72">Your answers are kept on this phone. Once you&apos;re in, they&apos;re added to the Link-Up straight away, and your match shows up in Dashpad on reveal night.</p>
-            <p className="mt-5 text-[13px] font-bold">While you wait for reveal night, meet people masked every hour, for</p>
+            <p className="mt-5 text-[13px] font-bold">While you wait, get paired with strangers every hour, for</p>
             <div className="mt-2.5 grid grid-cols-2 gap-2.5">
               {[
                 { icon: <Briefcase size={20} />, t: "Business", d: "Partners, clients and mentors who think like you.", g: "#1f4a7a" },
