@@ -43,7 +43,7 @@ export function YourPacts({ demo }: { demo?: MyPact[] }) {
       <ul className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
         {list.map((p) => {
           const revealed = p.status === "revealed";
-          const href = p.session_id ? `/masquerade/${p.session_id}` : `/link-up/${p.slug}`;
+          const href = p.session_id ? `/masquerade/${p.session_id}` : `/link/${p.slug}`;
           return (
             <li key={p.slug} className="min-w-0">
               <Link href={href} className="flex items-center gap-3 rounded-3xl border border-line bg-surface p-3 pr-4 shadow-card transition active:scale-[0.98]">

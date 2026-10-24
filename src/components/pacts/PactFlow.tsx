@@ -365,7 +365,7 @@ export function PactFlow({
     }
     try {
       localStorage.setItem(draftKey, JSON.stringify({ answers, about }));
-      localStorage.setItem(AFTER_JOIN, `/link-up/${pact.slug}?resume=1`);
+      localStorage.setItem(AFTER_JOIN, `/link/${pact.slug}?resume=1`);
     } catch {
       /* private mode */
     }
@@ -532,7 +532,7 @@ function Seal({ accent }: { accent: string }) {
 function ShareButton({ pact }: { pact: Pact }) {
   const [copied, setCopied] = useState(false);
   async function share() {
-    const url = `${location.origin}/link-up/${pact.slug}`;
+    const url = `${location.origin}/link/${pact.slug}`;
     const text = `I just answered ${pact.name}. Answer it too and see who you match with on reveal night.`;
     try {
       if (navigator.share) return await navigator.share({ title: pact.name, text, url });
@@ -899,7 +899,7 @@ function RevealLookup({ pact }: { pact: Pact }) {
       </div>
       <div className="mx-5 mt-7 grid gap-3">
         {mine && (
-          <Link href={`/link-up/${pact.slug}/match?t=${mine}`} className="flex h-14 items-center justify-center rounded-full text-[16px] font-extrabold text-[#1c1310]" style={{ background: pact.accent }}>See my match</Link>
+          <Link href={`/link/${pact.slug}/match?t=${mine}`} className="flex h-14 items-center justify-center rounded-full text-[16px] font-extrabold text-[#1c1310]" style={{ background: pact.accent }}>See my match</Link>
         )}
         <Link href={`/login`} className="flex h-12 items-center justify-center rounded-full border border-white/20 text-[15px] font-bold">Log in to Dashpad</Link>
         {sent ? (

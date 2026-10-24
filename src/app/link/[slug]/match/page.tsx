@@ -30,7 +30,7 @@ export default async function PactMatchPage({ params, searchParams }: { params: 
             <h1 className="font-display text-[30px] font-bold">You&apos;re in {pact.name}</h1>
             <Countdown to={pact.reveal_at} accent={pact.accent} label="Your match arrives in" />
             <p className="text-[14px] text-white/70">Reveal night: {pactDate(pact.reveal_at)}. Keep this link, it shows your match.</p>
-            <Link href={`/link-up/${pact.slug}`} className="mx-auto flex h-12 items-center rounded-full border border-white/20 px-6 text-[15px] font-bold">Go back</Link>
+            <Link href={`/link/${pact.slug}`} className="mx-auto flex h-12 items-center rounded-full border border-white/20 px-6 text-[15px] font-bold">Go back</Link>
           </div>
         ) : (
           <PactReveal pact={pact} view={result.view} signedIn={!!user && result.signedIn} total={count} token={t} />

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { Plus } from "lucide-react";
-import { createPact } from "@/app/admin/(panel)/pacts/actions";
+import { createPact } from "@/app/admin/(panel)/link-ups/actions";
 import { pactPhase } from "@/lib/pacts";
 import { pactDate } from "@/lib/pacts";
 import { AdminTitle } from "./AdminShell";
@@ -43,7 +43,7 @@ export function PactsAdmin({ pacts }: { pacts: AdminPact[] }) {
     const r = await createPact(name, slug);
     setBusy(false);
     if (r.error || !r.id) return setError(r.error ?? "Couldn't create the Link-Up.");
-    router.push(`/admin/pacts/${r.id}`);
+    router.push(`/admin/link-ups/${r.id}`);
   }
 
   return (
@@ -75,7 +75,7 @@ export function PactsAdmin({ pacts }: { pacts: AdminPact[] }) {
           <label className="grid gap-1.5">
             <span className="text-[13px] font-semibold">Link</span>
             <span className="flex h-11 items-center overflow-hidden rounded-xl border border-line-strong bg-white focus-within:border-brand">
-              <span className="pl-3.5 text-[14px] text-muted">/link-up/</span>
+              <span className="pl-3.5 text-[14px] text-muted">/link/</span>
               <input
                 id="pact-slug"
                 value={slug}
@@ -102,7 +102,7 @@ export function PactsAdmin({ pacts }: { pacts: AdminPact[] }) {
             const badge = { draft: ["Draft", "bg-cream text-ink-soft"], open: ["Live", "bg-mint text-white"], closed: ["Answers closed", "bg-gold-soft text-[#9a6a0c]"], matching: ["Matching now", "bg-brand-soft text-brand"], revealed: ["Revealed", "bg-line text-muted"] }[phase];
             return (
               <li key={p.id}>
-                <Link href={`/admin/pacts/${p.id}`} className="flex gap-4 rounded-3xl border border-line bg-surface p-4 shadow-card transition hover:border-brand/40">
+                <Link href={`/admin/link-ups/${p.id}`} className="flex gap-4 rounded-3xl border border-line bg-surface p-4 shadow-card transition hover:border-brand/40">
                   <span className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-full font-display text-[18px] font-bold text-[#1c1310]" style={{ background: p.accent }}>
                     {p.logo_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -116,7 +116,7 @@ export function PactsAdmin({ pacts }: { pacts: AdminPact[] }) {
                       <span className="truncate text-[16px] font-semibold">{p.name}</span>
                       <span className={clsx("shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold", badge[1])}>{badge[0]}</span>
                     </span>
-                    <span className="block truncate text-[13px] text-brand">/link-up/{p.slug}</span>
+                    <span className="block truncate text-[13px] text-brand">/link/{p.slug}</span>
                     <span className="mt-1 block text-[13px] text-muted">
                       <b className="text-ink tabular-nums">{p.count.toLocaleString()}</b> answered
                       {p.matches ? <> · <b className="text-ink tabular-nums">{p.matches.toLocaleString()}</b> {p.matches === 1 ? "match" : "matches"}</> : null} · reveal {pactDate(p.reveal_at)}

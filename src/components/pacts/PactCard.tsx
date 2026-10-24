@@ -12,7 +12,7 @@ export function PactCard({ pact, compact }: { pact: PactListItem; compact?: bool
   const phase = pactPhase(pact);
   const when = phase === "open" ? `Answers close ${pactDate(pact.closes_at)}` : phase === "closed" ? `Matching now · reveal ${pactDate(pact.reveal_at)}` : phase === "matching" ? "Matches arriving now" : "Matches are out";
   return (
-    <Link href={phase === "open" && pact.taken ? `/link-up/${pact.slug}?edit=1` : `/link-up/${pact.slug}`} className="group relative block overflow-hidden rounded-[28px] bg-[#140d24] text-white shadow-card transition active:scale-[0.98]">
+    <Link href={phase === "open" && pact.taken ? `/link/${pact.slug}?edit=1` : `/link/${pact.slug}`} className="group relative block overflow-hidden rounded-[28px] bg-[#140d24] text-white shadow-card transition active:scale-[0.98]">
       <div className={compact ? "relative h-24" : "relative h-36"}>
         {pact.header_url ? (
           // eslint-disable-next-line @next/next/no-img-element

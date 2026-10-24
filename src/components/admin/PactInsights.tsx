@@ -35,7 +35,7 @@ export function PactInsights({ pact, questions, insights: s, people, page, perPa
   return (
     <div className="pb-16">
       {working && <AdminAutoRefresh seconds={10} />}
-      <Link href={`/admin/pacts/${pact.id}`} className="mb-3 inline-flex items-center gap-1.5 text-[14px] font-semibold text-muted"><ArrowLeft size={16} /> {pact.name}</Link>
+      <Link href={`/admin/link-ups/${pact.id}`} className="mb-3 inline-flex items-center gap-1.5 text-[14px] font-semibold text-muted"><ArrowLeft size={16} /> {pact.name}</Link>
       <h1 className="font-display text-[30px] leading-tight font-semibold sm:text-[34px]">Answers and results</h1>
       <p className="mt-1 text-[14.5px] text-muted">
         Answers close {pactDate(pact.closes_at)} · reveal night {pactDate(pact.reveal_at)}
@@ -215,5 +215,5 @@ function Bars({ title, note, total, rows, unit }: { title: string; note?: string
 
 function PageLink({ id, page, off, children }: { id: string; page: number; off: boolean; children: React.ReactNode }) {
   if (off) return <span className="inline-flex h-10 items-center gap-1 px-3 text-[13.5px] font-semibold text-muted/50">{children}</span>;
-  return <Link href={`/admin/pacts/${id}/answers?page=${page}`} className="inline-flex h-10 items-center gap-1 rounded-full border border-line-strong bg-white px-4 text-[13.5px] font-semibold">{children}</Link>;
+  return <Link href={`/admin/link-ups/${id}/answers?page=${page}`} className="inline-flex h-10 items-center gap-1 rounded-full border border-line-strong bg-white px-4 text-[13.5px] font-semibold">{children}</Link>;
 }

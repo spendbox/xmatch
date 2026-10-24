@@ -18,13 +18,13 @@ export async function createPact(name: string, slug: string): Promise<{ id?: str
   if (s.length < 2) return { error: "Choose a link for the Link-Up." };
   const db = createAdminClient();
   const { data: taken } = await db.from("pacts").select("id").eq("slug", s).maybeSingle();
-  if (taken) return { error: `dashpad.site/link-up/${s} is already taken. Try another link.` };
+  if (taken) return { error: `dashpad.site/link/${s} is already taken. Try another link.` };
   const closes = new Date(Date.now() + 12 * 86400_000);
   const reveal = new Date(Date.now() + 14 * 86400_000);
   const { data, error } = await db.from("pacts").insert({ name: n, slug: s, areas: [], closes_at: closes.toISOString(), reveal_at: reveal.toISOString() }).select("id").single();
   if (error || !data) return { error: "Couldn't create the Link-Up. Please try again." };
   await db.from("pact_questions").insert(SEED_QUESTIONS.map((q, i) => ({ ...q, pact_id: data.id, position: i })));
-  revalidatePath("/admin/pacts");
+  revalidatePath("/admin/link-ups");
   return { id: data.id as string };
 }
 
@@ -60,14 +60,14 @@ export async function savePactDetails(id: string, d: PactDetails): Promise<{ err
   const url = (u: string | null) => (u && /^https:\/\//.test(u) ? u.slice(0, 500) : null);
   const db = createAdminClient();
   const { data: taken } = await db.from("pacts").select("id").eq("slug", slug).neq("id", id).maybeSingle();
-  if (taken) return { error: `dashpad.site/link-up/${slug} is already taken. Try another link.` };
+  if (taken) return { error: `dashpad.site/link/${slug} is already taken. Try another link.` };
   const { error } = await db
     .from("pacts")
     .update({ name, slug, tagline: clean(d.tagline, 160), logo_url: url(d.logo_url), header_url: url(d.header_url), accent, intents, areas, email_domain: domain, button_text: clean(d.button_text, 30), closes_at: closes.toISOString(), reveal_at: reveal.toISOString() })
     .eq("id", id);
   if (error) return { error: "Couldn't save. Please try again." };
-  revalidatePath("/admin/pacts");
-  revalidatePath(`/admin/pacts/${id}`);
+  revalidatePath("/admin/link-ups");
+  revalidatePath(`/admin/link-ups/${id}`);
   return {};
 }
 
@@ -122,7 +122,7 @@ export async function savePactQuestions(id: string, list: PactQuestion[]): Promi
     const { error } = await db.from("pact_questions").insert(fresh);
     if (error) return { error: "Couldn't save the questions. Please try again." };
   }
-  revalidatePath(`/admin/pacts/${id}`);
+  revalidatePath(`/admin/link-ups/${id}`);
   return {};
 }
 
@@ -137,8 +137,8 @@ export async function setPactStatus(id: string, status: "draft" | "live"): Promi
   }
   const { error } = await db.from("pacts").update({ status }).eq("id", id);
   if (error) return { error: "Couldn't change it. Please try again." };
-  revalidatePath("/admin/pacts");
-  revalidatePath(`/admin/pacts/${id}`);
+  revalidatePath("/admin/link-ups");
+  revalidatePath(`/admin/link-ups/${id}`);
   return {};
 }
 
@@ -152,7 +152,7 @@ export async function revealPactNow(id: string): Promise<{ error?: string; summa
   if (!p || p.status !== "live") return { error: "This Link-Up has already been revealed (or isn't published)." };
   await db.from("pacts").update({ reveal_at: now, ...(p.closes_at > now ? { closes_at: now } : {}) }).eq("id", id);
   const r = await runReveal(id, Date.now() + 40_000);
-  revalidatePath(`/admin/pacts/${id}`);
+  revalidatePath(`/admin/link-ups/${id}`);
   if (!r) return { summary: "Revealing now. Refresh in a minute to see progress." };
   if (r.step === "match" || r.step === "ready") return { summary: "Big Link-Up: matching will finish within a few minutes, then it reveals." };
   return { summary: `${(r.pairs ?? 0).toLocaleString()} matches made from ${(r.people ?? 0).toLocaleString()} people.${r.step === "done" ? " Everyone has been told." : " Telling everyone now, this can take a few minutes."}` };
@@ -162,7 +162,7 @@ export async function revealPactNow(id: string): Promise<{ error?: string; summa
 export async function retryPactReveal(id: string): Promise<{ error?: string; summary?: string }> {
   await requireAdmin();
   const r = await runReveal(id, Date.now() + 40_000);
-  revalidatePath(`/admin/pacts/${id}`);
+  revalidatePath(`/admin/link-ups/${id}`);
   if (!r) return { summary: "It's already working on this Link-Up. Refresh in a minute." };
   if (r.error) return { error: `Still not working: ${r.error}` };
   return { summary: r.step === "done" ? "Done. Everyone has been told." : "It's moving again. Refresh in a minute to see progress." };
@@ -178,6 +178,6 @@ export async function deletePact(id: string, typedName: string): Promise<{ error
   // Answers and matches go with it; chats that already started stay open
   const { error } = await db.from("pacts").delete().eq("id", id);
   if (error) return { error: "Couldn't delete it. Please try again." };
-  revalidatePath("/admin/pacts");
+  revalidatePath("/admin/link-ups");
   return {};
 }
