@@ -85,6 +85,7 @@ export const ART_LIBRARY: { name: string; label: string }[] = [
   { name: "night-owl", label: "Night owl" }, { name: "texting", label: "Texting" }, { name: "calling", label: "Calling" }, { name: "books", label: "Books" },
   { name: "gym", label: "Gym" }, { name: "couch", label: "Couch" }, { name: "football", label: "Football" }, { name: "music", label: "Music" },
   { name: "city", label: "City" }, { name: "village", label: "Village" }, { name: "sweet", label: "Sweet" }, { name: "spicy", label: "Spicy" },
+  { name: "anime", label: "Anime" }, { name: "games", label: "Games" },
 ];
 export const art = (name: string) => `/pacts/art/${name}.svg`;
 
@@ -97,6 +98,12 @@ const SEED_ART: Record<string, string> = {
   "Still in Lagos": "lagos", "Living abroad": "abroad",
   "A big part of my life": "faith-big", "Personal and private": "faith-private",
   "Party jollof, smoky": "party-jollof", "Home jollof, mama's way": "home-jollof",
+  "Anime marathon": "anime", "A good movie": "movie-suya",
+  "Early bird": "early-bird", "Night owl": "night-owl",
+  "Coffee": "coffee", "Tea": "tea", "Dogs": "dog", "Cats": "cat",
+  "Texting all day": "texting", "Long phone calls": "calling",
+  "Hitting the gym": "gym", "Chilling on the couch": "couch",
+  "A beach resort": "beach", "Exploring a new city": "city",
   "At church or the mosque": "worship", "At brunch with friends": "brunch", "Asleep, recovering": "asleep", "Working on my side hustle": "side-hustle", "At the beach": "beach",
 };
 
@@ -112,6 +119,16 @@ export const SEED_QUESTIONS: Omit<PactQuestion, "id" | "position">[] = [
   { kind: "scale", title: "How social are you?", subtitle: "", options: opts("Homebody", "Life of the party"), min_pick: 1, max_pick: 1, weight: "normal" },
   { kind: "this_or_that", title: "Faith", subtitle: "", options: opts("A big part of my life", "Personal and private"), min_pick: 1, max_pick: 1, weight: "dealbreaker" },
   { kind: "this_or_that", title: "Jollof", subtitle: "", options: opts("Party jollof, smoky", "Home jollof, mama's way"), min_pick: 1, max_pick: 1, weight: "normal" },
+  { kind: "this_or_that", title: "Anime or movies?", subtitle: "", options: opts("Anime marathon", "A good movie"), min_pick: 1, max_pick: 1, weight: "normal" },
+  { kind: "choose_many", title: "Games you love", subtitle: "Pick up to 4", options: opts("EA FC (FIFA)", "Call of Duty", "PUBG or Free Fire", "Fortnite", "GTA", "Mortal Kombat", "Minecraft", "Chess", "Ludo", "Whot", "Scrabble", "Card games", "Board games with friends", "I don't really play games"), min_pick: 1, max_pick: 4, weight: "normal" },
+  { kind: "choose_many", title: "What you watch", subtitle: "Pick up to 3", options: opts("Nollywood", "Anime", "K-dramas", "Hollywood movies", "Reality TV", "Football", "Sitcoms", "Crime and thrillers", "Documentaries", "YouTube creators"), min_pick: 1, max_pick: 3, weight: "normal" },
+  { kind: "this_or_that", title: "Morning person or night owl?", subtitle: "", options: opts("Early bird", "Night owl"), min_pick: 1, max_pick: 1, weight: "normal" },
+  { kind: "this_or_that", title: "Coffee or tea?", subtitle: "", options: opts("Coffee", "Tea"), min_pick: 1, max_pick: 1, weight: "normal" },
+  { kind: "this_or_that", title: "Dogs or cats?", subtitle: "", options: opts("Dogs", "Cats"), min_pick: 1, max_pick: 1, weight: "normal" },
+  { kind: "this_or_that", title: "Keeping in touch", subtitle: "", options: opts("Texting all day", "Long phone calls"), min_pick: 1, max_pick: 1, weight: "normal" },
+  { kind: "this_or_that", title: "Your free evening", subtitle: "", options: opts("Hitting the gym", "Chilling on the couch"), min_pick: 1, max_pick: 1, weight: "normal" },
+  { kind: "this_or_that", title: "Dream holiday", subtitle: "", options: opts("A beach resort", "Exploring a new city"), min_pick: 1, max_pick: 1, weight: "normal" },
+  { kind: "scale", title: "How competitive are you?", subtitle: "", options: opts("Just for fun", "I play to win"), min_pick: 1, max_pick: 1, weight: "normal" },
 ];
 
 export const MAX_QUESTIONS = 25;
@@ -161,7 +178,8 @@ export function cleanAbout(pact: Pick<Pact, "intents" | "areas">, raw: unknown):
   const a = (raw ?? {}) as Record<string, unknown>;
   const gender = a.gender === "woman" || a.gender === "man" ? a.gender : null;
   if (!gender) return "Tell us if you're a woman or a man.";
-  const intents = (Array.isArray(a.intents) ? a.intents : []).filter((i): i is PactIntent => pact.intents.includes(i as PactIntent));
+  // One thing each: matching pairs people for a single reason
+  const intents = (Array.isArray(a.intents) ? a.intents : []).filter((i): i is PactIntent => pact.intents.includes(i as PactIntent)).slice(0, 1);
   if (!intents.length) return "Pick what you're here for.";
   const seeking = (Array.isArray(a.seeking) ? a.seeking : []).filter((g): g is "woman" | "man" => g === "woman" || g === "man");
   const romantic = intents.includes("love") || intents.includes("spicy");
@@ -174,7 +192,6 @@ export function cleanAbout(pact: Pick<Pact, "intents" | "areas">, raw: unknown):
   ageMin = Math.max(18, Math.min(99, ageMin));
   ageMax = Math.max(ageMin, Math.min(99, ageMax));
   const area = typeof a.area === "string" && pact.areas.includes(a.area) ? a.area : undefined;
-  if (pact.areas.length && !area) return "Pick your area.";
   const work = typeof a.work === "string" && WORK.includes(a.work) ? a.work : undefined;
   if (intents.includes("business") && !work) return "Tell us what you do.";
   return { gender, intents, seeking: romantic ? seeking : [], age, ageMin, ageMax, area, work };
@@ -606,4 +623,14 @@ export function pactPhase(p: Pick<Pact, "closes_at" | "reveal_at" | "status">, n
   if (now >= new Date(p.reveal_at).getTime()) return "matching";
   if (now >= new Date(p.closes_at).getTime()) return "closed";
   return "open";
+}
+
+/** "Fri 30 Oct, 7:00 pm" in Lagos time, written the same on the server and the phone */
+export function pactDate(iso: string) {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true, timeZone: "Africa/Lagos" })
+      .formatToParts(new Date(iso))
+      .map((p) => [p.type, p.value]),
+  );
+  return `${parts.weekday} ${parts.day} ${parts.month}, ${parts.hour}:${parts.minute} ${String(parts.dayPeriod).toLowerCase()}`;
 }

@@ -65,6 +65,10 @@ export function PactEditor({ pact, questions: initial, count, matches }: { pact:
   const [busy, setBusy] = useState<string | null>(null);
   const [openQ, setOpenQ] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  // The areas box keeps exactly what's typed; it's split into a list only when saved
+  const [areasText, setAreasText] = useState(pact.areas.join(", "));
+  const [sureReveal, setSureReveal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const say = (text: string, bad = false) => {
     setMsg({ text, bad });
     setTimeout(() => setMsg(null), 4000);
@@ -139,18 +143,21 @@ export function PactEditor({ pact, questions: initial, count, matches }: { pact:
             <button
               disabled={!!busy}
               onClick={() => {
-                if (busy !== "sure-reveal") return setBusy("sure-reveal");
+                // First tap asks to be sure; the second reveals. It resets after a few seconds.
+                if (!sureReveal) {
+                  setSureReveal(true);
+                  setTimeout(() => setSureReveal(false), 5000);
+                  return;
+                }
+                setSureReveal(false);
                 run("reveal", () => revealPactNow(pact.id), "Revealed.");
               }}
-              onBlur={() => busy === "sure-reveal" && setBusy(null)}
-              className={clsx("h-11 rounded-full px-4 text-[14px] font-semibold", busy === "sure-reveal" ? "bg-chili text-white" : "bg-ink text-white")}
+              className={clsx("h-11 rounded-full px-4 text-[14px] font-semibold text-white disabled:opacity-60", sureReveal ? "bg-chili" : "bg-ink")}
             >
-              {busy === "sure-reveal" ? "Tap again to reveal now" : busy === "reveal" ? "Matching…" : "Reveal now"}
+              {busy === "reveal" ? "Matching…" : sureReveal ? "Tap again to reveal now" : "Reveal now"}
             </button>
           )}
-          {pact.status === "draft" && count === 0 && (
-            <button disabled={!!busy} onClick={async () => { const r = await deletePact(pact.id); if (r.error) return say(r.error, true); router.push("/admin/pacts"); }} className="grid h-11 w-11 place-items-center rounded-full border border-line-strong bg-white text-chili" aria-label="Delete pact"><Trash2 size={17} /></button>
-          )}
+          <button disabled={!!busy} onClick={() => setDeleting(true)} className="grid h-11 w-11 place-items-center rounded-full border border-line-strong bg-white text-chili disabled:opacity-60" aria-label="Delete pact" title="Delete pact"><Trash2 size={17} /></button>
         </div>
       </div>
 
@@ -165,7 +172,7 @@ export function PactEditor({ pact, questions: initial, count, matches }: { pact:
               <input id="d-slug" className="h-full min-w-0 flex-1 px-1 text-[15px] font-semibold text-brand outline-none" value={d.slug} onChange={(e) => setD({ ...d, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") })} />
             </span>
           </label>
-          <label className="grid gap-1.5 md:col-span-2"><span className="text-[13px] font-semibold">Tagline</span><input id="d-tagline" className={field} value={d.tagline} maxLength={160} placeholder="Answer 10 questions. On reveal night, meet the one person most like you." onChange={(e) => setD({ ...d, tagline: e.target.value })} /></label>
+          <label className="grid gap-1.5 md:col-span-2"><span className="text-[13px] font-semibold">Tagline</span><input id="d-tagline" className={field} value={d.tagline} maxLength={160} placeholder="Answer a few questions. On reveal night, meet the one person most like you." onChange={(e) => setD({ ...d, tagline: e.target.value })} /></label>
 
           <ImageField label="Logo" hint="Square, at least 400 × 400" value={d.logo_url} round busy={busy === "upload"} onFile={(f) => upload(f, (url) => setD((x) => ({ ...x, logo_url: url })))} onClear={() => setD({ ...d, logo_url: null })} />
           <ImageField label="Header image" hint="Wide, about 1200 × 700" value={d.header_url} busy={busy === "upload"} onFile={(f) => upload(f, (url) => setD((x) => ({ ...x, header_url: url })))} onClear={() => setD({ ...d, header_url: null })} />
@@ -195,9 +202,9 @@ export function PactEditor({ pact, questions: initial, count, matches }: { pact:
           <label className="grid gap-1.5"><span className="text-[13px] font-semibold">Answers close (Lagos time)</span><input id="d-closes" type="datetime-local" className={field} value={toLocal(d.closes_at)} onChange={(e) => e.target.value && setD({ ...d, closes_at: fromLocal(e.target.value) })} /></label>
           <label className="grid gap-1.5"><span className="text-[13px] font-semibold">Reveal night (Lagos time)</span><input id="d-reveal" type="datetime-local" className={field} value={toLocal(d.reveal_at)} onChange={(e) => e.target.value && setD({ ...d, reveal_at: fromLocal(e.target.value) })} /></label>
           <label className="grid gap-1.5">
-            <span className="text-[13px] font-semibold">Areas people pick from</span>
-            <input id="d-areas" className={field} value={d.areas.join(", ")} placeholder="Island, Mainland" onChange={(e) => setD({ ...d, areas: e.target.value.split(",").map((x) => x.trimStart()) })} />
-            <span className="text-[12px] text-muted">Separate with commas. Same area counts a little extra. Leave empty to skip.</span>
+            <span className="text-[13px] font-semibold">Areas people pick from (optional)</span>
+            <input id="d-areas" className={field} value={areasText} placeholder="Optional, e.g. Island, Mainland" onChange={(e) => setAreasText(e.target.value)} />
+            <span className="text-[12px] text-muted">Optional. Separate with commas. People can skip it, and the same area counts a little extra. Leave empty to not ask.</span>
           </label>
           <label className="grid gap-1.5">
             <span className="text-[13px] font-semibold">Only for emails ending in (optional)</span>
@@ -206,7 +213,7 @@ export function PactEditor({ pact, questions: initial, count, matches }: { pact:
           </label>
         </div>
         <div className="mt-5 flex justify-end">
-          <button disabled={!!busy} onClick={() => run("details", () => savePactDetails(pact.id, { ...d, areas: d.areas.map((a) => a.trim()).filter(Boolean) }), "Details saved.")} className="h-11 rounded-full bg-brand px-6 text-[14px] font-semibold text-white disabled:opacity-60">
+          <button disabled={!!busy} onClick={() => run("details", () => savePactDetails(pact.id, { ...d, areas: areasText.split(",").map((a) => a.trim()).filter(Boolean) }), "Details saved.")} className="h-11 rounded-full bg-brand px-6 text-[14px] font-semibold text-white disabled:opacity-60">
             {busy === "details" ? "Saving…" : "Save details"}
           </button>
         </div>
@@ -267,6 +274,8 @@ export function PactEditor({ pact, questions: initial, count, matches }: { pact:
           </button>
         </div>
       </section>
+
+      {deleting && <DeletePact pact={pact} count={count} onClose={() => setDeleting(false)} onDeleted={() => router.push("/admin/pacts")} />}
 
       {msg && (
         <div className={clsx("fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full px-5 py-3 text-[14px] font-semibold text-white shadow-lift", msg.bad ? "bg-chili" : "bg-ink")} role="status">{msg.text}</div>
@@ -402,6 +411,58 @@ function PicturePicker({ busy, has, onClose, onPick, onUpload }: { busy: boolean
             </button>
           ))}
         </div>
+      </div>
+    </div>
+  );
+}
+
+/** Deleting needs two steps: confirm, then type the pact's name */
+function DeletePact({ pact, count, onClose, onDeleted }: { pact: Pact; count: number; onClose: () => void; onDeleted: () => void }) {
+  const [step, setStep] = useState<1 | 2>(1);
+  const [typed, setTyped] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const match = typed.trim().toLowerCase() === pact.name.trim().toLowerCase();
+  async function go() {
+    if (!match) return;
+    setBusy(true);
+    setError(null);
+    const r = await deletePact(pact.id, typed);
+    setBusy(false);
+    if (r.error) return setError(r.error);
+    onDeleted();
+  }
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 sm:items-center" onClick={() => !busy && onClose()}>
+      <div role="dialog" aria-label="Delete pact" className="w-full rounded-t-[28px] bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:max-w-md sm:rounded-[28px]" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start gap-3">
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-chili-soft text-chili"><Trash2 size={20} /></span>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-[18px] font-semibold">Delete {pact.name}?</h3>
+            <p className="mt-1 text-[13.5px] text-muted">
+              {count > 0 ? `This deletes the pact, its questions, and the answers and matches of ${people(count)}. ` : "This deletes the pact and its questions. "}
+              Masked chats people already started stay open. This can&apos;t be undone.
+            </p>
+          </div>
+        </div>
+        {step === 1 ? (
+          <div className="mt-5 flex justify-end gap-2">
+            <button type="button" onClick={onClose} className="h-11 rounded-full border border-line-strong bg-white px-5 text-[14px] font-semibold">Cancel</button>
+            <button type="button" onClick={() => setStep(2)} className="h-11 rounded-full bg-chili px-5 text-[14px] font-semibold text-white">Yes, delete</button>
+          </div>
+        ) : (
+          <form onSubmit={(e) => { e.preventDefault(); go(); }} className="mt-4 grid gap-3">
+            <label className="grid gap-1.5">
+              <span className="text-[13px] font-semibold">To confirm, type <b className="select-all text-chili">{pact.name}</b></span>
+              <input autoFocus className={field} value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={pact.name} autoComplete="off" />
+            </label>
+            {error && <p className="text-[13.5px] font-medium text-chili">{error}</p>}
+            <div className="flex justify-end gap-2">
+              <button type="button" disabled={busy} onClick={onClose} className="h-11 rounded-full border border-line-strong bg-white px-5 text-[14px] font-semibold disabled:opacity-60">Cancel</button>
+              <button type="submit" disabled={!match || busy} className="h-11 rounded-full bg-chili px-5 text-[14px] font-semibold text-white disabled:opacity-40">{busy ? "Deleting…" : "Delete forever"}</button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );

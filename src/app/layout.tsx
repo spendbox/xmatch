@@ -3,6 +3,7 @@ import "@fontsource-variable/plus-jakarta-sans";
 import "@fontsource-variable/fraunces";
 import "./globals.css";
 import { NavProgress } from "@/components/ui/NavProgress";
+import { TapFeedback } from "@/components/ui/TapFeedback";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://dashpad.site"),
@@ -43,6 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="min-h-dvh">
         <NavProgress />
+        <TapFeedback />
         {children}
       </body>
     </html>

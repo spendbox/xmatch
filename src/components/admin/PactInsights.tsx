@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
 import { INTENTS, people as peopleCount, plural, type About, type Answers, type Pact, type PactQuestion } from "@/lib/pacts";
-import { pactDate } from "@/components/pacts/PactBits";
+import { pactDate } from "@/lib/pacts";
 import { AdminAutoRefresh } from "./AdminAutoRefresh";
 
 export type Insights = {
@@ -85,7 +85,7 @@ export function PactInsights({ pact, questions, insights: s, people, page, perPa
         <section className="mt-6 rounded-3xl border border-line bg-surface p-5 shadow-card">
           <h2 className="text-[17px] font-semibold">Who took part</h2>
           <div className="mt-2 grid gap-x-8 lg:grid-cols-2">
-            <Bars title="Here for" note="People could pick several" total={s.entries} rows={INTENTS.filter((i) => pact.intents.includes(i.id)).map((i) => ({ label: i.label, n: s.intents[i.id] ?? 0 }))} unit="person" />
+            <Bars title="Here for" total={s.entries} rows={INTENTS.filter((i) => pact.intents.includes(i.id)).map((i) => ({ label: i.label, n: s.intents[i.id] ?? 0 }))} unit="person" />
             <Bars title="Gender" total={s.entries} rows={[{ label: "Women", n: s.gender.woman ?? 0 }, { label: "Men", n: s.gender.man ?? 0 }]} unit="person" />
             <Bars title="Age" total={s.entries} rows={["18-21", "22-25", "26-30", "31-35", "36-45", "46+"].map((k) => ({ label: k, n: s.ages[k] ?? 0 }))} unit="person" />
             {pact.areas.length > 0 && <Bars title="Area" total={s.entries} rows={pact.areas.map((a) => ({ label: a, n: s.areas[a] ?? 0 }))} unit="person" />}

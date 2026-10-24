@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import clsx from "clsx";
-import type { Pact, PactOption } from "@/lib/pacts";
+import { pactDate, type Pact, type PactOption } from "@/lib/pacts";
 
 /** Colours for answer cards that have no picture */
 const ART = [
@@ -121,14 +121,4 @@ export function Countdown({ to, accent, label }: { to: string; accent: string; l
       </div>
     </div>
   );
-}
-
-/** "Fri 30 Oct, 7:00 pm" in Lagos time, written the same on the server and the phone */
-export function pactDate(iso: string) {
-  const parts = Object.fromEntries(
-    new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true, timeZone: "Africa/Lagos" })
-      .formatToParts(new Date(iso))
-      .map((p) => [p.type, p.value]),
-  );
-  return `${parts.weekday} ${parts.day} ${parts.month}, ${parts.hour}:${parts.minute} ${String(parts.dayPeriod).toLowerCase()}`;
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { FeedbackButton } from "./FeedbackButton";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import { MessageCircle, PanelLeftClose, PanelLeftOpen, UserRound, UsersRound } from "lucide-react";
@@ -122,7 +123,10 @@ export function Sidebar({ user, badges }: { user: ChromeUser; badges?: MenuBadge
         <p className="relative text-[12px] text-white/75">A new masked pair every hour</p>
       </Link>
 
-      <div className="mt-auto flex items-center gap-3 rounded-2xl p-2 collapsed:flex-col collapsed:p-0">
+      <div className="mt-auto pb-2">
+        <FeedbackButton variant="row" />
+      </div>
+      <div className="flex items-center gap-3 rounded-2xl p-2 collapsed:flex-col collapsed:p-0">
         <Link href="/profile" title="View profile" className="shrink-0">
           <Avatar src={user.photo} name={user.name} size={40} />
         </Link>

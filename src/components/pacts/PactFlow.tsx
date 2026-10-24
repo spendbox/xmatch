@@ -7,7 +7,8 @@ import { ArrowLeft, ArrowRight, Bell, Briefcase, Check, Flame, Heart, Minus, Plu
 import { INTENTS, WORK, pactPhase, people, type PactView, type About, type Answer, type Answers, type Pact, type PactIntent, type PactQuestion } from "@/lib/pacts";
 import { Turnstile } from "@/components/ui/Turnstile";
 import { MaskIcon } from "@/components/ui/MaskIcon";
-import { Countdown, OptionArt, PactLogo, PactMatching, pactDate } from "./PactBits";
+import { Countdown, OptionArt, PactLogo, PactMatching } from "./PactBits";
+import { pactDate } from "@/lib/pacts";
 import { PactReveal } from "./PactReveal";
 import { AFTER_JOIN, savedPactTokens } from "./pactTokens";
 
@@ -51,7 +52,7 @@ export function PactFlow({
   const [step, setStep] = useState<Step>(demoStep?.step ?? "intro");
   const [qi, setQi] = useState(demoStep?.qi ?? 0);
   const [answers, setAnswers] = useState<Answers>(mine?.answers ?? {});
-  const [about, setAbout] = useState<Partial<About>>(mine?.about ?? { intents: [], seeking: [], age: 25, ageMin: 21, ageMax: 35 });
+  const [about, setAbout] = useState<Partial<About>>(mine?.about ? { ...mine.about, intents: (mine.about.intents ?? []).slice(0, 1) } : { intents: [], seeking: [], age: 25, ageMin: 21, ageMax: 35 });
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -383,7 +384,6 @@ function aboutProblem(a: Partial<About>, pact: Pact) {
   if (!a.gender) return "Tell us if you're a woman or a man.";
   if (!a.intents?.length) return "Pick what you're here for.";
   if ((a.intents.includes("love") || a.intents.includes("spicy")) && !a.seeking?.length) return "Tell us who you'd like to meet.";
-  if (pact.areas.length && !a.area) return "Pick your area.";
   if (a.intents.includes("business") && !a.work) return "Tell us what you do.";
   return null;
 }
@@ -708,7 +708,7 @@ function AboutView({ pact, about, setAbout }: { pact: Pact; about: Partial<About
                 key={i.id}
                 type="button"
                 aria-pressed={on}
-                onClick={() => set({ intents: on ? intents.filter((x) => x !== i.id) : [...intents, i.id] })}
+                onClick={() => set({ intents: [i.id] })}
                 className="flex min-h-[64px] items-center gap-2.5 rounded-2xl border px-3 text-left transition active:scale-[0.98]"
                 style={on ? { borderColor: accent, borderWidth: 2, background: `${accent}1f` } : { borderColor: "rgba(255,255,255,.18)" }}
               >
@@ -721,7 +721,7 @@ function AboutView({ pact, about, setAbout }: { pact: Pact; about: Partial<About
             );
           })}
         </div>
-        <span className="text-[12px] text-white/50">Pick as many as you like.</span>
+        <span className="text-[12px] text-white/50">Pick one. Your match is for this.</span>
       </div>
       <div className="grid gap-2">
         <span className={label}>I&apos;m a</span>
@@ -750,10 +750,10 @@ function AboutView({ pact, about, setAbout }: { pact: Pact; about: Partial<About
       </div>
       {pact.areas.length > 0 && (
         <div className="grid gap-2">
-          <span className={label}>My area</span>
+          <span className={label}>My area <span className="font-semibold tracking-normal normal-case text-white/45">(optional)</span></span>
           <div className={clsx("grid gap-2", pact.areas.length > 2 ? "grid-cols-3" : "grid-cols-2")}>
             {pact.areas.map((a) => (
-              <Chip key={a} accent={accent} on={about.area === a} onClick={() => set({ area: a })}>{a}</Chip>
+              <Chip key={a} accent={accent} on={about.area === a} onClick={() => set({ area: about.area === a ? undefined : a })}>{a}</Chip>
             ))}
           </div>
         </div>

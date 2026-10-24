@@ -5,7 +5,8 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { intentLabel, type PactIntent } from "@/lib/pacts";
-import { PactLogo, pactDate } from "./PactBits";
+import { PactLogo } from "./PactBits";
+import { pactDate } from "@/lib/pacts";
 
 export type MyPact = {
   slug: string;

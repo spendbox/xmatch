@@ -9,6 +9,7 @@ import { GettingStarted } from "./GettingStarted";
 import type { Thing } from "@/lib/things";
 import type { ExploreList } from "@/lib/explore";
 import { ChevronRight } from "lucide-react";
+import { FeedbackButton } from "@/components/app/FeedbackButton";
 import { createClient } from "@/lib/supabase/client";
 import type { Wallet } from "@/lib/keys";
 import type { MasqueradeHour } from "@/lib/hourly";
@@ -129,6 +130,7 @@ export function HomeScreen({
         >
           {INTENT_ICONS[prefs.intent]({ size: 20, strokeWidth: 2 })}
         </button>
+        <FeedbackButton />
         <Link
           href="/wallet"
           className="inline-flex h-11 items-center gap-2 rounded-full border border-gold/40 bg-gold-soft pr-4 pl-1.5 text-[15px] font-bold text-[#8a5a00] transition active:scale-95"
