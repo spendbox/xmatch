@@ -4,6 +4,9 @@ const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
   ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname
   : "*.supabase.co";
 
+// Photos on Cloudflare R2 (when NEXT_PUBLIC_MEDIA_URL is set)
+const mediaHost = process.env.NEXT_PUBLIC_MEDIA_URL ? new URL(process.env.NEXT_PUBLIC_MEDIA_URL).hostname : null;
+
 const nextConfig: NextConfig = {
   devIndicators: false,
   // Big icebreaker imports (thousands of questions) go through a server action
@@ -19,7 +22,7 @@ const nextConfig: NextConfig = {
     ];
   },
   images: {
-    remotePatterns: [{ protocol: "https", hostname: supabaseHost }],
+    remotePatterns: [{ protocol: "https", hostname: supabaseHost }, ...(mediaHost ? [{ protocol: "https" as const, hostname: mediaHost }] : [])],
   },
 };
 

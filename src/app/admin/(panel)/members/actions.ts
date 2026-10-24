@@ -1,5 +1,6 @@
 "use server";
 
+import { deleteKeys, deletePhotoFolder, keyFromUrl } from "@/lib/r2";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/server";
@@ -64,6 +65,9 @@ export async function removeMemberPhoto(id: string, url: string) {
   const marker = "/storage/v1/object/public/photos/";
   const i = url.indexOf(marker);
   if (i >= 0) await db.storage.from("photos").remove([decodeURIComponent(url.slice(i + marker.length))]);
+  // Photos on R2: the photo and its small copy
+  const key = keyFromUrl(url);
+  if (key && key.startsWith(`photos/${id}/`)) await deleteKeys([key, key.replace(/(_t)?\.jpg$/, "_t.jpg")]);
   refresh(id);
   return { ok: true };
 }
@@ -74,6 +78,7 @@ export async function deleteMember(id: string) {
   const db = createAdminClient();
   const { data: files } = await db.storage.from("photos").list(id, { limit: 100 });
   if (files?.length) await db.storage.from("photos").remove(files.map((f) => `${id}/${f.name}`));
+  await deletePhotoFolder(id);
   const { error } = await db.auth.admin.deleteUser(id);
   if (error) return { error: "Couldn't delete this member." };
   revalidatePath("/admin/members");
