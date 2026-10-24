@@ -219,7 +219,7 @@ export function PactFlow({
             </p>
           ) : (
             <button onClick={next} className="h-14 rounded-full text-[16.5px] font-extrabold text-[#1c1310] transition active:scale-[0.98]" style={{ background: accent }}>
-              {taken ? "Edit my answers" : "Take the Pact"}
+              {taken ? "Edit my answers" : pact.button_text?.trim() || "Take the Pact"}
             </button>
           )}
           <p className="text-center text-[12px] text-white/55">Free with a Dashpad account · answers stay private · 18+</p>

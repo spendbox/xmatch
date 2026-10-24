@@ -57,6 +57,7 @@ export function PactEditor({ pact, questions: initial, count, matches }: { pact:
     intents: pact.intents,
     areas: pact.areas,
     email_domain: pact.email_domain,
+    button_text: pact.button_text ?? "",
     closes_at: pact.closes_at,
     reveal_at: pact.reveal_at,
   });
@@ -173,6 +174,12 @@ export function PactEditor({ pact, questions: initial, count, matches }: { pact:
             </span>
           </label>
           <label className="grid gap-1.5 md:col-span-2"><span className="text-[13px] font-semibold">Tagline</span><input id="d-tagline" className={field} value={d.tagline} maxLength={160} placeholder="Answer a few questions. On reveal night, meet the one person most like you." onChange={(e) => setD({ ...d, tagline: e.target.value })} /></label>
+
+          <label className="grid gap-1.5 md:col-span-2">
+            <span className="text-[13px] font-semibold">Main button text (optional)</span>
+            <input id="d-button" className={field} value={d.button_text} maxLength={30} placeholder="Take the Pact" onChange={(e) => setD({ ...d, button_text: e.target.value })} />
+            <span className="text-[12px] text-muted">The big button on the pact page. Leave empty for &quot;Take the Pact&quot;.</span>
+          </label>
 
           <ImageField label="Logo" hint="Square, at least 400 × 400" value={d.logo_url} round busy={busy === "upload"} onFile={(f) => upload(f, (url) => setD((x) => ({ ...x, logo_url: url })))} onClear={() => setD({ ...d, logo_url: null })} />
           <ImageField label="Header image" hint="Wide, about 1200 × 700" value={d.header_url} busy={busy === "upload"} onFile={(f) => upload(f, (url) => setD((x) => ({ ...x, header_url: url })))} onClear={() => setD({ ...d, header_url: null })} />
