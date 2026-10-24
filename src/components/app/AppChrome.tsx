@@ -2,7 +2,7 @@
 
 import { registerWorker, refreshSubscription } from "@/lib/pushClient";
 import { useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { BottomNav } from "./BottomNav";
 import { Sidebar, type ChromeUser } from "./Sidebar";
 import { useHeartbeat } from "./useHeartbeat";
@@ -11,10 +11,11 @@ import { CallProvider } from "@/components/calls/CallProvider";
 import { EventMediaProvider } from "@/components/events/media/EventMediaProvider";
 import { MediaHelp } from "./MediaHelp";
 import { chime } from "@/lib/chime";
-import { claimSavedPacts } from "@/components/pacts/pactTokens";
+import { claimSavedPacts, takeAfterJoin } from "@/components/pacts/pactTokens";
 
 export function AppChrome({ user, children }: { user: ChromeUser; children: React.ReactNode }) {
   const path = usePathname();
+  const router = useRouter();
   // Full-screen chats hide the phone tab bar
   const fullScreen = /^\/masquerade\/[^/]+|^\/matches\/(?!people)[^/]+|^\/events\/[^/]+\/chat\/|^\/feed\/chat\//.test(path);
   useHeartbeat();
@@ -22,9 +23,12 @@ export function AppChrome({ user, children }: { user: ChromeUser; children: Reac
   // Background helper for notifications; keeps this phone's subscription fresh
   useEffect(() => {
     registerWorker().then(() => refreshSubscription());
-    // Pacts answered before joining become part of this account
-    claimSavedPacts();
-  }, []);
+    // Pacts answered before joining become part of this account; someone who joined to reveal their match goes straight back to it
+    claimSavedPacts().then(() => {
+      const back = takeAfterJoin();
+      if (back) router.push(back);
+    });
+  }, [router]);
   // A notification arrived while Dashpad is open: chime
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;

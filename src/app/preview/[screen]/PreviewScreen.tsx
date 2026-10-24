@@ -335,11 +335,13 @@ function ScreenBody({ screen }: { screen: string }) {
       );
     case "room-hourly":
     case "room-lapsed":
+    case "room-pact":
       return (
         <MasqueradeRoom
           initial={{ ...session(), hourly: true, status: screen === "room-lapsed" ? "lapsed" : "active", ends_at: new Date(now + 41 * 60_000).toISOString() }}
           initialMessages={msgs}
           demo={{ remaining: screen === "room-lapsed" ? 0 : 41 * 60 + 12 }}
+          pact={screen === "room-pact" ? "The Lagos Pact" : null}
         />
       );
     case "media-help":
@@ -706,11 +708,15 @@ function ScreenBody({ screen }: { screen: string }) {
     case "pact-matching":
       return pactWrap(<PactFlow pact={{ ...demoPact, closes_at: iso(86400), reveal_at: iso(60) }} questions={demoQs} count={104219} signedIn={false} mine={null} result={null} />);
     case "pact-reveal":
+    case "pact-teaser":
+    case "pact-teaser-guest":
       return pactWrap(
         <PactFlow
           pact={{ ...demoPact, status: "revealed", closes_at: iso(2 * 86400), reveal_at: iso(600), matched_at: iso(600) }}
-          questions={demoQs} count={4127} signedIn mine={null}
-          result={{ match: { alias: "Golden Panther", score: 87, intent: "business", age: 27, area: "Island", work: "Tech", shared: [{ q: "Your hustle", a: "Building my own thing" }, { q: "Money", a: "Save it for the future" }, { q: "Your top artists", a: "Tems" }, { q: "Jollof", a: "Party jollof, smoky" }], differ: { q: "Your ideal Friday night", mine: "Owambe till 3am", theirs: "Movie and suya at home" }, sessionId: "s1", theyHaveAccount: true } }}
+          questions={demoQs} count={4127} signedIn={screen !== "pact-teaser-guest"} mine={null}
+          result={screen === "pact-reveal"
+            ? { kind: "match", match: { alias: "Golden Panther", score: 87, intent: "business", age: 27, area: "Island", work: "Tech", shared: [{ q: "Your hustle", a: "Building my own thing" }, { q: "Money", a: "Save it for the future" }, { q: "Your top artists", a: "Tems" }, { q: "Jollof", a: "Party jollof, smoky" }], differ: { q: "Your ideal Friday night", mine: "Owambe till 3am", theirs: "Movie and suya at home" }, sessionId: "s1", theyHaveAccount: true } }
+            : { kind: "teaser", score: 87, intent: "business", inCommon: 4, rematch: false }}
         />,
       );
     case "pact-events":
@@ -735,7 +741,8 @@ function ScreenBody({ screen }: { screen: string }) {
         <div className="mx-auto max-w-md px-5 pt-6 pb-24">
           <h1 className="font-display text-[34px] font-semibold">Chats</h1>
           <MaskedChats demo={[
-            { id: "s1", alias: "Golden Panther", my_alias: "Silver Lynx", from_meet: false, pact: "The Lagos Pact", my_vote: null, they_unmasked: false, last_message: null, last_mine: null, last_at: iso(300), unread: true },
+            { id: "s0", alias: "Hidden", my_alias: "Silver Lynx", from_meet: false, pact: "UNILAG Pact", pact_slug: "unilag-pact", pact_seen: false, my_vote: null, they_unmasked: false, last_message: null, last_mine: null, last_at: iso(60), unread: true },
+            { id: "s1", alias: "Golden Panther", my_alias: "Silver Lynx", from_meet: false, pact: "The Lagos Pact", pact_slug: "lagos-pact", pact_seen: true, my_vote: null, they_unmasked: false, last_message: null, last_mine: null, last_at: iso(300), unread: true },
             { id: "s2", alias: "Coral Heron", my_alias: "Silver Lynx", from_meet: true, my_vote: null, they_unmasked: false, last_message: "Haha same, I'm on the Island too", last_mine: false, last_at: iso(4000), unread: false },
           ]} />
           <BottomNav />

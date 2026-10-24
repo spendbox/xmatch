@@ -28,6 +28,7 @@ import { ReportSheet } from "./ReportSheet";
 import { useKeyboardSafe } from "@/lib/useKeyboardSafe";
 import { useGameHost } from "@/components/games/GameHost";
 import { gameInfo } from "@/lib/games";
+import { GoldStar } from "@/components/pacts/PactReveal";
 
 const TOTAL = MASQUERADE_MINUTES * 60;
 
@@ -36,12 +37,15 @@ export function MasqueradeRoom({
   initialMessages,
   demo,
   eventId = null,
+  pact = null,
 }: {
   initial: MasqueradeState;
   initialMessages: ChatMessage[];
   demo?: { remaining: number; hideExtend?: boolean };
   /** Set when this chat is a round of a Masquerade Night */
   eventId?: string | null;
+  /** Set when this chat is a pact match: it carries a gold star */
+  pact?: string | null;
 }) {
   const shell = useKeyboardSafe<HTMLDivElement>();
   const router = useRouter();
@@ -263,7 +267,11 @@ export function MasqueradeRoom({
             />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[16px] font-semibold">{them.alias}</p>
+            <p className="flex items-center gap-1.5 text-[16px] font-semibold">
+              <span className="truncate">{them.alias}</span>
+              {pact && <GoldStar size={18} />}
+            </p>
+            {pact && <p className="truncate text-[12px] font-semibold text-[#a26b00]">{pact} match</p>}
             <p className="truncate text-[13px] text-muted">
               <span className={them.online ? "font-semibold text-mint" : undefined}>{presenceText(them.online, them.seen_minutes)}</span>
               {[gender, (them.same_place ? "Near you" : them.place) ?? distanceLabel(them.distance_km) ?? intentLabel(state.intent)]

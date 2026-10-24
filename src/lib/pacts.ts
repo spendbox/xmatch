@@ -180,6 +180,30 @@ export function cleanAbout(pact: Pick<Pact, "intents" | "areas">, raw: unknown):
   return { gender, intents, seeking: romantic ? seeking : [], age, ageMin, ageMax, area, work };
 }
 
+// ---------------------------------------------------------------- reveal night
+
+/** Your match, once you've revealed them */
+export type RevealMatch = {
+  alias: string;
+  score: number;
+  intent: PactIntent;
+  age?: number;
+  area: string | null;
+  work: string | null;
+  shared: { q: string; a: string }[];
+  differ: { q: string; mine: string; theirs: string } | null;
+  sessionId: string | null;
+  theyHaveAccount: boolean;
+  /** A second match, because the first one didn't join in time */
+  rematch?: boolean;
+};
+
+/** What reveal night shows someone: nothing yet to reveal, a teaser to tap, or their match */
+export type PactView =
+  | { kind: "none"; lost: boolean }
+  | { kind: "teaser"; score: number; intent: PactIntent; inCommon: number; rematch: boolean }
+  | { kind: "match"; match: RevealMatch };
+
 // ---------------------------------------------------------------- matching
 
 export type Entry = { id: string; about: About; answers: Answers };

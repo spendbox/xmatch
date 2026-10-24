@@ -157,6 +157,16 @@ export async function revealPactNow(id: string): Promise<{ error?: string; summa
   return { summary: `${(r.pairs ?? 0).toLocaleString()} matches made from ${(r.people ?? 0).toLocaleString()} people.${r.step === "done" ? " Everyone has been told." : " Telling everyone now, this can take a few minutes."}` };
 }
 
+/** Runs the next part of matching or revealing right away (it also runs by itself every minute) */
+export async function retryPactReveal(id: string): Promise<{ error?: string; summary?: string }> {
+  await requireAdmin();
+  const r = await runReveal(id, Date.now() + 40_000);
+  revalidatePath(`/admin/pacts/${id}`);
+  if (!r) return { summary: "It's already working on this pact. Refresh in a minute." };
+  if (r.error) return { error: `Still not working: ${r.error}` };
+  return { summary: r.step === "done" ? "Done. Everyone has been told." : "It's moving again. Refresh in a minute to see progress." };
+}
+
 export async function deletePact(id: string): Promise<{ error?: string }> {
   await requireAdmin();
   const db = createAdminClient();

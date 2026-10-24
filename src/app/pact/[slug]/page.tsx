@@ -35,5 +35,5 @@ export default async function PactPage({ params }: { params: Promise<{ slug: str
     if (data) mine = data as { about: About; answers: Answers };
     if (pactPhase(pact) === "revealed" && mine) result = await resultFor(pact.id, { userId: user.id });
   }
-  return <PactFlow pact={pact} questions={questions} count={count} signedIn={!!user} mine={mine} result={result ? { match: result.match } : null} />;
+  return <PactFlow pact={pact} questions={questions} count={count} signedIn={!!user} mine={mine} result={result?.view ?? null} />;
 }

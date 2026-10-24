@@ -32,7 +32,7 @@ export default async function PactMatchPage({ params, searchParams }: { params: 
             <Link href={`/pact/${pact.slug}`} className="mx-auto flex h-12 items-center rounded-full border border-white/20 px-6 text-[15px] font-bold">Back to the Pact</Link>
           </div>
         ) : (
-          <PactReveal pact={pact} match={result.match} signedIn={!!user} total={count} />
+          <PactReveal pact={pact} view={result.view} signedIn={!!user && result.signedIn} total={count} token={t} />
         )}
       </div>
     </div>

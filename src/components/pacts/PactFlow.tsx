@@ -4,11 +4,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
 import { ArrowLeft, ArrowRight, Bell, Briefcase, Check, Flame, Heart, Minus, Plus, Share2, Users } from "lucide-react";
-import { INTENTS, WORK, pactPhase, people, type About, type Answer, type Answers, type Pact, type PactIntent, type PactQuestion } from "@/lib/pacts";
+import { INTENTS, WORK, pactPhase, people, type PactView, type About, type Answer, type Answers, type Pact, type PactIntent, type PactQuestion } from "@/lib/pacts";
 import { Turnstile } from "@/components/ui/Turnstile";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { Countdown, OptionArt, PactLogo, PactMatching, pactDate } from "./PactBits";
-import { PactReveal, type RevealMatch } from "./PactReveal";
+import { PactReveal } from "./PactReveal";
 import { rememberToken, savedPactTokens } from "./pactTokens";
 
 type Step = "intro" | "q" | "about" | "finish" | "done";
@@ -36,8 +36,8 @@ export function PactFlow({
   signedIn: boolean;
   /** Your answers, if you've already taken it with your account */
   mine: { about: About; answers: Answers } | null;
-  /** Reveal night: your match (for people logged in) */
-  result: { match: RevealMatch | null } | null;
+  /** Reveal night: your teaser or match (for people logged in) */
+  result: PactView | null;
   /** Previews only */
   demoStep?: { step: Step; qi?: number };
 }) {
@@ -141,7 +141,7 @@ export function PactFlow({
     return (
       <Shell pact={pact}>
         {result ? (
-          <PactReveal pact={pact} match={result.match} signedIn={signedIn} total={joined} />
+          <PactReveal pact={pact} view={result} signedIn={signedIn} total={joined} />
         ) : (
           <RevealLookup pact={pact} />
         )}

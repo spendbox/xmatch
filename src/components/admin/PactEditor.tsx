@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { ArrowDown, ArrowLeft, ArrowUp, ExternalLink, ImagePlus, Plus, Trash2, X } from "lucide-react";
-import { deletePact, revealPactNow, savePactDetails, savePactQuestions, setPactStatus, type PactDetails } from "@/app/admin/(panel)/pacts/actions";
+import { deletePact, retryPactReveal, revealPactNow, savePactDetails, savePactQuestions, setPactStatus, type PactDetails } from "@/app/admin/(panel)/pacts/actions";
 import { ART_LIBRARY, INTENTS, KIND_LABEL, art, MAX_QUESTIONS, SEED_QUESTIONS, WEIGHT_LABEL, pactPhase, people, plural, type Pact, type PactIntent, type PactQuestion, type QuestionKind, type Weight } from "@/lib/pacts";
 import { uploadEventFile } from "./eventUpload";
 
@@ -35,7 +35,7 @@ export function PactEditor({ pact, questions: initial, count, matches }: { pact:
   const router = useRouter();
   const phase = pact.status === "draft" ? "draft" : pactPhase(pact);
   // Reveal night runs in steps; show where it's up to
-  const { reveal_step: step, reveal_stats: st = {} } = pact as Pact & { reveal_step?: string | null; reveal_stats?: Record<string, number> };
+  const { reveal_step: step, reveal_stats: st = {} } = pact as Pact & { reveal_step?: string | null; reveal_stats?: Record<string, number> & { error?: string; failed_at?: string } };
   const progress =
     pact.status !== "revealed" && step === "match"
       ? "Matching everyone… (this can take a few minutes for a big pact)"
@@ -111,6 +111,15 @@ export function PactEditor({ pact, questions: initial, count, matches }: { pact:
             {{ draft: "Draft: only you can see it", open: "Live: taking answers", closed: "Answers closed: matching people before reveal night", matching: "Reveal night: finishing the matches", revealed: "Revealed" }[phase]}
           </p>
           {progress && <p className="mt-1 text-[13.5px] font-semibold text-brand">{progress}</p>}
+          {st.error && step !== "done" && (
+            <div className="mt-3 max-w-xl rounded-2xl bg-chili-soft px-4 py-3 text-[13.5px] text-chili">
+              <b>Matching hit a problem</b>{st.failed_at ? ` at ${new Date(st.failed_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Africa/Lagos" })}` : ""}: {st.error}
+              <p className="mt-1 text-ink-soft">Nothing is lost. It tries again by itself every minute and carries on from where it stopped.</p>
+              <button disabled={!!busy} onClick={() => run("retry", () => retryPactReveal(pact.id), "Running.")} className="mt-2 h-10 rounded-full bg-chili px-4 text-[13.5px] font-semibold text-white disabled:opacity-60">
+                {busy === "retry" ? "Trying…" : "Try again now"}
+              </button>
+            </div>
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
           {pact.status !== "draft" && (

@@ -2,7 +2,7 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/server";
 import { pushToUsers } from "@/lib/push";
 import { eventEmail, sendEmailsEach } from "@/lib/email";
-import { answersAsThings, emailKey, matchEveryone, pactPhase, type About, type Answers, type Entry, type Pact, type PactQuestion } from "@/lib/pacts";
+import { answersAsThings, emailKey, matchEveryone, pactPhase, type About, type Answers, type Entry, type Pact, type PactIntent, type PactQuestion, type PactView } from "@/lib/pacts";
 
 const site = () => (process.env.NEXT_PUBLIC_SITE_URL ?? "https://dashpad.site").replace(/\/$/, "");
 const PACT_COLS = "id, slug, name, tagline, logo_url, header_url, accent, intents, areas, email_domain, closes_at, reveal_at, status, matched_at";
@@ -146,37 +146,59 @@ async function startChat(matchId: number) {
   return (data as string | null) ?? null;
 }
 
-/** What someone sees on reveal night, from their private token (or their account) */
-export async function resultFor(pactId: string, by: { token?: string; userId?: string }) {
+/**
+ * What someone sees on reveal night, from their private token (or their account). Nobody's
+ * match shows by itself: it's a teaser until they tap to reveal, and revealing needs an account.
+ */
+export async function resultFor(pactId: string, by: { token?: string; userId?: string }): Promise<{ entryId: string; signedIn: boolean; view: PactView } | null> {
   const db = createAdminClient();
-  let q = db.from("pact_entries").select("id, about, user_id").eq("pact_id", pactId);
+  let q = db.from("pact_entries").select("id, about, user_id, match_seen_at, lost_match_at").eq("pact_id", pactId);
   q = by.token ? q.eq("token", by.token) : q.eq("user_id", by.userId!);
   const { data: me } = await q.maybeSingle();
   if (!me) return null;
-  const { data: m } = await db.from("pact_matches").select("id, a, b, score, intent, alias_a, alias_b, shared, differ, session_id").or(`a.eq.${me.id},b.eq.${me.id}`).maybeSingle();
-  if (!m) return { entryId: me.id as string, signedIn: !!me.user_id, match: null };
+  const base = { entryId: me.id as string, signedIn: !!me.user_id };
+  const { data: m } = await db.from("pact_matches").select("id, a, b, score, intent, alias_a, alias_b, shared, differ, session_id, rematch").or(`a.eq.${me.id},b.eq.${me.id}`).maybeSingle();
+  if (!m) return { ...base, view: { kind: "none", lost: !!me.lost_match_at } };
+  const shared = m.shared as { q: string; a: string }[];
+  if (!me.user_id || !me.match_seen_at) {
+    return { ...base, view: { kind: "teaser", score: m.score as number, intent: m.intent as PactIntent, inCommon: shared.length, rematch: !!m.rematch } };
+  }
   const meIsA = m.a === me.id;
   const otherId = (meIsA ? m.b : m.a) as string;
   const { data: other } = await db.from("pact_entries").select("about, user_id").eq("id", otherId).single();
   const oa = (other?.about ?? {}) as About;
   const differ = m.differ as { q: string; a: string; b: string } | null;
   return {
-    entryId: me.id as string,
-    signedIn: !!me.user_id,
-    match: {
-      alias: (meIsA ? m.alias_b : m.alias_a) as string,
-      myAlias: (meIsA ? m.alias_a : m.alias_b) as string,
-      score: m.score as number,
-      intent: m.intent as Entry["about"]["intents"][number],
-      age: oa.age,
-      area: oa.area ?? null,
-      work: m.intent === "business" ? oa.work ?? null : null,
-      shared: m.shared as { q: string; a: string }[],
-      differ: differ ? { q: differ.q, mine: meIsA ? differ.a : differ.b, theirs: meIsA ? differ.b : differ.a } : null,
-      sessionId: (m.session_id as string | null) ?? (me.user_id && other?.user_id ? await startChat(m.id as number) : null),
-      theyHaveAccount: !!other?.user_id,
+    ...base,
+    view: {
+      kind: "match",
+      match: {
+        alias: (meIsA ? m.alias_b : m.alias_a) as string,
+        score: m.score as number,
+        intent: m.intent as PactIntent,
+        age: oa.age,
+        area: oa.area ?? null,
+        work: m.intent === "business" ? oa.work ?? null : null,
+        shared,
+        differ: differ ? { q: differ.q, mine: meIsA ? differ.a : differ.b, theirs: meIsA ? differ.b : differ.a } : null,
+        sessionId: (m.session_id as string | null) ?? (other?.user_id ? await startChat(m.id as number) : null),
+        theyHaveAccount: !!other?.user_id,
+        rematch: !!m.rematch,
+      },
     },
   };
+}
+
+/** Someone with an account taps to reveal their match: remember it, and open the chat if their match has joined too */
+export async function revealMyMatch(userId: string, pact: Pact) {
+  if (pact.status !== "revealed") return { error: "Matches aren't out yet." };
+  const db = createAdminClient();
+  const { data: me } = await db.from("pact_entries").select("id").eq("pact_id", pact.id).eq("user_id", userId).maybeSingle();
+  if (!me) return { error: "You didn't take this pact." };
+  await db.from("pact_entries").update({ match_seen_at: new Date().toISOString() }).eq("id", me.id).is("match_seen_at", null);
+  const { data: m } = await db.from("pact_matches").select("id, session_id").or(`a.eq.${me.id},b.eq.${me.id}`).maybeSingle();
+  if (m && !m.session_id) await startChat(m.id as number);
+  return { ok: true };
 }
 
 const ALIAS_A = ["Velvet", "Quiet", "Golden", "Midnight", "Silver", "Crimson", "Lucky", "Gentle", "Bold", "Secret", "Starry", "Wild", "Calm", "Bright", "Misty", "Royal"];
@@ -185,7 +207,7 @@ const alias = () => `${ALIAS_A[Math.floor(Math.random() * ALIAS_A.length)]} ${AL
 
 type RevealStep = "match" | "ready" | "chats" | "notify" | "done";
 type RevealRow = Pact & { reveal_step: RevealStep; reveal_cursor: string | null; reveal_stats: Record<string, number> };
-export type RevealProgress = { step: RevealStep; people?: number; pairs?: number; told?: number; emailed?: number; waiting?: boolean };
+export type RevealProgress = { step: RevealStep; people?: number; pairs?: number; told?: number; emailed?: number; waiting?: boolean; error?: string };
 
 /**
  * A pact's matching and reveal, in steps that pick up where they stopped, so a pact with
@@ -207,7 +229,7 @@ export async function runReveal(pactId: string, deadline: number): Promise<Revea
   const save = (patch: Record<string, unknown>) => db.from("pacts").update(patch).eq("id", pactId);
   let step = pact.reveal_step;
   let cursor = pact.reveal_cursor;
-  const stats = { ...pact.reveal_stats };
+  const stats: Record<string, number | string> & { people?: number; pairs?: number; told?: number; emailed?: number } = { ...pact.reveal_stats };
   try {
     if (step === "match") {
       const done = await matchStep(pact, left);
@@ -256,7 +278,19 @@ export async function runReveal(pactId: string, deadline: number): Promise<Revea
         await save({ reveal_cursor: cursor, reveal_stats: stats });
       }
     }
+    // Got through without a problem: clear any earlier one
+    if (stats.error) {
+      delete stats.error;
+      delete stats.failed_at;
+      await save({ reveal_stats: stats });
+    }
     return { step, people: stats.people, pairs: stats.pairs, told: stats.told, emailed: stats.emailed };
+  } catch (e) {
+    // Saved for the admin page. Nothing is lost: the next run (every minute) carries on from the last saved place.
+    const error = e instanceof Error ? e.message : typeof e === "object" && e && "message" in e ? String((e as { message: unknown }).message) : String(e);
+    console.error(`pact ${pactId} reveal step ${step} failed`, e);
+    await save({ reveal_stats: { ...stats, error: error.slice(0, 300), failed_at: new Date().toISOString() } });
+    return { step, error };
   } finally {
     await save({ reveal_lock: null });
   }
@@ -325,7 +359,7 @@ async function tellPage(pact: Pact, page: { user_id: string | null; email: strin
   const withMatch = page.filter((e) => e.user_id && e.matched).map((e) => e.user_id!);
   const without = page.filter((e) => e.user_id && !e.matched).map((e) => e.user_id!);
   const [a, b] = await Promise.all([
-    pushToUsers(withMatch, { title: `${pact.name}: your match is here`, body: "Out of everyone in the Pact, you two fit best. Say hi, masked.", url: `/pact/${pact.slug}`, tag: `pact-${pact.id}` }),
+    pushToUsers(withMatch, { title: `${pact.name}: you have a match ⭐`, body: "Out of everyone in the Pact, you two fit best. Tap to reveal who it is.", url: `/pact/${pact.slug}`, tag: `pact-${pact.id}` }),
     pushToUsers(without, { title: `${pact.name} has been revealed`, body: "No match for you this time. Meet new people on Dashpad every hour.", url: `/pact/${pact.slug}`, tag: `pact-${pact.id}` }),
   ]);
   const mails = page
@@ -333,18 +367,18 @@ async function tellPage(pact: Pact, page: { user_id: string | null; email: strin
     .map((e) => {
       const link = `${site()}/pact/${pact.slug}/match?t=${e.token}`;
       const m = eventEmail({
-        heading: e.matched ? "Your Pact match is here" : "The Pact has been revealed",
+        heading: e.matched ? "You have a match" : "The Pact has been revealed",
         message: e.matched
-          ? `Out of everyone who took ${pact.name}, you two fit best. See who it is and what you have in common.`
+          ? `Out of everyone who took ${pact.name}, you two fit best. Join Dashpad (it's free) to reveal who it is and start chatting, masked.`
           : `We couldn't find you a match this time, but there are people like you on Dashpad for business, friendship, love or something spicy.`,
         title: pact.name,
         when: "Reveal night",
         kind: "Pact",
         link,
-        button: e.matched ? "See my match" : "Open Dashpad",
+        button: e.matched ? "Reveal my match" : "Open Dashpad",
         footer: "You're getting this because you took this pact.",
       });
-      return { to: e.email!, subject: e.matched ? `${pact.name}: your match is here` : `${pact.name} has been revealed`, ...m };
+      return { to: e.email!, subject: e.matched ? `${pact.name}: you have a match` : `${pact.name} has been revealed`, ...m };
     });
   const mail = await sendEmailsEach(mails);
   return { pushed: a.sent + b.sent, emailed: mail.sent };
@@ -362,13 +396,86 @@ export async function revealDuePacts(deadline: number) {
     .or(`reveal_step.is.null,reveal_step.in.(match,chats,notify),and(reveal_step.eq.ready,reveal_at.lte."${now}")`)
     .order("reveal_at")
     .limit(5);
-  const out: (RevealProgress & { id: string })[] = [];
+  const out: (RevealProgress & { id: string; rematched?: number })[] = [];
   for (const p of data ?? []) {
     if (deadline - Date.now() < 5000) break;
-    const r = await runReveal(p.id as string, deadline);
+    // One pact with a problem never holds up the others
+    const r = await runReveal(p.id as string, deadline).catch((e) => ({ step: "match" as const, error: String(e) }));
     if (r) out.push({ id: p.id as string, ...r });
   }
+  // From 48 hours after reveal night (for two weeks, every 6 hours): rematch people whose match never joined
+  if (deadline - Date.now() > 15_000) {
+    const { data: due } = await db
+      .from("pacts")
+      .select(PACT_COLS)
+      .eq("status", "revealed")
+      .eq("reveal_step", "done")
+      .lte("reveal_at", new Date(Date.now() - 48 * 3600_000).toISOString())
+      .gte("reveal_at", new Date(Date.now() - 14 * 86400_000).toISOString())
+      .or(`rematched_at.is.null,rematched_at.lt."${new Date(Date.now() - 6 * 3600_000).toISOString()}"`)
+      .limit(3);
+    for (const p of (due ?? []) as Pact[]) {
+      if (deadline - Date.now() < 15_000) break;
+      const n = await rematchPact(p).catch((e) => (console.error(`pact ${p.id} rematch failed`, e), 0));
+      out.push({ id: p.id, step: "done", rematched: n });
+    }
+  }
   return out;
+}
+
+/** Ids in small groups, so requests stay short */
+const chunks = <T,>(list: T[], size = 100) => Array.from({ length: Math.ceil(list.length / size) }, (_, i) => list.slice(i * size, i * size + size));
+
+/**
+ * 48 hours after reveal night: people who joined Dashpad but whose match didn't (or who had no
+ * match) are matched again among themselves. The person who never joined loses that match.
+ */
+async function rematchPact(pact: Pact) {
+  const db = createAdminClient();
+  await db.from("pacts").update({ rematched_at: new Date().toISOString() }).eq("id", pact.id);
+  const { data } = await db.rpc("pact_stranded", { p_pact: pact.id });
+  const stranded = (data ?? []) as (Entry & { match_id: number | null })[];
+  if (stranded.length < 2) return 0;
+  const { data: qs } = await db.from("pact_questions").select(Q_COLS).eq("pact_id", pact.id).order("position");
+  const pairs = matchEveryone((qs ?? []) as PactQuestion[], stranded);
+  if (!pairs.length) return 0;
+  const moving = new Set(pairs.flatMap((p) => [p.a, p.b]));
+
+  // Their old matches go; the partners who never joined are told on their page if they come back
+  const oldIds = stranded.filter((e) => moving.has(e.id) && e.match_id).map((e) => e.match_id!);
+  for (const ids of chunks(oldIds)) {
+    const { data: old } = await db.from("pact_matches").select("a, b").in("id", ids);
+    const partners = (old ?? []).map((m) => (moving.has(m.a as string) ? m.b : m.a) as string).filter((id) => !moving.has(id));
+    if (partners.length) await db.from("pact_entries").update({ lost_match_at: new Date().toISOString() }).in("id", partners);
+    await db.from("pact_matches").delete().in("id", ids);
+  }
+  const { data: last } = await db.from("pact_matches").select("id").eq("pact_id", pact.id).order("id", { ascending: false }).limit(1).maybeSingle();
+  const rows = pairs.map((p) => {
+    const a = alias();
+    let b = alias();
+    while (b === a) b = alias();
+    return { pact_id: pact.id, a: p.a, b: p.b, score: p.score, intent: p.intent, shared: p.shared, differ: p.differ, alias_a: a, alias_b: b, rematch: true };
+  });
+  for (const part of chunks(rows, 1000)) {
+    const { error } = await db.from("pact_matches").insert(part);
+    if (error) throw error;
+  }
+  // A new match to reveal, with its masked chat ready (both have accounts)
+  const users: string[] = [];
+  for (const ids of chunks([...moving])) {
+    await db.from("pact_entries").update({ match_seen_at: null }).in("id", ids);
+    const { data: es } = await db.from("pact_entries").select("user_id").in("id", ids);
+    (es ?? []).forEach((e) => e.user_id && users.push(e.user_id as string));
+  }
+  let after = Number(last?.id ?? 0);
+  for (;;) {
+    const { data: r } = await db.rpc("create_pact_sessions", { p_pact: pact.id, p_after: after, p_limit: 300 });
+    const got = r as { done: number; last: number } | null;
+    if (!got || got.done < 300) break;
+    after = got.last;
+  }
+  await pushToUsers(users, { title: `${pact.name}: you have a new match ⭐`, body: "Your first match didn't join, so we found you someone new. Tap to reveal them.", url: `/pact/${pact.slug}`, tag: `pact-${pact.id}` });
+  return pairs.length;
 }
 
 /** Emails someone their private result link again */
