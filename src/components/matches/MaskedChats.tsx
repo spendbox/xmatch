@@ -12,6 +12,8 @@ type MaskedChat = {
   alias: string;
   my_alias: string;
   from_meet: boolean;
+  /** The pact this chat came from */
+  pact?: string | null;
   my_vote: boolean | null;
   they_unmasked: boolean;
   last_message: string | null;
@@ -57,7 +59,9 @@ export function MaskedChats({ term = "", demo }: { term?: string; demo?: MaskedC
                       ? `${c.alias} unmasked · your move`
                       : c.last_message
                         ? `${c.last_mine ? "You: " : ""}${c.last_message}`
-                        : c.from_meet
+                        : c.pact
+                          ? `${c.pact} match · say hi`
+                          : c.from_meet
                           ? "Started from Meet · say hi"
                           : "Reopened · say hi"}
                   </span>

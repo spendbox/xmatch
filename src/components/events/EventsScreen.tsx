@@ -5,8 +5,9 @@ import { ArrowLeft, BellRing, CalendarDays } from "lucide-react";
 import { KindIcon } from "./kind";
 import { eventPhase, type DashpadEvent } from "@/lib/events";
 import { EventCard, useNow } from "./EventCard";
+import { PactCard, type PactListItem } from "@/components/pacts/PactCard";
 
-export function EventsScreen({ events, embedded }: { events: DashpadEvent[]; /** Shown as a tab of the Meet page */ embedded?: boolean }) {
+export function EventsScreen({ events, pacts = [], embedded }: { events: DashpadEvent[]; pacts?: PactListItem[]; /** Shown as a tab of the Meet page */ embedded?: boolean }) {
   const now = useNow(30_000);
   const phase = (e: DashpadEvent) => (now ? eventPhase(e, now) : "upcoming");
   const live = events.filter((e) => phase(e) === "live");
@@ -28,9 +29,20 @@ export function EventsScreen({ events, embedded }: { events: DashpadEvent[]; /**
         </>
       )}
 
+      {pacts.length > 0 && (
+        <section className="mt-8">
+          <h2 className="text-[15px] font-semibold">Pacts</h2>
+          <p className="mb-3 text-[14px] text-muted">Answer a few questions. On reveal night, meet the person most like you, for business, friendship, love or something spicy.</p>
+          <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+            {pacts.map((p) => (
+              <PactCard key={p.id} pact={p} />
+            ))}
+          </div>
+        </section>
+      )}
       {live.length > 0 && <Section title="Live now" events={live} />}
       {upcoming.length > 0 && <Section title="Coming up" events={upcoming} />}
-      {!live.length && !upcoming.length && (
+      {!live.length && !upcoming.length && !pacts.length && (
         <div className="mt-6 flex flex-col items-center rounded-[32px] border border-line bg-surface px-6 py-10 text-center shadow-card lg:flex-row lg:gap-6 lg:px-8 lg:py-8 lg:text-left">
           <span className="grid h-16 w-16 shrink-0 animate-float place-items-center rounded-2xl bg-brand-soft text-brand">
             <CalendarDays size={30} />

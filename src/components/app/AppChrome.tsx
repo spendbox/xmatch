@@ -11,6 +11,7 @@ import { CallProvider } from "@/components/calls/CallProvider";
 import { EventMediaProvider } from "@/components/events/media/EventMediaProvider";
 import { MediaHelp } from "./MediaHelp";
 import { chime } from "@/lib/chime";
+import { claimSavedPacts } from "@/components/pacts/pactTokens";
 
 export function AppChrome({ user, children }: { user: ChromeUser; children: React.ReactNode }) {
   const path = usePathname();
@@ -21,6 +22,8 @@ export function AppChrome({ user, children }: { user: ChromeUser; children: Reac
   // Background helper for notifications; keeps this phone's subscription fresh
   useEffect(() => {
     registerWorker().then(() => refreshSubscription());
+    // Pacts answered before joining become part of this account
+    claimSavedPacts();
   }, []);
   // A notification arrived while Dashpad is open: chime
   useEffect(() => {

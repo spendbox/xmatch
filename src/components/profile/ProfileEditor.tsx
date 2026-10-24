@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { showMediaHelp } from "@/lib/mediaPermission";
 import { GhostMode } from "./GhostMode";
 import { ThingsAboutMe } from "./ThingsAboutMe";
+import { YourPacts, type MyPact } from "@/components/pacts/YourPacts";
 import clsx from "clsx";
 import {
   AtSign, BellOff, BellRing, Cake, ChevronRight, Eye, FileText, ImagePlus, MessageCircle, LogOut, Mic, PenLine, Shapes, ShieldCheck, SlidersHorizontal, Trash2,
@@ -55,6 +56,7 @@ export function ProfileEditor({
   matchCount = 0,
   week = null,
   replySeconds = null,
+  demoPacts,
 }: {
   profile: Profile;
   email: string;
@@ -63,6 +65,8 @@ export function ProfileEditor({
   week?: { week_chats: number; week_unmasks: number; gifts_received: number } | null;
   /** Your usual reply time (others see this while you're masked) */
   replySeconds?: number | null;
+  /** Design previews */
+  demoPacts?: MyPact[];
 }) {
   const supabase = useMemo(() => createClient(), []);
   const push = usePushState();
@@ -267,6 +271,7 @@ export function ProfileEditor({
           </div>
 
           <ThingsAboutMe initial={profile.things ?? []} />
+          <YourPacts demo={demoPacts} />
 
           <SectionTitle>Masquerade</SectionTitle>
           <div className="grid gap-3 sm:grid-cols-2">

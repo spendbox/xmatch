@@ -6,6 +6,7 @@ import type { Wallet } from "@/lib/keys";
 import type { DashpadEvent } from "@/lib/events";
 import type { MasqueradeHour } from "@/lib/hourly";
 import type { MeetList } from "@/lib/meets";
+import { livePacts } from "@/lib/pactsServer";
 import { HomeScreen } from "@/components/home/HomeScreen";
 
 export const metadata = { title: "Home" };
@@ -23,6 +24,8 @@ export default async function HomePage() {
     FEATURES.meets ? supabase.rpc("list_meets", { p_limit: 4 }) : Promise.resolve({ data: null }),
     getMatches(),
   ]);
+  // The soonest open pact, if any, sits with the events
+  const pact = (await livePacts().catch(() => [])).find((p) => new Date(p.closes_at).getTime() > Date.now()) ?? null;
 
   return (
     <HomeScreen
@@ -32,6 +35,7 @@ export default async function HomePage() {
       hour={(hour as MasqueradeHour | null) ?? null}
       meets={(meets as MeetList | null) ?? null}
       matches={matches}
+      pact={pact}
     />
   );
 }
