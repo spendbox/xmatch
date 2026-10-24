@@ -278,7 +278,10 @@ export function MatchChat({
         plusDot={games.live}
         actions={[
           ...(games.canPlay ? [{ key: "game", label: games.live ? "Back to game" : "Play a game", icon: <Gamepad2 size={24} strokeWidth={1.75} />, tone: "bg-brand-soft text-brand", onClick: games.play }] : []),
-          { key: "ice", label: "Icebreaker", icon: <Dices size={24} strokeWidth={1.75} />, tone: "bg-gold-soft text-[#9a6a0c]", onClick: () => void supabase.rpc("match_icebreaker", { p_match: matchId }) },
+          // Icebreakers are written for dating, so friendship chats don't get them
+          ...(intent !== "friends"
+            ? [{ key: "ice", label: "Icebreaker", icon: <Dices size={24} strokeWidth={1.75} />, tone: "bg-gold-soft text-[#9a6a0c]", onClick: () => void supabase.rpc("match_icebreaker", { p_match: matchId }) }]
+            : []),
         ]}
         onSend={send}
         onSendMedia={sendMedia}
