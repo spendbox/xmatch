@@ -21,7 +21,7 @@ const STEPS: Step[] = [
   {
     icon: <MaskIcon className="w-8" eyes="#5b3fd9" />,
     title: "Welcome to Dashpad",
-    body: "Switch on Masquerade and you're paired with someone new who's online too, masked. Chat, send a disguised voice note, play games, and unmask together if you click.",
+    body: "Turn on Masquerade to match with someone online, completely anonymous. Chat, send disguised voice notes, play games, and unmask when you're both ready.",
   },
   {
     target: "masquerade-card",
