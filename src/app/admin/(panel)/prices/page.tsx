@@ -30,6 +30,7 @@ export default async function PricesPage() {
         ghost_cost: s.ghost_cost ?? 100,
         wave_cost: s.wave_cost ?? 0,
         setup_reward: s.setup_reward ?? 5,
+        signup_keys: s.signup_keys ?? 5,
         slow_reveal_cost: s.slow_reveal_cost ?? 10,
       }}
       invites={(invites as InviteStats | null) ?? null}

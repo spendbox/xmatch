@@ -31,6 +31,7 @@ const REASONS: Record<string, string> = {
   ghost: "Ghost mode (30 days)",
   wave: "Waved at someone",
   setup: "Getting set up",
+  signup: "Welcome gift for joining",
   gift_received: "Received a gift",
   slow_reveal: "Saw a slow reveal early",
 };
