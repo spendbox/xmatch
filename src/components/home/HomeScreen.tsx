@@ -7,7 +7,7 @@ import { PeopleForYou } from "./PeopleForYou";
 import { WelcomeTour } from "./WelcomeTour";
 import { GettingStarted } from "./GettingStarted";
 import type { Thing } from "@/lib/things";
-import type { ExploreList } from "@/lib/explore";
+import type { ExploreList, Viewers } from "@/lib/explore";
 import { ChevronRight } from "lucide-react";
 import { FeedbackButton } from "@/components/app/FeedbackButton";
 import { createClient } from "@/lib/supabase/client";
@@ -37,6 +37,7 @@ import { YourMeet } from "@/components/meets/YourMeet";
 import { useMeets } from "@/components/meets/useMeets";
 import { FEATURES } from "@/lib/features";
 import { RecentChats } from "./RecentChats";
+import { ProfileViews } from "./ProfileViews";
 
 export type HomeStats = { online: number; week_chats: number; week_unmasks: number; gifts_received: number };
 
@@ -50,6 +51,7 @@ export function HomeScreen({
   meets: initialMeets = null,
   demoSheet,
   demoPeople,
+  demoViews,
   demoSetup,
   demoTour,
 }: {
@@ -66,6 +68,8 @@ export function HomeScreen({
   demoSheet?: "meet" | "post";
   /** Design previews: the people grid */
   demoPeople?: ExploreList;
+  /** Design previews: who viewed you */
+  demoViews?: Viewers;
   demoSetup?: { place: boolean; push: boolean; things: number; claimed: boolean; reward: number };
   /** Design previews: open the welcome tour */
   demoTour?: boolean;
@@ -145,6 +149,7 @@ export function HomeScreen({
       </Sticky>
 
       <RecentChats matches={matches} />
+      <ProfileViews demo={demoViews} />
 
       <div className="lg:mt-8 lg:grid lg:grid-cols-12 lg:items-start lg:gap-8">
       <div className="mt-5 lg:sticky lg:top-24 lg:col-span-7 lg:mt-0">

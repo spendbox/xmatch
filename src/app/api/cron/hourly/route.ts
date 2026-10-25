@@ -85,6 +85,19 @@ async function handle(req: Request) {
       ),
     ),
   );
+  // Keys back for paid chats nobody replied to in 48 hours (before update 61 runs, this just does nothing)
+  const { data: back } = await db.rpc("refund_quiet_paid_chats", { p_limit: 200 });
+  const refunds = (Array.isArray(back) ? back : []) as { user_id: string; keys: number; session_id: string; name: string | null }[];
+  await Promise.all(
+    refunds.map((r) =>
+      pushToUsers([r.user_id], {
+        title: `Your ${r.keys} ${r.keys === 1 ? "Key is" : "Keys are"} back 🔑`,
+        body: `${(r.name ?? "They").split(" ")[0]} didn't reply in 48 hours, so we gave you your Keys back. The chat stays open in case they do.`,
+        url: "/wallet",
+        tag: `refund-${r.session_id}`,
+      }),
+    ),
+  );
   // Pacts whose reveal night has come (the every-minute pacts job does this too, if it's set up)
   let pacts: unknown[] = [];
   try {
@@ -92,7 +105,7 @@ async function handle(req: Request) {
   } catch (e) {
     console.error("pact reveal failed", e);
   }
-  return NextResponse.json({ ok: true, made, left, told, sent, nudged: nudges.length, pacts });
+  return NextResponse.json({ ok: true, made, left, told, sent, nudged: nudges.length, refunds: refunds.length, pacts });
 }
 
 export const GET = handle;

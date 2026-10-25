@@ -7,11 +7,11 @@ import { createAdminClient } from "@/lib/supabase/server";
 const int = (n: unknown, min: number, max: number) => Math.max(min, Math.min(max, Math.round(Number(n) || 0)));
 
 export async function saveSetting(
-  key: "reopen_cost" | "reveal_cost" | "free_reveals" | "invite_reward" | "meet_cost" | "meet_free_posts" | "meet_hours" | "explore_message_cost" | "explore_photos_cost" | "ghost_cost" | "setup_reward" | "slow_reveal_cost",
+  key: "reopen_cost" | "reveal_cost" | "free_reveals" | "invite_reward" | "meet_cost" | "meet_free_posts" | "meet_hours" | "explore_message_cost" | "explore_photos_cost" | "explore_photos_paid" | "ghost_cost" | "setup_reward" | "slow_reveal_cost",
   value: number,
 ) {
   await requireAdmin();
-  const v = key === "meet_hours" ? int(value, 1, 48) : int(value, 0, 100000);
+  const v = key === "meet_hours" ? int(value, 1, 48) : key === "explore_photos_paid" ? int(value, 0, 1) : int(value, 0, 100000);
   const { error } = await createAdminClient().from("app_settings").upsert({ key, value: v, updated_at: new Date().toISOString() });
   revalidatePath("/admin/prices");
   return error ? { error: "Couldn't save." } : {};

@@ -17,26 +17,26 @@ export type Hint = { id: string; label: string; text: string; weight: number };
 
 // An easy opener for each interest (shared or theirs)
 const OPENERS: Record<string, string[]> = {
-  Music: ["Who's the best Afrobeats artist right now?", "What song have you had on repeat this week?"],
-  Travel: ["Where's the next trip?", "Best place you've ever been to?"],
-  Food: ["What's the best thing you've eaten this week?", "Which Nigerian food would you defend with your life?"],
-  Fitness: ["Gym in the morning or the evening?", "What's your workout this week?"],
-  Movies: ["Best movie you've seen this year?", "Nollywood or Hollywood tonight?"],
-  Books: ["What are you reading right now?", "One book everyone should read?"],
-  Gaming: ["What are you playing right now?", "EA FC, COD or Whot: which one are you unbeatable at?"],
+  Music: ["Who's the best Afrobeats artist right now?", "What song have you had on repeat this week?", "Burna, Wizkid or Davido? You can only pick one."],
+  Travel: ["Where's the next trip?", "Best place you've ever been to?", "If you could fly anywhere tomorrow, where?"],
+  Food: ["What's the best thing you've eaten this week?", "Which Nigerian food would you defend with your life?", "Jollof: party jollof or home jollof?"],
+  Fitness: ["Gym in the morning or the evening?", "What's your workout this week?", "What's the hardest workout you actually enjoy?"],
+  Movies: ["Best movie you've seen this year?", "Nollywood or Hollywood tonight?", "What movie can you watch over and over?"],
+  Books: ["What are you reading right now?", "One book everyone should read?", "What book changed how you think?"],
+  Gaming: ["What are you playing right now?", "EA FC, COD or Whot: which one are you unbeatable at?", "What game would you challenge me to?"],
   Art: ["What kind of art do you make or love?", "Who's an artist everyone should know?"],
-  Fashion: ["What's your signature look?", "Best thing in your wardrobe right now?"],
-  Tech: ["What are you building or using right now?", "Best app nobody knows about?"],
-  Nature: ["Beach or mountains?", "Best outdoor spot near you?"],
-  Dancing: ["What's your go-to dance move?", "Which song gets you on the dance floor every time?"],
+  Fashion: ["What's your signature look?", "Best thing in your wardrobe right now?", "Sneakers or something classy?"],
+  Tech: ["What are you building or using right now?", "Best app nobody knows about?", "What's one app you can't live without?"],
+  Nature: ["Beach or mountains?", "Best outdoor spot near you?", "Sunrise or sunset person?"],
+  Dancing: ["What's your go-to dance move?", "Which song gets you on the dance floor every time?", "Who's the best dancer you know (it's you, isn't it)?"],
   Photography: ["What do you love taking pictures of?", "Phone or camera?"],
-  Cooking: ["What's your best dish?", "What should I learn to cook first?"],
-  Sports: ["Arsenal or Chelsea? Choose wisely.", "Who are you supporting this season?"],
+  Cooking: ["What's your best dish?", "What should I learn to cook first?", "What dish would you make to impress someone?"],
+  Sports: ["Arsenal or Chelsea? Choose wisely.", "Who are you supporting this season?", "Best match you've ever watched?"],
   Faith: ["What does a good Sunday look like for you?", "What keeps you grounded?"],
-  Comedy: ["Who's the funniest comedian right now?", "Last thing that made you laugh out loud?"],
+  Comedy: ["Who's the funniest comedian right now?", "Last thing that made you laugh out loud?", "Which skit maker never misses?"],
   Pets: ["Dog person or cat person?", "Tell me about your pet!"],
-  Business: ["What are you building?", "Best business idea you've ever had?"],
-  Nightlife: ["Best spot for a night out?", "Owambe or club?"],
+  Business: ["What are you building?", "Best business idea you've ever had?", "What's the dream: one big company or many small wins?"],
+  Nightlife: ["Best spot for a night out?", "Owambe or club?", "What's the perfect Friday night?"],
   Poetry: ["Who's your favourite poet?", "Do you write too?"],
   Anime: ["What anime should I start with?", "Top 3 anime, go."],
 };
@@ -91,4 +91,20 @@ export function hintPage(all: Hint[], page: number, size = 3): Hint[] {
   if (all.length <= size) return all;
   const start = (page * size) % all.length;
   return [...all, ...all].slice(start, start + size);
+}
+
+/**
+ * First messages for someone you haven't talked to yet (on their profile). Each one says
+ * why you're saying hi, so it doesn't feel random: "You're into Food too 👀 …".
+ */
+export function buildOpeners(d: HintData | null, theirInterests: string[], now = new Date(), seed = 0): Hint[] {
+  return buildHints(d, theirInterests, now, seed)
+    .slice(0, 6)
+    .map((h) => {
+      if (h.id.startsWith("s-")) return { ...h, text: `You're into ${h.id.slice(2)} too 👀 ${h.text}` };
+      if (h.id.startsWith("t-")) return { ...h, text: `Saw you're into ${h.id.slice(2)}. ${h.text}` };
+      if (h.id === "p") return { ...h, text: `Hi neighbour 👋 ${h.text}` };
+      if (h.id === "time") return { ...h, label: "Keep it simple", text: `Hi 👋 ${h.text}` };
+      return h;
+    });
 }

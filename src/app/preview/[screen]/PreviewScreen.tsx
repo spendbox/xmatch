@@ -57,7 +57,7 @@ import { PactsAdmin } from "@/components/admin/PactsAdmin";
 import { PactEditor } from "@/components/admin/PactEditor";
 import { PactInsights } from "@/components/admin/PactInsights";
 import { AdminPreview } from "@/components/pacts/AdminPreview";
-import type { ExploreList, ExploreProfile } from "@/lib/explore";
+import type { ExploreList, ExploreProfile, Viewers } from "@/lib/explore";
 
 const photo = (a: string, b: string, letter: string) =>
   "data:image/svg+xml;utf8," +
@@ -240,6 +240,14 @@ const homePeople: ExploreList = {
     return i < explorePeople.people.length ? p : { ...p, id: `${p.id}-${i}`, name: NAMES[i % NAMES.length], online: i % 3 === 0, connected: false };
   }),
 };
+// Who viewed you (Home)
+const homeViews: Viewers = {
+  today: 10,
+  people: homePeople.people.slice(0, 10).map((p, i) => ({
+    id: p.id, name: p.name, photo: p.photo, online: p.online, seen_at: new Date(Date.now() - (i * 47 + 6) * 60_000).toISOString(),
+    waved_me: i === 1 || i === 4, i_waved: i === 3, connected: false,
+  })),
+};
 const exploreProfile: ExploreProfile = {
   id: "p0", name: "Ada", age: 26, gender: "woman", bio: "Bookworm, beach lover, and the friend who always knows the best brunch spot.",
   interests: ["Books", "Travel", "Dancing", "Food"], place: "Akoka, Lagos", intent: null, online: true,
@@ -312,7 +320,7 @@ function ScreenBody({ screen }: { screen: string }) {
     case "people":
       return <div className="pb-24"><YourPeople matches={recent} myId="me" /><BottomNav /></div>;
     case "admin-prices":
-      return <AdminShell><PricesManager settings={{ reopen_cost: 10, reveal_cost: 1, free_reveals: 10, invite_reward: 10, meet_cost: 10, meet_free_posts: 1, meet_hours: 3, explore_message_cost: 15, explore_photos_cost: 5, ghost_cost: 100, setup_reward: 5, slow_reveal_cost: 10 }} invites={{ joined: 64, joined_7d: 12, buyers: 19, keys_paid: 410, top: [{ name: "Tolu", joined: 9, earned: 90 }, { name: "Kemi", joined: 6, earned: 40 }] }}
+      return <AdminShell><PricesManager settings={{ reopen_cost: 10, reveal_cost: 1, free_reveals: 10, invite_reward: 10, meet_cost: 10, meet_free_posts: 1, meet_hours: 3, explore_message_cost: 15, explore_photos_cost: 5, explore_photos_paid: 1, ghost_cost: 100, setup_reward: 5, slow_reveal_cost: 10 }} invites={{ joined: 64, joined_7d: 12, buyers: 19, keys_paid: 410, top: [{ name: "Tolu", joined: 9, earned: 90 }, { name: "Kemi", joined: 6, earned: 40 }] }}
         gifts={[{ id: "fire", name: "Fire", emoji: "🔥", price: 5, sort: 1, retired: false }, { id: "rose", name: "Rose", emoji: "🌹", price: 5, sort: 2, retired: false }, { id: "jollof", name: "Jollof", emoji: "🍛", price: 15, sort: 5, retired: false }, { id: "teddy", name: "Teddy bear", emoji: "🧸", price: 30, sort: 91, retired: true }]}
         packs={[{ id: "p50", keys: 50, naira: 750, tag: null, sort: 1, active: true }, { id: "p150", keys: 150, naira: 2000, tag: "Popular", sort: 2, active: true }, { id: "p500", keys: 500, naira: 4500, tag: "Best value", sort: 3, active: true }]} /></AdminShell>;
     case "admin-masquerade": {
@@ -332,7 +340,7 @@ function ScreenBody({ screen }: { screen: string }) {
     case "home-off":
       return (
         <div className="pb-24">
-          <HomeScreen demoPeople={homePeople} demoSetup={{ place: true, push: false, things: 4, claimed: false, reward: 5 }} hour={demoHour(screen === "home-off" ? "off" : "next")} profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} stats={{ online: 214, week_chats: 12, week_unmasks: 5, gifts_received: 3 }} matches={recent} />
+          <HomeScreen demoPeople={homePeople} demoViews={homeViews} demoSetup={{ place: true, push: false, things: 4, claimed: false, reward: 5 }} hour={demoHour(screen === "home-off" ? "off" : "next")} profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} stats={{ online: 214, week_chats: 12, week_unmasks: 5, gifts_received: 3 }} matches={recent} />
           <BottomNav />
         </div>
       );

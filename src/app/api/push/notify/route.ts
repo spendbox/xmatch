@@ -11,7 +11,7 @@ import type { Intent } from "@/lib/types";
  * send a message, start a call, say hi at an event, or keep an event chat.
  * We check it really was you, then notify the other person.
  */
-type Body = { kind?: string; matchId?: string; callId?: string; chatId?: string; answerId?: string; sessionId?: string; gameId?: string };
+type Body = { kind?: string; personId?: string; matchId?: string; callId?: string; chatId?: string; answerId?: string; sessionId?: string; gameId?: string };
 
 const RECENT_MS = 60_000;
 const firstName = (n: string | null | undefined) => (n ?? "").split(" ")[0] || "Someone";
@@ -116,6 +116,32 @@ export async function POST(req: Request) {
       url: `/masquerade/${s.id}`,
       tag: `unmask-${s.id}`,
     });
+    return ok;
+  }
+
+  // You waved at someone: tell them (or, if you both waved, that your chat is open)
+  if (b.kind === "wave" && b.personId) {
+    const { data: w } = await db.from("waves").select("created_at, session_id").eq("from_id", uid).eq("to_id", b.personId).maybeSingle();
+    if (!w || Date.now() - new Date(w.created_at as string).getTime() > RECENT_MS) return ok;
+    const { data: me } = await db.from("profiles").select("display_name, photos").eq("id", uid).single();
+    const icon = (me?.photos as string[] | null)?.[0] ?? null;
+    if (w.session_id) {
+      await pushToUsers([b.personId], {
+        title: "You both waved 👋",
+        body: `${firstName(me?.display_name)} waved back. Your chat is open, free. Say hi!`,
+        url: `/masquerade/${w.session_id}`,
+        tag: `masked-${w.session_id}`,
+        icon,
+      });
+    } else {
+      await pushToUsers([b.personId], {
+        title: `${firstName(me?.display_name)} waved at you 👋`,
+        body: "Wave back and a chat opens, free.",
+        url: "/home?views=1",
+        tag: `wave-${uid}`,
+        icon,
+      });
+    }
     return ok;
   }
 

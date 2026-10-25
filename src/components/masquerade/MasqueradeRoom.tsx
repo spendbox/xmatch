@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Flag, Gamepad2, Gift, Handshake, LogOut, MoreVertical, Dices, RotateCcw, Timer, X } from "lucide-react";
+import { ArrowLeft, Flag, Gamepad2, Gift, Handshake, LogOut, MoreVertical, Dices, RotateCcw, ShieldCheck, Timer, X } from "lucide-react";
 import { Button, Spinner } from "@/components/ui/Button";
 import { Sheet } from "@/components/ui/Sheet";
 import { KeyCoin } from "@/components/keys/KeyIcon";
@@ -62,7 +62,11 @@ export function MasqueradeRoom({
   const known = paidChat?.started_by_me === false ? undefined : paidChat;
   const theyPaid = paidChat?.started_by_me === false;
   const theirName = known?.name || state.them.alias;
-  const whoSees = known?.name ? (
+  const whoSees = paidChat?.waved ? (
+    <>
+      You&apos;re <span className="font-semibold text-ink">{state.me.alias}</span>. You both waved, so you can both see each other&apos;s names. Photos stay hidden until you both unmask.
+    </>
+  ) : known?.name ? (
     <>
       You&apos;re <span className="font-semibold text-ink">{state.me.alias}</span>. You found {known.name} on Meet, so you can see their name. They only see your mask name until you both unmask.
     </>
@@ -76,6 +80,16 @@ export function MasqueradeRoom({
     </>
   );
   const [messages, setMessages] = useState(initialMessages);
+  // You paid to start this chat: your Keys come back if they never reply in 48 hours
+  const theyReplied = messages.some((m) => m.sender_id && m.sender_id !== state.me.id);
+  const keysWord = (n?: number) => `${n ?? ""} ${n === 1 ? "Key" : "Keys"}`.trim();
+  const refundNote = !known?.started_by_me || theyReplied
+    ? null
+    : known.refunded
+      ? `They didn't reply in 48 hours, so your ${keysWord(known.paid_keys)} came back.`
+      : known.refund_at
+        ? `No reply by ${new Date(known.refund_at).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" })}? Your ${keysWord(known.paid_keys)} ${known.paid_keys === 1 ? "comes" : "come"} back.`
+        : null;
   const [menu, setMenu] = useState(false);
   const [reporting, setReporting] = useState(false);
   const [voting, setVoting] = useState(false);
@@ -249,6 +263,19 @@ export function MasqueradeRoom({
   // Ideas to say: at the start, and when the chat has been quiet for 3 minutes
   const [hintDraft, setHintDraft] = useState<{ text: string; key: number } | null>(null);
   const [hintsOn, setHintsOn] = useState(true);
+  // An opener you picked on their profile before the chat opened
+  useEffect(() => {
+    try {
+      const k = `dp_say_${initial.id}`;
+      const say = sessionStorage.getItem(k);
+      if (say) {
+        sessionStorage.removeItem(k);
+        setHintDraft({ text: say, key: Date.now() });
+      }
+    } catch {
+      /* private mode */
+    }
+  }, [initial.id]);
   const lastText = [...messages].reverse().find((m) => m.sender_id && m.kind === "text");
   const iSaid = messages.some((m) => m.sender_id === state.me.id && m.kind === "text");
   const quietNow = !lastText || Date.now() - new Date(lastText.created_at).getTime() > 3 * 60_000;
@@ -420,6 +447,11 @@ export function MasqueradeRoom({
         <p className="px-6 pt-5 text-center text-[13px] leading-relaxed text-muted">
           {whoSees}
         </p>
+        {refundNote && (
+          <p className="mx-auto mt-2 flex w-fit max-w-[90%] items-center gap-1.5 rounded-full bg-mint-soft px-3 py-1 text-center text-[12px] font-medium text-ink-soft">
+            <ShieldCheck size={14} className="shrink-0 text-mint" /> {refundNote}
+          </p>
+        )}
         {/* What you have in common (on computers it's in the side panel) */}
         {!demo && (
           <div className="mx-4 mt-3 lg:hidden">
