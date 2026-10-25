@@ -15,6 +15,9 @@ type MaskedChat = {
   alias: string;
   my_alias: string;
   from_meet: boolean;
+  /** Your live Masquerade pair, and when it ends */
+  live_pair?: boolean;
+  ends_at?: string | null;
   /** The pact this chat came from, and whether you've revealed your match yet */
   pact?: string | null;
   pact_slug?: string | null;
@@ -114,12 +117,17 @@ export function MaskedChats({ term = "", demo, onCount }: { term?: string; demo?
                         ? `${c.last_mine ? "You: " : ""}${c.last_message}`
                         : c.pact
                           ? `${c.pact} match · say hi`
-                          : c.from_meet
-                          ? "Started from Meet · say hi"
-                          : "Reopened · say hi"}
+                          : c.live_pair
+                            ? "Your Masquerade pair · say hi"
+                            : c.from_meet
+                              ? "Started from Meet · say hi"
+                              : "Reopened · say hi"}
                   </span>
                   {c.unread ? (
                     <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-brand" aria-label="New messages" />
+                  ) : c.live_pair && c.ends_at ? (
+                    // Live pair: how long is left
+                    <span className="shrink-0 rounded-full bg-brand-soft px-2 py-0.5 text-[11px] font-semibold text-brand">{left(c.ends_at)}</span>
                   ) : (
                     <span className="shrink-0 rounded-full bg-ink/[0.06] px-2 py-0.5 text-[11px] font-semibold text-ink-soft">Masked</span>
                   )}
@@ -140,4 +148,10 @@ function ago(iso: string) {
   if (s < 3600) return `${Math.floor(s / 60)}m`;
   if (s < 86400) return `${Math.floor(s / 3600)}h`;
   return `${Math.floor(s / 86400)}d`;
+}
+
+/** "42m left" */
+function left(iso: string) {
+  const m = Math.max(0, Math.ceil((new Date(iso).getTime() - Date.now()) / 60_000));
+  return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m left` : `${m}m left`;
 }
