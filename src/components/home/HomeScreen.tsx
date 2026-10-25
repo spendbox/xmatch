@@ -36,7 +36,6 @@ import { PostMeetSheet } from "@/components/meets/PostMeetSheet";
 import { YourMeet } from "@/components/meets/YourMeet";
 import { useMeets } from "@/components/meets/useMeets";
 import { FEATURES } from "@/lib/features";
-import { RecentChats } from "./RecentChats";
 import { ProfileViews } from "./ProfileViews";
 
 export type HomeStats = { online: number; week_chats: number; week_unmasks: number; gifts_received: number };
@@ -47,7 +46,6 @@ export function HomeScreen({
   nextEvent = null,
   pact = null,
   hour: initialHour = null,
-  matches = [],
   meets: initialMeets = null,
   demoSheet,
   demoPeople,
@@ -148,7 +146,6 @@ export function HomeScreen({
       </header>
       </Sticky>
 
-      <RecentChats matches={matches} />
       <ProfileViews demo={demoViews} onKeys={refreshWallet} />
 
       <div className="lg:mt-8 lg:grid lg:grid-cols-12 lg:items-start lg:gap-8">
