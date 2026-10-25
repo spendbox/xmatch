@@ -284,7 +284,7 @@ export function ProfileEditor({
               </div>
               <p className="mt-3 text-[15px] font-semibold">Masquerade</p>
               <p className="mt-0.5 text-[13px] leading-snug text-muted">
-                {open ? "On · a new masked pair every hour" : "Off · you won't be paired"}
+                {open ? "On · paired with someone online" : "Off · you won't be paired"}
               </p>
             </div>
             <Link

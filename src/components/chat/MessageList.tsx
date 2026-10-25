@@ -157,7 +157,7 @@ export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDat
   }, []);
 
   return (
-    <div ref={root} className="flex flex-col gap-1 px-3 py-4 lg:px-8">
+    <div ref={root} className="flex flex-col gap-1 px-3 py-4 lg:mx-auto lg:w-full lg:max-w-3xl lg:px-8">
       {messages.map((m, i) => {
         const prev = messages[i - 1];
         const next = messages[i + 1];

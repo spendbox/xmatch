@@ -161,7 +161,7 @@ export function HomeScreen({
       <ProfileViews demo={demoViews} onKeys={refreshWallet} />
 
       <div className="lg:mt-8 lg:grid lg:grid-cols-12 lg:items-start lg:gap-8">
-      <div className="mt-5 lg:sticky lg:top-24 lg:col-span-7 lg:mt-0">
+      <div className="mt-5 lg:col-span-7 lg:mt-0">
         <MasqueradeCard userId={profile.id} ctl={ctl} prefs={prefs} onSettings={() => setMeetOpen(true)} />
 
         {pact && (
@@ -179,11 +179,12 @@ export function HomeScreen({
           demo={demoSetup}
         />
 
-        <PeopleForYou userId={profile.id} demo={demoPeople} />
-        <WelcomeTour force={demoTour} off={!!demoPeople && !demoTour} />
       </div>
 
+      {/* On computers: people, past pairs and events in the right column (same order as on phones) */}
       <div className="lg:col-span-5">
+        <PeopleForYou userId={profile.id} demo={demoPeople} />
+        <WelcomeTour force={demoTour} off={!!demoPeople && !demoTour} />
       <PastPairs pairs={ctl.hour?.past ?? []} balance={wallet?.balance ?? null} onChanged={ctl.load} />
 
       {nextEvent && (

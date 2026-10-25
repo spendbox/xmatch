@@ -164,7 +164,7 @@ export function Composer({
   }
 
   return (
-    <div className="border-t border-line bg-surface pb-safe">
+    <div className="border-t border-line bg-surface pb-safe lg:[&>*]:mx-auto lg:[&>*]:max-w-3xl">
       {replyTo && (
         <div className="flex animate-fade-up items-center gap-3 px-4 pt-3">
           <div className="min-w-0 flex-1 rounded-xl border-l-[3px] border-brand bg-brand-soft/70 px-3 py-1.5">

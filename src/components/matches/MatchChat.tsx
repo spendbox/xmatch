@@ -245,7 +245,7 @@ export function MatchChat({
       </header>
 
       <div data-chat-scroll className="flex-1 overflow-y-auto overscroll-contain">
-        <div className="mx-4 mt-4 animate-fade-up rounded-3xl border border-line bg-surface p-5 text-center shadow-card">
+        <div className="mx-4 mt-4 animate-fade-up rounded-3xl lg:mx-auto lg:max-w-xl border border-line bg-surface p-5 text-center shadow-card">
           <div className="flex justify-center -space-x-3">
             <span className="grid h-14 w-14 place-items-center rounded-full bg-ink text-white ring-4 ring-surface">
               <MaskIcon className="w-8" eyes="#1c1828" />
