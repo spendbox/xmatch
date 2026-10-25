@@ -11,6 +11,7 @@ import { giftById } from "@/lib/keys";
 import { GiftArt } from "@/components/keys/GiftArt";
 import { Sheet } from "@/components/ui/Sheet";
 import { Spinner, tapFeedback } from "@/components/ui/Button";
+import { voiceUrl } from "@/lib/voiceDisguise";
 import { AudioPlayer } from "./AudioPlayer";
 import { MediaViewer, type ViewerItem } from "./MediaViewer";
 import { GameCard } from "@/components/games/GameCard";
@@ -515,11 +516,23 @@ function Bubble({
               : `Slow reveal · ${slow.progress * 10}% clear for them`}
         </p>
       )}
-      {m.kind === "audio" && (
+      {m.kind === "audio" && m.media_meta?.expired ? (
+        // Masked voice notes disappear after 24 hours
+        <p className="px-4 py-2.5 text-[14px] text-muted italic">🎤 Voice note · gone after 24 hours</p>
+      ) : m.kind === "audio" ? (
         <div className="px-3 py-2">
-          <AudioPlayer path={m.media_path} localUrl={m.local_url} duration={m.media_meta?.duration} mine={mine} seed={Math.abs(m.id)} />
+          <AudioPlayer
+            path={m.media_meta?.key ? null : m.media_path}
+            localUrl={m.local_url ?? voiceUrl(m.media_meta?.key) ?? undefined}
+            duration={m.media_meta?.duration}
+            mine={mine}
+            seed={Math.abs(m.id)}
+          />
+          {m.media_meta?.key && (
+            <p className={clsx("mt-1 text-[11px] font-semibold", mine ? "text-white/70" : "text-muted")}>🎭 Disguised voice · gone in 24h</p>
+          )}
         </div>
-      )}
+      ) : null}
       {(m.kind === "text" || !m.kind || (media && m.body)) && m.body ? (
         <p className={clsx("text-[15px] leading-snug whitespace-pre-wrap", media ? "px-3 pt-1.5 pb-2" : "px-4 py-2.5")}>{m.body}</p>
       ) : null}

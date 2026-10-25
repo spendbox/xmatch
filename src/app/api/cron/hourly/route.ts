@@ -4,6 +4,7 @@ import { pushToUsers } from "@/lib/push";
 import { intentLabel } from "@/lib/constants";
 import type { Intent } from "@/lib/types";
 import { revealDuePacts } from "@/lib/pactsServer";
+import { deleteKeys } from "@/lib/r2";
 
 // Called every 5 minutes by a scheduled job in Supabase (see the database setup page),
 // with "Authorization: Bearer CRON_SECRET". Closes ended chats, pairs anyone online who is still waiting (live pairing happens on check-in), tells each new pair, and nudges quiet chats.
@@ -84,6 +85,19 @@ async function handle(req: Request) {
       ),
     ),
   );
+  // Masked voice notes last 24 hours (or until their chat ends): delete the files from storage
+  let voiceDeleted = 0;
+  try {
+    const { data: due } = await db.rpc("masked_voice_due", { p_limit: 500 });
+    const keys = (Array.isArray(due) ? due : []) as string[];
+    if (keys.length) {
+      await deleteKeys(keys);
+      const { data: n } = await db.rpc("masked_voice_deleted", { p_keys: keys });
+      voiceDeleted = (n as number) ?? 0;
+    }
+  } catch (e) {
+    console.error("voice cleanup failed", e);
+  }
   // Keys back for paid chats nobody replied to in 48 hours (before update 61 runs, this just does nothing)
   const { data: back } = await db.rpc("refund_quiet_paid_chats", { p_limit: 200 });
   const refunds = (Array.isArray(back) ? back : []) as { user_id: string; keys: number; session_id: string; name: string | null }[];
@@ -104,7 +118,7 @@ async function handle(req: Request) {
   } catch (e) {
     console.error("pact reveal failed", e);
   }
-  return NextResponse.json({ ok: true, pairingError, made, left, told, sent, nudged: nudges.length, refunds: refunds.length, pacts });
+  return NextResponse.json({ ok: true, pairingError, made, left, told, sent, nudged: nudges.length, refunds: refunds.length, voiceDeleted, pacts });
 }
 
 export const GET = handle;

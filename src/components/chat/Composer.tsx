@@ -25,6 +25,8 @@ type Props = {
   onSendMedia?: (file: File, kind: MediaKind, caption: string, slow: boolean) => Promise<void> | void;
   /** Turn on voice notes */
   onSendVoice?: (blob: Blob, seconds: number) => Promise<void> | void;
+  /** Masked chats: the mic opens the masked voice note pop-up instead */
+  onVoiceTap?: () => void;
   replyTo?: ChatMessage | null;
   replyName?: string;
   onCancelReply?: () => void;
@@ -45,6 +47,7 @@ export function Composer({
   onSend,
   onSendMedia,
   onSendVoice,
+  onVoiceTap,
   replyTo,
   replyName,
   onCancelReply,
@@ -253,7 +256,7 @@ export function Composer({
             className="no-scrollbar max-h-[132px] min-h-10 min-w-0 flex-1 resize-none bg-transparent px-2.5 py-[9px] text-[16px] leading-[22px] outline-none placeholder:text-muted disabled:opacity-60"
             aria-label="Message"
           />
-          {hasText || !onSendVoice ? (
+          {hasText || (!onSendVoice && !onVoiceTap) ? (
             <button
               type="submit"
               disabled={!hasText || disabled}
@@ -270,7 +273,8 @@ export function Composer({
               type="button"
               onClick={() => {
                 tapFeedback();
-                voice.start();
+                if (onVoiceTap) onVoiceTap();
+                else voice.start();
               }}
               disabled={disabled}
               aria-label="Record a voice note"

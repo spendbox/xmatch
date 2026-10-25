@@ -22,6 +22,7 @@ import { Composer } from "@/components/chat/Composer";
 import { refreshMenuBadges } from "@/components/app/useMenuBadges";
 import { YouBoth } from "@/components/matches/YouBoth";
 import { ExploreProfileSheet } from "@/components/explore/ExploreProfileSheet";
+import { MaskedVoiceSheet } from "@/components/chat/MaskedVoiceSheet";
 import { usePaidChatPeople, type PaidChatPerson } from "./usePaidChatPeople";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { Chilis } from "@/components/ui/Spice";
@@ -83,6 +84,7 @@ export function MasqueradeRoom({
   );
   const [messages, setMessages] = useState(initialMessages);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [voiceOpen, setVoiceOpen] = useState(false);
   // Notes in the chat are saved with mask names. Show "You" for you, and their real name when you know it.
   const shownMessages = useMemo(() => {
     const mine = state.me.alias;
@@ -568,6 +570,8 @@ export function MasqueradeRoom({
           draft={hintDraft}
           noTip={hintsOn}
           onSend={send}
+          // Masked voice notes: disguised on the phone, gone after 24 hours
+          onVoiceTap={() => setVoiceOpen(true)}
           placeholder={state.hourly ? "Message" : undefined}
           replyTo={replyTo}
           replyName={replyTo ? (replyTo.sender_id === state.me.id ? "yourself" : replyTo.sender_id ? theirName : replyTo.kind === "game" ? "the game" : "the icebreaker") : undefined}
@@ -626,6 +630,12 @@ export function MasqueradeRoom({
       {reporting && <ReportSheet onClose={() => setReporting(false)} onReport={report} />}
       {games.overlay}
       {profileOpen && known?.id && <ExploreProfileSheet personId={known.id} onClose={() => setProfileOpen(false)} inChat />}
+      <MaskedVoiceSheet
+        open={voiceOpen}
+        onClose={() => setVoiceOpen(false)}
+        sessionId={state.id}
+        onSent={(m) => setMessages((l) => (l.some((x) => x.id === m.id) ? l : [...l, m]))}
+      />
     </div>
 
     {/* About them — side panel on computers */}
