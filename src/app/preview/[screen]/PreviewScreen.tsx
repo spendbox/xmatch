@@ -135,7 +135,7 @@ const msgs: ChatMessage[] = [
 ];
 
 const recent = [
-  { id: "m1", created_at: iso(3000), last_message_at: iso(200), intent: "dating" as const, other_id: "ada", display_name: "Ada", photos: [photo("#e5484d", "#f2b33d", "A")], age: 26, last_message: null, last_sender: null },
+  { id: "m1", created_at: iso(3000), last_message_at: iso(200), intent: "dating" as const, other_id: "ada", display_name: "Ada", photos: [photo("#e5484d", "#f2b33d", "A")], age: 26, last_message: "Are you coming?", last_sender: "ada", unread: true },
   { id: "m2", created_at: iso(3000), last_message_at: iso(200), intent: "friends" as const, other_id: "k", display_name: "Kemi", photos: [photo("#1f9d6b", "#f2b33d", "K")], age: 24, last_message: null, last_sender: null },
   { id: "m3", created_at: iso(3000), last_message_at: iso(200), intent: "spicy" as const, other_id: "z", display_name: "Zara", photos: [photo("#5b3fd9", "#e5484d", "Z")], age: 29, last_message: null, last_sender: null },
 ];
@@ -240,6 +240,12 @@ const homePeople: ExploreList = {
     return i < explorePeople.people.length ? p : { ...p, id: `${p.id}-${i}`, name: NAMES[i % NAMES.length], online: i % 3 === 0, connected: false };
   }),
 };
+// Masked chats in Recent chats (Home)
+const homeMasked = [
+  { id: "s1", alias: "Golden Owl", last_message: "Haha you're funny", last_mine: false, last_at: iso(100), unread: true },
+  { id: "s2", alias: "Quiet Heron", last_message: "Talk later", last_mine: true, last_at: iso(900), unread: false },
+  { id: "s3", alias: "Wild Comet", last_message: "Hi 👋", last_mine: true, last_at: iso(5000), unread: false },
+];
 // Who viewed you (Home)
 const homeViews: Viewers = {
   today: 10,
@@ -340,7 +346,7 @@ function ScreenBody({ screen }: { screen: string }) {
     case "home-off":
       return (
         <div className="pb-24">
-          <HomeScreen demoPeople={homePeople} demoViews={homeViews} demoSetup={{ place: true, push: false, things: 4, claimed: false, reward: 5 }} hour={demoHour(screen === "home-off" ? "off" : "next")} profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} stats={{ online: 214, week_chats: 12, week_unmasks: 5, gifts_received: 3 }} matches={recent} />
+          <HomeScreen demoPeople={homePeople} demoViews={homeViews} demoMasked={homeMasked} demoSetup={{ place: true, push: false, things: 4, claimed: false, reward: 5 }} hour={demoHour(screen === "home-off" ? "off" : "next")} profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} stats={{ online: 214, week_chats: 12, week_unmasks: 5, gifts_received: 3 }} matches={recent} />
           <BottomNav />
         </div>
       );

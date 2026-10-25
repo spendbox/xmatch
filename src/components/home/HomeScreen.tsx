@@ -37,6 +37,7 @@ import { YourMeet } from "@/components/meets/YourMeet";
 import { useMeets } from "@/components/meets/useMeets";
 import { FEATURES } from "@/lib/features";
 import { ProfileViews } from "./ProfileViews";
+import { RecentChats, type RecentMasked } from "./RecentChats";
 
 export type HomeStats = { online: number; week_chats: number; week_unmasks: number; gifts_received: number };
 
@@ -50,6 +51,8 @@ export function HomeScreen({
   demoSheet,
   demoPeople,
   demoViews,
+  demoMasked,
+  matches = [],
   demoSetup,
   demoTour,
 }: {
@@ -68,6 +71,8 @@ export function HomeScreen({
   demoPeople?: ExploreList;
   /** Design previews: who viewed you */
   demoViews?: Viewers;
+  /** Design previews: masked chats in Recent chats */
+  demoMasked?: RecentMasked[];
   demoSetup?: { place: boolean; push: boolean; things: number; claimed: boolean; reward: number };
   /** Design previews: open the welcome tour */
   demoTour?: boolean;
@@ -146,6 +151,7 @@ export function HomeScreen({
       </header>
       </Sticky>
 
+      <RecentChats matches={matches} myId={profile.id} demoMasked={demoMasked} />
       <ProfileViews demo={demoViews} onKeys={refreshWallet} />
 
       <div className="lg:mt-8 lg:grid lg:grid-cols-12 lg:items-start lg:gap-8">
