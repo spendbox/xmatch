@@ -198,7 +198,8 @@ export function Composer({
           </button>
         </div>
       ) : (
-        <form onSubmit={submit} className="flex items-end gap-2 px-3 pt-3">
+        <form onSubmit={submit} className="px-3 pt-2.5 pb-1">
+          <div className="flex items-end gap-1 rounded-[26px] border border-line bg-cream p-1 transition focus-within:border-brand/40 focus-within:bg-surface focus-within:shadow-[0_0_0_4px_rgb(91_63_217/0.08)]">
           {hasPlus && (
             <span className="relative shrink-0">
             {tip && (
@@ -222,14 +223,14 @@ export function Composer({
               }}
               disabled={disabled}
               className={clsx(
-                "relative grid h-12 w-12 shrink-0 place-items-center rounded-full transition active:scale-95 disabled:opacity-50",
-                attachOpen ? "bg-brand text-white" : "bg-cream text-ink-soft",
+                "relative grid h-10 w-10 shrink-0 place-items-center rounded-full transition active:scale-95 disabled:opacity-50",
+                attachOpen ? "bg-brand text-white" : "bg-surface text-ink-soft shadow-[0_1px_3px_rgb(28_24_40/0.12)]",
               )}
               aria-label="More: games, gifts and more"
               aria-expanded={attachOpen}
             >
               <Plus size={22} className={clsx("transition-transform duration-200", attachOpen && "rotate-45")} />
-              {plusDot && <span className="absolute top-2 right-2 h-2.5 w-2.5 rounded-full bg-gold ring-2 ring-surface" />}
+              {plusDot && <span className="absolute top-1 right-1 h-2.5 w-2.5 rounded-full bg-gold ring-2 ring-surface" />}
               {tip && <span aria-hidden className="absolute inset-0 animate-ping rounded-full ring-2 ring-brand" />}
             </button>
             </span>
@@ -249,7 +250,7 @@ export function Composer({
             disabled={disabled}
             maxLength={2000}
             enterKeyHint="send"
-            className="max-h-[132px] min-h-12 min-w-0 flex-1 resize-none rounded-3xl border border-line bg-cream px-5 py-3 text-[16px] leading-snug outline-none focus:border-brand disabled:opacity-60"
+            className="no-scrollbar max-h-[132px] min-h-10 min-w-0 flex-1 resize-none bg-transparent px-2.5 py-[9px] text-[16px] leading-[22px] outline-none placeholder:text-muted disabled:opacity-60"
             aria-label="Message"
           />
           {hasText || !onSendVoice ? (
@@ -258,11 +259,11 @@ export function Composer({
               disabled={!hasText || disabled}
               aria-label="Send"
               className={clsx(
-                "grid h-12 w-12 shrink-0 place-items-center rounded-full transition active:scale-95",
-                hasText ? "animate-pop bg-brand text-white" : "bg-line text-muted",
+                "grid h-10 w-10 shrink-0 place-items-center rounded-full transition active:scale-95",
+                hasText ? "animate-pop bg-brand text-white shadow-[0_6px_16px_-6px_rgb(91_63_217/0.7)]" : "bg-line text-muted",
               )}
             >
-              <SendHorizontal size={20} />
+              <SendHorizontal size={18} />
             </button>
           ) : (
             <button
@@ -273,11 +274,12 @@ export function Composer({
               }}
               disabled={disabled}
               aria-label="Record a voice note"
-              className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-brand text-white transition active:scale-95 disabled:opacity-50"
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-brand text-white transition active:scale-95 disabled:opacity-50"
             >
-              <Mic size={21} />
+              <Mic size={19} />
             </button>
           )}
+          </div>
         </form>
       )}
 
