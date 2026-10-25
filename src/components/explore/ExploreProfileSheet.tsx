@@ -109,7 +109,7 @@ export function ExploreProfileSheet({
     setError(null);
     const { data, error: err } = await supabase.rpc("wave_person", { p_id: personId });
     setBusy(null);
-    if (err || !data) return setError(err?.message?.replace(/^.*?: /, "") || "Couldn't wave. Try again.");
+    if (err || !data) return setError((err?.message?.includes("NOT_ENOUGH_KEYS") ? keysError(err.message) : err?.message?.replace(/^.*?: /, "")) || "Couldn't wave. Try again.");
     const r = data as { kind: "waved" | "match" | "masked"; id?: string; again?: boolean; mutual?: boolean };
     onChanged?.();
     if (r.kind === "waved") {
@@ -136,6 +136,8 @@ export function ExploreProfileSheet({
   const profile = { id: p.id, display_name: p.name, gender: p.gender, bio: p.bio, interests: p.interests, photos: p.photos, things: p.things ?? [] } as Profile;
   const both = p.shared_words?.length ? `You both mentioned ${listOf(p.shared_words)}` : null;
   const fresh = !p.match_id && !p.masked_id;
+  // Waving first can cost Keys (set in admin); waving back is always free
+  const waveCost = p.wave_cost ?? 0;
   const unlockButton = (
     <button
       type="button"
@@ -259,7 +261,7 @@ export function ExploreProfileSheet({
                     loading={busy === "wave"}
                     loadingText="Waving…"
                     className="w-auto! shrink-0 px-5"
-                    aria-label={p.i_waved ? `You waved at ${first}` : `Wave at ${first}, free`}
+                    aria-label={p.i_waved ? `You waved at ${first}` : waveCost > 0 ? `Wave at ${first} for ${waveCost} Keys` : `Wave at ${first}, free`}
                   >
                     {p.i_waved ? (
                       <>
@@ -268,6 +270,11 @@ export function ExploreProfileSheet({
                     ) : (
                       <>
                         <span aria-hidden className="text-[20px]">👋</span> Wave
+                        {waveCost > 0 && (
+                          <span className="inline-flex items-center gap-0.5 text-[15px]">
+                            · <KeyCoin size={18} /> {waveCost}
+                          </span>
+                        )}
                       </>
                     )}
                   </Button>

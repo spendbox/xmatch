@@ -149,7 +149,7 @@ export function HomeScreen({
       </Sticky>
 
       <RecentChats matches={matches} />
-      <ProfileViews demo={demoViews} />
+      <ProfileViews demo={demoViews} onKeys={refreshWallet} />
 
       <div className="lg:mt-8 lg:grid lg:grid-cols-12 lg:items-start lg:gap-8">
       <div className="mt-5 lg:sticky lg:top-24 lg:col-span-7 lg:mt-0">

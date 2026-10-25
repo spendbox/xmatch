@@ -10,6 +10,8 @@ import { thumbFallback, thumbUrl } from "@/lib/photos";
 import type { Viewer, Viewers } from "@/lib/explore";
 import { Sheet } from "@/components/ui/Sheet";
 import { Spinner, tapFeedback } from "@/components/ui/Button";
+import { KeyCoin } from "@/components/keys/KeyIcon";
+import { keysError } from "@/components/keys/GiftSheet";
 import { ExploreProfileSheet } from "@/components/explore/ExploreProfileSheet";
 
 const ago = (iso: string) => {
@@ -37,7 +39,7 @@ function Face({ v, size }: { v: Pick<Viewer, "name" | "photo">; size: number }) 
 }
 
 /** Home: "10 people viewed you today". Tap to see who, and wave at them. */
-export function ProfileViews({ demo }: { demo?: Viewers }) {
+export function ProfileViews({ demo, onKeys }: { demo?: Viewers; /** Keys were spent on a wave */ onKeys?: () => void }) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const [data, setData] = useState<Viewers | null>(demo ?? null);
@@ -72,7 +74,8 @@ export function ProfileViews({ demo }: { demo?: Viewers }) {
     setBusy(v.id);
     const { data: r, error: err } = await supabase.rpc("wave_person", { p_id: v.id });
     setBusy(null);
-    if (err || !r) return setError(err?.message?.replace(/^.*?: /, "") || "Couldn't wave. Try again.");
+    if (err || !r) return setError((err?.message?.includes("NOT_ENOUGH_KEYS") ? keysError(err.message) : err?.message?.replace(/^.*?: /, "")) || "Couldn't wave. Try again.");
+    onKeys?.();
     const res = r as { kind: "waved" | "match" | "masked"; id?: string; again?: boolean; mutual?: boolean };
     if (res.kind === "waved") {
       if (!res.again) notify({ kind: "wave", personId: v.id });
@@ -120,7 +123,7 @@ export function ProfileViews({ demo }: { demo?: Viewers }) {
         open={open}
         onClose={() => setOpen(false)}
         title="Who viewed you"
-        subtitle="The last 7 days. Wave at someone for free: if you both wave, your chat opens free."
+        subtitle={`The last 7 days. Wave at someone${(data.wave_cost ?? 0) > 0 ? "" : " for free"}: if you both wave, your chat opens free.`}
         icon={<Eye size={20} />}
       >
         {error && <p className="mb-2 text-center text-[13px] font-medium text-chili">{error}</p>}
@@ -150,8 +153,13 @@ export function ProfileViews({ demo }: { demo?: Viewers }) {
                   <Check size={15} /> Waved
                 </span>
               ) : (
-                <button type="button" onClick={() => wave(v)} disabled={!!busy} className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border border-line-strong bg-surface px-3.5 text-[13.5px] font-bold text-ink active:scale-95 disabled:opacity-60" aria-label={`Wave at ${v.name.split(" ")[0]}`}>
+                <button type="button" onClick={() => wave(v)} disabled={!!busy} className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border border-line-strong bg-surface px-3.5 text-[13.5px] font-bold text-ink active:scale-95 disabled:opacity-60" aria-label={`Wave at ${v.name.split(" ")[0]}${(data.wave_cost ?? 0) > 0 ? ` for ${data.wave_cost} Keys` : ""}`}>
                   {busy === v.id ? <Spinner className="h-4 w-4" /> : <span aria-hidden>👋</span>} Wave
+                  {(data.wave_cost ?? 0) > 0 && (
+                    <span className="inline-flex items-center gap-0.5">
+                      · <KeyCoin size={15} /> {data.wave_cost}
+                    </span>
+                  )}
                 </button>
               )}
             </li>
@@ -163,7 +171,10 @@ export function ProfileViews({ demo }: { demo?: Viewers }) {
         <ExploreProfileSheet
           personId={person}
           onClose={() => setPerson(null)}
-          onChanged={load}
+          onChanged={() => {
+            void load();
+            onKeys?.();
+          }}
           demo={demo ? demoProfileOf(data.people.find((x) => x.id === person)) : undefined}
         />
       )}

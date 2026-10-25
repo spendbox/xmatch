@@ -27,6 +27,7 @@ type Settings = {
   /** 1: people can pay to see someone's other photos. 0: only once they're connected */
   explore_photos_paid: number;
   ghost_cost: number;
+  wave_cost: number;
   setup_reward: number;
 };
 export type InviteStats = { joined: number; joined_7d: number; buyers: number; keys_paid: number; top: { name: string | null; joined: number; earned: number }[] };
@@ -59,6 +60,7 @@ export function PricesManager({ settings, gifts, packs, invites = null }: { sett
           <SettingField k="explore_message_cost" label="Message someone" hint="Keys to start a chat with someone you're not connected to" value={settings.explore_message_cost} />
           <SettingField k="explore_photos_cost" label="Unlock photos" hint="Keys to see the rest of someone's photos (their main photo always shows)" value={settings.explore_photos_cost} />
           <SettingField k="ghost_cost" label="Ghost mode" hint="Keys for 30 days hidden from the Meet page" value={settings.ghost_cost} />
+          <SettingField k="wave_cost" label="Wave" hint="Keys to wave at someone (0 = free). Waving back is always free" value={settings.wave_cost} />
         </div>
         <SettingSwitch
           k="explore_photos_paid"

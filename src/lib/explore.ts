@@ -42,6 +42,8 @@ export type ExploreProfile = {
   /** You've waved at them / they've waved at you */
   i_waved?: boolean;
   waved_me?: boolean;
+  /** Keys to wave first (0: free); waving back is always free */
+  wave_cost?: number;
   match_id: string | null;
   shared_interests: string[];
   message_cost: number;
@@ -68,4 +70,4 @@ export type Viewer = {
   connected: boolean;
 };
 
-export type Viewers = { today: number; people: Viewer[] };
+export type Viewers = { today: number; people: Viewer[]; /** Keys to wave first (0: free) */ wave_cost?: number };

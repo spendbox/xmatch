@@ -29,6 +29,7 @@ const REASONS: Record<string, string> = {
   explore_message: "Messaged someone from Meet",
   explore_refund: "Keys back: no reply in 48 hours",
   ghost: "Ghost mode (30 days)",
+  wave: "Waved at someone",
   setup: "Getting set up",
   gift_received: "Received a gift",
   slow_reveal: "Saw a slow reveal early",
