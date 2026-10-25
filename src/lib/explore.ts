@@ -68,6 +68,8 @@ export type Viewer = {
   waved_me: boolean;
   i_waved: boolean;
   connected: boolean;
+  /** A masked chat you already have with them (you both waved, or one of you messaged) */
+  chat_id?: string | null;
 };
 
 export type Viewers = { today: number; people: Viewer[]; /** Keys to wave first (0: free) */ wave_cost?: number };

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { Check, Lightbulb, Lock, MessageCircle, RefreshCw, ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { notify } from "@/lib/pushClient";
+import { clearNotice, notify } from "@/lib/pushClient";
 import { buildOpeners, hintPage, type HintData } from "@/lib/chatHints";
 import type { ExploreProfile } from "@/lib/explore";
 import type { Profile } from "@/lib/types";
@@ -118,6 +118,7 @@ export function ExploreProfileSheet({
       return;
     }
     if (r.mutual) notify({ kind: "wave", personId });
+    clearNotice(`wave-${personId}`);
     openChat({ kind: r.kind, id: r.id! });
   }
 
