@@ -120,7 +120,7 @@ export function Sidebar({ user, badges }: { user: ChromeUser; badges?: MenuBadge
         <span aria-hidden className="absolute -top-8 -right-8 h-24 w-24 rounded-full bg-white/10" />
         <MaskIcon className="relative w-9 animate-float text-white" eyes="#6d4ff0" />
         <p className="relative mt-2 text-[15px] font-semibold">Masquerade</p>
-        <p className="relative text-[12px] text-white/75">A new masked pair every hour</p>
+        <p className="relative text-[12px] text-white/75">Meet someone new, masked</p>
       </Link>
 
       <div className="mt-auto pb-2">

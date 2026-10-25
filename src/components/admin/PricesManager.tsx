@@ -23,6 +23,7 @@ type Settings = {
   meet_hours: number;
   explore_message_cost: number;
   slow_reveal_cost: number;
+  gift_share_percent: number;
   explore_photos_cost: number;
   /** 1: people can pay to see someone's other photos. 0: only once they're connected */
   explore_photos_paid: number;
@@ -136,6 +137,15 @@ export function PricesManager({ settings, gifts, packs, invites = null }: { sett
       <section className="mt-6 rounded-3xl border border-line bg-surface p-5 shadow-card">
         <h2 className="text-[16px] font-semibold">Gifts</h2>
         <p className="mt-1 text-[13px] text-muted">Retired gifts can&apos;t be sent but still show in old chats.</p>
+        <div className="mt-4">
+          <SettingField
+            k="gift_share_percent"
+            label="Gift share (%)"
+            hint="How much of a gift's price the person who gets it receives as Keys. 50 means a 20 Key gift gives them 10 Keys. 0 to 100."
+            value={settings.gift_share_percent}
+            keysIcon={false}
+          />
+        </div>
         <ul className="mt-4 divide-y divide-line">
           {gifts.map((g) => (
             <GiftRow key={g.id} g={g} onSaved={refresh} />
