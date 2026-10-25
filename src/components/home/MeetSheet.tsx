@@ -6,6 +6,7 @@ import { Check, ChevronDown, ChevronRight, MapPin, SlidersHorizontal } from "luc
 import { INTENTS, MAX_SEEK, SEEK_OPTIONS, SPICE_LEVELS, seekingLabel, seekingList, toSeeking } from "@/lib/constants";
 import { Choice } from "@/components/ui/Choice";
 import { Sheet } from "@/components/ui/Sheet";
+import { usePrices } from "@/components/keys/usePrices";
 import { Button, tapFeedback } from "@/components/ui/Button";
 import { INTENT_ICONS, SEEKING_ICONS, SpiceIcon } from "@/components/ui/icons";
 import { INTENT_HINTS, SPICE_HINTS, type SetupPrefs } from "./prefs";
@@ -42,6 +43,8 @@ export function MeetSheet({
   const set = <K extends keyof SetupPrefs>(k: K, v: SetupPrefs[K]) => setPrefs((p) => ({ ...p, [k]: v }));
   const [whoOpen, setWhoOpen] = useState(false);
   const whoSet = prefs.seeking !== "anyone";
+  // Set in Admin -> Prices
+  const prices = usePrices();
   return (
     <Sheet
       open={open}
@@ -64,7 +67,7 @@ export function MeetSheet({
           </span>
           <span>
             <b className="text-ink">Only people online are paired.</b> Keep Dashpad open and we&apos;ll pair you with someone who fits as soon as
-            they&apos;re online too, up to once an hour, 6am to 2am.
+            they&apos;re online too, {gapText(prices.pair_gap_minutes)}, 6am to 2am.
           </span>
         </p>
         <Section title="I'm in the mood for">
@@ -241,4 +244,11 @@ function SeekPicker({ value, onChange }: { value: string; onChange: (v: string) 
       })}
     </div>
   );
+}
+
+/** "up to once an hour", "up to once every 30 minutes", "up to once every 2 hours" */
+function gapText(min: number) {
+  if (min === 60) return "up to once an hour";
+  if (min % 60 === 0) return `up to once every ${min / 60} hours`;
+  return `up to once every ${min} minutes`;
 }
