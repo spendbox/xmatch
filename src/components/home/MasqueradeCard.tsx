@@ -42,6 +42,8 @@ export function useMasqueradeHour(userId: string, initial: MasqueradeHour | null
       .channel(`hour-${userId}-${Math.random().toString(36).slice(2, 8)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "masquerade_sessions", filter: `user_a=eq.${userId}` }, () => load())
       .on("postgres_changes", { event: "*", schema: "public", table: "masquerade_sessions", filter: `user_b=eq.${userId}` }, () => load())
+      // A message (or voice note) in one of your masked chats: refresh the card so it shows
+      .on("postgres_changes", { event: "*", schema: "public", table: "masked_activity", filter: `user_id=eq.${userId}` }, () => load())
       .subscribe();
     const onFocus = () => document.visibilityState === "visible" && load();
     document.addEventListener("visibilitychange", onFocus);
@@ -117,7 +119,9 @@ export function MasqueradeCard({
         ? `${cur.their_alias} has made a choice. Your move.`
         : cur.messages === 0
           ? "Say hi before the hour is up."
-          : cur.last_from_them && cur.last_message
+          : cur.last_from_them && cur.last_kind === "audio"
+            ? "🎤 Sent you a voice note. Tap to listen"
+            : cur.last_from_them && cur.last_message
             ? `“${cur.last_message}”`
             : "Keep the vibe going."
     : "";

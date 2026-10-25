@@ -24,6 +24,8 @@ export type HourPair = {
   messages: number;
   last_message: string | null;
   last_from_them: boolean | null;
+  /** "text" or "audio" (a masked voice note) */
+  last_kind?: string | null;
 };
 
 export type PastPair = {
