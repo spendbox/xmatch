@@ -12,6 +12,7 @@ import { tapFeedback } from "@/components/ui/Button";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { INTENT_ICONS, SEEKING_ICONS, SpiceIcon } from "@/components/ui/icons";
 import type { SetupPrefs } from "./prefs";
+import type { Intent } from "@/lib/types";
 import { nameColor } from "@/lib/eventSpace";
 
 /** Keeps the hourly pairing state fresh: on open, on focus, when the hour turns, and when your pair changes. */
@@ -140,7 +141,7 @@ export function MasqueradeCard({
       ) : live && cur ? (
         // Your pair right now
         <>
-          <Face alias={cur.their_alias} />
+          <Face alias={cur.their_alias} intent={cur.intent} />
           <div className="relative min-w-0 flex-1">
             <p className="flex items-center gap-2">
               <span className="truncate text-[15px] leading-tight font-semibold">{cur.their_alias}</span>
@@ -244,14 +245,19 @@ export function MasqueradeCard({
   );
 }
 
-function Face({ alias, small }: { alias: string; small?: boolean }) {
+/** Your pair: the chat's mood (friends, dating, spicy) on their colour, instead of a mask */
+function Face({ alias, small, intent }: { alias: string; small?: boolean; intent?: Intent }) {
   return (
     <span
       className={clsx("relative grid shrink-0 place-items-center rounded-full ring-[3px] ring-white/20", small ? "h-10 w-10 opacity-80" : "h-11 w-11")}
       style={{ background: nameColor(alias) }}
-      title={small ? `You · ${alias}` : alias}
+      title={small ? `You · ${alias}` : intent ? `${alias} · ${intentLabel(intent)}` : alias}
     >
-      <MaskIcon className={clsx("text-white", small ? "w-6" : "w-7")} eyes={nameColor(alias)} />
+      {intent ? (
+        <span className="text-white">{INTENT_ICONS[intent]({ size: small ? 18 : 21, strokeWidth: 2.2 })}</span>
+      ) : (
+        <MaskIcon className={clsx("text-white", small ? "w-6" : "w-7")} eyes={nameColor(alias)} />
+      )}
     </span>
   );
 }

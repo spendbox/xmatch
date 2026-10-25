@@ -56,6 +56,17 @@ export function MeetSheet({
       }
     >
       <div className="space-y-6">
+        {/* How pairing works (live pairing, update 66) */}
+        <p className="flex items-start gap-2.5 rounded-2xl bg-mint-soft px-3.5 py-3 text-[13px] leading-snug text-ink-soft">
+          <span className="relative mt-1 flex h-2 w-2 shrink-0" aria-hidden>
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-mint opacity-60" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-mint" />
+          </span>
+          <span>
+            <b className="text-ink">Only people online are paired.</b> Keep Dashpad open and we&apos;ll pair you with someone who fits as soon as
+            they&apos;re online too, up to once an hour, 6am to 2am.
+          </span>
+        </p>
         <Section title="I'm in the mood for">
           <Choice
             name="I'm in the mood for"
