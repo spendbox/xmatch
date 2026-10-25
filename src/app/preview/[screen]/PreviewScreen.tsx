@@ -445,7 +445,7 @@ function ScreenBody({ screen }: { screen: string }) {
     case "voice-chat":
       return (
         <MasqueradeRoom
-          initial={session()}
+          initial={{ ...session(), hourly: true, status: "active", ends_at: new Date(now + 41 * 60_000).toISOString() }}
           initialMessages={[
             ...msgs,
             { id: 20, sender_id: "ada", kind: "audio", body: "🎤 Voice note", created_at: iso(120), media_meta: { key: "voice/s1/a.wav", duration: 9, voice: "deep" } },
