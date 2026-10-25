@@ -62,11 +62,8 @@ export function MasqueradeRoom({
   const known = paidChat?.started_by_me === false ? undefined : paidChat;
   const theyPaid = paidChat?.started_by_me === false;
   const theirName = known?.name || state.them.alias;
-  const whoSees = paidChat?.waved ? (
-    <>
-      You&apos;re <span className="font-semibold text-ink">{state.me.alias}</span>. You both waved, so you can both see each other&apos;s names. Photos stay hidden until you both unmask.
-    </>
-  ) : known?.name ? (
+  // Chats from a wave need no explaining: you both chose each other
+  const whoSees = paidChat?.waved ? null : known?.name ? (
     <>
       You&apos;re <span className="font-semibold text-ink">{state.me.alias}</span>. You found {known.name} on Meet, so you can see their name. They only see your mask name until you both unmask.
     </>
@@ -444,9 +441,11 @@ export function MasqueradeRoom({
 
       {/* Messages */}
       <div data-chat-scroll className="flex-1 overflow-y-auto overscroll-contain">
-        <p className="px-6 pt-5 text-center text-[13px] leading-relaxed text-muted">
-          {whoSees}
-        </p>
+        {whoSees && (
+          <p className="px-6 pt-5 text-center text-[13px] leading-relaxed text-muted">
+            {whoSees}
+          </p>
+        )}
         {refundNote && (
           <p className="mx-auto mt-2 flex w-fit max-w-[90%] items-center gap-1.5 rounded-full bg-mint-soft px-3 py-1 text-center text-[12px] font-medium text-ink-soft">
             <ShieldCheck size={14} className="shrink-0 text-mint" /> {refundNote}
@@ -663,9 +662,11 @@ export function MasqueradeRoom({
         </div>
       )}
 
-      <p className="mt-auto rounded-2xl bg-cream p-4 text-[13px] leading-relaxed text-muted">
-        {whoSees}
-      </p>
+      {whoSees && (
+        <p className="mt-auto rounded-2xl bg-cream p-4 text-[13px] leading-relaxed text-muted">
+          {whoSees}
+        </p>
+      )}
     </aside>
         </div>
   );
