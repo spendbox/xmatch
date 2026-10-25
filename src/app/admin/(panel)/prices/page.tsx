@@ -26,7 +26,9 @@ export default async function PricesPage() {
         meet_hours: s.meet_hours ?? 3,
         explore_message_cost: s.explore_message_cost ?? 15,
         explore_photos_cost: s.explore_photos_cost ?? 5,
+        explore_photos_paid: s.explore_photos_paid ?? 1,
         ghost_cost: s.ghost_cost ?? 100,
+        wave_cost: s.wave_cost ?? 0,
         setup_reward: s.setup_reward ?? 5,
         slow_reveal_cost: s.slow_reveal_cost ?? 10,
       }}

@@ -24,7 +24,10 @@ type Settings = {
   explore_message_cost: number;
   slow_reveal_cost: number;
   explore_photos_cost: number;
+  /** 1: people can pay to see someone's other photos. 0: only once they're connected */
+  explore_photos_paid: number;
   ghost_cost: number;
+  wave_cost: number;
   setup_reward: number;
 };
 export type InviteStats = { joined: number; joined_7d: number; buyers: number; keys_paid: number; top: { name: string | null; joined: number; earned: number }[] };
@@ -55,9 +58,16 @@ export function PricesManager({ settings, gifts, packs, invites = null }: { sett
         <p className="mt-1 text-[13px] text-muted">The Meet page. Both are free between people who are already connected.</p>
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
           <SettingField k="explore_message_cost" label="Message someone" hint="Keys to start a chat with someone you're not connected to" value={settings.explore_message_cost} />
-          <SettingField k="explore_photos_cost" label="Unlock photos" hint="Keys to unblur someone's photos and see the rest" value={settings.explore_photos_cost} />
+          <SettingField k="explore_photos_cost" label="Unlock photos" hint="Keys to see the rest of someone's photos (their main photo always shows)" value={settings.explore_photos_cost} />
           <SettingField k="ghost_cost" label="Ghost mode" hint="Keys for 30 days hidden from the Meet page" value={settings.ghost_cost} />
+          <SettingField k="wave_cost" label="Wave" hint="Keys to wave at someone (0 = free). Waving back is always free" value={settings.wave_cost} />
         </div>
+        <SettingSwitch
+          k="explore_photos_paid"
+          label="Let people pay to see someone's other photos"
+          hint="Main photos always show. Off: someone's other photos only show once you're both connected (people who already paid keep theirs)."
+          value={settings.explore_photos_paid}
+        />
       </section>
 
       <section className="mt-6 rounded-3xl border border-line bg-surface p-5 shadow-card">
@@ -181,6 +191,43 @@ function SettingField({ k, label, hint, value, keysIcon = true }: { k: keyof Set
         </button>
       </span>
     </label>
+  );
+}
+
+function SettingSwitch({ k, label, hint, value }: { k: keyof Settings; label: string; hint: string; value: number }) {
+  const [on, setOn] = useState(value > 0);
+  const [saved, setSaved] = useState(false);
+  const [busy, setBusy] = useState(false);
+  return (
+    <div className="mt-3 flex items-center gap-3 rounded-2xl bg-cream p-4">
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center gap-2 text-[14px] font-semibold">
+          {label} <Saved on={saved} />
+        </span>
+        <span className="mt-0.5 block text-[12px] text-muted">{hint}</span>
+      </span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={on}
+        aria-label={label}
+        disabled={busy}
+        onClick={async () => {
+          const next = !on;
+          setBusy(true);
+          setSaved(false);
+          const r = await saveSetting(k, next ? 1 : 0);
+          setBusy(false);
+          if (!r.error) {
+            setOn(next);
+            setSaved(true);
+          }
+        }}
+        className={clsx("relative h-8 w-14 shrink-0 rounded-full transition disabled:opacity-60", on ? "bg-brand" : "bg-line-strong")}
+      >
+        <span className={clsx("absolute top-1 h-6 w-6 rounded-full bg-white shadow transition-all", on ? "left-7" : "left-1")} />
+      </button>
+    </div>
   );
 }
 

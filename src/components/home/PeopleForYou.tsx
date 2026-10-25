@@ -52,8 +52,6 @@ export function PeopleForYou({ userId, demo }: { userId: string; demo?: ExploreL
                           alt=""
                           loading="lazy"
                           className="h-full w-full object-cover transition group-hover:scale-105"
-                          // Softly blurred until you're connected, like on Meet
-                          style={p.connected ? undefined : { filter: "blur(4px)", transform: "scale(1.15)" }}
                         />
                       ) : (
                         <span className="grid h-full w-full place-items-center text-[20px] font-semibold text-brand">{p.name.charAt(0)}</span>

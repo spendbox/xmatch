@@ -5,7 +5,7 @@ import { lockScroll } from "@/lib/scrollLock";
 import { thumbFallback, thumbUrl } from "@/lib/photos";
 import clsx from "clsx";
 import { createPortal } from "react-dom";
-import { ChevronLeft, ChevronRight, Quote, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Lock, Quote, X } from "lucide-react";
 import { GENDERS } from "@/lib/constants";
 import { promptOf } from "@/lib/things";
 import type { Profile } from "@/lib/types";
@@ -19,7 +19,7 @@ export function ProfileSheet({
   shared = [],
   extra,
   footer,
-  blur,
+  locked,
   commonWith,
 }: {
   profile: Profile;
@@ -30,8 +30,8 @@ export function ProfileSheet({
   extra?: React.ReactNode;
   /** Actions pinned to the bottom (e.g. Message) */
   footer?: React.ReactNode;
-  /** Soften the photos (Meet, before you've unlocked them) */
-  blur?: boolean;
+  /** Their other photos you can't see yet: shown as blurred, locked slides */
+  locked?: { count: number; note: string; action?: React.ReactNode };
   /** Their id: shows what you have in common ("You both…") */
   commonWith?: string;
 }) {
@@ -49,11 +49,13 @@ export function ProfileSheet({
   }, [onClose]);
 
   const photos = profile.photos ?? [];
+  const lockedCount = locked?.count ?? 0;
+  const slides = photos.length + lockedCount;
   const gender = GENDERS.find((g) => g.value === profile.gender)?.label;
   if (!mounted) return null;
 
   const prev = () => setI(Math.max(0, i - 1));
-  const next = () => setI(Math.min(photos.length - 1, i + 1));
+  const next = () => setI(Math.min(slides - 1, i + 1));
 
   return createPortal(
     <div
@@ -66,38 +68,56 @@ export function ProfileSheet({
       <div className={clsx("relative mx-auto max-w-md lg:grid lg:h-[min(88vh,780px)] lg:w-full lg:max-w-5xl lg:animate-pop lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:overflow-hidden lg:rounded-[32px] lg:bg-surface lg:pb-0 lg:shadow-lift", footer ? "pb-32" : "pb-12")}>
         {/* Photos */}
         <div className="relative overflow-hidden lg:h-full lg:bg-ink">
-          {photos[i] ? (
+          {i >= photos.length && lockedCount > 0 ? (
+            // A photo you can't see yet: their main photo, heavily blurred, with a lock
+            <div className="relative aspect-[4/5] w-full overflow-hidden bg-brand-ink lg:aspect-auto lg:h-full">
+              {photos[0] && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={thumbUrl(photos[0]) ?? photos[0]} onError={thumbFallback(photos[0])} alt="" className="absolute inset-0 h-full w-full object-cover" style={{ filter: "blur(28px)", transform: "scale(1.3)" }} />
+              )}
+            </div>
+          ) : photos[i] ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               key={photos[i]}
               src={photos[i]}
               alt={profile.display_name ?? ""}
               className="aspect-[4/5] w-full animate-fade-in object-cover lg:aspect-auto lg:h-full"
-              style={blur ? { filter: "blur(7px)", transform: "scale(1.08)" } : undefined}
             />
           ) : (
             <div className="aspect-[4/5] w-full bg-line lg:aspect-auto lg:h-full" />
           )}
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/30 lg:from-black/40" />
-          {photos.length > 1 && (
+          {i >= photos.length && locked && (
+            <div className="absolute inset-0 z-[1] grid place-items-center p-8 text-center text-white">
+              <div>
+                <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-white/20 backdrop-blur"><Lock size={24} /></span>
+                <p className="mt-3 text-[16px] font-semibold">{lockedCount} more {lockedCount === 1 ? "photo" : "photos"}</p>
+                <p className="mt-1 text-[13.5px] text-white/80">{locked.note}</p>
+                {locked.action && <div className="mt-4 flex justify-center">{locked.action}</div>}
+              </div>
+            </div>
+          )}
+          {slides > 1 && (
             <>
-              <div className="absolute inset-x-3 top-3 flex gap-1">
-                {photos.map((_, n) => (
+              <div className="absolute inset-x-3 top-3 z-[2] flex gap-1">
+                {Array.from({ length: slides }, (_, n) => (
                   <span key={n} className={`h-1 flex-1 rounded-full transition ${n === i ? "bg-white" : "bg-white/40"}`} />
                 ))}
               </div>
-              <button className="absolute inset-y-0 left-0 w-1/2 lg:hidden" aria-label="Previous photo" onClick={prev} />
-              <button className="absolute inset-y-0 right-0 w-1/2 lg:hidden" aria-label="Next photo" onClick={next} />
+              {/* Tap the sides to move (narrower on a locked photo, so its button stays tappable) */}
+              <button className={clsx("absolute inset-y-0 left-0 z-[2] lg:hidden", i >= photos.length ? "w-1/5" : "w-1/2")} aria-label="Previous photo" onClick={prev} />
+              <button className={clsx("absolute inset-y-0 right-0 z-[2] lg:hidden", i >= photos.length ? "w-1/5" : "w-1/2")} aria-label="Next photo" onClick={next} />
               {/* Desktop arrows and thumbnails */}
               <button onClick={prev} disabled={i === 0} aria-label="Previous photo"
-                className="absolute top-1/2 left-4 hidden h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-ink shadow transition hover:bg-white disabled:opacity-0 lg:grid">
+                className="absolute top-1/2 left-4 z-[2] hidden h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-ink shadow transition hover:bg-white disabled:opacity-0 lg:grid">
                 <ChevronLeft size={22} />
               </button>
-              <button onClick={next} disabled={i === photos.length - 1} aria-label="Next photo"
-                className="absolute top-1/2 right-4 hidden h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-ink shadow transition hover:bg-white disabled:opacity-0 lg:grid">
+              <button onClick={next} disabled={i === slides - 1} aria-label="Next photo"
+                className="absolute top-1/2 right-4 z-[2] hidden h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-ink shadow transition hover:bg-white disabled:opacity-0 lg:grid">
                 <ChevronRight size={22} />
               </button>
-              <div className="absolute inset-x-0 bottom-5 hidden justify-center gap-2 lg:flex">
+              <div className="absolute inset-x-0 bottom-5 z-[2] hidden justify-center gap-2 lg:flex">
                 {photos.map((p, n) => (
                   <button key={p} onClick={() => setI(n)} aria-label={`Photo ${n + 1}`}
                     className={`h-14 w-14 overflow-hidden rounded-xl border-2 transition ${n === i ? "border-white" : "border-transparent opacity-70 hover:opacity-100"}`}>
@@ -105,13 +125,19 @@ export function ProfileSheet({
                     <img src={thumbUrl(p) ?? p} onError={thumbFallback(p)} alt="" className="h-full w-full object-cover" />
                   </button>
                 ))}
+                {Array.from({ length: lockedCount }, (_, n) => (
+                  <button key={`locked-${n}`} onClick={() => setI(photos.length + n)} aria-label={`Locked photo ${n + 1}`}
+                    className={`grid h-14 w-14 place-items-center rounded-xl border-2 bg-white/15 text-white backdrop-blur transition ${photos.length + n === i ? "border-white" : "border-transparent opacity-70 hover:opacity-100"}`}>
+                    <Lock size={18} />
+                  </button>
+                ))}
               </div>
             </>
           )}
-          <button onClick={onClose} className="absolute top-6 left-4 grid h-10 w-10 place-items-center rounded-full bg-white/90 text-ink shadow active:scale-95 lg:hidden" aria-label="Back">
+          <button onClick={onClose} className="absolute top-6 left-4 z-[3] grid h-10 w-10 place-items-center rounded-full bg-white/90 text-ink shadow active:scale-95 lg:hidden" aria-label="Back">
             <ChevronLeft size={22} />
           </button>
-          <button onClick={onClose} className="absolute top-6 right-4 grid h-10 w-10 place-items-center rounded-full bg-white/90 text-ink shadow active:scale-95 lg:hidden" aria-label="Close">
+          <button onClick={onClose} className="absolute top-6 right-4 z-[3] grid h-10 w-10 place-items-center rounded-full bg-white/90 text-ink shadow active:scale-95 lg:hidden" aria-label="Close">
             <X size={20} />
           </button>
           <div className="pointer-events-none absolute inset-x-0 bottom-0 p-5 text-white lg:hidden">

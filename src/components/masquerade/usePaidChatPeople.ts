@@ -9,6 +9,12 @@ export type PaidChatPerson = {
   photo: string | null;
   /** true: you paid and can see their name. false: they paid to message you, so they can see yours */
   started_by_me?: boolean;
+  /** You both waved: you can both see each other's names */
+  waved?: boolean;
+  /** You paid: when your Keys come back if they never reply (null once they have, or if it was free) */
+  refund_at?: string | null;
+  refunded?: boolean;
+  paid_keys?: number;
 };
 
 /** Masked chats someone paid to start on Meet (you or them), by chat id. Empty until loaded (or if none). */

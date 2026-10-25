@@ -37,6 +37,13 @@ export type ExploreProfile = {
   photos: string[];
   photo_count: number;
   photos_unlocked: boolean;
+  /** Whether you can pay Keys to see their other photos (otherwise: once you're connected) */
+  photos_paid?: boolean;
+  /** You've waved at them / they've waved at you */
+  i_waved?: boolean;
+  waved_me?: boolean;
+  /** Keys to wave first (0: free); waving back is always free */
+  wave_cost?: number;
   match_id: string | null;
   shared_interests: string[];
   message_cost: number;
@@ -50,3 +57,17 @@ export type ExploreProfile = {
   /** Words you both used in your things */
   shared_words?: string[];
 };
+
+/** Someone who viewed your profile */
+export type Viewer = {
+  id: string;
+  name: string;
+  photo: string | null;
+  online: boolean;
+  seen_at: string;
+  waved_me: boolean;
+  i_waved: boolean;
+  connected: boolean;
+};
+
+export type Viewers = { today: number; people: Viewer[]; /** Keys to wave first (0: free) */ wave_cost?: number };

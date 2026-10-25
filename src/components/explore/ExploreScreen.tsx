@@ -45,7 +45,7 @@ export function ExploreScreen({ initial, demoProfile, userId }: { initial: Explo
   return (
     <main className="mx-auto max-w-md px-5 pt-6 lg:max-w-6xl lg:px-10 lg:pt-10">
       <h1 className="font-display text-[34px] leading-tight font-semibold tracking-tight lg:text-[40px]">Meet</h1>
-      <p className="mt-1 text-[15px] text-muted">People like you. Photos stay soft until you unlock them or connect.</p>
+      <p className="mt-1 text-[15px] text-muted">People like you. Tap someone to see more, wave or say hi.</p>
 
       <Sticky className="mt-3">
       <label className="relative block lg:max-w-md">
@@ -91,8 +91,6 @@ export function ExploreScreen({ initial, demoProfile, userId }: { initial: Explo
                     alt=""
                     loading="lazy"
                     className="absolute inset-0 h-full w-full object-cover"
-                    // Softly blurred until you're connected, so you can just make them out
-                    style={p.connected ? undefined : { filter: "blur(7px)", transform: "scale(1.1)" }}
                   />
                 ) : (
                   <span className="absolute inset-0 grid place-items-center text-[40px] font-semibold text-brand">{p.name.charAt(0)}</span>
