@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { Handshake, MessageCircle, Pencil } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -127,12 +128,25 @@ export function MasqueradeCard({
     : "Masquerade settings";
   const chip = "grid h-7 w-7 shrink-0 place-items-center rounded-full bg-white/15";
 
+  // Tapping anywhere on the card: open your pair's chat, or your Masquerade settings.
+  // (The switch and buttons inside still do their own thing.)
+  const router = useRouter();
+  const cardHref = live && cur ? `/masquerade/${cur.id}` : cur?.status === "matched" && cur.match_id ? `/matches/${cur.match_id}` : null;
+  function tapCard(e: React.MouseEvent) {
+    if ((e.target as HTMLElement).closest("a, button")) return;
+    if (!hour) return;
+    tapFeedback();
+    if (cardHref) router.push(cardHref);
+    else onSettings?.();
+  }
+
   // One small row, about the size of the "viewed you" card
   return (
     <section
       data-tour="masquerade-card"
       aria-label="Masquerade"
-      className="relative flex min-h-[68px] items-center gap-3 overflow-hidden rounded-[24px] bg-gradient-to-br from-brand via-[#6d4ff0] to-[#8f6bff] px-3.5 py-3 text-white shadow-[0_14px_30px_-16px_rgb(91_63_217/0.8)]"
+      onClick={tapCard}
+      className="relative flex min-h-[68px] cursor-pointer items-center gap-3 overflow-hidden rounded-[24px] bg-gradient-to-br from-brand via-[#6d4ff0] to-[#8f6bff] px-3.5 py-3 text-white shadow-[0_14px_30px_-16px_rgb(91_63_217/0.8)] transition active:scale-[0.99]"
     >
       <div aria-hidden className="absolute -top-10 -right-8 h-24 w-24 rounded-full bg-white/10" />
 
