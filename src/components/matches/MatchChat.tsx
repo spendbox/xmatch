@@ -13,6 +13,7 @@ import { intentLabel } from "@/lib/constants";
 import { Avatar } from "@/components/ui/Avatar";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { MessageList } from "@/components/chat/MessageList";
+import { ChatHints } from "@/components/chat/ChatHints";
 import { Composer } from "@/components/chat/Composer";
 import { ReportSheet } from "@/components/masquerade/ReportSheet";
 import { readMediaInfo, removeChatMedia, uploadChatMedia } from "@/lib/chatMedia";
@@ -69,6 +70,19 @@ export function MatchChat({
     masked: false,
     peek: lastFromThem?.body ?? null,
   });
+
+  // Ideas to say: at the start, and when the chat has been quiet for 12 hours
+  const [hintDraft, setHintDraft] = useState<{ text: string; key: number } | null>(null);
+  const [hintsOn, setHintsOn] = useState(true);
+  const lastText = [...messages].reverse().find((m) => m.sender_id && m.kind === "text");
+  const iSaid = messages.some((m) => m.sender_id === myId && m.kind === "text");
+  const quietNow = !lastText || Date.now() - new Date(lastText.created_at).getTime() > 12 * 3600_000;
+  const [, tick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => tick((n) => n + 1), 30_000);
+    return () => clearInterval(t);
+  }, []);
+  const showHints = !iSaid || quietNow;
 
   // Opening the chat (and anything that arrives while it's open) counts as read
   useEffect(() => {
@@ -274,7 +288,10 @@ export function MatchChat({
       </div>
 
       {games.banner}
+      <ChatHints other={other.id} theirInterests={other.interests ?? []} show={showHints} onPick={(text) => setHintDraft({ text, key: Date.now() })} onVisible={setHintsOn} />
       <Composer
+        draft={hintDraft}
+          noTip={hintsOn}
         plusDot={games.live}
         actions={[
           ...(games.canPlay ? [{ key: "game", label: games.live ? "Back to game" : "Play a game", icon: <Gamepad2 size={24} strokeWidth={1.75} />, tone: "bg-brand-soft text-brand", onClick: games.play }] : []),
