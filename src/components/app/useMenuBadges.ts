@@ -18,6 +18,9 @@ export const MenuBadgesContext = createContext<MenuBadges | undefined>(undefined
 export const useMenuBadgesContext = () => useContext(MenuBadgesContext);
 
 /** Tell the menu to re-check (e.g. after a chat was opened and read). */
+/** Fired when one of your chats changes (a new message), so lists on screen can refresh */
+export const CHATS_EVENT = "dp:chats";
+
 export function refreshMenuBadges() {
   window.dispatchEvent(new Event("dp:badges"));
 }
@@ -67,16 +70,23 @@ export function useMenuBadges(userId: string): MenuBadges {
   }, [path, soon]);
 
   useEffect(() => {
+    // A chat changed (a message arrived or was sent): update the dots, and tell lists on screen (Home, Chats)
+    const changed = () => {
+      soon();
+      window.dispatchEvent(new Event(CHATS_EVENT));
+    };
     const ch = supabase
       .channel(`badges-${userId}-${Math.random().toString(36).slice(2, 8)}`)
       // Only rows that are yours: a new message bumps its chat's last_message_at, so watching
       // your own chats is enough (watching every message on Dashpad costs a lot as we grow)
-      .on("postgres_changes", { event: "*", schema: "public", table: "matches", filter: `user_a=eq.${userId}` }, soon)
-      .on("postgres_changes", { event: "*", schema: "public", table: "matches", filter: `user_b=eq.${userId}` }, soon)
-      .on("postgres_changes", { event: "*", schema: "public", table: "event_chats", filter: `user_a=eq.${userId}` }, soon)
-      .on("postgres_changes", { event: "*", schema: "public", table: "event_chats", filter: `user_b=eq.${userId}` }, soon)
-      .on("postgres_changes", { event: "*", schema: "public", table: "feed_chats", filter: `user_a=eq.${userId}` }, soon)
-      .on("postgres_changes", { event: "*", schema: "public", table: "feed_chats", filter: `user_b=eq.${userId}` }, soon)
+      .on("postgres_changes", { event: "*", schema: "public", table: "matches", filter: `user_a=eq.${userId}` }, changed)
+      .on("postgres_changes", { event: "*", schema: "public", table: "matches", filter: `user_b=eq.${userId}` }, changed)
+      .on("postgres_changes", { event: "*", schema: "public", table: "event_chats", filter: `user_a=eq.${userId}` }, changed)
+      .on("postgres_changes", { event: "*", schema: "public", table: "event_chats", filter: `user_b=eq.${userId}` }, changed)
+      .on("postgres_changes", { event: "*", schema: "public", table: "feed_chats", filter: `user_a=eq.${userId}` }, changed)
+      .on("postgres_changes", { event: "*", schema: "public", table: "feed_chats", filter: `user_b=eq.${userId}` }, changed)
+      // Masked chats: one small row per person, touched on every message (update 65)
+      .on("postgres_changes", { event: "*", schema: "public", table: "masked_activity", filter: `user_id=eq.${userId}` }, changed)
       .subscribe();
     const onFocus = () => document.visibilityState === "visible" && soon();
     window.addEventListener("dp:badges", soon);

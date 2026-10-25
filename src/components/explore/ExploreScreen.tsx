@@ -9,6 +9,7 @@ import { tapFeedback, Spinner } from "@/components/ui/Button";
 import { Sticky } from "@/components/ui/Sticky";
 import { ExploreProfileSheet } from "./ExploreProfileSheet";
 import { useMeetList } from "./useMeetList";
+import { isOnline, usePresence } from "@/lib/usePresence";
 
 /** The Meet page: your closest matches in a grid, and a search to find anyone by name */
 export function ExploreScreen({ initial, demoProfile, userId }: { initial: ExploreList | null; demoProfile?: ExploreProfile; userId?: string }) {
@@ -39,7 +40,10 @@ export function ExploreScreen({ initial, demoProfile, userId }: { initial: Explo
   }, [q, supabase]);
 
 
-  const people = results ?? list?.people ?? [];
+  const shownList = results ?? list?.people ?? [];
+  // Who's online is checked live (every 30s), the same way as in Chats
+  const { seen, now } = usePresence(initial && !userId ? [] : shownList.slice(0, 60).map((p) => p.id));
+  const people = shownList.map((p) => (p.id in seen ? { ...p, online: isOnline(seen[p.id], now) } : p));
   const searchingNow = results !== null || searching;
 
   return (

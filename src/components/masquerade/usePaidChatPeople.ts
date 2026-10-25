@@ -20,9 +20,9 @@ export type PaidChatPerson = {
 };
 
 /** Masked chats someone paid to start on Meet (you or them), by chat id. Empty until loaded (or if none). */
-export function usePaidChatPeople(skip?: boolean) {
+export function usePaidChatPeople(skip?: boolean, initial?: Record<string, PaidChatPerson>) {
   const supabase = useMemo(() => createClient(), []);
-  const [people, setPeople] = useState<Record<string, PaidChatPerson>>({});
+  const [people, setPeople] = useState<Record<string, PaidChatPerson>>(initial ?? {});
   useEffect(() => {
     if (skip) return;
     supabase.rpc("paid_chat_people").then(({ data, error }) => {

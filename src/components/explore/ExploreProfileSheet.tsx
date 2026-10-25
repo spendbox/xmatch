@@ -7,6 +7,7 @@ import { Check, Lightbulb, Lock, MessageCircle, RefreshCw, ShieldCheck } from "l
 import { createClient } from "@/lib/supabase/client";
 import { clearNotice, notify } from "@/lib/pushClient";
 import { buildOpeners, hintPage, type HintData } from "@/lib/chatHints";
+import { isOnline, usePresence } from "@/lib/usePresence";
 import type { ExploreProfile } from "@/lib/explore";
 import type { Profile } from "@/lib/types";
 import { Button, Spinner, tapFeedback } from "@/components/ui/Button";
@@ -43,6 +44,8 @@ export function ExploreProfileSheet({
   const [page, setPage] = useState(0);
   const [picked, setPicked] = useState<string | null>(null);
   const [seed] = useState(() => Math.floor(Math.random() * 1000));
+  // Online, checked the same way as everywhere else
+  const presence = usePresence(demo ? [] : [personId]);
 
   useEffect(() => {
     if (demo) return;
@@ -165,7 +168,7 @@ export function ExploreProfileSheet({
       commonWith={p.id}
       shared={p.shared_interests}
       onClose={onClose}
-      note={[p.online ? "Online now" : null, p.place, both].filter(Boolean).join(" · ") || undefined}
+      note={[(personId in presence.seen ? isOnline(presence.seen[personId], presence.now) : p.online) ? "Online now" : null, p.place, both].filter(Boolean).join(" · ") || undefined}
       extra={
         <>
           {fresh && p.waved_me && (

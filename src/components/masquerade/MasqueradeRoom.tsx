@@ -22,7 +22,7 @@ import { Composer } from "@/components/chat/Composer";
 import { refreshMenuBadges } from "@/components/app/useMenuBadges";
 import { YouBoth } from "@/components/matches/YouBoth";
 import { ExploreProfileSheet } from "@/components/explore/ExploreProfileSheet";
-import { usePaidChatPeople } from "./usePaidChatPeople";
+import { usePaidChatPeople, type PaidChatPerson } from "./usePaidChatPeople";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { Chilis } from "@/components/ui/Spice";
 import { TimerRing } from "./TimerRing";
@@ -43,6 +43,7 @@ export function MasqueradeRoom({
   demo,
   eventId = null,
   pact = null,
+  initialPaid,
 }: {
   initial: MasqueradeState;
   initialMessages: ChatMessage[];
@@ -51,13 +52,16 @@ export function MasqueradeRoom({
   eventId?: string | null;
   /** Set when this chat is a pact match: it carries a gold star */
   pact?: string | null;
+  /** Who's who in chats started from Meet, fetched with the page */
+  initialPaid?: Record<string, PaidChatPerson>;
 }) {
   const shell = useKeyboardSafe<HTMLDivElement>();
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [state, setState] = useState(initial);
-  // A chat you paid to start on Meet: you saw their name and photo there, so their name shows (photo blurred)
-  const paidPeople = usePaidChatPeople(!!demo);
+  // A chat you paid to start on Meet (or you both waved): you saw their name and main photo there, so they show.
+  // Loaded with the page, so the chat opens in the right layout straight away.
+  const paidPeople = usePaidChatPeople(!!demo, initialPaid);
   const paidChat = paidPeople[state.id];
   // You paid: their name and blurred photo. They paid: they can see your name, you can't see theirs.
   const known = paidChat?.started_by_me === false ? undefined : paidChat;
@@ -79,6 +83,20 @@ export function MasqueradeRoom({
   );
   const [messages, setMessages] = useState(initialMessages);
   const [profileOpen, setProfileOpen] = useState(false);
+  // Notes in the chat are saved with mask names. Show "You" for you, and their real name when you know it.
+  const shownMessages = useMemo(() => {
+    const mine = state.me.alias;
+    const theirs = state.them.alias;
+    return messages.map((m) => {
+      if (m.kind !== "system" || !m.body) return m;
+      let body = m.body;
+      if (body.startsWith(`${mine} unmasked`)) body = `You unmasked. If ${theirName} unmasks too, you're connected.`;
+      else if (body.startsWith(`${mine} found you on Meet`)) body = `You started this chat from Meet. ${theirName} sees your mask name until you both unmask.`;
+      else if (body.startsWith(`${mine} `)) body = `You ${body.slice(mine.length + 1)}`;
+      else if (theirName !== theirs && body.includes(theirs)) body = body.split(theirs).join(theirName);
+      return body === m.body ? m : { ...m, body };
+    });
+  }, [messages, state.me.alias, state.them.alias, theirName]);
   // You paid to start this chat: your Keys come back if they never reply in 48 hours
   const theyReplied = messages.some((m) => m.sender_id && m.sender_id !== state.me.id);
   const keysWord = (n?: number) => `${n ?? ""} ${n === 1 ? "Key" : "Keys"}`.trim();
@@ -339,7 +357,7 @@ export function MasqueradeRoom({
             {known?.photo ? (
               <span className="absolute inset-0 overflow-hidden rounded-full">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={known.photo} alt="" className="h-full w-full scale-110 object-cover blur-md" />
+                <img src={known.photo} alt="" className="h-full w-full object-cover" />
               </span>
             ) : (
               <MaskIcon className="w-7" eyes="#1c1828" />
@@ -471,7 +489,7 @@ export function MasqueradeRoom({
           </div>
         )}
         <MessageList
-          messages={messages}
+          messages={shownMessages}
           myId={state.me.id}
           nameOf={(id) => (id === state.me.id ? "You" : theirName)}
           onReply={setReplyTo}
@@ -622,7 +640,7 @@ export function MasqueradeRoom({
         >
           {known?.photo ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={known.photo} alt="" className="h-full w-full scale-110 object-cover blur-lg" />
+            <img src={known.photo} alt="" className="h-full w-full object-cover" />
           ) : (
             <MaskIcon className="w-14" eyes="#1c1828" />
           )}
