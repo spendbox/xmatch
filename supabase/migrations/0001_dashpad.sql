@@ -10072,3 +10072,266 @@ begin
 end $$;
 revoke execute on function public.in_common(uuid, uuid) from public, anon;
 grant execute on function public.in_common(uuid, uuid) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Part 59: An hourly pair where you didn't both send a message can be paired again,
+-- but only after 7 days, so it isn't the same silent person every hour. Pairs that
+-- talked, unmasked, or where someone tapped Let go still never repeat.
+-- ---------------------------------------------------------------------------
+create or replace function public.run_hourly_pairing_batch(p_budget int default 3000) returns json
+language plpgsql security definer set search_path = public as $$
+declare
+  h timestamptz := date_trunc('hour', now());
+  hr masquerade_hours;
+  r record;
+  partner record;
+  ids uuid[];
+  pid uuid;
+  sid uuid;
+  a1 text;
+  q text;
+  n int := 0;
+  lvl smallint;
+  t int;
+  left_n int;
+begin
+  -- Close chats from hours that have ended
+  for r in select id from masquerade_sessions
+           where hour_at is not null and status = 'active' and reopened_at is null and ends_at <= now()
+           limit 2000 loop
+    perform public.finalize_masquerade(r.id);
+  end loop;
+
+  if not public.pairing_hour_open(h) then return json_build_object('made', 0, 'left', 0); end if;
+  perform pg_advisory_xact_lock(515151);
+  select * into hr from masquerade_hours where hour_at = h;
+  if not found then
+    insert into masquerade_hours (hour_at) values (h);
+    -- Too late in the hour to start a fair chat: wait for the next one
+    if now() > h + interval '45 minutes' then
+      update masquerade_hours set note = 'late', finished_at = now() where hour_at = h;
+      return json_build_object('made', 0, 'left', 0);
+    end if;
+    delete from hour_pool where hour_at < h;
+    insert into hour_pool (hour_at, id, gender, pref_intent, pref_seeking, pref_age_min, pref_age_max, pref_spice,
+                           interests, thing_keys, age, place_country, place_region, place_continent, rs, rnd)
+    select h, p.id, p.gender, p.pref_intent, p.pref_seeking, p.pref_age_min, p.pref_age_max, p.pref_spice,
+      p.interests, p.thing_keys, public.age_years(p.birthdate), p.place_country, p.place_region, p.place_continent,
+      coalesce(public.reply_seconds(p.id), 1800), random()
+    from profiles p
+    left join accounts_private a on a.user_id = p.id
+    where p.open_to_masquerade
+      and p.last_seen_at > now() - interval '24 hours'
+      and p.display_name is not null and p.birthdate is not null and p.gender is not null
+      and cardinality(p.photos) > 0
+      and a.banned_at is null;
+    -- Fresh numbers about the list, so finding partners uses the indexes
+    analyze public.hour_pool;
+    update masquerade_hours set eligible = (select count(*) from hour_pool where hour_at = h) where hour_at = h;
+  elsif hr.finished_at is not null then
+    return json_build_object('made', 0, 'left', 0);
+  elsif now() > h + interval '45 minutes' then
+    -- Ran out of time this hour: whoever is left waits for the next one
+    update masquerade_hours set finished_at = now(), note = coalesce(note, 'unfinished') where hour_at = h;
+    delete from hour_pool where hour_at = h;
+    return json_build_object('made', 0, 'left', 0);
+  end if;
+
+  -- Quick repliers choose first, so they get the best fits
+  for r in select * from hour_pool where hour_at = h and not tried order by rs, rnd limit greatest(1, p_budget) loop
+    -- Already taken as someone's partner in this batch
+    continue when not exists (select 1 from hour_pool where hour_at = h and id = r.id);
+    update hour_pool set tried = true where hour_at = h and id = r.id;
+    pid := null;
+    -- Closest first: same state, then same country, then same continent, then anywhere
+    for t in 1..4 loop
+      ids := null;
+      if t = 1 then
+        select array_agg(c.id) into ids from (
+          select c.id from hour_pool c
+          where c.hour_at = h and c.pref_intent = r.pref_intent and c.place_country = r.place_country and c.place_region = r.place_region
+            and c.id <> r.id
+            and public.gender_fits(r.pref_seeking, c.gender) and public.gender_fits(c.pref_seeking, r.gender)
+            and c.age between r.pref_age_min and r.pref_age_max and r.age between c.pref_age_min and c.pref_age_max
+          limit 100) c;
+      elsif t = 2 then
+        select array_agg(c.id) into ids from (
+          select c.id from hour_pool c
+          where c.hour_at = h and c.pref_intent = r.pref_intent and c.place_country = r.place_country
+            and c.id <> r.id
+            and public.gender_fits(r.pref_seeking, c.gender) and public.gender_fits(c.pref_seeking, r.gender)
+            and c.age between r.pref_age_min and r.pref_age_max and r.age between c.pref_age_min and c.pref_age_max
+          limit 100) c;
+      elsif t = 3 then
+        select array_agg(c.id) into ids from (
+          select c.id from hour_pool c
+          where c.hour_at = h and c.pref_intent = r.pref_intent and c.place_continent = r.place_continent
+            and c.id <> r.id
+            and public.gender_fits(r.pref_seeking, c.gender) and public.gender_fits(c.pref_seeking, r.gender)
+            and c.age between r.pref_age_min and r.pref_age_max and r.age between c.pref_age_min and c.pref_age_max
+          limit 100) c;
+      else
+        select array_agg(c.id) into ids from (
+          select c.id from hour_pool c
+          where c.hour_at = h and c.pref_intent = r.pref_intent
+            and c.id <> r.id
+            and public.gender_fits(r.pref_seeking, c.gender) and public.gender_fits(c.pref_seeking, r.gender)
+            and c.age between r.pref_age_min and r.pref_age_max and r.age between c.pref_age_min and c.pref_age_max
+          limit 100) c;
+      end if;
+      continue when ids is null;
+      -- The 15 with the most in common (interests, and words from "things about me"), then the safety checks
+      select c.* into partner from (
+        select c.*, public.shared_count(r.interests, c.interests) + 2 * least(public.shared_count(r.thing_keys, c.thing_keys), 5) as fit
+        from hour_pool c
+        where c.hour_at = h and c.id = any(ids)
+        order by fit desc, (c.rs < 600) desc, c.rs, c.rnd
+        limit 15
+      ) c
+      where not public.is_blocked(r.id, c.id)
+        and not public.already_matched(r.id, c.id)
+        -- New people every time. A pair that never both talked can meet again, but not
+        -- for 7 days, so the same quiet person doesn't come back hour after hour.
+        and not exists (select 1 from masquerade_sessions s
+                        where s.hour_at is not null
+                          and ((s.user_a = r.id and s.user_b = c.id) or (s.user_a = c.id and s.user_b = r.id))
+                          and not (s.status = 'ended' and s.ended_reason = 'quiet' and s.hour_at < now() - interval '7 days'))
+      order by c.fit desc, (c.rs < 600) desc, c.rs, c.rnd
+      limit 1;
+      if found then
+        pid := partner.id;
+        exit;
+      end if;
+    end loop;
+    continue when pid is null;
+
+    a1 := public.random_alias();
+    lvl := round((r.pref_spice + partner.pref_spice) / 2.0)::smallint;
+    insert into masquerade_sessions (user_a, user_b, intent, spice_a, spice_b, spice_level, alias_a, alias_b, started_at, ends_at, hour_at)
+    values (r.id, partner.id, r.pref_intent, r.pref_spice, partner.pref_spice, lvl, a1, public.random_alias(a1), now(), h + interval '1 hour', h)
+    returning id into sid;
+    q := public.pick_icebreaker(sid, lvl, null);
+    if q is not null then
+      insert into masquerade_messages (session_id, kind, body) values (sid, 'icebreaker', q);
+    end if;
+    delete from hour_pool where hour_at = h and id in (r.id, partner.id);
+    n := n + 1;
+  end loop;
+
+  select count(*) into left_n from hour_pool where hour_at = h and not tried;
+  update masquerade_hours set pairs = pairs + n, finished_at = case when left_n = 0 then now() end where hour_at = h;
+  if left_n = 0 then delete from hour_pool where hour_at = h; end if;
+  return json_build_object('made', n, 'left', left_n);
+end $$;
+revoke execute on function public.run_hourly_pairing_batch(int) from public, anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Part 60: "Ask them about…" hints in chats. What you have in common now also says
+-- where you picked differently in This or That, so a chat can suggest a playful
+-- opener ("They picked Tea, you picked Coffee"). Same privacy rules as before.
+-- ---------------------------------------------------------------------------
+create or replace function public.in_common(p_other uuid default null, p_session uuid default null) returns json
+language plpgsql stable security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  other uuid := p_other;
+  s masquerade_sessions;
+  me profiles;
+  them profiles;
+  connected boolean;
+  tot_same int := 0;
+  tot_rounds int := 0;
+  tot_items json;
+  tot_differ json;
+  links json;
+  link_count int := 0;
+begin
+  if uid is null then return null; end if;
+  if p_session is not null then
+    select * into s from masquerade_sessions where id = p_session and uid in (user_a, user_b);
+    if not found then return null; end if;
+    other := case when s.user_a = uid then s.user_b else s.user_a end;
+  end if;
+  if other is null or other = uid then return null; end if;
+  connected := public.explore_match_id(uid, other) is not null;
+  if p_session is null and not connected and not public.explore_visible(uid, other) then return null; end if;
+  if public.is_blocked(uid, other) then return null; end if;
+  select * into me from profiles where id = uid;
+  select * into them from profiles where id = other;
+
+  -- This or That rounds you both answered, in games you played together
+  select count(*) filter (where x.p->>0 = x.p->>1), count(*)
+  into tot_same, tot_rounds
+  from games g
+  cross join lateral jsonb_array_elements(coalesce(g.state->'picks', '[]'::jsonb)) as x(p)
+  where g.kind = 'tot'
+    and ((g.player_a = uid and g.player_b = other) or (g.player_a = other and g.player_b = uid))
+    and x.p->>0 is not null and x.p->>1 is not null;
+
+  select coalesce(json_agg(json_build_object('q', t.q, 'a', t.a)), '[]'::json) into tot_items from (
+    select g.state->'qs'->(x.i::int - 1)->>'q' as q,
+      case x.p->>0 when 'a' then g.state->'qs'->(x.i::int - 1)->>'a' else g.state->'qs'->(x.i::int - 1)->>'b' end as a
+    from games g
+    cross join lateral jsonb_array_elements(coalesce(g.state->'picks', '[]'::jsonb)) with ordinality as x(p, i)
+    where g.kind = 'tot'
+      and ((g.player_a = uid and g.player_b = other) or (g.player_a = other and g.player_b = uid))
+      and x.p->>0 is not null and x.p->>0 = x.p->>1
+    order by g.created_at desc
+    limit 3
+  ) t where t.q is not null and t.a is not null;
+
+  -- And where you picked differently (for chat hints: "They picked Tea, you picked Coffee")
+  select coalesce(json_agg(json_build_object('q', t.q, 'mine', t.mine, 'theirs', t.theirs)), '[]'::json) into tot_differ from (
+    select g.state->'qs'->(x.i::int - 1)->>'q' as q,
+      g.state->'qs'->(x.i::int - 1)->>(case when g.player_a = uid then x.p->>0 else x.p->>1 end) as mine,
+      g.state->'qs'->(x.i::int - 1)->>(case when g.player_a = uid then x.p->>1 else x.p->>0 end) as theirs
+    from games g
+    cross join lateral jsonb_array_elements(coalesce(g.state->'picks', '[]'::jsonb)) with ordinality as x(p, i)
+    where g.kind = 'tot'
+      and ((g.player_a = uid and g.player_b = other) or (g.player_a = other and g.player_b = uid))
+      and x.p->>0 is not null and x.p->>1 is not null and x.p->>0 <> x.p->>1
+    order by g.created_at desc
+    limit 3
+  ) t where t.q is not null and t.mine is not null and t.theirs is not null;
+
+  -- Link-Up answers you share (only once you're connected: answers stay private until then)
+  if connected then
+    select count(*), coalesce(json_agg(json_build_object('pact', t.pact, 'q', t.title, 'a', t.answer)) filter (where t.rn <= 4), '[]'::json)
+    into link_count, links
+    from (
+      select p.name as pact, q.title, row_number() over (order by p.reveal_at desc, q.position) as rn,
+        case
+          when q.kind = 'choose_many' then (
+            select string_agg(o->>'label', ', ')
+            from jsonb_array_elements(q.options) o
+            where jsonb_typeof(ea.answers->(q.id::text)) = 'array' and jsonb_typeof(eb.answers->(q.id::text)) = 'array'
+              and (ea.answers->(q.id::text)) ? (o->>'id') and (eb.answers->(q.id::text)) ? (o->>'id'))
+          when q.kind = 'scale' then
+            case when ea.answers->>(q.id::text) = eb.answers->>(q.id::text) then (ea.answers->>(q.id::text)) || ' of 5' end
+          else
+            case when ea.answers->>(q.id::text) = eb.answers->>(q.id::text)
+              then (select o->>'label' from jsonb_array_elements(q.options) o where o->>'id' = ea.answers->>(q.id::text) limit 1) end
+        end as answer
+      from pact_entries ea
+      join pact_entries eb on eb.pact_id = ea.pact_id and eb.user_id = other
+      join pacts p on p.id = ea.pact_id
+      join pact_questions q on q.pact_id = ea.pact_id
+      where ea.user_id = uid
+    ) t
+    where t.answer is not null;
+  end if;
+
+  return json_build_object(
+    'connected', connected,
+    'interests', array(select unnest(them.interests) intersect select unnest(me.interests)),
+    'place', case
+      when me.place_country is not null and me.place_country = them.place_country and me.place_region is not null and me.place_region = them.place_region then them.place_region
+      when me.place_country is not null and me.place_country = them.place_country then 'same country'
+    end,
+    'tot', json_build_object('same', tot_same, 'rounds', tot_rounds, 'items', tot_items, 'differ', tot_differ),
+    'words', case when connected then (array(select unnest(them.thing_keys) intersect select unnest(me.thing_keys)))[1:6] end,
+    'linkups', case when connected then json_build_object('count', link_count, 'items', links) end
+  );
+end $$;
+revoke execute on function public.in_common(uuid, uuid) from public, anon;
+grant execute on function public.in_common(uuid, uuid) to authenticated;

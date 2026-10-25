@@ -35,6 +35,10 @@ type Props = {
   actions?: ComposerAction[];
   /** A dot on the + button (e.g. a game is waiting) */
   plusDot?: boolean;
+  /** Put this in the message box (a suggested opener); change `key` to put it in again */
+  draft?: { text: string; key: number } | null;
+  /** Hold back the "Tap + for more" tip (something else is showing above the box) */
+  noTip?: boolean;
 };
 
 export function Composer({
@@ -49,6 +53,8 @@ export function Composer({
   placeholder = "Say something…",
   actions = [],
   plusDot,
+  draft,
+  noTip,
 }: Props) {
   const [text, setText] = useState("");
   const [attachOpen, setAttachOpen] = useState(false);
@@ -62,12 +68,26 @@ export function Composer({
   const camera = useRef<HTMLInputElement>(null);
   const voice = useVoiceRecorder();
   const hasText = text.trim().length > 0;
+  // A suggested opener was picked: put it in the box, ready to edit or send
+  useEffect(() => {
+    if (!draft) return;
+    setText(draft.text);
+    requestAnimationFrame(() => {
+      const el = area.current;
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(draft.text.length, draft.text.length);
+    });
+  }, [draft]);
   const hasPlus = !!(onSendMedia || onGift || actions.length > 0);
 
   // Someone's first 3 chats: a little tip pointing at the + (gone once they've tapped it)
   const [tip, setTip] = useState(false);
+  const tipDone = useRef(false);
   useEffect(() => {
-    if (!hasPlus || !actions.length) return;
+    // Wait while ideas to say are showing above the box (they'd overlap); once per chat
+    if (!hasPlus || !actions.length || noTip || tipDone.current) return;
+    tipDone.current = true;
     try {
       const n = Number(localStorage.getItem(TIP_KEY) ?? "0");
       if (n >= TIP_TIMES) return;
@@ -78,7 +98,7 @@ export function Composer({
       /* private mode */
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [noTip]);
   function plusSeen() {
     setTip(false);
     try {
