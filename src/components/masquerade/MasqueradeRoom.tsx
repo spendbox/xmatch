@@ -85,11 +85,17 @@ export function MasqueradeRoom({
   const [messages, setMessages] = useState(initialMessages);
   const [profileOpen, setProfileOpen] = useState(false);
   const [voiceOpen, setVoiceOpen] = useState(false);
+  // What you know about them so far (connections, reply speed, spice, interests): tap their name to show
+  const [about, setAbout] = useState(false);
   // Notes in the chat are saved with mask names. Show "You" for you, and their real name when you know it.
   const shownMessages = useMemo(() => {
     const mine = state.me.alias;
     const theirs = state.them.alias;
-    return messages.map((m) => {
+    // The automatic icebreaker that used to start every chat: hidden (ones you ask for from + still show)
+    const start = new Date(state.started_at).getTime();
+    return messages
+      .filter((m) => !(m.kind === "icebreaker" && !m.sender_id && new Date(m.created_at).getTime() - start < 15_000))
+      .map((m) => {
       if (m.kind !== "system" || !m.body) return m;
       let body = m.body;
       if (body.startsWith(`${mine} unmasked`)) body = `You unmasked. If ${theirName} unmasks too, you're connected.`;
@@ -98,7 +104,7 @@ export function MasqueradeRoom({
       else if (theirName !== theirs && body.includes(theirs)) body = body.split(theirs).join(theirName);
       return body === m.body ? m : { ...m, body };
     });
-  }, [messages, state.me.alias, state.them.alias, theirName]);
+  }, [messages, state.me.alias, state.them.alias, state.started_at, theirName]);
   // You paid to start this chat: your Keys come back if they never reply in 48 hours
   const theyReplied = messages.some((m) => m.sender_id && m.sender_id !== state.me.id);
   const keysWord = (n?: number) => `${n ?? ""} ${n === 1 ? "Key" : "Keys"}`.trim();
@@ -350,10 +356,10 @@ export function MasqueradeRoom({
           )}
           <button
             type="button"
-            onClick={() => known?.id && setProfileOpen(true)}
-            disabled={!known?.id}
-            aria-label={known?.id ? `See ${theirName}'s profile` : undefined}
-            className="flex min-w-0 flex-1 items-center gap-3 text-left enabled:active:scale-[0.98]"
+            onClick={() => (known?.id ? setProfileOpen(true) : setAbout((a) => !a))}
+            aria-label={known?.id ? `See ${theirName}'s profile` : about ? "Hide what you know about them" : "See what you know about them"}
+            aria-expanded={known?.id ? undefined : about}
+            className="flex min-w-0 flex-1 items-center gap-3 text-left active:scale-[0.98]"
           >
           <span className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full bg-ink text-white">
             {known?.photo ? (
@@ -391,6 +397,19 @@ export function MasqueradeRoom({
           ) : (
             <TimerRing remaining={remaining} total={total} />
           )}
+          {/* Unmask lives in the header now (it used to take a whole row) */}
+          {state.hourly && !lapsed && !iUnmasked && (
+            <button
+              type="button"
+              onClick={() => setAskUnmask(true)}
+              disabled={voting}
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center gap-1 rounded-full bg-brand text-[13px] font-semibold text-white shadow-[0_6px_16px_-6px_rgb(91_63_217/0.7)] transition active:scale-95 disabled:opacity-60 sm:w-auto sm:px-3.5"
+              aria-label="Unmask"
+              title="Unmask"
+            >
+              <MaskIcon className="w-6 sm:w-5" eyes="#5b3fd9" /> <span className="hidden sm:inline">Unmask</span>
+            </button>
+          )}
           <div className="relative">
             <button onClick={() => setMenu((m) => !m)} className="grid h-10 w-10 place-items-center rounded-full text-muted hover:bg-ink/5" aria-label="More options">
               {menu ? <X size={20} /> : <MoreVertical size={20} />}
@@ -410,8 +429,8 @@ export function MasqueradeRoom({
 
         {/* What we know so far (shown in the side panel on computers). Not needed when you
             can open their profile instead (chats you started from Meet, or where you both waved). */}
-        {!known?.id && (
-        <div className="flex items-center gap-2 overflow-x-auto px-4 pb-3 no-scrollbar lg:hidden">
+        {!known?.id && about && (
+        <div className="flex animate-fade-up items-center gap-2 overflow-x-auto px-4 pb-3 no-scrollbar lg:hidden">
           <Tag strong>{connectionsLabel(them.connections)}</Tag>
           <Tag>{replyLabel(them.reply_seconds)}</Tag>
           {state.intent !== "friends" && (
@@ -434,10 +453,10 @@ export function MasqueradeRoom({
         )}
       </header>
 
-      {/* Hourly pairs can unmask any time */}
-      {state.hourly && !lapsed && (
-        <div className="flex items-center gap-3 border-b border-line bg-brand-soft/60 px-4 py-2.5">
-          <Handshake size={18} className="shrink-0 text-brand" />
+      {/* After someone chooses to unmask: a small note (the button itself is in the header) */}
+      {state.hourly && !lapsed && (iUnmasked || them.has_voted) && (
+        <div className="flex items-center gap-2.5 border-b border-line bg-brand-soft/60 px-4 py-2">
+          <Handshake size={16} className="shrink-0 text-brand" />
           <p className="min-w-0 flex-1 text-[13px] leading-snug">
             {iUnmasked ? (
               <>
@@ -451,31 +470,13 @@ export function MasqueradeRoom({
               </>
             )}
           </p>
-          <button
-            type="button"
-            onClick={leave}
-            className="inline-flex h-9 shrink-0 items-center rounded-full px-2.5 text-[13px] font-semibold text-muted hover:bg-ink/5 hover:text-chili"
-            title="Stay masked and end this chat"
-          >
-            End
-          </button>
-          {!iUnmasked && (
-            <button
-              type="button"
-              onClick={() => setAskUnmask(true)}
-              disabled={voting}
-              className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-brand px-3.5 text-[13px] font-semibold text-white transition active:scale-95 disabled:opacity-60"
-            >
-              <MaskIcon className="w-5" eyes="#5b3fd9" /> Unmask
-            </button>
-          )}
         </div>
       )}
 
       {/* Messages */}
       <div data-chat-scroll className="flex-1 overflow-y-auto overscroll-contain">
         {whoSees && (
-          <p className="px-6 pt-5 text-center text-[13px] leading-relaxed text-muted">
+          <p className="px-6 pt-3 text-center text-[12px] leading-relaxed text-muted">
             {whoSees}
           </p>
         )}

@@ -11651,3 +11651,283 @@ language sql stable security definer set search_path = public as $$
       and (s.source = 'explore' or s.reopened_at is not null)
   ) t
 $$;
+
+-- ---------------------------------------------------------------------------
+-- Part 72: The Masquerade card on Home counts masked voice notes as messages and shows
+-- "Sent you a voice note" when the latest one is from your pair.
+-- ---------------------------------------------------------------------------
+create or replace function public.my_masquerade_hour() returns json
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  h timestamptz := date_trunc('hour', now());
+  me profiles;
+  cur masquerade_sessions;
+  i_a boolean;
+  op profiles;
+  gap int := public.setting_int('pair_gap_minutes', 60);
+  last_start timestamptz;
+  free_at timestamptz;
+begin
+  if uid is null then return null; end if;
+  select * into me from profiles where id = uid;
+  -- Opening Home while you're online and switched on can pair you straight away
+  begin
+    perform public.try_live_pair(uid);
+  exception when others then null;
+  end;
+  -- Your latest pair: still going, or from within the last gap (so "You clicked!" stays a while)
+  select * into cur from masquerade_sessions
+  where hour_at is not null and reopened_at is null and (user_a = uid or user_b = uid)
+    and coalesce(ended_reason, '') <> 'away'
+    and ((status = 'active' and ends_at > now()) or started_at > now() - make_interval(mins => gap))
+  order by started_at desc limit 1;
+  last_start := (select max(started_at) from masquerade_sessions
+                 where hour_at is not null and (user_a = uid or user_b = uid) and coalesce(ended_reason, '') <> 'away');
+  -- When you can next be paired: after the gap since your last pair, and only in pairing hours
+  free_at := greatest(now(), coalesce(last_start + make_interval(mins => gap), now()));
+  if not public.pairing_hour_open(free_at) then free_at := public.next_pairing_at(free_at); end if;
+  i_a := cur.user_a = uid;
+  if cur.id is not null then
+    select * into op from profiles where id = case when i_a then cur.user_b else cur.user_a end;
+  end if;
+
+  return json_build_object(
+    'enabled', me.open_to_masquerade,
+    'has_place', me.place_country is not null,
+    'server_now', now(),
+    'hour_at', h,
+    'hour_open', public.pairing_hour_open(h),
+    'hour_ran', exists (select 1 from masquerade_hours where hour_at = h),
+    'pairs_this_hour', coalesce((select pairs from masquerade_hours where hour_at = h), 0),
+    -- Live pairing: no countdown. You're "looking" while you're free to be paired; otherwise next_at is when you can be.
+    'next_at', free_at,
+    'looking', me.open_to_masquerade and free_at <= now() and (cur.id is null or cur.status <> 'active'),
+    'live', true,
+    'pulse', (select json_build_object(
+        'all', count(*),
+        'country', count(*) filter (where me.place_country is not null and p.place_country = me.place_country),
+        'region', count(*) filter (where me.place_region is not null and p.place_country = me.place_country and p.place_region = me.place_region),
+        'region_name', me.place_region)
+      from profiles p left join accounts_private a on a.user_id = p.id
+      -- Switched on and online right now
+      where p.open_to_masquerade and p.id <> uid and p.last_seen_at > now() - interval '150 seconds' and a.banned_at is null),
+    'invite_reward', public.setting_int('invite_reward', 10),
+    'current', case when cur.id is null then null else json_build_object(
+      'id', cur.id, 'status', cur.status, 'intent', cur.intent, 'ends_at', cur.ends_at, 'match_id', cur.match_id,
+      'my_alias', case when i_a then cur.alias_a else cur.alias_b end,
+      'their_alias', case when i_a then cur.alias_b else cur.alias_a end,
+      'their_age', public.age_years(op.birthdate), 'their_gender', op.gender, 'their_place', op.place_label,
+      'their_connections', (select count(*) from matches x where op.id in (x.user_a, x.user_b)),
+      'their_reply_seconds', public.reply_seconds(op.id),
+      'their_tier', case
+        when me.place_country is null or op.place_country is null then null
+        when op.place_country = me.place_country and op.place_region = me.place_region then 'state'
+        when op.place_country = me.place_country then 'country'
+        when op.place_continent = me.place_continent then 'continent'
+        else 'world' end,
+      'their_name', case when cur.status = 'matched' then op.display_name end,
+      'their_photo', case when cur.status = 'matched' then op.photos[1] end,
+      'my_vote', case when i_a then cur.unmask_a else cur.unmask_b end,
+      'they_voted', (case when i_a then cur.unmask_b else cur.unmask_a end) is not null,
+      'messages', (select count(*) from masquerade_messages m where m.session_id = cur.id and m.kind in ('text', 'gift', 'audio')),
+      -- The latest message, voice notes included
+      'last_message', (select body from masquerade_messages m where m.session_id = cur.id and m.kind in ('text', 'audio') order by m.id desc limit 1),
+      'last_kind', (select kind from masquerade_messages m where m.session_id = cur.id and m.kind in ('text', 'audio') order by m.id desc limit 1),
+      'last_from_them', (select m.sender_id <> uid from masquerade_messages m where m.session_id = cur.id and m.kind in ('text', 'audio') order by m.id desc limit 1)
+    ) end,
+    'past', coalesce((
+      select json_agg(row_to_json(t) order by t.sort_at desc) from (
+        select s.id, s.status, s.intent, s.hour_at, s.reopened_at, coalesce(s.reopened_at, s.started_at) as sort_at,
+          case when s.user_a = uid then s.alias_b else s.alias_a end as their_alias,
+          public.age_years(p.birthdate) as their_age, p.gender as their_gender,
+          case when s.user_a = uid then s.unmask_a else s.unmask_b end as my_vote,
+          (select body from masquerade_messages m where m.session_id = s.id and m.kind in ('text', 'audio') order by m.id desc limit 1) as last_message
+        from masquerade_sessions s
+        join profiles p on p.id = case when s.user_a = uid then s.user_b else s.user_a end
+        where (s.user_a = uid or s.user_b = uid) and s.hour_at is not null
+          and (s.status = 'lapsed' or (s.status = 'active' and s.reopened_at is not null))
+          and not public.is_blocked(s.user_a, s.user_b)
+        order by coalesce(s.reopened_at, s.started_at) desc
+        limit 30
+      ) t), '[]'::json)
+  );
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- Part 73: New masked chats (live pairs, waves and paid messages from Meet) no longer get
+-- an icebreaker question posted automatically. The "Ask them about…" ideas and the
+-- icebreaker button in the + menu are still there.
+-- ---------------------------------------------------------------------------
+create or replace function public.try_live_pair(uid uuid) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare
+  gap int := public.setting_int('pair_gap_minutes', 60);
+  len int := public.setting_int('pair_minutes', 60);
+  me profiles;
+  my_age int;
+  pid uuid;
+  sid uuid;
+  a1 text;
+  q text;
+  lvl smallint;
+  h timestamptz := date_trunc('hour', now());
+begin
+  if uid is null then return null; end if;
+  -- Your pair left before either of you said anything: let them go, so you can be paired again
+  perform public.release_abandoned_pairs(uid);
+  if not public.pairing_hour_open(now()) then return null; end if;
+  if not public.live_pair_free(uid, gap) then return null; end if;
+  -- One pairing at a time, so two people can't both grab the same partner (busy: try again next check-in)
+  if not pg_try_advisory_xact_lock(515152) then return null; end if;
+  if not public.live_pair_free(uid, gap) then return null; end if;
+  select * into me from profiles where id = uid;
+  my_age := public.age_years(me.birthdate);
+
+  select c.id into pid
+  from profiles c left join accounts_private a on a.user_id = c.id
+  where c.open_to_masquerade and c.id <> uid
+    and c.last_seen_at > now() - interval '150 seconds'
+    and c.display_name is not null and c.birthdate is not null and c.gender is not null
+    and cardinality(c.photos) > 0 and a.banned_at is null
+    and c.pref_intent = me.pref_intent
+    and public.gender_fits(me.pref_seeking, c.gender) and public.gender_fits(c.pref_seeking, me.gender)
+    and public.age_years(c.birthdate) between me.pref_age_min and me.pref_age_max
+    and my_age between c.pref_age_min and c.pref_age_max
+    and not public.is_blocked(uid, c.id)
+    and not public.already_matched(uid, c.id)
+    and not exists (select 1 from masquerade_sessions s
+                    where s.hour_at is not null
+                      and ((s.user_a = uid and s.user_b = c.id) or (s.user_a = c.id and s.user_b = uid))
+                      and coalesce(s.ended_reason, '') <> 'away'
+                      and not (s.status = 'ended' and s.ended_reason = 'quiet' and s.hour_at < now() - interval '7 days'))
+    and public.live_pair_free(c.id, gap)
+  -- Closest first, then most in common, then quick repliers
+  order by
+    case when c.place_country = me.place_country and c.place_region = me.place_region then 1
+         when c.place_country = me.place_country then 2
+         when c.place_continent = me.place_continent then 3 else 4 end,
+    public.shared_count(me.interests, c.interests) + 2 * least(public.shared_count(me.thing_keys, c.thing_keys), 5) desc,
+    coalesce(public.reply_seconds(c.id), 1800),
+    random()
+  limit 1;
+  if pid is null then return null; end if;
+
+  a1 := public.random_alias();
+  lvl := round((coalesce(me.pref_spice, 1) + coalesce((select pref_spice from profiles where id = pid), 1)) / 2.0)::smallint;
+  insert into masquerade_sessions (user_a, user_b, intent, spice_a, spice_b, spice_level, alias_a, alias_b, started_at, ends_at, hour_at)
+  values (uid, pid, me.pref_intent, coalesce(me.pref_spice, 1), coalesce((select pref_spice from profiles where id = pid), 1), lvl,
+          a1, public.random_alias(a1), now(), now() + make_interval(mins => len), h)
+  returning id into sid;
+  -- No automatic icebreaker: chats start empty (icebreakers are still in the + menu)
+  insert into masquerade_hours (hour_at, pairs) values (h, 1)
+  on conflict (hour_at) do update set pairs = masquerade_hours.pairs + 1;
+  return sid;
+end $$;
+revoke execute on function public.try_live_pair(uuid) from public, anon, authenticated;
+
+create or replace function public.wave_person(p_id uuid) returns json
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  mid uuid;
+  sid uuid;
+  me profiles;
+  them profiles;
+  a1 text;
+  lvl smallint;
+  q text;
+  cost int := public.setting_int('wave_cost', 0);
+begin
+  if uid is null then raise exception 'Please log in'; end if;
+  if p_id is null or p_id = uid then raise exception 'Not available'; end if;
+  mid := public.explore_match_id(uid, p_id);
+  if mid is not null then return json_build_object('kind', 'match', 'id', mid); end if;
+  select id into sid from masquerade_sessions
+  where source = 'explore' and status = 'active'
+    and ((user_a = uid and user_b = p_id) or (user_a = p_id and user_b = uid))
+  order by started_at desc limit 1;
+  if sid is not null then return json_build_object('kind', 'masked', 'id', sid); end if;
+
+  if not public.explore_visible(uid, p_id) then raise exception 'Not available'; end if;
+  if exists (select 1 from accounts_private where user_id = uid and banned_at is not null) then raise exception 'Not available'; end if;
+  if exists (select 1 from waves where from_id = uid and to_id = p_id) then
+    return json_build_object('kind', 'waved', 'again', true);
+  end if;
+  if (select count(*) from waves where from_id = uid and created_at > now() - interval '24 hours') >= 30 then
+    raise exception 'You''ve waved a lot today. Try again tomorrow';
+  end if;
+
+  -- Waving first can cost Keys (set in admin); waving back is always free
+  if cost > 0 and not exists (select 1 from waves where from_id = p_id and to_id = uid) then
+    perform public.spend_keys(uid, cost, 'wave', p_id::text);
+  end if;
+  insert into waves (from_id, to_id) values (uid, p_id) on conflict do nothing;
+  -- Waving means you looked
+  insert into profile_views (viewer, target, seen_at) values (uid, p_id, now())
+  on conflict (viewer, target) do update set seen_at = now();
+
+  if not exists (select 1 from waves where from_id = p_id and to_id = uid) then
+    return json_build_object('kind', 'waved');
+  end if;
+
+  -- You both waved: open a masked chat, free
+  select * into me from profiles where id = uid;
+  select * into them from profiles where id = p_id;
+  a1 := public.random_alias();
+  lvl := round((coalesce(me.pref_spice, 1) + coalesce(them.pref_spice, 1)) / 2.0)::smallint;
+  insert into masquerade_sessions (user_a, user_b, intent, spice_a, spice_b, spice_level, alias_a, alias_b, started_at, ends_at, source, waved)
+  values (uid, p_id, me.pref_intent, coalesce(me.pref_spice, 1), coalesce(them.pref_spice, 1), lvl, a1, public.random_alias(a1), now(), 'infinity', 'explore', true)
+  returning id into sid;
+  insert into masquerade_messages (session_id, kind, body)
+  values (sid, 'system', 'You both waved 👋 This chat is free. Photos stay hidden until you both unmask.');
+  -- No automatic icebreaker: chats start empty (icebreakers are still in the + menu)
+  update waves set session_id = sid where (from_id = uid and to_id = p_id) or (from_id = p_id and to_id = uid);
+  return json_build_object('kind', 'masked', 'id', sid, 'mutual', true);
+end $$;
+revoke execute on function public.wave_person(uuid) from public, anon;
+
+create or replace function public.message_person(p_id uuid) returns json
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  mid uuid;
+  sid uuid;
+  cost int := public.setting_int('explore_message_cost', 15);
+  me profiles;
+  them profiles;
+  a1 text;
+  lvl smallint;
+  q text;
+begin
+  if uid is null then raise exception 'Please log in'; end if;
+  mid := public.explore_match_id(uid, p_id);
+  if mid is not null then return json_build_object('kind', 'match', 'id', mid); end if;
+  select id into sid from masquerade_sessions
+  where source = 'explore' and status = 'active'
+    and ((user_a = uid and user_b = p_id) or (user_a = p_id and user_b = uid))
+  order by started_at desc limit 1;
+  if sid is not null then return json_build_object('kind', 'masked', 'id', sid); end if;
+
+  if not public.explore_visible(uid, p_id) then raise exception 'Not available'; end if;
+  if exists (select 1 from accounts_private where user_id = uid and banned_at is not null) then raise exception 'Not available'; end if;
+  if (select count(*) from masquerade_sessions where source = 'explore' and user_a = uid and started_at > now() - interval '1 minute') >= 5 then
+    raise exception 'Slow down a little';
+  end if;
+  select * into me from profiles where id = uid;
+  select * into them from profiles where id = p_id;
+  if cost > 0 then perform public.spend_keys(uid, cost, 'explore_message', p_id::text); end if;
+
+  a1 := public.random_alias();
+  lvl := round((coalesce(me.pref_spice, 1) + coalesce(them.pref_spice, 1)) / 2.0)::smallint;
+  insert into masquerade_sessions (user_a, user_b, intent, spice_a, spice_b, spice_level, alias_a, alias_b, started_at, ends_at, source, paid_keys)
+  values (uid, p_id, me.pref_intent, coalesce(me.pref_spice, 1), coalesce(them.pref_spice, 1), lvl, a1, public.random_alias(a1), now(), 'infinity', 'explore', greatest(cost, 0))
+  returning id into sid;
+  insert into masquerade_messages (session_id, kind, body)
+  values (sid, 'system', a1 || ' found you on Meet and started this chat. You''re both masked until you both unmask.');
+  -- No automatic icebreaker: chats start empty (icebreakers are still in the + menu)
+  return json_build_object('kind', 'masked', 'id', sid);
+end $$;
+revoke execute on function public.message_person(uuid) from public, anon;
+grant execute on function public.wave_person(uuid) to authenticated;
+grant execute on function public.message_person(uuid) to authenticated;
