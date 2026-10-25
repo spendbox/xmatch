@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import clsx from "clsx";
-import { Gamepad2, Sparkles, UsersRound } from "lucide-react";
+import { Eye, Gamepad2, Sparkles, UsersRound } from "lucide-react";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { tapFeedback } from "@/components/ui/Button";
 
@@ -21,24 +21,30 @@ const STEPS: Step[] = [
   {
     icon: <MaskIcon className="w-8" eyes="#5b3fd9" />,
     title: "Welcome to Dashpad",
-    body: "Every hour you're paired with a person anonymously. Chat, play games, and unmask together when you click.",
+    body: "Turn on Masquerade to match with someone online, completely anonymous. Chat, send disguised voice notes, play games, and unmask when you're both ready.",
   },
   {
     target: "masquerade-card",
     icon: <Sparkles size={22} />,
     title: "Your Masquerade card",
-    body: "Your pair for the hour shows up here. Tap the card any time to change who you meet: mood, ages, distance and more.",
+    body: "Your pair shows up here as soon as someone who fits is online. Tap the mic to send a disguised voice note, or the icons to change who you'd like to meet.",
+  },
+  {
+    target: "views",
+    icon: <Eye size={22} />,
+    title: "Who viewed you",
+    body: "See who looked at your profile this week. Wave at them for free: if you both wave, a chat opens.",
   },
   {
     target: "people",
     icon: <UsersRound size={22} />,
     title: "People for you",
-    body: "Who's online and who we think you'll click with. Tap someone to see their profile.",
+    body: "People we think you'll click with, online first. Tap someone to see their profile, wave, or say hi with an opener made for the two of you.",
   },
   {
     icon: <Gamepad2 size={22} />,
-    title: "Games, gifts and more",
-    body: "In any chat, tap the + beside the message box to play games or send gifts.",
+    title: "Games, gifts and voice notes",
+    body: "In any chat, tap + for games and gifts. In masked chats, the mic sends a voice note in a disguised voice that disappears after 24 hours.",
   },
 ];
 

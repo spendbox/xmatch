@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import clsx from "clsx";
 import { CHATS_EVENT } from "@/components/app/useMenuBadges";
 import { useEffect, useRef, useState } from "react";
-import { MessageCircle, Search, Shapes, Users, X } from "lucide-react";
+import { MessageCircle, Search, Users, X } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Sticky } from "@/components/ui/Sticky";
 import { ButtonLink } from "@/components/ui/Button";
@@ -157,13 +157,7 @@ export function MatchesList({
                               ? `${theirTurn ? "You: " : ""}${m.last_message.replace(/^💬 /, "")}`
                               : "You matched! Start the conversation"}
                           </p>
-                          {mine ? (
-                            <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-brand" aria-label="New messages" />
-                          ) : m.shared ? (
-                            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-cream px-2 py-0.5 text-[11px] font-semibold text-ink-soft">
-                              <Shapes size={11} /> {m.shared} shared
-                            </span>
-                          ) : null}
+                          {mine && <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-brand" aria-label="New messages" />}
                         </div>
                       </div>
                     </Link>

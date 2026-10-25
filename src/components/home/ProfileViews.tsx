@@ -101,6 +101,7 @@ export function ProfileViews({ demo, onKeys }: { demo?: Viewers; /** Keys were s
     <>
       <button
         type="button"
+        data-tour="views"
         onClick={() => {
           tapFeedback();
           setOpen(true);
