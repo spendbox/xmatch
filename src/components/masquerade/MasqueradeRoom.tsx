@@ -21,6 +21,7 @@ import { ChatHints } from "@/components/chat/ChatHints";
 import { Composer } from "@/components/chat/Composer";
 import { refreshMenuBadges } from "@/components/app/useMenuBadges";
 import { YouBoth } from "@/components/matches/YouBoth";
+import { ExploreProfileSheet } from "@/components/explore/ExploreProfileSheet";
 import { usePaidChatPeople } from "./usePaidChatPeople";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { Chilis } from "@/components/ui/Spice";
@@ -62,11 +63,8 @@ export function MasqueradeRoom({
   const known = paidChat?.started_by_me === false ? undefined : paidChat;
   const theyPaid = paidChat?.started_by_me === false;
   const theirName = known?.name || state.them.alias;
-  const whoSees = paidChat?.waved ? (
-    <>
-      You&apos;re <span className="font-semibold text-ink">{state.me.alias}</span>. You both waved, so you can both see each other&apos;s names. Photos stay hidden until you both unmask.
-    </>
-  ) : known?.name ? (
+  // Chats from a wave need no explaining: you both chose each other
+  const whoSees = paidChat?.waved ? null : known?.name ? (
     <>
       You&apos;re <span className="font-semibold text-ink">{state.me.alias}</span>. You found {known.name} on Meet, so you can see their name. They only see your mask name until you both unmask.
     </>
@@ -80,6 +78,7 @@ export function MasqueradeRoom({
     </>
   );
   const [messages, setMessages] = useState(initialMessages);
+  const [profileOpen, setProfileOpen] = useState(false);
   // You paid to start this chat: your Keys come back if they never reply in 48 hours
   const theyReplied = messages.some((m) => m.sender_id && m.sender_id !== state.me.id);
   const keysWord = (n?: number) => `${n ?? ""} ${n === 1 ? "Key" : "Keys"}`.trim();
@@ -329,6 +328,13 @@ export function MasqueradeRoom({
               <ArrowLeft size={22} />
             </Link>
           )}
+          <button
+            type="button"
+            onClick={() => known?.id && setProfileOpen(true)}
+            disabled={!known?.id}
+            aria-label={known?.id ? `See ${theirName}'s profile` : undefined}
+            className="flex min-w-0 flex-1 items-center gap-3 text-left enabled:active:scale-[0.98]"
+          >
           <span className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full bg-ink text-white">
             {known?.photo ? (
               <span className="absolute inset-0 overflow-hidden rounded-full">
@@ -357,6 +363,7 @@ export function MasqueradeRoom({
                 .join("")}
             </p>
           </div>
+          </button>
           {lapsed ? (
             <span className="shrink-0 rounded-full bg-cream px-2.5 py-1 text-[12px] font-semibold text-muted">{meet ? "Meet over" : "Hour over"}</span>
           ) : state.reopened ? (
@@ -381,7 +388,9 @@ export function MasqueradeRoom({
           </div>
         </div>
 
-        {/* What we know so far (shown in the side panel on computers) */}
+        {/* What we know so far (shown in the side panel on computers). Not needed when you
+            can open their profile instead (chats you started from Meet, or where you both waved). */}
+        {!known?.id && (
         <div className="flex items-center gap-2 overflow-x-auto px-4 pb-3 no-scrollbar lg:hidden">
           <Tag strong>{connectionsLabel(them.connections)}</Tag>
           <Tag>{replyLabel(them.reply_seconds)}</Tag>
@@ -402,6 +411,7 @@ export function MasqueradeRoom({
               <InterestTag key={i} name={i} highlight={(them.shared_interests ?? []).includes(i)} />
           ))}
         </div>
+        )}
       </header>
 
       {/* Hourly pairs can unmask any time */}
@@ -444,9 +454,11 @@ export function MasqueradeRoom({
 
       {/* Messages */}
       <div data-chat-scroll className="flex-1 overflow-y-auto overscroll-contain">
-        <p className="px-6 pt-5 text-center text-[13px] leading-relaxed text-muted">
-          {whoSees}
-        </p>
+        {whoSees && (
+          <p className="px-6 pt-5 text-center text-[13px] leading-relaxed text-muted">
+            {whoSees}
+          </p>
+        )}
         {refundNote && (
           <p className="mx-auto mt-2 flex w-fit max-w-[90%] items-center gap-1.5 rounded-full bg-mint-soft px-3 py-1 text-center text-[12px] font-medium text-ink-soft">
             <ShieldCheck size={14} className="shrink-0 text-mint" /> {refundNote}
@@ -595,19 +607,26 @@ export function MasqueradeRoom({
       {timeUp && !state.hourly && <DecisionSheet state={state} voting={voting} onVote={vote} />}
       {reporting && <ReportSheet onClose={() => setReporting(false)} onReport={report} />}
       {games.overlay}
+      {profileOpen && known?.id && <ExploreProfileSheet personId={known.id} onClose={() => setProfileOpen(false)} inChat />}
     </div>
 
     {/* About them — side panel on computers */}
     <aside className="hidden w-[340px] shrink-0 flex-col overflow-y-auto border-l border-line bg-surface px-6 py-8 lg:flex">
       <div className="flex flex-col items-center text-center">
-        <span className="grid h-24 w-24 animate-float place-items-center overflow-hidden rounded-full bg-ink text-white shadow-lift">
+        <button
+          type="button"
+          onClick={() => known?.id && setProfileOpen(true)}
+          disabled={!known?.id}
+          aria-label={known?.id ? `See ${theirName}'s profile` : undefined}
+          className="grid h-24 w-24 animate-float place-items-center overflow-hidden rounded-full bg-ink text-white shadow-lift"
+        >
           {known?.photo ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={known.photo} alt="" className="h-full w-full scale-110 object-cover blur-lg" />
           ) : (
             <MaskIcon className="w-14" eyes="#1c1828" />
           )}
-        </span>
+        </button>
         <p className="mt-4 font-display text-[26px] font-semibold">{theirName}</p>
         <p className="text-[14px] text-muted">
           {[gender, them.place ?? distanceLabel(them.distance_km)].filter(Boolean).join(" · ")}
@@ -663,9 +682,11 @@ export function MasqueradeRoom({
         </div>
       )}
 
-      <p className="mt-auto rounded-2xl bg-cream p-4 text-[13px] leading-relaxed text-muted">
-        {whoSees}
-      </p>
+      {whoSees && (
+        <p className="mt-auto rounded-2xl bg-cream p-4 text-[13px] leading-relaxed text-muted">
+          {whoSees}
+        </p>
+      )}
     </aside>
         </div>
   );

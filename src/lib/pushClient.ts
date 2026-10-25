@@ -104,3 +104,12 @@ export function notify(body: {
     keepalive: true,
   }).catch(() => {});
 }
+
+/** Remove a notification from the phone's tray once it's been dealt with (e.g. you waved back) */
+export function clearNotice(tag: string) {
+  if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
+  navigator.serviceWorker.ready
+    .then((reg) => reg.getNotifications({ tag }))
+    .then((list) => list.forEach((n) => n.close()))
+    .catch(() => {});
+}

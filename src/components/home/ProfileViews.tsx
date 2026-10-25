@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { Check, ChevronRight, Eye } from "lucide-react";
+import { Check, ChevronRight, Eye, MessageCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { notify } from "@/lib/pushClient";
+import { clearNotice, notify } from "@/lib/pushClient";
 import { thumbFallback, thumbUrl } from "@/lib/photos";
 import type { Viewer, Viewers } from "@/lib/explore";
 import { Sheet } from "@/components/ui/Sheet";
@@ -83,13 +83,17 @@ export function ProfileViews({ demo, onKeys }: { demo?: Viewers; /** Keys were s
       return;
     }
     if (res.mutual) notify({ kind: "wave", personId: v.id });
+    // Their "waved at you" notification is answered now
+    clearNotice(`wave-${v.id}`);
+    setData((d) => d && { ...d, people: d.people.map((x) => (x.id === v.id ? { ...x, i_waved: true, chat_id: res.kind === "masked" ? res.id! : x.chat_id } : x)) });
     router.push(res.kind === "match" ? `/matches/${res.id}` : `/masquerade/${res.id}`);
   }
 
   if (!data || data.people.length === 0) return null;
   const today = data.today;
   const count = today > 0 ? today : data.people.length;
-  const waves = data.people.filter((p) => p.waved_me && !p.connected).length;
+  // Waves still waiting for you (not ones you've answered with a chat)
+  const waves = data.people.filter((p) => p.waved_me && !p.connected && !p.chat_id).length;
   const faces = data.people.slice(0, 3);
 
   return (
@@ -137,13 +141,28 @@ export function ProfileViews({ demo, onKeys }: { demo?: Viewers; /** Keys were s
                 </span>
                 <span className="min-w-0">
                   <span className="block truncate text-[15px] font-semibold">{v.name.split(" ")[0]}</span>
-                  <span className={clsx("block truncate text-[12.5px]", v.waved_me && !v.connected ? "font-semibold text-[#8a5a00]" : "text-muted")}>
-                    {v.waved_me && !v.connected ? "Waved at you 👋" : `Viewed you ${ago(v.seen_at)}`}
+                  <span className={clsx("block truncate text-[12.5px]", v.waved_me && !v.connected && !v.chat_id ? "font-semibold text-[#8a5a00]" : "text-muted")}>
+                    {v.chat_id && v.waved_me && v.i_waved
+                      ? "You both waved 👋"
+                      : v.waved_me && !v.connected && !v.chat_id
+                        ? "Waved at you 👋"
+                        : `Viewed you ${ago(v.seen_at)}`}
                   </span>
                 </span>
               </button>
               {v.connected ? (
                 <span className="text-[12.5px] font-semibold text-brand">Connected</span>
+              ) : v.chat_id ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    tapFeedback();
+                    router.push(`/masquerade/${v.chat_id}`);
+                  }}
+                  className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-brand px-3.5 text-[13.5px] font-bold text-white active:scale-95"
+                >
+                  <MessageCircle size={16} /> Chat
+                </button>
               ) : v.waved_me ? (
                 <button type="button" onClick={() => wave(v)} disabled={!!busy} className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-gold px-3.5 text-[13.5px] font-bold text-ink active:scale-95 disabled:opacity-60">
                   {busy === v.id ? <Spinner className="h-4 w-4" /> : <span aria-hidden>👋</span>} Wave back

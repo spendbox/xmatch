@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { Check, Lightbulb, Lock, MessageCircle, RefreshCw, ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { notify } from "@/lib/pushClient";
+import { clearNotice, notify } from "@/lib/pushClient";
 import { buildOpeners, hintPage, type HintData } from "@/lib/chatHints";
 import type { ExploreProfile } from "@/lib/explore";
 import type { Profile } from "@/lib/types";
@@ -23,6 +23,7 @@ export function ExploreProfileSheet({
   onClose,
   onChanged,
   demo,
+  inChat,
 }: {
   personId: string;
   onClose: () => void;
@@ -30,6 +31,8 @@ export function ExploreProfileSheet({
   onChanged?: () => void;
   /** Design previews */
   demo?: ExploreProfile;
+  /** Opened from your chat with them: no chat buttons */
+  inChat?: boolean;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
@@ -118,6 +121,7 @@ export function ExploreProfileSheet({
       return;
     }
     if (r.mutual) notify({ kind: "wave", personId });
+    clearNotice(`wave-${personId}`);
     openChat({ kind: r.kind, id: r.id! });
   }
 
@@ -243,6 +247,7 @@ export function ExploreProfileSheet({
         </>
       }
       footer={
+        inChat ? undefined : (
         <div className="space-y-2">
           {error && <p className="text-center text-[13px] font-medium text-chili">{error}</p>}
           {fresh ? (
@@ -300,6 +305,7 @@ export function ExploreProfileSheet({
             </Button>
           )}
         </div>
+        )
       }
     />
   );
