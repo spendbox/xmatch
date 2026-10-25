@@ -3,15 +3,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
-import { Handshake, MessageCircle } from "lucide-react";
+import { Handshake, MessageCircle, Pencil } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { intentLabel } from "@/lib/constants";
+import { intentLabel, seekingLabel, seekingList, spiceLabel } from "@/lib/constants";
 import { sexLabel } from "@/lib/eventSpace";
 import { clock, lagosHour, lagosTime, type MasqueradeHour } from "@/lib/hourly";
 import { Toggle } from "@/components/ui/Toggle";
 import { tapFeedback } from "@/components/ui/Button";
 import { MaskIcon } from "@/components/ui/MaskIcon";
-import { INTENT_ICONS } from "@/components/ui/icons";
+import { INTENT_ICONS, SEEKING_ICONS, SpiceIcon } from "@/components/ui/icons";
+import type { SetupPrefs } from "./prefs";
 import { nameColor } from "@/lib/eventSpace";
 
 /** Keeps the hourly pairing state fresh: on open, on focus, when the hour turns, and when your pair changes. */
@@ -70,10 +71,13 @@ export function useMasqueradeHour(userId: string, initial: MasqueradeHour | null
 export function MasqueradeCard({
   userId,
   ctl,
+  prefs,
   onSettings,
 }: {
   userId: string;
   ctl: ReturnType<typeof useMasqueradeHour>;
+  /** Your Masquerade settings, shown as icons at the top of the card */
+  prefs?: SetupPrefs;
   /** Tapped while waiting for a pair: open the Masquerade settings */
   onSettings?: () => void;
 }) {
@@ -116,9 +120,40 @@ export function MasqueradeCard({
       <div aria-hidden className="absolute -top-14 -right-12 h-40 w-40 rounded-full bg-white/10" />
 
       <div className="relative flex items-center gap-3">
-        <p className="min-w-0 flex-1 truncate text-[12px] font-semibold tracking-wide text-white/80 uppercase">
-          {!enabled && !live ? "Masquerade is off" : live && hour ? `Your ${lagosHour(hour.hour_at)} pair` : "Masquerade"}
-        </p>
+        {enabled && !live && prefs ? (
+          // Your settings at a glance: mood, who you'd like to meet (if set), question spice (dating and spicy)
+          <button
+            type="button"
+            onClick={() => {
+              tapFeedback();
+              onSettings?.();
+            }}
+            className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
+            aria-label={`Masquerade settings: ${[intentLabel(prefs.intent), prefs.seeking !== "anyone" ? `meeting ${seekingLabel(prefs.seeking)}` : null, prefs.intent !== "friends" ? `${spiceLabel(prefs.spice)} questions` : null].filter(Boolean).join(", ")}. Edit`}
+          >
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/15">{INTENT_ICONS[prefs.intent]({ size: 16, strokeWidth: 2.2 })}</span>
+            {seekingList(prefs.seeking).map((g) => {
+              const Icon = SEEKING_ICONS[g];
+              return (
+                <span key={g} className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/15">
+                  <Icon size={16} strokeWidth={2.2} />
+                </span>
+              );
+            })}
+            {prefs.intent !== "friends" && (
+              <span className="grid h-8 min-w-8 shrink-0 place-items-center rounded-full bg-white/15 px-1.5">
+                <SpiceIcon level={prefs.spice} size={15} />
+              </span>
+            )}
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-white/80">
+              <Pencil size={14} strokeWidth={2.4} />
+            </span>
+          </button>
+        ) : (
+          <p className="min-w-0 flex-1 truncate text-[12px] font-semibold tracking-wide text-white/80 uppercase">
+            {!enabled && !live ? "Masquerade is off" : live && hour ? `Your ${lagosHour(hour.hour_at)} pair` : "Masquerade"}
+          </p>
+        )}
         {live && cur && (
           <span className="rounded-full bg-white/15 px-2.5 py-1 text-[12px] font-bold tabular-nums">
             {now ? clock(new Date(cur.ends_at).getTime() - serverNow) : "··:··"} left

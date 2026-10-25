@@ -36,7 +36,6 @@ import { PostMeetSheet } from "@/components/meets/PostMeetSheet";
 import { YourMeet } from "@/components/meets/YourMeet";
 import { useMeets } from "@/components/meets/useMeets";
 import { FEATURES } from "@/lib/features";
-import { RecentChats } from "./RecentChats";
 
 export type HomeStats = { online: number; week_chats: number; week_unmasks: number; gifts_received: number };
 
@@ -87,15 +86,16 @@ export function HomeScreen({
     setGreeting(h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening");
   }, []);
 
-  function savePrefs() {
+  function savePrefs(next: SetupPrefs) {
+    setPrefs(next);
     return supabase
       .from("profiles")
       .update({
-        pref_intent: prefs.intent,
-        pref_seeking: prefs.seeking,
-        pref_age_min: prefs.ageMin,
-        pref_age_max: prefs.ageMax,
-        pref_spice: prefs.spice,
+        pref_intent: next.intent,
+        pref_seeking: next.seeking,
+        pref_age_min: next.ageMin,
+        pref_age_max: next.ageMax,
+        pref_spice: next.spice,
         // Distance is decided for you now (closest first)
         pref_max_km: null,
       })
@@ -143,11 +143,12 @@ export function HomeScreen({
       </header>
       </Sticky>
 
-      <RecentChats matches={matches} />
+      {/* People for you, as one long strip (your chats are in Chats) */}
+      <PeopleForYou userId={profile.id} demo={demoPeople} />
 
       <div className="lg:mt-8 lg:grid lg:grid-cols-12 lg:items-start lg:gap-8">
       <div className="mt-5 lg:sticky lg:top-24 lg:col-span-7 lg:mt-0">
-        <MasqueradeCard userId={profile.id} ctl={ctl} onSettings={() => setMeetOpen(true)} />
+        <MasqueradeCard userId={profile.id} ctl={ctl} prefs={prefs} onSettings={() => setMeetOpen(true)} />
 
         {pact && (
           <section className="mt-6">
@@ -164,7 +165,6 @@ export function HomeScreen({
           demo={demoSetup}
         />
 
-        <PeopleForYou userId={profile.id} demo={demoPeople} />
         <WelcomeTour force={demoTour} off={!!demoPeople && !demoTour} />
       </div>
 
@@ -206,12 +206,12 @@ export function HomeScreen({
 
       <MeetSheet
         open={meetOpen}
-        onClose={() => {
+        onClose={() => setMeetOpen(false)}
+        onSave={(next) => {
           setMeetOpen(false);
-          savePrefs();
+          savePrefs(next);
         }}
         prefs={prefs}
-        setPrefs={setPrefs}
         place={place.label}
         onPlace={() => setPlaceOpen(true)}
       />
