@@ -12,7 +12,11 @@ export function Outcome({ state, eventId }: { state: MasqueradeState; eventId?: 
   const reason = state.ended_reason;
   let title = "Not this time";
   let body = `${alias} chose to stay masked. That's okay — the right person is out there.`;
-  if (reason === "reported") {
+  if (reason === "away") {
+    // Paired, but one of you left before anyone said anything (update 67)
+    title = "They stepped away";
+    body = "Your pair left before you started talking, so we're finding you someone new who's online now.";
+  } else if (reason === "reported") {
     title = "Chat ended";
     body = "Thanks for letting us know. You won't be paired with this person again.";
   } else if (reason === "left" && state.me.vote === false) {
