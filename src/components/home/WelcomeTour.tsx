@@ -33,7 +33,7 @@ const STEPS: Step[] = [
     target: "views",
     icon: <Eye size={22} />,
     title: "Who viewed you",
-    body: "See who looked at your profile this week. Wave at them for free: if you both wave, a chat opens.",
+    body: "See who looked at your profile this week. Wave at someone you like: if you both wave, a chat opens for free.",
   },
   {
     target: "people",
