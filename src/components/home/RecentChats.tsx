@@ -24,11 +24,11 @@ export type RecentMasked = {
   unread: boolean;
 };
 
-type Item = { key: string; href: string; at: string; label: string; waiting: boolean; photo?: string | null; name?: string; mask?: string };
+type Item = { key: string; href: string; at: string; label: string; unread: boolean; waiting: boolean; photo?: string | null; name?: string; mask?: string };
 
 /**
  * Home: your latest chats (connected and masked) as small circles, no names.
- * A dot shows when their last message is still waiting for your reply.
+ * Red dot and ring: a new message you haven't read. Small dark dot: you've read it but not replied.
  */
 export function RecentChats({ matches, myId, demoMasked }: { matches: MatchSummary[]; myId: string; demoMasked?: RecentMasked[] }) {
   const supabase = useMemo(() => createClient(), []);
@@ -69,7 +69,8 @@ export function RecentChats({ matches, myId, demoMasked }: { matches: MatchSumma
       name: m.display_name,
       photo: m.photos?.[0],
       label: m.display_name,
-      waiting: !!m.unread || (!!m.last_message && !!m.last_sender && m.last_sender !== myId),
+      unread: !!m.unread,
+      waiting: !!m.last_message && !!m.last_sender && m.last_sender !== myId,
     })),
     ...masked.map((c) => {
       // You can see who it is if you paid to start it on Meet, or you both waved
@@ -82,7 +83,8 @@ export function RecentChats({ matches, myId, demoMasked }: { matches: MatchSumma
         name: known?.name ?? undefined,
         mask: c.alias,
         label: known?.name || c.alias,
-        waiting: c.unread || c.last_mine === false,
+        unread: c.unread,
+        waiting: c.last_mine === false,
       };
     }),
   ]
@@ -101,18 +103,23 @@ export function RecentChats({ matches, myId, demoMasked }: { matches: MatchSumma
       <ul className="-mx-5 flex gap-2.5 overflow-x-auto px-5 py-1 no-scrollbar lg:mx-0 lg:px-1">
         {items.map((c) => (
           <li key={c.key} className="shrink-0">
-            <Link href={c.href} className="relative block active:scale-95" aria-label={`Chat with ${c.label}${c.waiting ? ", waiting for your reply" : ""}`}>
+            <Link href={c.href} className="relative block active:scale-95" aria-label={`Chat with ${c.label}${c.unread ? ", new message" : c.waiting ? ", waiting for your reply" : ""}`}>
               {c.photo || !c.mask ? (
-                <Avatar src={c.photo ?? undefined} name={c.name ?? c.label} size={48} className={c.waiting ? "ring-2 ring-brand ring-offset-2 ring-offset-cream" : "ring-2 ring-surface"} />
+                <Avatar src={c.photo ?? undefined} name={c.name ?? c.label} size={48} className={c.unread ? "ring-2 ring-brand ring-offset-2 ring-offset-cream" : "ring-2 ring-surface"} />
               ) : (
                 <span
-                  className={`grid h-12 w-12 place-items-center rounded-full ${c.waiting ? "ring-2 ring-brand ring-offset-2 ring-offset-cream" : "ring-2 ring-surface"}`}
+                  className={`grid h-12 w-12 place-items-center rounded-full ${c.unread ? "ring-2 ring-brand ring-offset-2 ring-offset-cream" : "ring-2 ring-surface"}`}
                   style={{ background: nameColor(c.mask) }}
                 >
                   <MaskIcon className="w-7 text-white" eyes={nameColor(c.mask)} />
                 </span>
               )}
-              {c.waiting && <span className="absolute -top-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-chili ring-2 ring-cream" aria-hidden />}
+              {c.unread ? (
+                <span className="absolute -top-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-chili ring-2 ring-cream" aria-hidden />
+              ) : c.waiting ? (
+                // Read, but your reply is still owed
+                <span className="absolute top-0 right-0 h-2.5 w-2.5 rounded-full bg-ink ring-2 ring-cream" aria-hidden />
+              ) : null}
               {c.mask && c.photo && (
                 // A masked chat with someone you know: a little mask on their photo
                 <span className="absolute -right-1 -bottom-1 grid h-5 w-5 place-items-center rounded-full bg-ink ring-2 ring-cream" aria-hidden>
