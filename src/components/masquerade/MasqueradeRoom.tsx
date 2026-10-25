@@ -19,6 +19,7 @@ import type { ChatMessage, MasqueradeState } from "@/lib/types";
 import { MessageList } from "@/components/chat/MessageList";
 import { Composer } from "@/components/chat/Composer";
 import { refreshMenuBadges } from "@/components/app/useMenuBadges";
+import { YouBoth } from "@/components/matches/YouBoth";
 import { usePaidChatPeople } from "./usePaidChatPeople";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { Chilis } from "@/components/ui/Spice";
@@ -404,17 +405,13 @@ export function MasqueradeRoom({
       <div data-chat-scroll className="flex-1 overflow-y-auto overscroll-contain">
         <p className="px-6 pt-5 text-center text-[13px] leading-relaxed text-muted">
           {whoSees}
-          {(them.shared_interests ?? []).length > 0 && (
-            <span className="mt-2 block font-semibold text-brand">
-              You both like {formatList(them.shared_interests)} ✓
-            </span>
-          )}
-          {(them.shared_words ?? []).length > 0 && (
-            <span className="mt-1 block font-semibold text-[#c2306b]">
-              You both mentioned {formatList(them.shared_words!)} ✨
-            </span>
-          )}
         </p>
+        {/* What you have in common (on computers it's in the side panel) */}
+        {!demo && (
+          <div className="mx-4 mt-3 lg:hidden">
+            <YouBoth session={state.id} />
+          </div>
+        )}
         <MessageList
           messages={messages}
           myId={state.me.id}
@@ -609,8 +606,10 @@ export function MasqueradeRoom({
           <InterestTag key={i} name={i} highlight={(them.shared_interests ?? []).includes(i)} />
         ))}
       </div>
-      {(them.shared_interests ?? []).length > 0 && (
-        <p className="mt-2 text-[13px] font-semibold text-brand">You both like {formatList(them.shared_interests)} ✓</p>
+      {!demo && (
+        <div className="mt-6">
+          <YouBoth session={state.id} tone="plain" />
+        </div>
       )}
 
       <p className="mt-auto rounded-2xl bg-cream p-4 text-[13px] leading-relaxed text-muted">

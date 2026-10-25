@@ -10,6 +10,7 @@ import { GENDERS } from "@/lib/constants";
 import { promptOf } from "@/lib/things";
 import type { Profile } from "@/lib/types";
 import { InterestIcon } from "@/components/ui/icons";
+import { YouBoth } from "./YouBoth";
 
 export function ProfileSheet({
   profile,
@@ -19,6 +20,7 @@ export function ProfileSheet({
   extra,
   footer,
   blur,
+  commonWith,
 }: {
   profile: Profile;
   onClose: () => void;
@@ -30,6 +32,8 @@ export function ProfileSheet({
   footer?: React.ReactNode;
   /** Soften the photos (Meet, before you've unlocked them) */
   blur?: boolean;
+  /** Their id: shows what you have in common ("You both…") */
+  commonWith?: string;
 }) {
   const [i, setI] = useState(0);
   const [mounted, setMounted] = useState(false);
@@ -133,6 +137,7 @@ export function ProfileSheet({
           </div>
           {note && <p className="rounded-2xl bg-brand-soft px-4 py-3 text-[13px] font-medium text-brand-ink lg:mt-5">{note}</p>}
           {extra}
+          {commonWith && <YouBoth other={commonWith} />}
           {profile.bio && (
             <section className="rounded-3xl bg-surface p-5 shadow-card">
               <Quote size={20} className="text-brand" />

@@ -314,7 +314,7 @@ export function MatchChat({
           return null;
         }}
       />
-      {showProfile && <ProfileSheet profile={other} shared={shared} onClose={() => setShowProfile(false)} />}
+      {showProfile && <ProfileSheet profile={other} shared={shared} commonWith={other.id} onClose={() => setShowProfile(false)} />}
       {reporting && <ReportSheet onClose={() => setReporting(false)} onReport={report} />}
       {games.overlay}
     </div>

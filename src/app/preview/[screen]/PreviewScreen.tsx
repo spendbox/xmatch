@@ -49,6 +49,7 @@ import { MeetScreen } from "@/components/meets/MeetScreen";
 import { ExploreScreen } from "@/components/explore/ExploreScreen";
 import { MediaHelp } from "@/components/app/MediaHelp";
 import { SEED_QUESTIONS, type Pact, type PactQuestion } from "@/lib/pacts";
+import { YouBoth } from "@/components/matches/YouBoth";
 import { PactFlow } from "@/components/pacts/PactFlow";
 import { PactCard } from "@/components/pacts/PactCard";
 import { MaskedChats } from "@/components/matches/MaskedChats";
@@ -686,6 +687,14 @@ function ScreenBody({ screen }: { screen: string }) {
         <div className="pb-24">
           <MatchesList myId="me" matches={[]} />
           <BottomNav />
+        </div>
+      );
+    case "you-both":
+      return (
+        <div className="mx-auto max-w-md p-5">
+          <YouBoth demo={{ connected: false, interests: ["Afrobeats", "Food", "Football"], place: "Lagos", tot: { same: 7, rounds: 10, items: [{ q: "Coffee or tea?", a: "Coffee" }, { q: "Beach or city?", a: "City" }, { q: "Early bird or night owl?", a: "Night owl" }] }, words: null, linkups: null }} />
+          <div className="h-5" />
+          <YouBoth demo={{ connected: true, interests: ["Afrobeats", "Food"], place: "Lagos", tot: { same: 7, rounds: 10, items: [{ q: "Coffee or tea?", a: "Coffee" }] }, words: ["jollof", "arsenal", "beach"], linkups: { count: 4, items: [{ pact: "Lagos Link-Up", q: "Money", a: "Save it for the future" }, { pact: "Lagos Link-Up", q: "Top artists", a: "Tems, Asake" }] } }} />
         </div>
       );
     case "profile-preview":

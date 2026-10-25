@@ -88,6 +88,7 @@ export function ExploreProfileSheet({
     <ProfileSheet
       profile={profile}
       blur={!p.photos_unlocked}
+      commonWith={p.id}
       shared={p.shared_interests}
       onClose={onClose}
       note={[p.online ? "Online now" : null, p.place, both].filter(Boolean).join(" · ") || undefined}
