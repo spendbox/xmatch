@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import clsx from "clsx";
 import { Check, ChevronDown, ChevronRight, MapPin, SlidersHorizontal } from "lucide-react";
 import { INTENTS, MAX_SEEK, SEEK_OPTIONS, SPICE_LEVELS, seekingLabel, seekingList, toSeeking } from "@/lib/constants";
@@ -12,22 +12,33 @@ import { INTENT_HINTS, SPICE_HINTS, type SetupPrefs } from "./prefs";
 
 const AGES = Array.from({ length: 82 }, (_, i) => i + 18);
 
-/** One pop-up with everything about who you'd like to meet. */
+/**
+ * One pop-up with everything about who you'd like to meet. Changes are kept to a copy:
+ * Done saves them; closing any other way (X, tapping outside, Escape) leaves them as they were.
+ */
 export function MeetSheet({
   open,
   onClose,
-  prefs,
-  setPrefs,
+  onSave,
+  prefs: saved,
   place,
   onPlace,
 }: {
   open: boolean;
+  /** Closed without saving */
   onClose: () => void;
+  /** Done: save these */
+  onSave: (prefs: SetupPrefs) => void;
   place: string | null;
   onPlace: () => void;
   prefs: SetupPrefs;
-  setPrefs: (fn: (p: SetupPrefs) => SetupPrefs) => void;
 }) {
+  const [prefs, setPrefs] = useState<SetupPrefs>(saved);
+  // Each time it opens, start from what's saved
+  useEffect(() => {
+    if (open) setPrefs(saved);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
   const set = <K extends keyof SetupPrefs>(k: K, v: SetupPrefs[K]) => setPrefs((p) => ({ ...p, [k]: v }));
   const [whoOpen, setWhoOpen] = useState(false);
   const whoSet = prefs.seeking !== "anyone";
@@ -39,7 +50,7 @@ export function MeetSheet({
       subtitle="Changes apply from your next pairing."
       icon={<SlidersHorizontal size={22} strokeWidth={1.75} />}
       footer={
-        <Button size="lg" onClick={onClose}>
+        <Button size="lg" onClick={() => onSave(prefs)}>
           Done
         </Button>
       }

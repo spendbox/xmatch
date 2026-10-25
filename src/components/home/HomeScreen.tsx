@@ -87,15 +87,16 @@ export function HomeScreen({
     setGreeting(h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening");
   }, []);
 
-  function savePrefs() {
+  function savePrefs(next: SetupPrefs) {
+    setPrefs(next);
     return supabase
       .from("profiles")
       .update({
-        pref_intent: prefs.intent,
-        pref_seeking: prefs.seeking,
-        pref_age_min: prefs.ageMin,
-        pref_age_max: prefs.ageMax,
-        pref_spice: prefs.spice,
+        pref_intent: next.intent,
+        pref_seeking: next.seeking,
+        pref_age_min: next.ageMin,
+        pref_age_max: next.ageMax,
+        pref_spice: next.spice,
         // Distance is decided for you now (closest first)
         pref_max_km: null,
       })
@@ -147,7 +148,7 @@ export function HomeScreen({
 
       <div className="lg:mt-8 lg:grid lg:grid-cols-12 lg:items-start lg:gap-8">
       <div className="mt-5 lg:sticky lg:top-24 lg:col-span-7 lg:mt-0">
-        <MasqueradeCard userId={profile.id} ctl={ctl} onSettings={() => setMeetOpen(true)} />
+        <MasqueradeCard userId={profile.id} ctl={ctl} prefs={prefs} onSettings={() => setMeetOpen(true)} />
 
         {pact && (
           <section className="mt-6">
@@ -206,12 +207,12 @@ export function HomeScreen({
 
       <MeetSheet
         open={meetOpen}
-        onClose={() => {
+        onClose={() => setMeetOpen(false)}
+        onSave={(next) => {
           setMeetOpen(false);
-          savePrefs();
+          savePrefs(next);
         }}
         prefs={prefs}
-        setPrefs={setPrefs}
         place={place.label}
         onPlace={() => setPlaceOpen(true)}
       />
