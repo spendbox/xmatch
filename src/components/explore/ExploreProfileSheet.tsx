@@ -288,7 +288,7 @@ export function ExploreProfileSheet({
               </div>
               {p.waved_me ? null : p.message_cost > 0 ? (
                 <p className="flex items-center justify-center gap-1.5 text-[12px] text-muted">
-                  <ShieldCheck size={14} className="text-mint" /> Keys back if {first} doesn&apos;t reply in 48 hours
+                  <ShieldCheck size={14} className="text-mint" /> Message Keys come back if {first} doesn&apos;t reply in 48 hours
                 </p>
               ) : null}
               {!p.waved_me && p.i_waved && <p className="text-center text-[12px] text-muted">If {first} waves back, your chat opens free.</p>}
