@@ -53,7 +53,7 @@ export function Outcome({ state, eventId }: { state: MasqueradeState; eventId?: 
           </ButtonLink>
         ) : (
           <ButtonLink href="/home" size="lg" variant="gold">
-            <RotateCcw size={18} /> {state.hourly ? "Back home · new pair next hour" : "Find someone new"}
+            <RotateCcw size={18} /> {state.hourly ? "Back home · new pair soon" : "Find someone new"}
           </ButtonLink>
         )}
       </div>

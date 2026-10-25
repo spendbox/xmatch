@@ -42,14 +42,15 @@ export function MasqueradeHealth({ stats }: { stats: MasqueradeStats | null }) {
   const w = stats.week;
 
   const issues: string[] = [];
-  if (missed.length) issues.push(`${missed.length} of the last 24 open hours never ran pairing. The scheduled job may be off (part 18), and nobody opened the app in those hours.`);
-  if (late.length) issues.push(`${late.length} hours started pairing too late (after :45) and were skipped. The scheduled job isn't running on the hour.`);
+  // Live pairing (update 66): an hour with nobody online simply has no pairs, so missed or late hours aren't problems any more
+  void missed;
+  void late;
   if (unnotified > 0) issues.push(`${unnotified} pairs weren't sent a "new pair" notification. Check that CRON_SECRET in part 18 matches Vercel.`);
   if (stats.no_place > 0) issues.push(`${stats.no_place} people with Masquerade on haven't set where they are, so they're paired without closeness.`);
 
   return (
     <>
-      <AdminTitle title="Masquerade" subtitle="Hourly pairing, 6am to 2am (Lagos time). Last 48 hours." />
+      <AdminTitle title="Masquerade" subtitle="Live pairing while people are online, 6am to 2am (Lagos time). Last 48 hours." />
 
       <div className={clsx("mb-6 rounded-2xl border p-4", issues.length ? "border-gold/50 bg-gold-soft" : "border-mint/30 bg-mint-soft")}>
         {issues.length ? (
@@ -62,7 +63,7 @@ export function MasqueradeHealth({ stats }: { stats: MasqueradeStats | null }) {
           </ul>
         ) : (
           <p className="flex items-center gap-2.5 text-[14px] font-semibold text-mint">
-            <CheckCircle2 size={18} /> Pairing ran every open hour and pairs were notified.
+            <CheckCircle2 size={18} /> Pairing is running and new pairs were notified.
           </p>
         )}
       </div>
