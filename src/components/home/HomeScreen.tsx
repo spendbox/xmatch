@@ -94,9 +94,11 @@ export function HomeScreen({
     setGreeting(h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening");
   }, []);
 
-  function savePrefs(next: SetupPrefs) {
+  async function savePrefs(next: SetupPrefs) {
+    const before = prefs;
     setPrefs(next);
-    return supabase
+    // The save only goes out when it's awaited (this was missing, so changes never reached Dashpad)
+    const { error } = await supabase
       .from("profiles")
       .update({
         pref_intent: next.intent,
@@ -108,6 +110,10 @@ export function HomeScreen({
         pref_max_km: null,
       })
       .eq("id", profile.id);
+    if (error) {
+      setPrefs(before);
+      alert("Couldn't save your Masquerade settings. Check your connection and try again.");
+    }
   }
 
   const balance = wallet?.balance ?? 0;
@@ -218,7 +224,7 @@ export function HomeScreen({
         onClose={() => setMeetOpen(false)}
         onSave={(next) => {
           setMeetOpen(false);
-          savePrefs(next);
+          void savePrefs(next);
         }}
         prefs={prefs}
         place={place.label}

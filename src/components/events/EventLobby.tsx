@@ -125,7 +125,7 @@ export function EventLobby({
   useEffect(() => {
     if (phase === "ended" && waiting) {
       setWaiting(false);
-      supabase.rpc("cancel_masquerade");
+      supabase.rpc("cancel_masquerade").then(() => {});
       refresh();
     }
   }, [phase, waiting, supabase, refresh]);
