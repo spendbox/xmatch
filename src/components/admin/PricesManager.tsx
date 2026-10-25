@@ -28,6 +28,8 @@ type Settings = {
   explore_photos_paid: number;
   ghost_cost: number;
   wave_cost: number;
+  pair_gap_minutes: number;
+  pair_minutes: number;
   setup_reward: number;
   signup_keys: number;
 };
@@ -69,6 +71,15 @@ export function PricesManager({ settings, gifts, packs, invites = null }: { sett
           hint="Main photos always show. Off: someone's other photos only show once you're both connected (people who already paid keep theirs)."
           value={settings.explore_photos_paid}
         />
+      </section>
+
+      <section className="mt-6 rounded-3xl border border-line bg-surface p-5 shadow-card">
+        <h2 className="text-[16px] font-semibold">Masquerade pairing</h2>
+        <p className="mt-1 text-[13px] text-muted">People are paired while they&apos;re both online, 6am to 2am. Nobody is paired while they&apos;re away.</p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <SettingField k="pair_gap_minutes" label="Time between pairs" hint="Minutes before someone can get a new pair (60 = one an hour)" value={settings.pair_gap_minutes} keysIcon={false} />
+          <SettingField k="pair_minutes" label="Chat length" hint="Minutes a masked pair chat lasts" value={settings.pair_minutes} keysIcon={false} />
+        </div>
       </section>
 
       <section className="mt-6 rounded-3xl border border-line bg-surface p-5 shadow-card">

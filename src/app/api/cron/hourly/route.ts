@@ -6,7 +6,7 @@ import type { Intent } from "@/lib/types";
 import { revealDuePacts } from "@/lib/pactsServer";
 
 // Called every 5 minutes by a scheduled job in Supabase (see the database setup page),
-// with "Authorization: Bearer CRON_SECRET". Pairs everyone at the top of the hour, tells each new pair, and nudges quiet chats.
+// with "Authorization: Bearer CRON_SECRET". Closes ended chats, pairs anyone online who is still waiting (live pairing happens on check-in), tells each new pair, and nudges quiet chats.
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 

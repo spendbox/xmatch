@@ -247,7 +247,7 @@ export function MasqueradeRoom({
         state.meet
           ? `Let go of ${theirName}? The chat closes for both of you.`
           : state.hourly
-            ? `Let go of ${theirName}? The chat closes for both of you. You'll get someone new next hour.`
+            ? `Let go of ${theirName}? The chat closes for both of you. You'll get someone new soon.`
             : "Leave this masquerade? The chat will be deleted.",
       )
     )

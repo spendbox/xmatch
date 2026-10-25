@@ -44,7 +44,7 @@ const MODES = [
 
 const STEPS = [
   { icon: <MaskLineIcon size={20} />, title: "Switch on Masquerade", body: "Pick your vibe in a few taps." },
-  { icon: <Clock3 size={20} strokeWidth={1.75} />, title: "Meet someone new every hour", body: "A fresh masked pair on the hour, 6am to 2am. No names, no photos. Just energy." },
+  { icon: <Clock3 size={20} strokeWidth={1.75} />, title: "Meet someone new every hour", body: "Paired the moment you're both online, 6am to 2am. No names, no photos. Just energy." },
   { icon: <Handshake size={20} strokeWidth={1.75} />, title: "Unmask together", body: "Both unmask? You're connected. Talked but didn't decide? Pick it up later." },
 ];
 

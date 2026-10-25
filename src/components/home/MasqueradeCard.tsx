@@ -6,12 +6,13 @@ import clsx from "clsx";
 import { Handshake, MessageCircle, Pencil } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { intentLabel, seekingLabel, seekingList, spiceLabel } from "@/lib/constants";
-import { clock, type MasqueradeHour } from "@/lib/hourly";
+import { clock, lagosTime, type MasqueradeHour } from "@/lib/hourly";
 import { Toggle } from "@/components/ui/Toggle";
 import { tapFeedback } from "@/components/ui/Button";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { INTENT_ICONS, SEEKING_ICONS, SpiceIcon } from "@/components/ui/icons";
 import type { SetupPrefs } from "./prefs";
+import type { Intent } from "@/lib/types";
 import { nameColor } from "@/lib/eventSpace";
 
 /** Keeps the hourly pairing state fresh: on open, on focus, when the hour turns, and when your pair changes. */
@@ -99,7 +100,12 @@ export function MasqueradeCard({
     tapFeedback();
     setHour((h) => (h ? { ...h, enabled: v } : h));
     const { error } = await supabase.from("profiles").update({ open_to_masquerade: v }).eq("id", userId);
-    if (error) setHour((h) => (h ? { ...h, enabled: !v } : h));
+    if (error) return setHour((h) => (h ? { ...h, enabled: !v } : h));
+    // Switched on: check in now, so you're paired straight away if someone online fits
+    if (v) {
+      await supabase.rpc("heartbeat");
+      void ctl.load();
+    }
   }
 
   const preview = cur
@@ -114,6 +120,8 @@ export function MasqueradeCard({
             : "Keep the vibe going."
     : "";
 
+  // Switched on, nothing live, and free to be paired now
+  const looking = !!hour && enabled && !live && cur?.status !== "matched" && (hour.looking ?? hour.hour_open);
   const settingsLabel = prefs
     ? `Masquerade settings: ${[intentLabel(prefs.intent), prefs.seeking !== "anyone" ? `meeting ${seekingLabel(prefs.seeking)}` : null, prefs.intent !== "friends" ? `${spiceLabel(prefs.spice)} questions` : null].filter(Boolean).join(", ")}. Edit`
     : "Masquerade settings";
@@ -133,7 +141,7 @@ export function MasqueradeCard({
       ) : live && cur ? (
         // Your pair right now
         <>
-          <Face alias={cur.their_alias} />
+          <Face alias={cur.their_alias} intent={cur.intent} />
           <div className="relative min-w-0 flex-1">
             <p className="flex items-center gap-2">
               <span className="truncate text-[15px] leading-tight font-semibold">{cur.their_alias}</span>
@@ -176,7 +184,8 @@ export function MasqueradeCard({
         // Waiting for your next pair, or switched off
         <>
           <span className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/15">
-            <MaskIcon className="w-7 text-white" eyes="#6d4ff0" />
+            {looking && <span aria-hidden className="absolute inset-0 animate-ping rounded-full bg-white/20 [animation-duration:2.4s]" />}
+            <MaskIcon className="relative w-7 text-white" eyes="#6d4ff0" />
           </span>
           <div className="relative min-w-0 flex-1">
             {enabled && prefs ? (
@@ -211,24 +220,22 @@ export function MasqueradeCard({
             ) : (
               <p className="text-[15px] leading-tight font-semibold">{enabled ? "Masquerade" : "Masquerade is off"}</p>
             )}
-            <p className="mt-0.5 flex items-center gap-1.5 truncate text-[12px] text-white/80">
-              {enabled && hour.pulse && hour.pulse.all > 0 ? (
+            {/* Quiet: no countdown. You're paired the moment someone who fits is online too. */}
+            <p className="mt-0.5 flex items-center gap-1.5 truncate text-[12px] text-white/85" aria-live="polite">
+              {!enabled ? (
+                <span className="truncate">Meet someone new, masked</span>
+              ) : looking ? (
                 <>
-                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#7dffb5]" aria-hidden />
-                  <span className="truncate">{pulseText(hour)}</span>
+                  <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-[#7dffb5]" aria-hidden />
+                  <span className="truncate">
+                    Looking for your pair{hour.pulse && hour.pulse.all > 0 ? ` · ${onlineCount(hour)} online` : "…"}
+                  </span>
                 </>
-              ) : enabled ? (
-                <span className="truncate">{hour.hour_open ? "A new masked pair every hour" : "Pairing runs 6am to 2am"}</span>
               ) : (
-                <span className="truncate">Meet someone new every hour</span>
+                <span className="truncate">{waitText(hour)}</span>
               )}
             </p>
           </div>
-          {enabled && (
-            <p className="relative shrink-0 font-display text-[22px] leading-none font-semibold tabular-nums" aria-label={`Next pair in ${now ? clock(new Date(hour.next_at).getTime() - serverNow) : ""}`}>
-              {now ? clock(new Date(hour.next_at).getTime() - serverNow) : "··:··"}
-            </p>
-          )}
           <span className="relative">
             <Toggle checked={enabled} onChange={toggle} label="Masquerade pairing" />
           </span>
@@ -238,22 +245,31 @@ export function MasqueradeCard({
   );
 }
 
-function Face({ alias, small }: { alias: string; small?: boolean }) {
+/** Your pair: the chat's mood (friends, dating, spicy) on their colour, instead of a mask */
+function Face({ alias, small, intent }: { alias: string; small?: boolean; intent?: Intent }) {
   return (
     <span
       className={clsx("relative grid shrink-0 place-items-center rounded-full ring-[3px] ring-white/20", small ? "h-10 w-10 opacity-80" : "h-11 w-11")}
       style={{ background: nameColor(alias) }}
-      title={small ? `You · ${alias}` : alias}
+      title={small ? `You · ${alias}` : intent ? `${alias} · ${intentLabel(intent)}` : alias}
     >
-      <MaskIcon className={clsx("text-white", small ? "w-6" : "w-7")} eyes={nameColor(alias)} />
+      {intent ? (
+        <span className="text-white">{INTENT_ICONS[intent]({ size: small ? 18 : 21, strokeWidth: 2.2 })}</span>
+      ) : (
+        <MaskIcon className={clsx("text-white", small ? "w-6" : "w-7")} eyes={nameColor(alias)} />
+      )}
     </span>
   );
 }
 
-/** "128 ready in Lagos" (short, to fit the small card) */
-function pulseText(h: MasqueradeHour) {
+/** How many people near you are switched on and online now (your state if enough, else country, else all) */
+function onlineCount(h: MasqueradeHour) {
   const p = h.pulse!;
-  if (p.region >= 3 && p.region_name) return `${p.region} ready in ${p.region_name}`;
-  if (p.country >= 3) return `${p.country} ready in your country`;
-  return `${p.all} ready now`;
+  return p.region >= 3 ? p.region : p.country >= 3 ? p.country : p.all;
+}
+
+/** When you're not looking yet: between pairs, or outside pairing hours */
+function waitText(h: MasqueradeHour) {
+  const at = lagosTime(h.next_at).replace(/\s?([AP]M)$/i, (_, m: string) => m.toLowerCase());
+  return h.hour_open && new Date(h.next_at).getTime() - Date.now() < 3 * 3600_000 ? `Your next pair after ${at}` : `Pairing starts at ${at}`;
 }

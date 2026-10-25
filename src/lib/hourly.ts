@@ -1,6 +1,6 @@
 import type { Gender, Intent } from "./types";
 
-// Hourly Masquerade: a new masked pair at the top of every hour, 6am to 2am (Lagos time).
+// Masquerade: you're paired with someone who fits as soon as you're both online (up to one new pair an hour), 6am to 2am (Lagos time).
 
 export type HourPair = {
   id: string;
@@ -47,8 +47,11 @@ export type MasqueradeHour = {
   hour_open: boolean;
   hour_ran: boolean;
   pairs_this_hour: number;
+  /** Live pairing: when you can next be paired (now, after the gap since your last pair, or when pairing hours start) */
   next_at: string;
-  /** People switched on and active today: everywhere, in your country, in your state */
+  /** Live pairing: switched on and free to be paired right now ("Looking for your pair…") */
+  looking?: boolean;
+  /** People switched on and online right now: everywhere, in your country, in your state */
   pulse?: { all: number; country: number; region: number; region_name: string | null };
   invite_reward?: number;
   current: HourPair | null;
