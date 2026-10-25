@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { CHATS_EVENT } from "@/components/app/useMenuBadges";
 import { ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { nameColor } from "@/lib/eventSpace";
@@ -33,12 +35,31 @@ export function RecentChats({ matches, myId, demoMasked }: { matches: MatchSumma
   const [masked, setMasked] = useState<RecentMasked[]>(demoMasked ?? []);
   const paid = usePaidChatPeople(!!demoMasked);
 
+  // Live: a new message in any of your chats refreshes this row (masked chats here, connected chats from the page)
+  const router = useRouter();
   useEffect(() => {
     if (demoMasked) return;
-    supabase.rpc("my_masked_chats").then(({ data }) => {
-      if (Array.isArray(data)) setMasked(data as RecentMasked[]);
-    });
-  }, [supabase, demoMasked]);
+    const load = () =>
+      supabase.rpc("my_masked_chats").then(({ data }) => {
+        if (Array.isArray(data)) setMasked(data as RecentMasked[]);
+      });
+    void load();
+    let t: ReturnType<typeof setTimeout> | null = null;
+    const again = () => {
+      if (t) clearTimeout(t);
+      t = setTimeout(() => {
+        void load();
+        router.refresh();
+      }, 600);
+    };
+    window.addEventListener(CHATS_EVENT, again);
+    window.addEventListener("dp:badges", again);
+    return () => {
+      window.removeEventListener(CHATS_EVENT, again);
+      window.removeEventListener("dp:badges", again);
+      if (t) clearTimeout(t);
+    };
+  }, [supabase, demoMasked, router]);
 
   const items: Item[] = [
     ...matches.map((m) => ({

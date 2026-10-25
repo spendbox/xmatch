@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-/** Someone counts as online if the app checked in within this time (it checks in every minute while open). */
+/** Someone counts as online if the app checked in within this time (it checks in every minute while open,
+ * and says when you leave). The database uses the same 2.5 minutes. */
 export const ONLINE_MS = 2.5 * 60 * 1000;
 
 export function isOnline(lastSeen?: string | null, now = Date.now()) {
@@ -23,7 +24,7 @@ export function lastSeenText(lastSeen?: string | null, now = Date.now()) {
   return "Offline";
 }
 
-/** When each of these people (your matches) was last in the app, refreshed every minute. */
+/** When each of these people was last in the app, refreshed every 30 seconds (the same check on every screen). */
 export function usePresence(ids: string[]) {
   const supabase = useMemo(() => createClient(), []);
   const key = [...new Set(ids)].sort().join(",");
@@ -41,7 +42,7 @@ export function usePresence(ids: string[]) {
       setNow(Date.now());
     };
     load();
-    const t = setInterval(() => document.visibilityState === "visible" && load(), 60_000);
+    const t = setInterval(() => document.visibilityState === "visible" && load(), 30_000);
     const onVisible = () => document.visibilityState === "visible" && load();
     document.addEventListener("visibilitychange", onVisible);
     return () => {

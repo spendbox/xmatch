@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import clsx from "clsx";
+import { CHATS_EVENT } from "@/components/app/useMenuBadges";
 import { useEffect, useRef, useState } from "react";
 import { MessageCircle, Search, Shapes, Users, X } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
@@ -46,8 +47,10 @@ export function MatchesList({
     };
     router.refresh();
     window.addEventListener("dp:badges", again);
+    window.addEventListener(CHATS_EVENT, again);
     return () => {
       window.removeEventListener("dp:badges", again);
+      window.removeEventListener(CHATS_EVENT, again);
       if (wait.current) clearTimeout(wait.current);
     };
   }, [router]);

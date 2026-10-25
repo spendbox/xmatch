@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
+import { CHATS_EVENT } from "@/components/app/useMenuBadges";
 import { createClient } from "@/lib/supabase/client";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { nameColor } from "@/lib/eventSpace";
@@ -48,8 +49,10 @@ export function MaskedChats({ term = "", demo, onCount }: { term?: string; demo?
       t = setTimeout(load, 700);
     };
     window.addEventListener("dp:badges", again);
+    window.addEventListener(CHATS_EVENT, again);
     return () => {
       window.removeEventListener("dp:badges", again);
+      window.removeEventListener(CHATS_EVENT, again);
       if (t) clearTimeout(t);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
