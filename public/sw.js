@@ -24,8 +24,9 @@ self.addEventListener("push", (event) => {
       }
       return self.registration.showNotification(title, {
       body: data.body || "",
-      icon: data.icon || "/icon-192.png",
-      badge: "/badge-96.png",
+      // Always the Dashpad logo (people's photos didn't always load, and faces on a lock screen aren't private)
+      icon: new URL("/icon-192.png", self.location.origin).href,
+      badge: new URL("/badge-96.png", self.location.origin).href,
       tag: data.tag || undefined,
       renotify: !!data.tag,
       // Play the phone's notification sound (and again when a chat's notification updates);
