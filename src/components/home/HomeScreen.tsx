@@ -36,6 +36,7 @@ import { PostMeetSheet } from "@/components/meets/PostMeetSheet";
 import { YourMeet } from "@/components/meets/YourMeet";
 import { useMeets } from "@/components/meets/useMeets";
 import { FEATURES } from "@/lib/features";
+import { RecentChats } from "./RecentChats";
 
 export type HomeStats = { online: number; week_chats: number; week_unmasks: number; gifts_received: number };
 
@@ -143,8 +144,7 @@ export function HomeScreen({
       </header>
       </Sticky>
 
-      {/* People for you, as one long strip (your chats are in Chats) */}
-      <PeopleForYou userId={profile.id} demo={demoPeople} />
+      <RecentChats matches={matches} />
 
       <div className="lg:mt-8 lg:grid lg:grid-cols-12 lg:items-start lg:gap-8">
       <div className="mt-5 lg:sticky lg:top-24 lg:col-span-7 lg:mt-0">
@@ -165,6 +165,7 @@ export function HomeScreen({
           demo={demoSetup}
         />
 
+        <PeopleForYou userId={profile.id} demo={demoPeople} />
         <WelcomeTour force={demoTour} off={!!demoPeople && !demoTour} />
       </div>
 
