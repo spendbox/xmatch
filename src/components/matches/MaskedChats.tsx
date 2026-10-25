@@ -66,7 +66,7 @@ export function MaskedChats({ term = "", demo, onCount }: { term?: string; demo?
       <h2 className="mb-2.5 text-[13px] font-semibold tracking-wide text-muted uppercase">Masked chats</h2>
       <ul className="space-y-2.5">
         {shown.map((c) => {
-          // Started by paying on Meet: you saw their name there, so it shows here (photo blurred)
+          // Started by paying on Meet, or you both waved: you saw their name and main photo there, so they show here
           const known = paid[c.id];
           const name = known?.name || c.alias;
           return c.pact && c.pact_slug && !c.pact_seen ? (
@@ -92,7 +92,7 @@ export function MaskedChats({ term = "", demo, onCount }: { term?: string; demo?
               <span className="relative grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-full" style={{ background: nameColor(c.alias) }}>
                 {known?.photo ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={known.photo} alt="" className="h-full w-full scale-110 object-cover blur-md" />
+                  <img src={known.photo} alt="" className="h-full w-full object-cover" />
                 ) : (
                   <MaskIcon className="w-8 text-white" eyes={nameColor(c.alias)} />
                 )}

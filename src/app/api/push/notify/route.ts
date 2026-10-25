@@ -16,6 +16,22 @@ type Body = { kind?: string; personId?: string; matchId?: string; callId?: strin
 const RECENT_MS = 60_000;
 const firstName = (n: string | null | undefined) => (n ?? "").split(" ")[0] || "Someone";
 
+/**
+ * In chats started from Meet the other person may already know your name: if you both
+ * waved, or they paid to message you (you're user_b). Then notifications use it, not your mask.
+ */
+async function senderLabel(
+  db: ReturnType<typeof createAdminClient>,
+  s: { source?: string | null; waved?: boolean | null; pact_id?: string | null; meet_id?: string | null; user_b: string },
+  uid: string,
+  alias: string,
+) {
+  const knows = s.source === "explore" && !s.pact_id && !s.meet_id && (s.waved || s.user_b === uid);
+  if (!knows) return alias;
+  const { data } = await db.from("profiles").select("display_name").eq("id", uid).single();
+  return firstName(data?.display_name as string | null) || alias;
+}
+
 function preview(kind: string, body: string | null, slow = false) {
   if (kind === "image") return slow ? "⏳ Sent you a slow reveal photo" : "📷 Photo";
   if (kind === "video") return slow ? "⏳ Sent you a slow reveal video" : "🎬 Video";
@@ -104,14 +120,15 @@ export async function POST(req: Request) {
   if (b.kind === "masquerade_unmask" && b.sessionId) {
     const { data: s } = await db
       .from("masquerade_sessions")
-      .select("id, user_a, user_b, alias_a, alias_b, unmask_a, unmask_b, status")
+      .select("id, user_a, user_b, alias_a, alias_b, unmask_a, unmask_b, status, source, waved, pact_id, meet_id")
       .eq("id", b.sessionId)
       .maybeSingle();
     if (!s || (s.user_a !== uid && s.user_b !== uid) || (s.status !== "active" && s.status !== "lapsed")) return ok;
     const iAmA = s.user_a === uid;
     if ((iAmA ? s.unmask_a : s.unmask_b) !== true || (iAmA ? s.unmask_b : s.unmask_a) === true) return ok;
+    const who = await senderLabel(db, s, uid, (iAmA ? s.alias_a : s.alias_b) as string);
     await pushToUsers([(iAmA ? s.user_b : s.user_a) as string], {
-      title: `${iAmA ? s.alias_a : s.alias_b} unmasked 🎭`,
+      title: `${who} unmasked 🎭`,
       body: "They want to see who you are. Unmask too and you're connected.",
       url: `/masquerade/${s.id}`,
       tag: `unmask-${s.id}`,
@@ -160,7 +177,7 @@ export async function POST(req: Request) {
 
   // A message in a masked chat (sent only if they're not in the app right now)
   if (b.kind === "masked_message" && b.sessionId) {
-    const { data: s } = await db.from("masquerade_sessions").select("id, user_a, user_b, alias_a, alias_b, status").eq("id", b.sessionId).maybeSingle();
+    const { data: s } = await db.from("masquerade_sessions").select("id, user_a, user_b, alias_a, alias_b, status, source, waved, pact_id, meet_id").eq("id", b.sessionId).maybeSingle();
     if (!s || (s.user_a !== uid && s.user_b !== uid) || s.status !== "active") return ok;
     const { data: msg } = await db
       .from("masquerade_messages")
@@ -173,7 +190,7 @@ export async function POST(req: Request) {
     if (!msg || Date.now() - new Date(msg.created_at as string).getTime() > RECENT_MS) return ok;
     await pushToUsers(
       [(s.user_a === uid ? s.user_b : s.user_a) as string],
-      { title: `${s.user_a === uid ? s.alias_a : s.alias_b} 🎭`, body: preview("text", msg.body as string), url: `/masquerade/${s.id}`, tag: `masked-${s.id}` },
+      { title: `${await senderLabel(db, s, uid, (s.user_a === uid ? s.alias_a : s.alias_b) as string)} 🎭`, body: preview("text", msg.body as string), url: `/masquerade/${s.id}`, tag: `masked-${s.id}` },
       { skipIfActive: true },
     );
     return ok;
