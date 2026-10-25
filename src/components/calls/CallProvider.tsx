@@ -303,7 +303,7 @@ export function CallProvider({ userId, children }: { userId: string; children: R
       timers.current.push(
         setTimeout(() => {
           if (callRef.current?.id === c.id && callRef.current.status === "outgoing") {
-            supabase.rpc("update_call", { p_call: c.id, p_status: "missed" });
+            supabase.rpc("update_call", { p_call: c.id, p_status: "missed" }).then(() => {});
             teardown("No answer");
           }
         }, RING_SECONDS * 1000),
@@ -415,7 +415,7 @@ export function CallProvider({ userId, children }: { userId: string; children: R
       const c = callRef.current;
       if (c && c.status !== "ended") {
         send({ type: "bye" });
-        supabase.rpc("update_call", { p_call: c.id, p_status: c.role === "callee" && c.status === "incoming" ? "declined" : "ended" });
+        supabase.rpc("update_call", { p_call: c.id, p_status: c.role === "callee" && c.status === "incoming" ? "declined" : "ended" }).then(() => {});
       }
     };
     window.addEventListener("pagehide", bye);

@@ -54,7 +54,8 @@ export function ExploreProfileSheet({
       else setError("This profile isn't available.");
     });
     // They'll see you viewed them (unless you're in ghost mode)
-    void supabase.rpc("log_profile_view", { p_id: personId });
+    // (.then makes the request actually go out)
+    supabase.rpc("log_profile_view", { p_id: personId }).then(() => {});
     supabase.rpc("in_common", { p_other: personId, p_session: null }).then(({ data, error: err }) => {
       if (!err && data) setCommon(data as HintData);
     });

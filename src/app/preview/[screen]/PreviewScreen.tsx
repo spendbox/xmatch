@@ -18,6 +18,7 @@ import { NightEditor } from "@/components/admin/NightEditor";
 import { IcebreakerManager } from "@/components/admin/IcebreakerManager";
 import type { DashpadEvent } from "@/lib/events";
 import { MasqueradeRoom } from "@/components/masquerade/MasqueradeRoom";
+import { MaskedVoiceSheet } from "@/components/chat/MaskedVoiceSheet";
 import { Outcome } from "@/components/masquerade/Outcome";
 import { MatchesList } from "@/components/matches/MatchesList";
 import { MatchChat } from "@/components/matches/MatchChat";
@@ -140,7 +141,7 @@ const recent = [
   { id: "m3", created_at: iso(3000), last_message_at: iso(200), intent: "spicy" as const, other_id: "z", display_name: "Zara", photos: [photo("#5b3fd9", "#e5484d", "Z")], age: 29, last_message: null, last_sender: null },
 ];
 
-const APP_SCREENS = ["events-empty", "event-spotlight", "event-spotlight-live", "events", "event-upcoming", "event-live", "event-waiting", "event-ended", "home", "matches", "wallet", "profile", "rich-chat", "extend", "chat", "desktop-matches", "gifts", "home-next", "home-wait", "home-off", "home-clicked", "people", "feed", "feed-locked", "feed-chat", "feed-gifts", "meet", "meet-events", "meet-post", "explore"];
+const APP_SCREENS = ["events-empty", "event-spotlight", "event-spotlight-live", "events", "event-upcoming", "event-live", "event-waiting", "event-ended", "home", "matches", "wallet", "profile", "rich-chat", "extend", "chat", "desktop-matches", "gifts", "home-next", "home-wait", "voice-chat", "voice-sheet", "voice-record", "home-off", "home-clicked", "people", "feed", "feed-locked", "feed-chat", "feed-gifts", "meet", "meet-events", "meet-post", "explore"];
 
 function ev(over: Partial<DashpadEvent> = {}): DashpadEvent {
   return {
@@ -441,6 +442,26 @@ function ScreenBody({ screen }: { screen: string }) {
       return <HomeScreen demoPeople={homePeople} demoSetup={{ place: true, push: false, things: 4, claimed: false, reward: 5 }} profile={me} wallet={null} stats={null} matches={[]} hour={demoHour("next")} />;
     case "chat":
       return <MasqueradeRoom initial={session()} initialMessages={msgs} demo={{ remaining: 121 }} />;
+    case "voice-chat":
+      return (
+        <MasqueradeRoom
+          initial={session()}
+          initialMessages={[
+            ...msgs,
+            { id: 20, sender_id: "ada", kind: "audio", body: "🎤 Voice note", created_at: iso(120), media_meta: { key: "voice/s1/a.wav", duration: 9, voice: "deep" } },
+            { id: 21, sender_id: "me", kind: "audio", body: "🎤 Voice note", created_at: iso(60), media_meta: { key: "voice/s1/b.wav", duration: 14, voice: "robot" } },
+          ]}
+          demo={{ remaining: 121 }}
+        />
+      );
+    case "voice-sheet":
+    case "voice-record":
+      return (
+        <div className="pb-24">
+          <HomeScreen demoPeople={homePeople} demoViews={homeViews} demoMasked={homeMasked} demoSetup={{ place: true, push: false, things: 4, claimed: false, reward: 5 }} hour={demoHour("live")} profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} matches={recent} />
+          <MaskedVoiceSheet open onClose={() => {}} sessionId="s1" demo={screen === "voice-sheet"} />
+        </div>
+      );
     case "decide":
       return <MasqueradeRoom initial={session()} initialMessages={msgs} demo={{ remaining: 0 }} />;
     case "matched":

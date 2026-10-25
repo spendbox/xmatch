@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { Handshake, MessageCircle, Pencil } from "lucide-react";
+import { Handshake, MessageCircle, Mic, Pencil } from "lucide-react";
+import { MaskedVoiceSheet } from "@/components/chat/MaskedVoiceSheet";
 import { createClient } from "@/lib/supabase/client";
 import { intentLabel, seekingLabel, seekingList, spiceLabel } from "@/lib/constants";
 import { clock, lagosTime, type MasqueradeHour } from "@/lib/hourly";
@@ -131,8 +132,11 @@ export function MasqueradeCard({
   // Tapping anywhere on the card: open your pair's chat, or your Masquerade settings.
   // (The switch and buttons inside still do their own thing.)
   const router = useRouter();
+  const [voiceOpen, setVoiceOpen] = useState(false);
   const cardHref = live && cur ? `/masquerade/${cur.id}` : cur?.status === "matched" && cur.match_id ? `/matches/${cur.match_id}` : null;
   function tapCard(e: React.MouseEvent) {
+    // Only taps on the card itself (not inside a pop-up opened from it, which React passes up here too)
+    if (!(e.currentTarget as HTMLElement).contains(e.target as Node)) return;
     if ((e.target as HTMLElement).closest("a, button")) return;
     if (!hour) return;
     tapFeedback();
@@ -165,13 +169,18 @@ export function MasqueradeCard({
             </p>
             <p className="truncate text-[12.5px] text-white/80">{preview}</p>
           </div>
-          <Link
-            href={`/masquerade/${cur.id}`}
-            onClick={() => tapFeedback()}
-            className="relative inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-gold px-3.5 text-[13.5px] font-semibold text-ink transition active:scale-95"
+          {/* Say hi with a masked voice note (tap the card itself to open the chat) */}
+          <button
+            type="button"
+            onClick={() => {
+              tapFeedback();
+              setVoiceOpen(true);
+            }}
+            className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full bg-gold text-ink shadow-[0_8px_20px_-8px_rgb(242_179_61/0.8)] transition active:scale-95"
+            aria-label={`Send ${cur.their_alias} a masked voice note`}
           >
-            <MessageCircle size={16} /> {cur.messages ? "Chat" : "Say hi"}
-          </Link>
+            <Mic size={20} />
+          </button>
         </>
       ) : cur?.status === "matched" ? (
         // You both unmasked this hour
@@ -254,6 +263,10 @@ export function MasqueradeCard({
             <Toggle checked={enabled} onChange={toggle} label="Masquerade pairing" />
           </span>
         </>
+      )}
+      {live && cur && (
+        // Sent from Home: open the chat, where the rest of the conversation happens
+        <MaskedVoiceSheet open={voiceOpen} onClose={() => setVoiceOpen(false)} sessionId={cur.id} onSent={() => router.push(`/masquerade/${cur.id}`)} />
       )}
     </section>
   );
