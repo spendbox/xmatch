@@ -94,9 +94,8 @@ export function ProfileViews({ demo, onKeys }: { demo?: Viewers; /** Keys were s
   const count = today > 0 ? today : data.people.length;
   // Waves still waiting for you (not ones you've answered with a chat)
   const waves = data.people.filter((p) => p.waved_me && !p.connected && !p.chat_id).length;
-  // Up to 4 small overlapping faces, then "+N", so the card stays one size however many people look
-  const faces = data.people.slice(0, 4);
-  const more = data.people.length - faces.length;
+  // The 3 most recent, overlapping, so the card stays one size however many people look
+  const faces = data.people.slice(0, 3);
 
   return (
     <>
@@ -110,17 +109,9 @@ export function ProfileViews({ demo, onKeys }: { demo?: Viewers; /** Keys were s
         aria-label={`${count} ${count === 1 ? "person" : "people"} viewed you ${today > 0 ? "today" : "this week"}. See who`}
       >
         <span className="flex shrink-0 -space-x-4">
-          {faces.map((v, i) => (
-            // Very small phones: 3 faces, so the words keep their room
-            <span key={v.id} className={i === 3 ? "max-[359px]:hidden" : undefined}>
-              <Face v={v} size={32} />
-            </span>
+          {faces.map((v) => (
+            <Face key={v.id} v={v} size={32} />
           ))}
-          {more > 0 && (
-            <span className="grid h-8 min-w-8 place-items-center rounded-full bg-brand-soft px-1 text-[11px] font-bold text-brand ring-2 ring-surface">
-              +{more > 99 ? 99 : more}
-            </span>
-          )}
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[14px] font-semibold text-ink min-[360px]:text-[15px]">
@@ -137,7 +128,7 @@ export function ProfileViews({ demo, onKeys }: { demo?: Viewers; /** Keys were s
         open={open}
         onClose={() => setOpen(false)}
         title="Who viewed you"
-        subtitle={`The last 7 days. Wave at someone${(data.wave_cost ?? 0) > 0 ? "" : " for free"}: if you both wave, your chat opens free.`}
+        subtitle={`The last 7 days. Wave at someone${(data.wave_cost ?? 0) > 0 ? "" : " for free"}. If you both wave, a chat opens for free.`}
         icon={<Eye size={20} />}
       >
         {error && <p className="mb-2 text-center text-[13px] font-medium text-chili">{error}</p>}
