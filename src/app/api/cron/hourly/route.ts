@@ -20,22 +20,21 @@ async function handle(req: Request) {
   const started = Date.now();
   const db = createAdminClient();
   // Keep "usually replies in…" fresh: this runs every 5 minutes, 200 people at a time (it pairs quick repliers first)
-  await db.rpc("refresh_reply_stats", { p_limit: 200 });
+  const stats = await db.rpc("refresh_reply_stats", { p_limit: 200 });
+  if (stats.error) console.error("reply stats failed", stats.error.message);
   // Pair in batches (each a few seconds) until everyone has had a turn, for up to ~40 seconds;
   // anyone left is picked up by the next run, 5 minutes later
+  // Live pairing happens as people check in; this is the backup (and closes ended chats).
+  // A problem here must not stop the notifications below, so it's noted and we carry on.
   let made = 0;
   let left = 0;
+  let pairingError: string | null = null;
   for (;;) {
-    const { data, error } = await db.rpc("run_hourly_pairing_batch", { p_budget: 1500 });
+    const { data, error } = await db.rpc("run_hourly_pairing_batch", { p_budget: 500 });
     if (error) {
-      // Before update 56 runs in Supabase: the old one-call pairing
-      if (/run_hourly_pairing_batch/.test(error.message)) {
-        const old = await db.rpc("run_hourly_pairing");
-        if (old.error) return NextResponse.json({ error: old.error.message }, { status: 500 });
-        made = (old.data as number) ?? 0;
-        break;
-      }
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      pairingError = error.message;
+      console.error("pairing batch failed", error.message);
+      break;
     }
     const r = data as { made: number; left: number };
     made += r.made;
@@ -105,7 +104,7 @@ async function handle(req: Request) {
   } catch (e) {
     console.error("pact reveal failed", e);
   }
-  return NextResponse.json({ ok: true, made, left, told, sent, nudged: nudges.length, refunds: refunds.length, pacts });
+  return NextResponse.json({ ok: true, pairingError, made, left, told, sent, nudged: nudges.length, refunds: refunds.length, pacts });
 }
 
 export const GET = handle;
