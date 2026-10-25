@@ -243,7 +243,7 @@ const homePeople: ExploreList = {
 // Masked chats in Recent chats (Home)
 const homeMasked = [
   { id: "s1", alias: "Golden Owl", last_message: "Haha you're funny", last_mine: false, last_at: iso(100), unread: true },
-  { id: "s2", alias: "Quiet Heron", last_message: "Talk later", last_mine: true, last_at: iso(900), unread: false },
+  { id: "s2", alias: "Quiet Heron", last_message: "Talk later", last_mine: false, last_at: iso(900), unread: false },
   { id: "s3", alias: "Wild Comet", last_message: "Hi 👋", last_mine: true, last_at: iso(5000), unread: false },
 ];
 // Who viewed you (Home)
