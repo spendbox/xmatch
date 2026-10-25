@@ -6,8 +6,7 @@ import clsx from "clsx";
 import { Handshake, MessageCircle, Pencil } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { intentLabel, seekingLabel, seekingList, spiceLabel } from "@/lib/constants";
-import { sexLabel } from "@/lib/eventSpace";
-import { clock, lagosHour, lagosTime, type MasqueradeHour } from "@/lib/hourly";
+import { clock, type MasqueradeHour } from "@/lib/hourly";
 import { Toggle } from "@/components/ui/Toggle";
 import { tapFeedback } from "@/components/ui/Button";
 import { MaskIcon } from "@/components/ui/MaskIcon";
@@ -115,141 +114,126 @@ export function MasqueradeCard({
             : "Keep the vibe going."
     : "";
 
-  return (
-    <section data-tour="masquerade-card" className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-brand via-[#6d4ff0] to-[#8f6bff] px-5 pt-4 pb-5 text-white shadow-[0_18px_40px_-18px_rgb(91_63_217/0.8)] lg:rounded-[28px] lg:p-6">
-      <div aria-hidden className="absolute -top-14 -right-12 h-40 w-40 rounded-full bg-white/10" />
+  const settingsLabel = prefs
+    ? `Masquerade settings: ${[intentLabel(prefs.intent), prefs.seeking !== "anyone" ? `meeting ${seekingLabel(prefs.seeking)}` : null, prefs.intent !== "friends" ? `${spiceLabel(prefs.spice)} questions` : null].filter(Boolean).join(", ")}. Edit`
+    : "Masquerade settings";
+  const chip = "grid h-7 w-7 shrink-0 place-items-center rounded-full bg-white/15";
 
-      <div className="relative flex items-center gap-3">
-        {enabled && !live && prefs ? (
-          // Your settings at a glance: mood, who you'd like to meet (if set), question spice (dating and spicy)
-          <button
-            type="button"
-            onClick={() => {
-              tapFeedback();
-              onSettings?.();
-            }}
-            className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
-            aria-label={`Masquerade settings: ${[intentLabel(prefs.intent), prefs.seeking !== "anyone" ? `meeting ${seekingLabel(prefs.seeking)}` : null, prefs.intent !== "friends" ? `${spiceLabel(prefs.spice)} questions` : null].filter(Boolean).join(", ")}. Edit`}
-          >
-            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/15">{INTENT_ICONS[prefs.intent]({ size: 16, strokeWidth: 2.2 })}</span>
-            {seekingList(prefs.seeking).map((g) => {
-              const Icon = SEEKING_ICONS[g];
-              return (
-                <span key={g} className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/15">
-                  <Icon size={16} strokeWidth={2.2} />
-                </span>
-              );
-            })}
-            {prefs.intent !== "friends" && (
-              <span className="grid h-8 min-w-8 shrink-0 place-items-center rounded-full bg-white/15 px-1.5">
-                <SpiceIcon level={prefs.spice} size={15} />
-              </span>
-            )}
-            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-white/80">
-              <Pencil size={14} strokeWidth={2.4} />
-            </span>
-          </button>
-        ) : (
-          <p className="min-w-0 flex-1 truncate text-[12px] font-semibold tracking-wide text-white/80 uppercase">
-            {!enabled && !live ? "Masquerade is off" : live && hour ? `Your ${lagosHour(hour.hour_at)} pair` : "Masquerade"}
-          </p>
-        )}
-        {live && cur && (
-          <span className="rounded-full bg-white/15 px-2.5 py-1 text-[12px] font-bold tabular-nums">
-            {now ? clock(new Date(cur.ends_at).getTime() - serverNow) : "··:··"} left
-          </span>
-        )}
-        <Toggle checked={enabled} onChange={toggle} label="Masquerade pairing" />
-      </div>
+  // One small row, about the size of the "viewed you" card
+  return (
+    <section
+      data-tour="masquerade-card"
+      aria-label="Masquerade"
+      className="relative flex min-h-[68px] items-center gap-3 overflow-hidden rounded-[24px] bg-gradient-to-br from-brand via-[#6d4ff0] to-[#8f6bff] px-3.5 py-3 text-white shadow-[0_14px_30px_-16px_rgb(91_63_217/0.8)]"
+    >
+      <div aria-hidden className="absolute -top-10 -right-8 h-24 w-24 rounded-full bg-white/10" />
 
       {!hour ? (
-        <p className="relative py-5 text-center text-[14px] text-white/80">Checking your pair…</p>
+        <p className="relative flex-1 text-center text-[13px] text-white/80">Checking your pair…</p>
       ) : live && cur ? (
-        <div className="relative mt-3.5">
-          <div className="flex items-center gap-3.5">
-            <Face alias={cur.their_alias} />
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[17px] leading-tight font-semibold">{cur.their_alias}</p>
-              <p className="truncate text-[12px] text-white/75">
-                {[sexLabel(cur.their_gender), intentLabel(cur.intent), cur.their_place].filter(Boolean).join(" · ")}
-              </p>
-            </div>
-            <Link
-              href={`/masquerade/${cur.id}`}
-              onClick={() => tapFeedback()}
-              className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-gold px-4 text-[14px] font-semibold text-ink shadow-[0_8px_24px_-6px_rgb(242_179_61/0.6)] transition active:scale-95"
-            >
-              <MessageCircle size={16} /> {cur.messages ? "Chat" : "Say hi"}
-            </Link>
+        // Your pair right now
+        <>
+          <Face alias={cur.their_alias} />
+          <div className="relative min-w-0 flex-1">
+            <p className="flex items-center gap-2">
+              <span className="truncate text-[15px] leading-tight font-semibold">{cur.their_alias}</span>
+              <span className="shrink-0 rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-bold tabular-nums">
+                {now ? clock(new Date(cur.ends_at).getTime() - serverNow) : "··:··"}
+              </span>
+            </p>
+            <p className="truncate text-[12.5px] text-white/80">{preview}</p>
           </div>
-          <p className="mt-3 truncate text-[14px] text-white/85">{preview}</p>
-        </div>
+          <Link
+            href={`/masquerade/${cur.id}`}
+            onClick={() => tapFeedback()}
+            className="relative inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-gold px-3.5 text-[13.5px] font-semibold text-ink transition active:scale-95"
+          >
+            <MessageCircle size={16} /> {cur.messages ? "Chat" : "Say hi"}
+          </Link>
+        </>
       ) : cur?.status === "matched" ? (
-        <div className="relative mt-3 flex items-center gap-3">
+        // You both unmasked this hour
+        <>
           {cur.their_photo ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={cur.their_photo} alt="" className="h-12 w-12 shrink-0 rounded-full object-cover ring-2 ring-white/40" />
+            <img src={cur.their_photo} alt="" className="relative h-11 w-11 shrink-0 rounded-full object-cover ring-2 ring-white/40" />
           ) : (
-            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white text-brand">
-              <Handshake size={22} />
+            <span className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white text-brand">
+              <Handshake size={20} />
             </span>
           )}
-          <div className="min-w-0 flex-1">
-            <p className="text-[16px] font-semibold">You clicked!</p>
-            <p className="truncate text-[12px] text-white/85">With {cur.their_name ?? cur.their_alias} · next pair {lagosTime(hour.next_at)}</p>
+          <div className="relative min-w-0 flex-1">
+            <p className="text-[15px] leading-tight font-semibold">You clicked!</p>
+            <p className="truncate text-[12.5px] text-white/80">With {cur.their_name ?? cur.their_alias}</p>
           </div>
           {cur.match_id && (
-            <Link href={`/matches/${cur.match_id}`} className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-gold px-4 text-[14px] font-semibold text-ink">
+            <Link href={`/matches/${cur.match_id}`} className="relative inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-gold px-3.5 text-[13.5px] font-semibold text-ink">
               <MessageCircle size={16} /> Chat
             </Link>
           )}
-        </div>
-      ) : !enabled ? (
-        <div className="relative mt-3 flex items-center gap-3">
-          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white/15">
-            <MaskIcon className="w-8 text-white" eyes="#6d4ff0" />
-          </span>
-          <p className="min-w-0 flex-1 text-[13px] leading-snug text-white/85">Switch it on to meet someone new, masked, every hour from 6am to 2am.</p>
-        </div>
+        </>
       ) : (
-        <button
-          type="button"
-          onClick={() => {
-            tapFeedback();
-            onSettings?.();
-          }}
-          aria-label={`Next pair up by ${lagosTime(hour.next_at)}. Open your Masquerade settings`}
-          className="relative mt-3.5 flex w-full items-center gap-4 rounded-2xl text-left transition active:scale-[0.99]"
-        >
-          <div className="min-w-0 flex-1">
-            <p className="text-[13px] text-white/75">
-              Next pair up by {lagosTime(hour.next_at).replace(/\s?([AP]M)$/i, (_, m: string) => m.toLowerCase())}
-            </p>
-            <p className="mt-1 text-[14px] leading-snug text-white/90">
-              {cur?.status === "ended" || cur?.status === "lapsed"
-                ? "This hour's chat is done. Someone new is coming."
-                : !hour.hour_open
-                  ? "Pairing runs 6am to 2am. Rest up."
-                  : hour.hour_ran
-                    ? "No matches found this hour."
-                    : "We pair everyone on the hour."}
-            </p>
-            {hour.pulse && hour.pulse.all > 0 && (
-              <p className="mt-2.5 inline-flex max-w-full items-center gap-1.5 truncate rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-semibold">
-                <span className="relative flex h-2 w-2 shrink-0">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#7dffb5] opacity-75" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-[#7dffb5]" />
+        // Waiting for your next pair, or switched off
+        <>
+          <span className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/15">
+            <MaskIcon className="w-7 text-white" eyes="#6d4ff0" />
+          </span>
+          <div className="relative min-w-0 flex-1">
+            {enabled && prefs ? (
+              // Your settings at a glance: mood, who you'd like to meet (if set), question spice (dating and spicy)
+              <button
+                type="button"
+                onClick={() => {
+                  tapFeedback();
+                  onSettings?.();
+                }}
+                className="flex max-w-full items-center gap-1 text-left"
+                aria-label={settingsLabel}
+              >
+                <span className={chip}>{INTENT_ICONS[prefs.intent]({ size: 14, strokeWidth: 2.2 })}</span>
+                {seekingList(prefs.seeking).map((g) => {
+                  const Icon = SEEKING_ICONS[g];
+                  return (
+                    <span key={g} className={chip}>
+                      <Icon size={14} strokeWidth={2.2} />
+                    </span>
+                  );
+                })}
+                {prefs.intent !== "friends" && (
+                  <span className={clsx(chip, "w-auto min-w-7 px-1.5")}>
+                    <SpiceIcon level={prefs.spice} size={13} />
+                  </span>
+                )}
+                <span className="grid h-7 w-6 shrink-0 place-items-center text-white/80">
+                  <Pencil size={13} strokeWidth={2.4} />
                 </span>
-                <span className="truncate">{pulseText(hour)}</span>
-              </p>
+              </button>
+            ) : (
+              <p className="text-[15px] leading-tight font-semibold">{enabled ? "Masquerade" : "Masquerade is off"}</p>
             )}
+            <p className="mt-0.5 flex items-center gap-1.5 truncate text-[12px] text-white/80">
+              {enabled && hour.pulse && hour.pulse.all > 0 ? (
+                <>
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#7dffb5]" aria-hidden />
+                  <span className="truncate">{pulseText(hour)}</span>
+                </>
+              ) : enabled ? (
+                <span className="truncate">{hour.hour_open ? "A new masked pair every hour" : "Pairing runs 6am to 2am"}</span>
+              ) : (
+                <span className="truncate">Meet someone new every hour</span>
+              )}
+            </p>
           </div>
-          <p className="shrink-0 font-display text-[36px] leading-none font-semibold tabular-nums lg:text-[48px]">
-            {now ? clock(new Date(hour.next_at).getTime() - serverNow) : "··:··"}
-          </p>
-        </button>
+          {enabled && (
+            <p className="relative shrink-0 font-display text-[22px] leading-none font-semibold tabular-nums" aria-label={`Next pair in ${now ? clock(new Date(hour.next_at).getTime() - serverNow) : ""}`}>
+              {now ? clock(new Date(hour.next_at).getTime() - serverNow) : "··:··"}
+            </p>
+          )}
+          <span className="relative">
+            <Toggle checked={enabled} onChange={toggle} label="Masquerade pairing" />
+          </span>
+        </>
       )}
-
     </section>
   );
 }
@@ -257,19 +241,19 @@ export function MasqueradeCard({
 function Face({ alias, small }: { alias: string; small?: boolean }) {
   return (
     <span
-      className={clsx("grid shrink-0 place-items-center rounded-full ring-[3px] ring-white/20", small ? "h-10 w-10 opacity-80" : "h-12 w-12")}
+      className={clsx("relative grid shrink-0 place-items-center rounded-full ring-[3px] ring-white/20", small ? "h-10 w-10 opacity-80" : "h-11 w-11")}
       style={{ background: nameColor(alias) }}
       title={small ? `You · ${alias}` : alias}
     >
-      <MaskIcon className={clsx("text-white", small ? "w-6" : "w-8")} eyes={nameColor(alias)} />
+      <MaskIcon className={clsx("text-white", small ? "w-6" : "w-7")} eyes={nameColor(alias)} />
     </span>
   );
 }
 
-/** "128 people available in Lagos" */
+/** "128 ready in Lagos" (short, to fit the small card) */
 function pulseText(h: MasqueradeHour) {
   const p = h.pulse!;
-  if (p.region >= 3 && p.region_name) return `${p.region} people available in ${p.region_name}`;
-  if (p.country >= 3) return `${p.country} people available in your country`;
-  return `${p.all} ${p.all === 1 ? "person" : "people"} available`;
+  if (p.region >= 3 && p.region_name) return `${p.region} ready in ${p.region_name}`;
+  if (p.country >= 3) return `${p.country} ready in your country`;
+  return `${p.all} ready now`;
 }
