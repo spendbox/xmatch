@@ -10764,6 +10764,8 @@ end $$;
 -- ---------------------------------------------------------------------------
 -- Part 63: In "Who viewed you", someone you already have a chat with (you both waved,
 -- or one of you messaged) shows a button to that chat instead of asking you to wave.
+-- And in chats you started from Meet (or where you both waved), tapping their photo
+-- opens their profile.
 -- ---------------------------------------------------------------------------
 create or replace function public.my_viewers() returns json
 language plpgsql stable security definer set search_path = public as $$
@@ -10792,3 +10794,25 @@ begin
     ) t), '[]'::json)
   );
 end $$;
+
+-- Chats started from Meet: who can see whose name (and open their profile). If you both waved, you both can.
+create or replace function public.paid_chat_people() returns json
+language sql stable security definer set search_path = public as $$
+  select coalesce(json_object_agg(s.id,
+    case
+      when s.waved then json_build_object('id', o.id, 'name', o.display_name, 'photo', o.photos[1], 'started_by_me', true, 'waved', true)
+      when s.user_a = auth.uid() then json_build_object('id', o.id, 'name', o.display_name, 'photo', o.photos[1], 'started_by_me', true,
+        'refund_at', case when s.paid_keys > 0 and s.refunded_at is null then s.started_at + interval '48 hours' end,
+        'refunded', s.refunded_at is not null, 'paid_keys', s.paid_keys)
+      else json_build_object('name', null, 'photo', null, 'started_by_me', false)
+    end), '{}'::json)
+  from masquerade_sessions s
+  join profiles o on o.id = case when s.user_a = auth.uid() then s.user_b else s.user_a end
+  where auth.uid() in (s.user_a, s.user_b)
+    and s.source = 'explore'
+    and s.pact_id is null
+    and s.meet_id is null
+    and s.status = 'active'
+$$;
+revoke execute on function public.paid_chat_people() from public, anon;
+grant execute on function public.paid_chat_people() to authenticated;

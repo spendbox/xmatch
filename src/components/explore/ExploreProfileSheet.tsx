@@ -23,6 +23,7 @@ export function ExploreProfileSheet({
   onClose,
   onChanged,
   demo,
+  inChat,
 }: {
   personId: string;
   onClose: () => void;
@@ -30,6 +31,8 @@ export function ExploreProfileSheet({
   onChanged?: () => void;
   /** Design previews */
   demo?: ExploreProfile;
+  /** Opened from your chat with them: no chat buttons */
+  inChat?: boolean;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
@@ -244,6 +247,7 @@ export function ExploreProfileSheet({
         </>
       }
       footer={
+        inChat ? undefined : (
         <div className="space-y-2">
           {error && <p className="text-center text-[13px] font-medium text-chili">{error}</p>}
           {fresh ? (
@@ -301,6 +305,7 @@ export function ExploreProfileSheet({
             </Button>
           )}
         </div>
+        )
       }
     />
   );

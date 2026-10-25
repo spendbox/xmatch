@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/client";
 
 /** Someone you paid to message from Meet: you already saw their name and main photo there */
 export type PaidChatPerson = {
+  /** Their id, so you can open their profile (only when you can see who they are) */
+  id?: string;
   name: string | null;
   photo: string | null;
   /** true: you paid and can see their name. false: they paid to message you, so they can see yours */

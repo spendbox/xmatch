@@ -21,6 +21,7 @@ import { ChatHints } from "@/components/chat/ChatHints";
 import { Composer } from "@/components/chat/Composer";
 import { refreshMenuBadges } from "@/components/app/useMenuBadges";
 import { YouBoth } from "@/components/matches/YouBoth";
+import { ExploreProfileSheet } from "@/components/explore/ExploreProfileSheet";
 import { usePaidChatPeople } from "./usePaidChatPeople";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { Chilis } from "@/components/ui/Spice";
@@ -77,6 +78,7 @@ export function MasqueradeRoom({
     </>
   );
   const [messages, setMessages] = useState(initialMessages);
+  const [profileOpen, setProfileOpen] = useState(false);
   // You paid to start this chat: your Keys come back if they never reply in 48 hours
   const theyReplied = messages.some((m) => m.sender_id && m.sender_id !== state.me.id);
   const keysWord = (n?: number) => `${n ?? ""} ${n === 1 ? "Key" : "Keys"}`.trim();
@@ -326,6 +328,13 @@ export function MasqueradeRoom({
               <ArrowLeft size={22} />
             </Link>
           )}
+          <button
+            type="button"
+            onClick={() => known?.id && setProfileOpen(true)}
+            disabled={!known?.id}
+            aria-label={known?.id ? `See ${theirName}'s profile` : undefined}
+            className="flex min-w-0 flex-1 items-center gap-3 text-left enabled:active:scale-[0.98]"
+          >
           <span className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full bg-ink text-white">
             {known?.photo ? (
               <span className="absolute inset-0 overflow-hidden rounded-full">
@@ -354,6 +363,7 @@ export function MasqueradeRoom({
                 .join("")}
             </p>
           </div>
+          </button>
           {lapsed ? (
             <span className="shrink-0 rounded-full bg-cream px-2.5 py-1 text-[12px] font-semibold text-muted">{meet ? "Meet over" : "Hour over"}</span>
           ) : state.reopened ? (
@@ -378,7 +388,9 @@ export function MasqueradeRoom({
           </div>
         </div>
 
-        {/* What we know so far (shown in the side panel on computers) */}
+        {/* What we know so far (shown in the side panel on computers). Not needed when you
+            can open their profile instead (chats you started from Meet, or where you both waved). */}
+        {!known?.id && (
         <div className="flex items-center gap-2 overflow-x-auto px-4 pb-3 no-scrollbar lg:hidden">
           <Tag strong>{connectionsLabel(them.connections)}</Tag>
           <Tag>{replyLabel(them.reply_seconds)}</Tag>
@@ -399,6 +411,7 @@ export function MasqueradeRoom({
               <InterestTag key={i} name={i} highlight={(them.shared_interests ?? []).includes(i)} />
           ))}
         </div>
+        )}
       </header>
 
       {/* Hourly pairs can unmask any time */}
@@ -594,19 +607,26 @@ export function MasqueradeRoom({
       {timeUp && !state.hourly && <DecisionSheet state={state} voting={voting} onVote={vote} />}
       {reporting && <ReportSheet onClose={() => setReporting(false)} onReport={report} />}
       {games.overlay}
+      {profileOpen && known?.id && <ExploreProfileSheet personId={known.id} onClose={() => setProfileOpen(false)} inChat />}
     </div>
 
     {/* About them — side panel on computers */}
     <aside className="hidden w-[340px] shrink-0 flex-col overflow-y-auto border-l border-line bg-surface px-6 py-8 lg:flex">
       <div className="flex flex-col items-center text-center">
-        <span className="grid h-24 w-24 animate-float place-items-center overflow-hidden rounded-full bg-ink text-white shadow-lift">
+        <button
+          type="button"
+          onClick={() => known?.id && setProfileOpen(true)}
+          disabled={!known?.id}
+          aria-label={known?.id ? `See ${theirName}'s profile` : undefined}
+          className="grid h-24 w-24 animate-float place-items-center overflow-hidden rounded-full bg-ink text-white shadow-lift"
+        >
           {known?.photo ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={known.photo} alt="" className="h-full w-full scale-110 object-cover blur-lg" />
           ) : (
             <MaskIcon className="w-14" eyes="#1c1828" />
           )}
-        </span>
+        </button>
         <p className="mt-4 font-display text-[26px] font-semibold">{theirName}</p>
         <p className="text-[14px] text-muted">
           {[gender, them.place ?? distanceLabel(them.distance_km)].filter(Boolean).join(" · ")}
