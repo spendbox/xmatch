@@ -2,7 +2,44 @@
 
 Planned work that isn't built yet. Newest ideas at the bottom of each list.
 
+Last updated: October 2026.
+
 ## Next up
+
+### Dashpad Voices (short public voice posts)
+Prototype and screens are done. Building starts once the open choices below are confirmed.
+
+Decided:
+- [ ] Tapping the greeting corner (top left of Home) folds Home away and shows the Voices feed; tap it again to go back
+- [ ] Home keeps Recent chats, Link-Up and People for you
+- [ ] Floating mic button records a voice, up to 30 seconds
+- [ ] Masked voices use a disguised voice; remove Echo from the voice styles (keep Deep, Light, Robot)
+- [ ] Public voices can use your real voice (optional)
+- [ ] A title is suggested from what you said; you can edit it
+- [ ] Attach images to a voice
+- [ ] Each voice lasts 24 hours; pay Keys to keep it longer
+- [ ] People react, like and send gifts on a voice
+- [ ] Feedback button stays visible on the feed
+- [ ] Light mode only, like the rest of the app
+
+To confirm (suggested defaults):
+- [ ] Masked voices show a mask name; real-voice posts show your name and photo
+- [ ] Reply opens a masked chat (free to start; admin can set a price)
+- [ ] Feed shows people near you first
+- [ ] Keep longer: 3 days for 10 Keys, 7 days for 20 Keys (admin can change)
+- [ ] Gifts on a voice turn into Keys for the poster (uses the gift share setting)
+
+Build:
+- [ ] Database: voices, reactions, likes, gifts, expiry and cleanup (files deleted from R2 when a voice ends)
+- [ ] Record, disguise, title, images and post
+- [ ] Feed with play, reactions, likes, gifts and reply
+- [ ] Keep longer with Keys
+- [ ] Admin: prices, remove a voice, reports
+- [ ] Notifications: reactions, gifts and replies on your voice
+
+### On hold
+- [ ] Test version of Dashpad to try updates before they go live (later)
+- [ ] Posts (think about later)
 
 ### Move photos and event media to Cloudflare R2
 Why: R2 doesn't charge for downloads. Photos and event music/video are the biggest download cost on Supabase.
@@ -10,10 +47,10 @@ Why: R2 doesn't charge for downloads. Photos and event music/video are the bigge
 Free each month: 10 GB storage, 1M uploads, 10M reads, and no download fees. After that, storage is $0.015/GB-month.
 
 Owner setup (about 30 min):
-- [ ] Cloudflare → R2 → create a bucket (e.g. `dashpad-media`)
-- [ ] Connect a custom domain to it, e.g. `media.dashpad.site` (served and cached by Cloudflare)
-- [ ] Create an R2 API token and add the settings to Vercel: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `NEXT_PUBLIC_MEDIA_URL`
-- [ ] Allow uploads from dashpad.site in the bucket's CORS settings
+- [x] Cloudflare → R2 → create a bucket (e.g. `dashpad-media`)
+- [x] Connect a custom domain to it, e.g. `media.dashpad.site` (served and cached by Cloudflare)
+- [x] Create an R2 API token and add the settings to Vercel: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `NEXT_PUBLIC_MEDIA_URL`
+- [x] Allow uploads from dashpad.site in the bucket's CORS settings
 
 Build (about 1 day):
 - [x] Server route that gives the phone a one-time upload link to R2 (`/api/media/photo`, profile photos)
