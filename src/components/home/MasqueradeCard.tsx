@@ -223,7 +223,7 @@ export function MasqueradeCard({
             {/* Quiet: no countdown. You're paired the moment someone who fits is online too. */}
             <p className="mt-0.5 flex items-center gap-1.5 truncate text-[12px] text-white/85" aria-live="polite">
               {!enabled ? (
-                <span className="truncate">Meet someone new, masked</span>
+                <span className="truncate">Turn on to meet someone new</span>
               ) : looking ? (
                 <>
                   <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-[#7dffb5]" aria-hidden />

@@ -94,7 +94,9 @@ export function ProfileViews({ demo, onKeys }: { demo?: Viewers; /** Keys were s
   const count = today > 0 ? today : data.people.length;
   // Waves still waiting for you (not ones you've answered with a chat)
   const waves = data.people.filter((p) => p.waved_me && !p.connected && !p.chat_id).length;
-  const faces = data.people.slice(0, 3);
+  // Up to 4 small overlapping faces, then "+N", so the card stays one size however many people look
+  const faces = data.people.slice(0, 4);
+  const more = data.people.length - faces.length;
 
   return (
     <>
@@ -104,23 +106,31 @@ export function ProfileViews({ demo, onKeys }: { demo?: Viewers; /** Keys were s
           tapFeedback();
           setOpen(true);
         }}
-        className="mt-5 flex w-full items-center gap-3 rounded-[24px] border border-line bg-surface px-4 py-3 text-left shadow-card transition active:scale-[0.99] lg:mt-6"
+        className="mt-5 flex w-full items-center gap-2.5 rounded-[24px] border border-line bg-surface px-3 py-2.5 min-[360px]:gap-3 min-[360px]:px-3.5 text-left shadow-card transition active:scale-[0.99] lg:mt-6"
         aria-label={`${count} ${count === 1 ? "person" : "people"} viewed you ${today > 0 ? "today" : "this week"}. See who`}
       >
-        <span className="flex shrink-0 -space-x-3">
-          {faces.map((v) => (
-            <Face key={v.id} v={v} size={38} />
+        <span className="flex shrink-0 -space-x-4">
+          {faces.map((v, i) => (
+            // Very small phones: 3 faces, so the words keep their room
+            <span key={v.id} className={i === 3 ? "max-[359px]:hidden" : undefined}>
+              <Face v={v} size={32} />
+            </span>
           ))}
+          {more > 0 && (
+            <span className="grid h-8 min-w-8 place-items-center rounded-full bg-brand-soft px-1 text-[11px] font-bold text-brand ring-2 ring-surface">
+              +{more > 99 ? 99 : more}
+            </span>
+          )}
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-[15px] font-semibold text-ink">
-            {count} {count === 1 ? "person" : "people"} viewed you {today > 0 ? "today" : "this week"}
+          <span className="block truncate text-[14px] font-semibold text-ink min-[360px]:text-[15px]">
+            {count} viewed you {today > 0 ? "today" : "this week"}
           </span>
           <span className="block truncate text-[12.5px] text-muted">
             {waves > 0 ? `${waves} waved at you 👋` : "Tap to see who"}
           </span>
         </span>
-        <ChevronRight size={18} className="shrink-0 text-muted" />
+        <ChevronRight size={18} className="shrink-0 text-muted max-[359px]:hidden" />
       </button>
 
       <Sheet
