@@ -94,6 +94,7 @@ export function ProfileViews({ demo, onKeys }: { demo?: Viewers; /** Keys were s
   const count = today > 0 ? today : data.people.length;
   // Waves still waiting for you (not ones you've answered with a chat)
   const waves = data.people.filter((p) => p.waved_me && !p.connected && !p.chat_id).length;
+  // The 3 most recent, overlapping, so the card stays one size however many people look
   const faces = data.people.slice(0, 3);
 
   return (
@@ -104,30 +105,30 @@ export function ProfileViews({ demo, onKeys }: { demo?: Viewers; /** Keys were s
           tapFeedback();
           setOpen(true);
         }}
-        className="mt-5 flex w-full items-center gap-3 rounded-[24px] border border-line bg-surface px-4 py-3 text-left shadow-card transition active:scale-[0.99] lg:mt-6"
+        className="mt-5 flex w-full items-center gap-2.5 rounded-[24px] border border-line bg-surface px-3 py-2.5 min-[360px]:gap-3 min-[360px]:px-3.5 text-left shadow-card transition active:scale-[0.99] lg:mt-6"
         aria-label={`${count} ${count === 1 ? "person" : "people"} viewed you ${today > 0 ? "today" : "this week"}. See who`}
       >
-        <span className="flex shrink-0 -space-x-3">
+        <span className="flex shrink-0 -space-x-4">
           {faces.map((v) => (
-            <Face key={v.id} v={v} size={38} />
+            <Face key={v.id} v={v} size={32} />
           ))}
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-[15px] font-semibold text-ink">
-            {count} {count === 1 ? "person" : "people"} viewed you {today > 0 ? "today" : "this week"}
+          <span className="block truncate text-[14px] font-semibold text-ink min-[360px]:text-[15px]">
+            {count} viewed you {today > 0 ? "today" : "this week"}
           </span>
           <span className="block truncate text-[12.5px] text-muted">
             {waves > 0 ? `${waves} waved at you 👋` : "Tap to see who"}
           </span>
         </span>
-        <ChevronRight size={18} className="shrink-0 text-muted" />
+        <ChevronRight size={18} className="shrink-0 text-muted max-[359px]:hidden" />
       </button>
 
       <Sheet
         open={open}
         onClose={() => setOpen(false)}
         title="Who viewed you"
-        subtitle={`The last 7 days. Wave at someone${(data.wave_cost ?? 0) > 0 ? "" : " for free"}: if you both wave, your chat opens free.`}
+        subtitle={`The last 7 days. Wave at someone${(data.wave_cost ?? 0) > 0 ? "" : " for free"}. If you both wave, a chat opens for free.`}
         icon={<Eye size={20} />}
       >
         {error && <p className="mb-2 text-center text-[13px] font-medium text-chili">{error}</p>}
