@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import clsx from "clsx";
 import { Check, ChevronLeft, Dices, PartyPopper, Trash2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { MAX_ANSWER, MAX_THINGS, NEEDED, nextPrompt, promptOf, type Thing } from "@/lib/things";
+import { MAX_ANSWER, MAX_THINGS, NEEDED, ideasIn, nextPrompt, promptOf, toggleIdea, type Thing } from "@/lib/things";
 import { tapFeedback, Spinner } from "@/components/ui/Button";
 
 /**
@@ -87,6 +87,7 @@ export function ThingsDeck({
   }
 
   const prompt = promptOf(promptId);
+  const picked = ideasIn(answer, prompt.ideas);
   const count = things.length;
 
   async function save(list: Thing[]) {
@@ -266,25 +267,35 @@ export function ThingsDeck({
                 className="mt-4 w-full resize-none rounded-2xl bg-white/15 px-4 py-3 text-[18px] font-semibold text-white outline-none placeholder:font-normal placeholder:text-white/55 focus:bg-white/20"
               />
               {prompt.ideas.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                  {prompt.ideas.map((idea) => (
-                    <button
-                      key={idea}
-                      type="button"
-                      onClick={() => {
-                        tapFeedback();
-                        setAnswer(idea);
-                        input.current?.focus();
-                      }}
-                      className={clsx(
-                        "rounded-full px-3 py-1.5 text-[13px] font-semibold transition active:scale-95",
-                        answer === idea ? "bg-white text-ink" : "bg-white/15 text-white",
-                      )}
-                    >
-                      {idea}
-                    </button>
-                  ))}
-                </div>
+                <>
+                  <p className="mt-3 text-[12px] font-semibold text-white/70">Pick as many as you like, or type your own</p>
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {prompt.ideas.map((idea) => {
+                      const on = picked.includes(idea);
+                      return (
+                        <button
+                          key={idea}
+                          type="button"
+                          aria-pressed={on}
+                          onClick={() => {
+                            tapFeedback();
+                            const next = toggleIdea(answer, idea);
+                            if (next.length > MAX_ANSWER) return setError("That's as many as fit. Take one out to add another.");
+                            setError(null);
+                            setAnswer(next);
+                          }}
+                          className={clsx(
+                            "inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[13px] font-semibold transition active:scale-95",
+                            on ? "bg-white text-ink" : "bg-white/15 text-white",
+                          )}
+                        >
+                          {on && <Check size={13} strokeWidth={3} />}
+                          {idea}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
               )}
               {error && <p className="mt-3 rounded-xl bg-black/20 px-3 py-2 text-[13px] font-medium">{error}</p>}
 

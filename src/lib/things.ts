@@ -24,7 +24,8 @@ export type ThingPromptRow = { id: string; text: string; ideas: string[]; tone: 
 
 export const NEEDED = 10;
 export const MAX_THINGS = 40;
-export const MAX_ANSWER = 60;
+// Room for a few picks from the ideas ("Jollof rice, Suya, Shawarma")
+export const MAX_ANSWER = 120;
 
 /** Card colours Admin can pick from */
 export const TONES = {
@@ -82,6 +83,22 @@ const fallback = (): ThingPrompt => current.find((p) => p.id === "else") ?? BUIL
 export const promptOf = (id: string) => current.find((p) => p.id === id) ?? BUILT_IN.find((p) => p.id === id) ?? fallback();
 
 /** The next prompt to show: one you haven't answered yet, in the order Admin set */
+/** The ideas already in an answer ("Jollof rice, Suya" has both) */
+export function ideasIn(answer: string, ideas: string[]) {
+  const parts = ", " + answer.toLowerCase().replace(/\s*,\s*/g, ", ").trim() + ",";
+  return ideas.filter((i) => parts.includes(", " + i.toLowerCase().replace(/\s*,\s*/g, ", ") + ","));
+}
+
+/** Tap an idea: add it to the answer, or take it out if it's already there */
+export function toggleIdea(answer: string, idea: string) {
+  const norm = (t: string) => t.replace(/\s*,\s*/g, ", ").replace(/^[,\s]+|[,\s]+$/g, "");
+  const clean = norm(answer);
+  const wrapped = `, ${clean},`;
+  const at = wrapped.toLowerCase().indexOf(`, ${norm(idea).toLowerCase()},`);
+  if (at >= 0) return norm(wrapped.slice(0, at) + "," + wrapped.slice(at + norm(idea).length + 3));
+  return clean ? `${clean}, ${idea}` : idea;
+}
+
 export function nextPrompt(things: Thing[], skip: string[] = []): ThingPrompt {
   const repeat = new Set(current.filter((p) => p.repeatable).map((p) => p.id));
   const used = new Set(things.map((t) => t.p).filter((p) => !repeat.has(p)));

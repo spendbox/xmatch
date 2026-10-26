@@ -13371,3 +13371,22 @@ language sql stable security definer set search_path = public as $$
   ) t
 $$;
 revoke execute on function public.admin_thing_counts() from public, anon, authenticated;
+
+-- Answers can hold a few picks from the ideas ("Jollof rice, Suya, Shawarma"): up to 120 characters
+create or replace function public.set_things(p_things jsonb) returns json
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  clean jsonb;
+begin
+  if uid is null then raise exception 'Please log in'; end if;
+  if jsonb_typeof(p_things) <> 'array' then raise exception 'Something went wrong'; end if;
+  select coalesce(jsonb_agg(jsonb_build_object('p', p, 'a', a) order by n), '[]'::jsonb) into clean from (
+    select left(btrim(x->>'p'), 24) as p, left(regexp_replace(btrim(x->>'a'), '\s+', ' ', 'g'), 120) as a, n
+    from jsonb_array_elements(p_things) with ordinality as e(x, n)
+    where coalesce(btrim(x->>'a'), '') <> '' and coalesce(btrim(x->>'p'), '') <> ''
+    limit 40
+  ) t;
+  update profiles set things = clean where id = uid;
+  return json_build_object('things', clean, 'count', jsonb_array_length(clean));
+end $$;

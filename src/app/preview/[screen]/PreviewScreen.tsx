@@ -838,7 +838,21 @@ function ScreenBody({ screen }: { screen: string }) {
         </div>
       );
     case "profile-preview":
-      return <ProfileSheet profile={ada} shared={["Travel", "Food"]} onClose={() => {}} />;
+      return (
+        <ProfileSheet
+          profile={{
+            ...ada,
+            things: [
+              { p: "food", a: "Jollof rice, Suya, Amala and ewedu, Pounded yam and egusi, Shawarma" },
+              { p: "weekend", a: "Owambe till late" },
+              { p: "music", a: "Burna Boy, Tems, Asake" },
+              { p: "dream", a: "Start a business that helps small farmers in the North sell straight to buyers in Lagos" },
+            ],
+          }}
+          shared={["Travel", "Food"]}
+          onClose={() => {}}
+        />
+      );
     case "things-deck":
       return <ThingsDeck open onClose={() => {}} things={me.things ?? []} onSaved={() => {}} demo />;
     case "pact-intro":
