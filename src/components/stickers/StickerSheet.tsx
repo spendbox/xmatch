@@ -10,7 +10,6 @@ import { STICKER_COLORS, STICKER_MAX, STICKER_PACKS, isPose, isStickerColor, pac
 import { Masky } from "./Masky";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
-import { Toggle } from "@/components/ui/Toggle";
 import { ScribblePad, ScribbleView, emptyDrawing } from "./Scribble";
 import { useSavedScribbles } from "./useSavedScribbles";
 import { useStickerPacks } from "./useStickerPacks";
@@ -20,7 +19,6 @@ import type { Drawing } from "@/lib/scribble";
 export type StickerPick = { pose: StickerPose; caption: string; color: string };
 export type ScribbleSend = { drawing?: Drawing; saved?: string; keep: boolean };
 
-const KEEP_KEY = "dp_keep_scribbles";
 
 const RECENT_KEY = "dp_recent_stickers";
 const TAB_KEY = "dp_sticker_tab";
@@ -81,16 +79,10 @@ export function StickerSheet({
   const [sending, setSending] = useState(false);
   const { saved, remove: removeSaved } = useSavedScribbles();
   const [savedPick, setSavedPick] = useState<string | null>(null);
-  const [keep, setKeep] = useState(true);
+  // Every scribble you send is saved, to send again for free
+  const keep = true;
   const [expanded, setExpanded] = useState(false);
   const [bigSize, setBigSize] = useState(360);
-  useEffect(() => {
-    try {
-      setKeep(localStorage.getItem(KEEP_KEY) !== "0");
-    } catch {
-      /* private mode */
-    }
-  }, []);
   // The big drawing space fills the screen, leaving room for the tools
   useEffect(() => {
     if (!expanded) return;
@@ -211,26 +203,7 @@ export function StickerSheet({
       footer={
         scribbling ? (
           <div className="space-y-2.5">
-            {!pickedSaved && (
-              <label className="flex cursor-pointer items-center gap-3 rounded-2xl bg-cream px-3.5 py-2.5">
-                <span className="min-w-0 flex-1 text-[13.5px] leading-snug">
-                  <span className="block font-semibold">Save a copy</span>
-                  <span className="block text-muted">Send it again any time, for free</span>
-                </span>
-                <Toggle
-                  checked={keep}
-                  onChange={(v) => {
-                    setKeep(v);
-                    try {
-                      localStorage.setItem(KEEP_KEY, v ? "1" : "0");
-                    } catch {
-                      /* private mode */
-                    }
-                  }}
-                  label="Save a copy"
-                />
-              </label>
-            )}
+            {!pickedSaved && <p className="text-center text-[12.5px] text-muted">Saved when you send it, free to send again</p>}
             {error && <p className="text-center text-[13px] font-medium text-chili">{error}</p>}
             <Button onClick={() => void sendScribble()} loading={sending} disabled={!canSendScribble} className="h-12 w-full rounded-full">
               {sendLabel}
