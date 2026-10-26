@@ -13,6 +13,7 @@ import { Sheet } from "@/components/ui/Sheet";
 import { KeyCoin } from "@/components/keys/KeyIcon";
 import { GiftSheet, keysError } from "@/components/keys/GiftSheet";
 import { reportError } from "@/lib/reportError";
+import { Photo } from "@/components/ui/Photo";
 import { useWallet } from "@/components/keys/useWallet";
 import { EXTEND_COST } from "@/lib/keys";
 import { notify } from "@/lib/pushClient";
@@ -406,8 +407,7 @@ export function MasqueradeRoom({
           <span className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full bg-ink text-white">
             {known?.photo ? (
               <span className="absolute inset-0 overflow-hidden rounded-full">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={known.photo} alt="" className="h-full w-full object-cover" />
+                <Photo src={known.photo} id={known.id} gender={state.them.gender} className="h-full w-full object-cover" />
               </span>
             ) : (
               <MaskIcon className="w-7" eyes="#1c1828" />
@@ -549,6 +549,7 @@ export function MasqueradeRoom({
           messages={shownMessages}
           myId={state.me.id}
           nameOf={(id) => (id === state.me.id ? "You" : theirName)}
+          genderOf={(id) => (id === state.me.id ? null : state.them.gender)}
           onReply={setReplyTo}
           onGameAgain={chatting ? games.rematch : undefined}
         />
@@ -720,8 +721,7 @@ export function MasqueradeRoom({
           className="grid h-24 w-24 animate-float place-items-center overflow-hidden rounded-full bg-ink text-white shadow-lift"
         >
           {known?.photo ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={known.photo} alt="" className="h-full w-full object-cover" />
+            <Photo src={known.photo} id={known.id} gender={state.them.gender} className="h-full w-full object-cover" />
           ) : (
             <MaskIcon className="w-14" eyes="#1c1828" />
           )}

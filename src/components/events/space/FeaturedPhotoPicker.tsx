@@ -1,5 +1,6 @@
 "use client";
 
+import { Photo } from "@/components/ui/Photo";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -72,8 +73,7 @@ export function FeaturedPhotoPicker({
                     on ? "ring-[3px] ring-brand ring-offset-2 ring-offset-surface" : "opacity-80 hover:opacity-100",
                   )}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={p} alt="" className="h-full w-full object-cover" />
+                  <Photo src={p} className="h-full w-full object-cover" />
                   {on && (
                     <span className="absolute top-1.5 right-1.5 grid h-6 w-6 place-items-center rounded-full bg-brand text-white shadow">
                       <Check size={14} strokeWidth={3} />
@@ -93,8 +93,7 @@ export function FeaturedPhotoPicker({
       {selected && (
         <div className="mt-4 flex items-center gap-3 rounded-2xl bg-cream p-3">
           <span className="relative h-14 w-11 shrink-0 overflow-hidden rounded-xl">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={selected} alt="" className="h-full w-full scale-110 object-cover blur-md" />
+            <Photo src={selected} className="h-full w-full scale-110 object-cover blur-md" />
           </span>
           <p className="text-[13px] leading-snug text-muted">
             <EyeOff size={13} className="mr-1 inline align-[-2px]" />

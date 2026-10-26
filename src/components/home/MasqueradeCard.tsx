@@ -1,5 +1,6 @@
 "use client";
 
+import { Photo } from "@/components/ui/Photo";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -190,8 +191,7 @@ export function MasqueradeCard({
         // You both unmasked this hour
         <>
           {cur.their_photo ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={cur.their_photo} alt="" className="relative h-11 w-11 shrink-0 rounded-full object-cover ring-2 ring-white/40" />
+            <Photo src={cur.their_photo} gender={cur.their_gender} className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full object-cover ring-2 ring-white/40" />
           ) : (
             <span className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white text-brand">
               <Handshake size={20} />

@@ -1,5 +1,6 @@
 "use client";
 
+import { Photo } from "@/components/ui/Photo";
 import { MessageCircle, RotateCcw } from "lucide-react";
 import { ButtonLink } from "@/components/ui/Button";
 import { MaskIcon } from "@/components/ui/MaskIcon";
@@ -87,8 +88,7 @@ function Reveal({ state, eventId }: { state: MasqueradeState; eventId?: string |
 
       <div className="relative mt-6 overflow-hidden rounded-[28px] bg-line shadow-lift animate-fade-up">
         {photo ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={photo} alt={p.display_name} className="aspect-[4/5] w-full object-cover" />
+          <Photo src={photo} small={false} id={p.id} gender={state.them.gender} alt={p.display_name ?? ""} className="aspect-[4/5] w-full object-cover" />
         ) : (
           <div className="aspect-[4/5] w-full" />
         )}

@@ -1,5 +1,6 @@
 "use client";
 
+import { Photo } from "@/components/ui/Photo";
 import { useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
 import { MaskIcon } from "@/components/ui/MaskIcon";
@@ -164,8 +165,7 @@ export function Player({
       }}
     >
       {photo ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={photo} alt="" className="h-[34px] w-[34px] shrink-0 rounded-full object-cover" style={{ boxShadow: `0 0 0 2px ${color}` }} />
+        <Photo src={photo} className="h-[34px] w-[34px] shrink-0 overflow-hidden rounded-full object-cover" style={{ boxShadow: `0 0 0 2px ${color}` }} />
       ) : (
         <Token color={color} size={34} />
       )}

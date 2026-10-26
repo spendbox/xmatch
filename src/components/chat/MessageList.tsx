@@ -5,7 +5,7 @@ import clsx from "clsx";
 import {
   Ban, Clock3, Copy, Gamepad2, Hourglass, MessageCircle, Timer, CornerUpLeft, MessageCircleQuestion, Phone, PhoneIncoming, PhoneMissed, PhoneOutgoing, Play, Reply, Trash2, Video,
 } from "lucide-react";
-import type { ChatMessage } from "@/lib/types";
+import type { ChatMessage, Gender } from "@/lib/types";
 import { formatDuration } from "@/lib/chatMedia";
 import { giftById } from "@/lib/keys";
 import { GiftArt } from "@/components/keys/GiftArt";
@@ -19,6 +19,8 @@ import { MediaViewer, type ViewerItem } from "./MediaViewer";
 import { GameCard } from "@/components/games/GameCard";
 import { gameInfo } from "@/lib/games";
 import { MaskIcon } from "@/components/ui/MaskIcon";
+import { MaskFace } from "@/components/ui/MaskFace";
+import { Photo } from "@/components/ui/Photo";
 import { useSignedUrl } from "./useSignedUrl";
 import { KeyCoin } from "@/components/keys/KeyIcon";
 
@@ -35,6 +37,8 @@ type Props = {
   onGameAgain?: (kind: string) => void;
   /** Slow reveals: what clearing one now costs, and doing it */
   slow?: { cost: number; onReveal: (m: ChatMessage) => Promise<void> | void };
+  /** Whether a sender is a man or a woman: picks the mask shown if their photo won't load */
+  genderOf?: (senderId: string | null) => Gender | null | undefined;
 };
 
 /** A slow reveal clears fully after 5 messages from each of you */
@@ -62,7 +66,7 @@ export function snippet(m: ChatMessage | undefined) {
   }
 }
 
-export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDates, footer, onGameAgain, slow }: Props) {
+export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDates, footer, onGameAgain, slow, genderOf }: Props) {
   // How far each slow reveal has cleared: messages after it from each person, up to 5 each (0 to 10)
   const slowProgress = useMemo(() => {
     const out = new Map<number, number>();
@@ -294,6 +298,7 @@ export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDat
                   quoteName={(q) => (q.sender_id === myId ? "You" : nameOf(q.sender_id))}
                   onQuote={() => m.reply_to && jumpTo(m.reply_to)}
                   onOpen={setViewer}
+                  gender={genderOf?.(m.sender_id)}
                   tail={lastOfGroup}
                   slow={m.slow ? { progress: slowProgress.get(m.id) ?? 0, cost: slow?.cost ?? 10, onReveal: slow?.onReveal } : undefined}
                 />
@@ -464,10 +469,12 @@ function Bubble({
   quoteName,
   onQuote,
   onOpen,
+  gender,
   tail,
   slow,
 }: {
   slow?: { progress: number; cost: number; onReveal?: (m: ChatMessage) => Promise<void> | void };
+  gender?: Gender | null;
   m: ChatMessage;
   mine: boolean;
   flash: boolean;
@@ -513,10 +520,10 @@ function Bubble({
       ) : null}
 
       {locked ? (
-        <SlowLocked m={m} progress={slow!.progress} cost={slow!.cost} onReveal={slow!.onReveal} />
+        <SlowLocked m={m} progress={slow!.progress} cost={slow!.cost} onReveal={slow!.onReveal} gender={gender} />
       ) : (
         <>
-          {m.kind === "image" && <ImageContent m={m} onOpen={onOpen} />}
+          {m.kind === "image" && <ImageContent m={m} onOpen={onOpen} gender={gender} />}
           {m.kind === "video" && <VideoContent m={m} onOpen={onOpen} />}
         </>
       )}
@@ -562,20 +569,38 @@ function Bubble({
   );
 }
 
-function ImageContent({ m, onOpen }: { m: ChatMessage; onOpen: (v: ViewerItem) => void }) {
+function ImageContent({ m, onOpen, gender }: { m: ChatMessage; onOpen: (v: ViewerItem) => void; gender?: Gender | null }) {
   const url = useSignedUrl(m.media_path, m.local_url);
+  const [broken, setBroken] = useState(false);
+  const fail = useCallback(() => setBroken(true), []);
   const w = m.media_meta?.width;
   const h = m.media_meta?.height;
   const ratio = w && h ? Math.min(Math.max(w / h, 0.6), 1.6) : 0.8;
   return (
     <button
       type="button"
-      onClick={() => url && onOpen({ url, kind: "image" })}
+      onClick={() => url && !broken && onOpen({ url, kind: "image" })}
       className="relative block w-[240px] max-w-full overflow-hidden rounded-[16px] bg-line"
       style={{ aspectRatio: ratio }}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      {url && <img src={url} alt="Photo" className="h-full w-full object-cover" loading="lazy" />}
+      {url && (
+        <Photo
+          src={url}
+          small={false}
+          id={m.sender_id}
+          gender={gender}
+          alt="Photo"
+          loading="lazy"
+          onFail={fail}
+          className="h-full w-full object-cover"
+          fallback={
+            <>
+              <MaskFace id={m.sender_id ?? url} gender={gender} className="absolute inset-0 grid place-items-center" />
+              <span className="absolute inset-x-0 bottom-2.5 text-center text-[12px] font-semibold text-white/90">Photo unavailable</span>
+            </>
+          }
+        />
+      )}
       {m.pending && (
         <span className="absolute inset-0 grid place-items-center bg-black/30 text-white">
           <Spinner className="h-7 w-7" />
@@ -586,7 +611,7 @@ function ImageContent({ m, onOpen }: { m: ChatMessage; onOpen: (v: ViewerItem) =
 }
 
 /** Their slow reveal, still blurred: clears a little with every message you swap, or all at once for Keys */
-function SlowLocked({ m, progress, cost, onReveal }: { m: ChatMessage; progress: number; cost: number; onReveal?: (m: ChatMessage) => Promise<void> | void }) {
+function SlowLocked({ m, progress, cost, onReveal, gender }: { m: ChatMessage; progress: number; cost: number; onReveal?: (m: ChatMessage) => Promise<void> | void; gender?: Gender | null }) {
   const p = m.media_meta?.preview;
   const signed = useSignedUrl(p && !/^(data:|blob:|https?:)/.test(p) ? p : null);
   const url = p && /^(data:|blob:|https?:)/.test(p) ? p : signed;
@@ -605,8 +630,14 @@ function SlowLocked({ m, progress, cost, onReveal }: { m: ChatMessage; progress:
   return (
     <div className="relative block w-[240px] max-w-full overflow-hidden rounded-[16px] bg-[#2a2140]" style={{ aspectRatio: ratio }}>
       {url && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={url} alt="" className="absolute inset-0 h-full w-full scale-125 object-cover transition-[filter] duration-700" style={{ filter: `blur(${blur}px) saturate(1.2)` }} />
+        <Photo
+          src={url}
+          small={false}
+          id={m.sender_id}
+          gender={gender}
+          className="absolute inset-0 h-full w-full scale-125 object-cover transition-[filter] duration-700"
+          style={{ filter: `blur(${blur}px) saturate(1.2)` }}
+        />
       )}
       <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/60" />
       <span className="absolute top-2 left-2 inline-flex items-center gap-1 rounded-full bg-black/45 px-2.5 py-1 text-[11.5px] font-bold text-white backdrop-blur">

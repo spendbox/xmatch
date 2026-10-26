@@ -9,7 +9,6 @@ import { ageFromBirthdate, GENDERS } from "@/lib/constants";
 import { promptOf } from "@/lib/things";
 import type { Profile } from "@/lib/types";
 import { InterestIcon } from "@/components/ui/icons";
-import { MaskFace } from "@/components/ui/MaskFace";
 import { Photo } from "@/components/ui/Photo";
 import { YouBoth } from "./YouBoth";
 
@@ -40,8 +39,6 @@ export function ProfileSheet({
   age?: number | null;
 }) {
   const [i, setI] = useState(0);
-  // Photos that didn't load: shown as a mask instead of a broken image
-  const [broken, setBroken] = useState<string[]>([]);
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
@@ -84,17 +81,16 @@ export function ProfileSheet({
                 <Photo src={photos[0]} id={profile.id} gender={profile.gender} className="absolute inset-0 h-full w-full object-cover" style={{ filter: "blur(28px)", transform: "scale(1.3)" }} />
               )}
             </div>
-          ) : photos[i] && !broken.includes(photos[i]) ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+          ) : photos[i] ? (
+            <Photo
               key={photos[i]}
               src={photos[i]}
+              small={false}
+              id={profile.id}
+              gender={profile.gender}
               alt={profile.display_name ?? ""}
-              onError={() => setBroken((b) => [...b, photos[i]])}
               className="aspect-[4/5] w-full animate-fade-in object-cover lg:aspect-auto lg:h-full"
             />
-          ) : photos[i] ? (
-            <MaskFace id={profile.id} gender={profile.gender} className="grid aspect-[4/5] w-full place-items-center lg:aspect-auto lg:h-full" />
           ) : (
             <div className="aspect-[4/5] w-full bg-line lg:aspect-auto lg:h-full" />
           )}

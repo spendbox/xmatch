@@ -1,5 +1,7 @@
 "use client";
 
+import { Photo } from "@/components/ui/Photo";
+import { MaskFace } from "@/components/ui/MaskFace";
 import { useMemo, useState } from "react";
 import { showMediaHelp } from "@/lib/mediaPermission";
 import { GhostMode } from "./GhostMode";
@@ -162,8 +164,15 @@ export function ProfileEditor({
         <div className="lg:sticky lg:top-8 lg:col-span-5">
           <section className="relative mt-5 overflow-hidden rounded-[30px] bg-ink shadow-lift lg:mt-0">
             {photos[0] ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={photos[0]} alt="" className="absolute inset-0 h-full w-full object-cover" />
+              <Photo
+                src={photos[0]}
+                small={false}
+                id={profile.id}
+                gender={profile.gender}
+                className="absolute inset-0 h-full w-full object-cover"
+                // Their mask above their name, not behind it
+                fallback={<MaskFace id={profile.id} gender={profile.gender} className="absolute inset-0 grid content-start justify-items-center pt-14" maskClassName="w-1/4" />}
+              />
             ) : null}
             <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/10" />
             <div className="relative flex min-h-[300px] flex-col justify-end p-5 text-white">
@@ -240,8 +249,7 @@ export function ProfileEditor({
             >
               <div className="mt-3 flex -space-x-2">
                 {photos.slice(0, 4).map((p) => (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img key={p} src={p} alt="" className="h-8 w-8 rounded-full border-2 border-surface object-cover" />
+                  <Photo key={p} src={p} id={profile.id} gender={profile.gender} className="h-8 w-8 overflow-hidden rounded-full border-2 border-surface object-cover" />
                 ))}
               </div>
             </Tile>

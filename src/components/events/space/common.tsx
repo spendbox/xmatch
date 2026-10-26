@@ -1,5 +1,6 @@
 "use client";
 
+import { Photo } from "@/components/ui/Photo";
 import { sexLabel } from "@/lib/eventSpace";
 import clsx from "clsx";
 import { Eye, EyeOff, UserRound } from "lucide-react";
@@ -31,11 +32,9 @@ export function BlurPhoto({
   return (
     <span className={clsx("relative block overflow-hidden bg-gradient-to-br from-brand-soft via-[#f3e8ff] to-[#ffe4ec]", className)}>
       {photo ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={photo} alt={alt} className="h-full w-full animate-fade-in object-cover" />
+        <Photo src={photo} small={false} alt={alt} className="h-full w-full animate-fade-in object-cover" />
       ) : blur ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={blur} alt="" aria-hidden className={clsx("h-full w-full scale-110 object-cover", soft ? "blur-sm" : "blur-xl")} />
+        <Photo src={blur} small={false} className={clsx("h-full w-full scale-110 object-cover", soft ? "blur-sm" : "blur-xl")} />
       ) : (
         <span className="grid h-full w-full place-items-center text-brand/40">
           <UserRound className="h-1/2 w-1/2" strokeWidth={1.5} />

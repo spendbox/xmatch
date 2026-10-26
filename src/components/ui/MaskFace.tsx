@@ -1,3 +1,4 @@
+import clsx from "clsx";
 import { nameColor } from "@/lib/eventSpace";
 import type { Gender } from "@/lib/types";
 
@@ -94,12 +95,25 @@ const BY_GENDER: Partial<Record<Gender, number[]>> = {
 };
 
 /** A mask that suits their gender, on a colour, both picked from their id: stands in for a photo that won't load */
-export function MaskFace({ id, gender, className }: { id: string; gender?: Gender | null; className?: string }) {
+export function MaskFace({
+  id,
+  gender,
+  className,
+  style,
+  maskClassName = "w-1/2",
+}: {
+  id: string;
+  gender?: Gender | null;
+  className?: string;
+  style?: React.CSSProperties;
+  /** The mask's size */
+  maskClassName?: string;
+}) {
   const color = nameColor(id);
   const choices = (gender && BY_GENDER[gender]) || MASKS.map((_, i) => i);
   return (
-    <div className={className} style={{ background: color }}>
-      <svg viewBox="0 0 64 48" className="w-1/2 text-white/90" aria-hidden="true">
+    <div className={className} style={{ ...style, background: color }}>
+      <svg viewBox="0 0 64 48" className={clsx(maskClassName, "text-white/90")} aria-hidden="true">
         {MASKS[choices[pick(id, choices.length)]](color)}
       </svg>
     </div>
