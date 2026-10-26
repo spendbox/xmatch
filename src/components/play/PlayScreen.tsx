@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import clsx from "clsx";
 import { ChevronLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { notify } from "@/lib/pushClient";
@@ -21,6 +20,9 @@ export type PlayStatus = {
   session_id: string | null;
   game: GameKind | null;
   intent: Intent;
+  seeking: string;
+  age_min: number;
+  age_max: number;
   cost: number;
   balance: number;
   games: GameKind[];
@@ -167,14 +169,6 @@ export function PlayScreen({ userId, demo }: { userId: string; demo?: { status: 
     }
   }
 
-  async function setMood(i: Intent) {
-    if (!st || st.intent === i || demo) return setSt((s) => (s ? { ...s, intent: i } : s));
-    setSt({ ...st, intent: i });
-    const { error } = await supabase.from("profiles").update({ pref_intent: i }).eq("id", userId);
-    if (error) setErr("Couldn't change your mood. Try again.");
-    void load();
-  }
-
   // Time in line (corrected for the phone's clock)
   const skew = st ? new Date(st.server_now).getTime() - Date.now() : 0;
   const waitedSec = now && st?.joined_at ? Math.max(0, Math.floor((now + skew - new Date(st.joined_at).getTime()) / 1000)) : 0;
@@ -216,28 +210,22 @@ export function PlayScreen({ userId, demo }: { userId: string; demo?: { status: 
               ))}
             </div>
 
-            <p className="mt-7 text-[12px] font-extrabold tracking-[0.14em] text-white/60 uppercase">Your mood</p>
-            <div className="mt-2 grid grid-cols-3 gap-2">
-              {INTENTS.map((m) => {
-                const on = st?.intent === m.value;
-                return (
-                  <button
-                    key={m.value}
-                    type="button"
-                    onClick={() => void setMood(m.value)}
-                    aria-pressed={on}
-                    className={clsx(
-                      "flex h-[58px] flex-col items-center justify-center gap-0.5 rounded-2xl text-[13px] leading-tight font-bold whitespace-nowrap transition active:scale-95",
-                      on ? "bg-white text-ink" : "bg-white/10 text-white/85 ring-1 ring-white/10",
-                    )}
-                  >
-                    {INTENT_ICONS[m.value]({ size: 18 })}
-                    {m.label}
-                  </button>
-                );
-              })}
-            </div>
-            <p className="mt-2 text-center text-[12px] text-white/55">You're paired with people in the same mood</p>
+            {/* Who you're paired with: your Masquerade settings */}
+            {st && (
+              <Link
+                href="/home?settings=1"
+                className="mt-7 flex items-center gap-3 rounded-[20px] bg-white/10 p-3.5 ring-1 ring-white/10 transition active:scale-[0.98]"
+              >
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-gold text-ink">{INTENT_ICONS[st.intent]({ size: 22, strokeWidth: 2 })}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[11.5px] font-extrabold tracking-[0.12em] text-white/60 uppercase">Paired using your settings</span>
+                  <span className="block truncate text-[15px] font-bold">
+                    {INTENTS.find((m) => m.value === st.intent)?.label} · {seekingLabel(st.seeking)} · {st.age_min}–{st.age_max}
+                  </span>
+                </span>
+                <span className="shrink-0 text-[13px] font-bold text-gold">Change</span>
+              </Link>
+            )}
 
             <div className="mt-auto pt-8">
               {short ? (
@@ -285,11 +273,11 @@ export function PlayScreen({ userId, demo }: { userId: string; demo?: { status: 
             </div>
             <h1 className="font-display text-[30px] leading-tight font-bold">Finding a player</h1>
             <p className="mt-1.5 text-[14.5px] text-white/75">
-              Someone in {INTENTS.find((m) => m.value === st?.intent)?.label ?? "your"} mood · {fmt(waitedSec)}
+              Someone who fits your settings · {fmt(waitedSec)}
             </p>
             <div className="mt-6 w-full rounded-[22px] bg-white/8 p-4 text-left ring-1 ring-white/10">
               <p className="text-[14px] font-semibold">
-                {st && st.in_line > 0 ? `${st.in_line} more ${st.in_line === 1 ? "person" : "people"} waiting in your mood` : "You're first in line"}
+                {st && st.in_line > 0 ? `${st.in_line} more ${st.in_line === 1 ? "person" : "people"} waiting who ${st.in_line === 1 ? "fits" : "fit"} your settings` : "You're first in line"}
               </p>
               <p className="mt-1 text-[13px] text-white/65">
                 Keep this screen open. You're paired the moment someone taps Play
@@ -364,3 +352,12 @@ function Picked({ game }: { game: GameKind }) {
 }
 
 const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+
+/** "women,men" → "Women & men"; "anyone" → "Anyone" */
+function seekingLabel(s: string) {
+  if (!s || s === "anyone") return "Anyone";
+  const words: Record<string, string> = { women: "women", men: "men", other: "others" };
+  const list = s.split(",").map((x) => words[x] ?? x);
+  const text = list.length > 1 ? `${list.slice(0, -1).join(", ")} & ${list[list.length - 1]}` : list[0];
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}

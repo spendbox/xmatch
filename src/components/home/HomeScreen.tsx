@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Sticky } from "@/components/ui/Sticky";
 import { PeopleForYou } from "./PeopleForYou";
@@ -85,6 +85,14 @@ export function HomeScreen({
   const now = useNow(30_000);
   const [prefs, setPrefs] = useState<SetupPrefs>(() => prefsFromProfile(profile));
   const [meetOpen, setMeetOpen] = useState(demoSheet === "meet");
+  const backToPlay = useRef(false);
+  // Opened from Play's "Change": go straight to your Masquerade settings
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("settings") !== "1") return;
+    backToPlay.current = true;
+    setMeetOpen(true);
+    window.history.replaceState(null, "", "/home");
+  }, []);
   const [greeting, setGreeting] = useState("Hello");
   const ctl = useMasqueradeHour(profile.id, initialHour);
   const [placeOpen, setPlaceOpen] = useState(false);
@@ -225,9 +233,11 @@ export function HomeScreen({
       <MeetSheet
         open={meetOpen}
         onClose={() => setMeetOpen(false)}
-        onSave={(next) => {
+        onSave={async (next) => {
           setMeetOpen(false);
-          void savePrefs(next);
+          await savePrefs(next);
+          // Came from Play: go back there with the new settings
+          if (backToPlay.current) window.location.assign("/play");
         }}
         prefs={prefs}
         place={place.label}

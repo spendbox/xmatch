@@ -12334,7 +12334,8 @@ revoke all on function public.game_finish(uuid, text, uuid) from public, anon, a
 
 -- Dashpad update: Play a stranger (Part 78)
 -- Run this once in Supabase: SQL Editor -> New query -> paste -> Run. Safe to run more than once.
--- Tap Play: you wait in line with people in the same mood. When someone's there, Dashpad
+-- Tap Play: you wait in line with people who fit your Masquerade settings (mood, who you
+-- want to meet and age, both ways). When someone's there, Dashpad
 -- opens a masked chat for you both and starts a game it picks at random
 -- (Whot, Ayo, Ludo or Snakes & Ladders; games switched off in Admin are skipped).
 -- Each player pays the match price when paired (Admin -> Prices, default 1 Key, 0 = free).
@@ -12364,6 +12365,17 @@ language sql stable security definer set search_path = public as $$
   where public.setting_int('game_' || k, 1) <> 0
 $$;
 
+-- Two people fit each other: same mood, who each wants to meet, and each other's age range
+-- (the same settings Masquerade pairs with)
+create or replace function public.play_fits(me profiles, p profiles) returns boolean
+language sql stable security definer set search_path = public as $$
+  select p.pref_intent = me.pref_intent
+    and public.gender_fits(me.pref_seeking, p.gender) and public.gender_fits(p.pref_seeking, me.gender)
+    and public.age_years(p.birthdate) between me.pref_age_min and me.pref_age_max
+    and public.age_years(me.birthdate) between p.pref_age_min and p.pref_age_max
+    and not public.is_blocked(me.id, p.id)
+$$;
+
 -- Where you are: waiting, just paired, or not playing; plus what it costs and how busy it is
 create or replace function public.play_status() returns json
 language plpgsql security definer set search_path = public as $$
@@ -12381,12 +12393,15 @@ begin
     'session_id', q.session_id,
     'game', q.game_kind,
     'intent', me.pref_intent,
+    'seeking', me.pref_seeking,
+    'age_min', me.pref_age_min,
+    'age_max', me.pref_age_max,
     'cost', public.setting_int('play_cost', 1),
     'balance', coalesce((select balance from wallets where user_id = uid), 0),
     'games', public.play_games(me.pref_intent),
-    -- Others waiting in your mood right now
+    -- Others waiting right now who fit your settings (and you theirs)
     'in_line', (select count(*) from play_queue x join profiles p on p.id = x.user_id
-                where x.session_id is null and x.user_id <> uid and x.intent = me.pref_intent
+                where x.session_id is null and x.user_id <> uid and public.play_fits(me, p)
                   and p.last_seen_at > now() - interval '150 seconds'),
     'playing', (select count(*) from games g join masquerade_sessions s on s.id = g.session_id
                 where s.source = 'play' and g.status = 'active'),
@@ -12424,12 +12439,10 @@ begin
     tries := tries + 1;
     exit when tries > 5;
     select p.* into them from play_queue x join profiles p on p.id = x.user_id
-    where x.session_id is null and x.user_id <> uid and x.intent = me.pref_intent
+    where x.session_id is null and x.user_id <> uid
       and x.joined_at > now() - interval '15 minutes'
       and p.last_seen_at > now() - interval '150 seconds'
-      and not public.is_blocked(uid, p.id)
-      -- Dating and spicy moods: who you want to meet still counts
-      and (me.pref_intent = 'friends' or (public.gender_fits(me.pref_seeking, p.gender) and public.gender_fits(p.pref_seeking, me.gender)))
+      and public.play_fits(me, p)
     order by x.joined_at
     limit 1;
     exit when not found;
@@ -12482,6 +12495,7 @@ language sql security definer set search_path = public as $$
 $$;
 
 revoke all on function public.play_games(public.intent) from public, anon;
+revoke all on function public.play_fits(profiles, profiles) from public, anon, authenticated;
 revoke all on function public.play_status() from public, anon;
 revoke all on function public.play_join() from public, anon;
 revoke all on function public.play_leave() from public, anon;
