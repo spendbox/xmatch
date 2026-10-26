@@ -1,9 +1,13 @@
 "use client";
 
+import { ChatBackdrop } from "@/components/chat/ChatBackdrop";
+import { ChatBgSheet } from "@/components/chat/ChatBgSheet";
+import { chatBgInfo, loadChatBg, saveChatBg, type ChatBgId } from "@/lib/chatBackgrounds";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import clsx from "clsx";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Flag, Gamepad2, Gift, Handshake, LogOut, MoreVertical, Dices, RotateCcw, ShieldCheck, Timer, X } from "lucide-react";
+import { ArrowLeft, Flag, Gamepad2, Gift, Handshake, LogOut, MoreVertical, Dices, Palette, RotateCcw, ShieldCheck, Timer, X } from "lucide-react";
 import { Button, Spinner } from "@/components/ui/Button";
 import { Sheet } from "@/components/ui/Sheet";
 import { KeyCoin } from "@/components/keys/KeyIcon";
@@ -116,6 +120,10 @@ export function MasqueradeRoom({
         ? `No reply by ${new Date(known.refund_at).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" })}? Your ${keysWord(known.paid_keys)} ${known.paid_keys === 1 ? "comes" : "come"} back.`
         : null;
   const [menu, setMenu] = useState(false);
+  // Your background for this chat (saved on this phone)
+  const [bg, setBg] = useState<ChatBgId>("classic");
+  const [bgOpen, setBgOpen] = useState(false);
+  useEffect(() => setBg(loadChatBg(`s-${initial.id}`)), [initial.id]);
   const [reporting, setReporting] = useState(false);
   const [voting, setVoting] = useState(false);
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
@@ -415,7 +423,16 @@ export function MasqueradeRoom({
               {menu ? <X size={20} /> : <MoreVertical size={20} />}
             </button>
             {menu && (
-              <div className="absolute top-11 right-0 w-48 overflow-hidden rounded-2xl border border-line bg-surface shadow-lift animate-fade-up">
+              <div className="absolute top-11 right-0 z-20 w-52 overflow-hidden rounded-2xl border border-line bg-surface shadow-lift animate-fade-up">
+                <button
+                  onClick={() => {
+                    setMenu(false);
+                    setBgOpen(true);
+                  }}
+                  className="flex w-full items-center gap-3 border-b border-line px-4 py-3.5 text-left text-[15px] hover:bg-cream"
+                >
+                  <Palette size={18} /> Chat background
+                </button>
                 <button onClick={leave} className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-[15px] hover:bg-cream">
                   <LogOut size={18} /> {state.hourly ? "Let go" : "Leave chat"}
                 </button>
@@ -475,9 +492,11 @@ export function MasqueradeRoom({
       )}
 
       {/* Messages */}
-      <div data-chat-scroll className="flex-1 overflow-y-auto overscroll-contain">
+      <div className="relative flex min-h-0 flex-1 flex-col" data-bg={bg !== "classic" ? "" : undefined} data-bg-dark={chatBgInfo(bg).dark ? "" : undefined}>
+      <ChatBackdrop id={bg} />
+      <div data-chat-scroll className="relative flex-1 overflow-y-auto overscroll-contain">
         {whoSees && (
-          <p className="px-6 pt-3 text-center text-[12px] leading-relaxed text-muted">
+          <p className={clsx("text-center text-[12px] leading-relaxed text-muted", bg === "classic" ? "px-6 pt-3" : "mx-auto mt-3 w-fit max-w-[90%] rounded-2xl bg-surface/90 px-3 py-1.5")}>
             {whoSees}
           </p>
         )}
@@ -499,6 +518,7 @@ export function MasqueradeRoom({
           onReply={setReplyTo}
           onGameAgain={chatting ? games.rematch : undefined}
         />
+      </div>
       </div>
 
       {chatting && !state.hourly && remaining <= 90 && !demo?.hideExtend && (
@@ -569,6 +589,7 @@ export function MasqueradeRoom({
       )}
       {chatting ? (
         <Composer
+          saveKey={`s-${state.id}`}
           draft={hintDraft}
           noTip={hintsOn}
           onSend={send}
@@ -632,6 +653,15 @@ export function MasqueradeRoom({
       {reporting && <ReportSheet onClose={() => setReporting(false)} onReport={report} />}
       {games.overlay}
       {profileOpen && known?.id && <ExploreProfileSheet personId={known.id} onClose={() => setProfileOpen(false)} inChat />}
+      <ChatBgSheet
+        open={bgOpen}
+        onClose={() => setBgOpen(false)}
+        value={bg}
+        onPick={(id, everywhere) => {
+          setBg(id);
+          saveChatBg(`s-${initial.id}`, id, everywhere);
+        }}
+      />
       <MaskedVoiceSheet
         open={voiceOpen}
         onClose={() => setVoiceOpen(false)}

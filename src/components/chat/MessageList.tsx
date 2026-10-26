@@ -298,7 +298,7 @@ export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDat
                   slow={m.slow ? { progress: slowProgress.get(m.id) ?? 0, cost: slow?.cost ?? 10, onReveal: slow?.onReveal } : undefined}
                 />
                 {lastOfGroup && (
-                  <span className="mt-1 flex items-center gap-1 px-1 text-[11px] text-muted">
+                  <span className="chat-meta mt-1 flex items-center gap-1 px-1 text-[11px] text-muted">
                     {m.failed ? (
                       <span className="font-semibold text-chili">Not sent</span>
                     ) : m.pending ? (

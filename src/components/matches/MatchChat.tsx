@@ -1,11 +1,14 @@
 "use client";
 
+import { ChatBackdrop } from "@/components/chat/ChatBackdrop";
+import { ChatBgSheet } from "@/components/chat/ChatBgSheet";
+import { chatBgInfo, loadChatBg, saveChatBg, type ChatBgId } from "@/lib/chatBackgrounds";
 import { notify } from "@/lib/pushClient";
 import clsx from "clsx";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Dices, Flag, Gamepad2, UserX, MoreVertical, Phone, Video, X } from "lucide-react";
+import { ArrowLeft, Dices, Flag, Gamepad2, Palette, UserX, MoreVertical, Phone, Video, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { ChatMessage, Intent, Profile } from "@/lib/types";
 import { INTENT_ICONS, InterestIcon } from "@/components/ui/icons";
@@ -59,6 +62,10 @@ export function MatchChat({
   const supabase = useMemo(() => createClient(), []);
   const [messages, setMessages] = useState(initialMessages);
   const [menu, setMenu] = useState(false);
+  // Your background for this chat (saved on this phone)
+  const [bg, setBg] = useState<ChatBgId>("classic");
+  const [bgOpen, setBgOpen] = useState(false);
+  useEffect(() => setBg(loadChatBg(`m-${matchId}`)), [matchId]);
   const [showProfile, setShowProfile] = useState(false);
   const [reporting, setReporting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -233,6 +240,15 @@ export function MatchChat({
           {menu && (
             <div className="absolute top-11 right-0 z-20 w-52 overflow-hidden rounded-2xl border border-line bg-surface shadow-lift animate-fade-up">
               <button
+                onClick={() => {
+                  setMenu(false);
+                  setBgOpen(true);
+                }}
+                className="flex w-full items-center gap-3 border-b border-line px-4 py-3.5 text-left text-[15px] hover:bg-cream"
+              >
+                <Palette size={18} /> Chat background
+              </button>
+              <button
                 onClick={async () => {
                   setMenu(false);
                   if (!confirm(`Remove ${other.display_name}? Your conversation will be deleted for both of you.`)) return;
@@ -252,7 +268,9 @@ export function MatchChat({
         </div>
       </header>
 
-      <div data-chat-scroll className="flex-1 overflow-y-auto overscroll-contain">
+      <div className="relative flex min-h-0 flex-1 flex-col" data-bg={bg !== "classic" ? "" : undefined} data-bg-dark={chatBgInfo(bg).dark ? "" : undefined}>
+      <ChatBackdrop id={bg} />
+      <div data-chat-scroll className="relative flex-1 overflow-y-auto overscroll-contain">
         <div className="mx-4 mt-4 animate-fade-up rounded-3xl lg:mx-auto lg:max-w-xl border border-line bg-surface p-5 text-center shadow-card">
           <div className="flex justify-center -space-x-3">
             <span className="grid h-14 w-14 place-items-center rounded-full bg-ink text-white ring-4 ring-surface">
@@ -280,10 +298,12 @@ export function MatchChat({
         </div>
         <MessageList messages={messages} myId={myId} nameOf={nameOf} onReply={setReplyTo} onDelete={remove} showDates onGameAgain={games.rematch} slow={{ cost: slowCost, onReveal: revealSlow }} />
       </div>
+      </div>
 
       {games.banner}
       {/* Ideas to say are for masked chats; once you've both unmasked you know each other */}
       <Composer
+        saveKey={`m-${matchId}`}
         plusDot={games.live}
         actions={[
           ...(games.canPlay ? [{ key: "game", label: games.live ? "Back to game" : "Play a game", icon: <Gamepad2 size={24} strokeWidth={1.75} />, tone: "bg-brand-soft text-brand", onClick: games.play }] : []),
@@ -303,6 +323,16 @@ export function MatchChat({
           setGiftOpen(true);
         }}
         placeholder={`Message ${other.display_name}`}
+      />
+
+      <ChatBgSheet
+        open={bgOpen}
+        onClose={() => setBgOpen(false)}
+        value={bg}
+        onPick={(id, everywhere) => {
+          setBg(id);
+          saveChatBg(`m-${matchId}`, id, everywhere);
+        }}
       />
 
       <MaskedVoiceSheet

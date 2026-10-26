@@ -261,7 +261,7 @@ export function FeedChat({ chat, myId }: { chat: FeedChatDetail; myId: string })
           </EndCard>
         )
       ) : (
-        <Composer onSend={send} placeholder={`Message ${other.name || "them"}`} />
+        <Composer saveKey={`f-${chat.id}`} onSend={send} placeholder={`Message ${other.name || "them"}`} />
       )}
 
       {toast && (

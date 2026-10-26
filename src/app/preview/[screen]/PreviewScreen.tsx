@@ -42,6 +42,7 @@ import { PromptManager } from "@/components/admin/PromptManager";
 import { PromptAnswers } from "@/components/admin/PromptAnswers";
 import { PlayScreen } from "@/components/play/PlayScreen";
 import { GameDemo } from "./GameDemos";
+import { ChatBgGallery } from "./ChatBgGallery";
 import { GamesManager } from "@/components/admin/GamesManager";
 import { ThingsManager } from "@/components/admin/ThingsManager";
 import { ErrorsList } from "@/components/admin/ErrorsList";
@@ -280,6 +281,9 @@ export function PreviewScreen({ screen }: { screen: string }) {
 
 function ScreenBody({ screen }: { screen: string }) {
   if (screen.startsWith("game-")) return <GameDemo screen={screen} />;
+  if (screen === "chat-bgs") return <ChatBgGallery />;
+  if (screen === "chat-bgs-moving") return <ChatBgGallery only={["beach", "sunset", "stars", "aurora", "rain", "snow", "hearts", "fireflies", "ocean", "clouds", "lagos", "bokeh"]} />;
+  if (screen.startsWith("chat-bg-")) return <ChatBgGallery only={[screen.slice(8) as never]} big />;
   switch (screen) {
     case "play":
     case "play-waiting":

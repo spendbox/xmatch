@@ -300,7 +300,7 @@ export function EventChat({ chat, myId, myInterests }: { chat: EventChatDetail; 
           </EndCard>
         )
       ) : (
-        <Composer onSend={send} disabled={phase !== "live"} placeholder={phase === "live" ? `Message ${other.name || "them"}` : phase === "upcoming" ? "The event hasn't started yet" : "The event has ended"} />
+        <Composer saveKey={`e-${chat.id}`} onSend={send} disabled={phase !== "live"} placeholder={phase === "live" ? `Message ${other.name || "them"}` : phase === "upcoming" ? "The event hasn't started yet" : "The event has ended"} />
       )}
 
       {toast && (
