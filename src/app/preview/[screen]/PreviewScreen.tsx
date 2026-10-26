@@ -753,6 +753,39 @@ function ScreenBody({ screen }: { screen: string }) {
       return <CallScreen call={{ id: "c", matchId: "m1", kind: "video", role: "callee", peer: { name: "Ada", photo: ada.photos[0] }, status: "incoming" }} localStream={null} remoteStream={null} muted={false} cameraOff={false} mirrored onAccept={() => {}} onDecline={() => {}} onHangUp={() => {}} onToggleMute={() => {}} onToggleCamera={() => {}} onFlip={() => {}} />;
     case "call-audio":
       return <CallScreen call={{ id: "c", matchId: "m1", kind: "audio", role: "caller", peer: { name: "Ada", photo: ada.photos[0] }, status: "connected", connectedAt: now - 83_000 }} localStream={null} remoteStream={null} muted cameraOff={false} mirrored onAccept={() => {}} onDecline={() => {}} onHangUp={() => {}} onToggleMute={() => {}} onToggleCamera={() => {}} onFlip={() => {}} />;
+    case "match-chat-merged":
+      return (
+        <MatchChat
+          matchId="m1"
+          myId="me"
+          other={ada}
+          shared={["Travel", "Food"]}
+          matchedAt={iso(3000)}
+          intent="dating"
+          initialMessages={[
+            ...msgs.slice(0, 3).map((m) => (m.kind === "icebreaker" ? { ...m, body: "💬 " + m.body } : m)),
+            {
+              id: 900,
+              sender_id: null,
+              kind: "masked",
+              body: "Your masked chat",
+              created_at: iso(5),
+              media_meta: {
+                aliases: { me: "Purple Heron", ada: "Golden Owl" },
+                from: "masquerade",
+                started_at: iso(60),
+                count: 4,
+                messages: [
+                  { s: null, k: "icebreaker", b: "What song is stuck in your head right now?", m: null, t: iso(58) },
+                  { s: "ada", k: "text", b: "Calm Down. Every single day 😅", m: null, t: iso(57) },
+                  { s: "me", k: "text", b: "Ha! Same. Rema has us all", m: null, t: iso(55) },
+                  { s: "ada", k: "gift", b: "fire", m: null, t: iso(50) },
+                ],
+              } as never,
+            },
+          ]}
+        />
+      );
     case "match-chat":
       return <MatchChat matchId="m1" myId="me" other={ada} shared={["Travel", "Food"]} matchedAt={iso(3000)} intent="dating" initialMessages={msgs.map((m) => (m.kind === "icebreaker" ? { ...m, body: "💬 " + m.body } : m))} />;
     case "matches-empty":

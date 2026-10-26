@@ -13,6 +13,7 @@ import { Sheet } from "@/components/ui/Sheet";
 import { Spinner, tapFeedback } from "@/components/ui/Button";
 import { voiceUrl, type VoiceStyle } from "@/lib/voiceDisguise";
 import { VoiceIcon } from "./VoiceIcon";
+import { MaskedHistoryCard, type MaskedCardMeta } from "./MaskedHistory";
 import { AudioPlayer } from "./AudioPlayer";
 import { MediaViewer, type ViewerItem } from "./MediaViewer";
 import { GameCard } from "@/components/games/GameCard";
@@ -168,6 +169,18 @@ export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDat
             <span className="rounded-full bg-surface px-3 py-1 text-[12px] font-semibold text-muted shadow-card">{dayLabel(m.created_at)}</span>
           </div>
         ) : null;
+
+        // A masked chat that joined this one when you unmasked ("Amaka was Purple Heron")
+        if (m.kind === "masked") {
+          const meta = m.media_meta as unknown as MaskedCardMeta;
+          const theirId = Object.keys(meta?.aliases ?? {}).find((id) => id !== myId) ?? null;
+          return (
+            <div key={m.id} data-msg={m.id}>
+              {dateLine}
+              <MaskedHistoryCard meta={meta} myId={myId} theirName={nameOf(theirId)} />
+            </div>
+          );
+        }
 
         if (m.kind === "gift") {
           const g = giftById(m.media_meta?.gift ?? m.body);

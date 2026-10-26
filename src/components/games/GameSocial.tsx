@@ -258,6 +258,12 @@ export function ChatPanel({
                     🎮 You played {m.body}
                   </p>
                 );
+              if (m.kind === "masked")
+                return (
+                  <p key={m.id} className="mx-auto w-fit rounded-full bg-brand-soft px-3 py-1 text-center text-[12px] font-semibold text-brand-ink">
+                    Your masked chat is in Chats
+                  </p>
+                );
               if (m.kind === "gift") {
                 const g = GIFTS.find((x) => x.id === m.body);
                 return (
