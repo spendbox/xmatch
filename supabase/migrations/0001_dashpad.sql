@@ -12362,6 +12362,12 @@ create table if not exists public.play_queue (
   game_kind text,
   matched_at timestamptz
 );
+-- If an earlier draft of this update made the table, bring it up to date
+alter table public.play_queue add column if not exists seen_at timestamptz not null default now();
+alter table public.play_queue add column if not exists game_id uuid references public.games on delete set null;
+alter table public.play_queue add column if not exists game_kind text;
+alter table public.play_queue add column if not exists matched_at timestamptz;
+alter table public.play_queue drop column if exists session_id;
 alter table public.play_queue enable row level security;
 drop policy if exists play_queue_own on public.play_queue;
 create policy play_queue_own on public.play_queue for select using (user_id = auth.uid());
@@ -12858,3 +12864,14 @@ grant execute on function public.play_info(uuid) to authenticated;
 grant execute on function public.play_chat_open(uuid) to authenticated;
 grant execute on function public.play_gift(uuid, text) to authenticated;
 grant execute on function public.play_rematch(uuid) to authenticated;
+
+
+-- Dashpad update: Play fix (Part 78b)
+-- Run this once in Supabase: SQL Editor -> New query -> paste -> Run. Safe to run more than once.
+-- If an earlier draft of update 78 was run, the waiting line was missing two columns,
+-- so the Play screen couldn't load. This adds them.
+alter table public.play_queue add column if not exists seen_at timestamptz not null default now();
+alter table public.play_queue add column if not exists game_id uuid references public.games on delete set null;
+alter table public.play_queue add column if not exists game_kind text;
+alter table public.play_queue add column if not exists matched_at timestamptz;
+alter table public.play_queue drop column if exists session_id;
