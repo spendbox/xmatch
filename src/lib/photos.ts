@@ -52,18 +52,11 @@ export async function uploadPhoto(supabase: SupabaseClient, userId: string, file
 const THUMB_SIZE = 400;
 const THUMB_SUFFIX = "_t";
 
-/** The small copy of a Dashpad photo (older photos don't have one: use onError to fall back) */
+/** The small copy of a Dashpad photo (older photos don't have one: <Photo> falls back to the full one) */
 export function thumbUrl(url: string | null | undefined) {
   if (!url) return url ?? null;
   const ours = /\/storage\/v1\/object\/public\/photos\/[^?]+\.jpg$/.test(url) || (!!MEDIA && url.startsWith(`${MEDIA}/photos/`) && url.endsWith(".jpg"));
   return ours && !url.endsWith(`${THUMB_SUFFIX}.jpg`) ? url.replace(/\.jpg$/, `${THUMB_SUFFIX}.jpg`) : url;
-}
-
-/** For <img onError>: if the small copy isn't there, show the full photo */
-export function thumbFallback(full: string | null | undefined) {
-  return (e: React.SyntheticEvent<HTMLImageElement>) => {
-    if (full && e.currentTarget.src !== full) e.currentTarget.src = full;
-  };
 }
 
 export async function deletePhoto(supabase: SupabaseClient, url: string) {

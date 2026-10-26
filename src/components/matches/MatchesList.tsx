@@ -129,7 +129,7 @@ export function MatchesList({
                       )}
                     >
                       <span className="relative shrink-0">
-                        <Avatar src={m.photos?.[0]} name={m.display_name} size={56} />
+                        <Avatar src={m.photos?.[0]} name={m.display_name} id={m.other_id} size={56} />
                         <span
                           className={clsx("absolute top-0.5 right-0.5 h-3.5 w-3.5 rounded-full ring-2 ring-surface", online(m.other_id) ? "bg-mint" : "bg-[#b9b3c4]")}
                           aria-label={online(m.other_id) ? "Online" : "Offline"}

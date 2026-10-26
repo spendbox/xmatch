@@ -138,7 +138,7 @@ export function HomeScreen({
       <header className="flex items-center gap-3">
         <span className="relative shrink-0 lg:hidden">
           <Link href="/profile" aria-label="Your profile" className="block">
-            <Avatar src={profile.photos?.[0]} name={profile.display_name} size={46} className="ring-2 ring-surface" />
+            <Avatar src={profile.photos?.[0]} name={profile.display_name} id={profile.id} gender={profile.gender} size={46} className="ring-2 ring-surface" />
           </Link>
           {/* Small badge on the photo: your Masquerade mood; tap it to change settings */}
           <button

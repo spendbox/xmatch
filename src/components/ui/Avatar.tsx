@@ -1,16 +1,22 @@
 "use client";
 
 import clsx from "clsx";
-import { thumbFallback, thumbUrl } from "@/lib/photos";
+import type { Gender } from "@/lib/types";
+import { Photo } from "./Photo";
 
 export function Avatar({
   src,
   name,
+  id,
+  gender,
   size = 48,
   className,
 }: {
   src?: string | null;
   name?: string | null;
+  /** Their id: picks the mask shown if the photo won't load */
+  id?: string;
+  gender?: Gender | null;
   size?: number;
   className?: string;
 }) {
@@ -21,8 +27,7 @@ export function Avatar({
       style={{ width: size, height: size, fontSize: size * 0.4 }}
     >
       {src ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={thumbUrl(src) ?? src} onError={thumbFallback(src)} alt={name ?? ""} loading="lazy" className="h-full w-full object-cover" />
+        <Photo src={src} id={id ?? src} gender={gender} alt={name ?? ""} loading="lazy" className="h-full w-full object-cover" />
       ) : (
         initial
       )}

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { lockScroll } from "@/lib/scrollLock";
-import { thumbFallback, thumbUrl } from "@/lib/photos";
 import clsx from "clsx";
 import { createPortal } from "react-dom";
 import { ChevronDown, ChevronLeft, ChevronRight, Lock, Quote, X } from "lucide-react";
@@ -11,6 +10,7 @@ import { promptOf } from "@/lib/things";
 import type { Profile } from "@/lib/types";
 import { InterestIcon } from "@/components/ui/icons";
 import { MaskFace } from "@/components/ui/MaskFace";
+import { Photo } from "@/components/ui/Photo";
 import { YouBoth } from "./YouBoth";
 
 export function ProfileSheet({
@@ -81,8 +81,7 @@ export function ProfileSheet({
             // A photo you can't see yet: their main photo, heavily blurred, with a lock
             <div className="relative aspect-[4/5] w-full overflow-hidden bg-brand-ink lg:aspect-auto lg:h-full">
               {photos[0] && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={thumbUrl(photos[0]) ?? photos[0]} onError={thumbFallback(photos[0])} alt="" className="absolute inset-0 h-full w-full object-cover" style={{ filter: "blur(28px)", transform: "scale(1.3)" }} />
+                <Photo src={photos[0]} id={profile.id} gender={profile.gender} className="absolute inset-0 h-full w-full object-cover" style={{ filter: "blur(28px)", transform: "scale(1.3)" }} />
               )}
             </div>
           ) : photos[i] && !broken.includes(photos[i]) ? (
@@ -133,8 +132,7 @@ export function ProfileSheet({
                 {photos.map((p, n) => (
                   <button key={p} onClick={() => setI(n)} aria-label={`Photo ${n + 1}`}
                     className={`h-14 w-14 overflow-hidden rounded-xl border-2 transition ${n === i ? "border-white" : "border-transparent opacity-70 hover:opacity-100"}`}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={thumbUrl(p) ?? p} onError={thumbFallback(p)} alt="" className="h-full w-full object-cover" />
+                    <Photo src={p} id={profile.id} gender={profile.gender} className="h-full w-full object-cover" />
                   </button>
                 ))}
                 {Array.from({ length: lockedCount }, (_, n) => (
