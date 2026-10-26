@@ -67,6 +67,14 @@ function demo(screen: string): Game | null {
   const t = Date.now();
   const at = (s: number) => new Date(t + s * 1000).toISOString();
   // New board games and the pop-ups (game-ludo, game-ludo-six, game-snakes-ladder, game-whot-pick2 …)
+  // Whot with a market of a given size (game-mkt-40 … game-mkt-0)
+  const mkt = screen.match(/^game-mkt-(\d+)$/)?.[1];
+  if (mkt !== undefined)
+    return base({
+      kind: "whot",
+      state: { top: "circle:7", called: null, turn: "a", count_a: 6, count_b: 4, market: Number(mkt), last: { by: "b", card: "circle:7", note: "" }, moves: 9 },
+      mine: { hand: ["circle:2", "star:7", "whot:20", "square:11", "triangle:4", "cross:13"] },
+    });
   // A "Play again" challenge that was cancelled before it started (nothing on the board yet)
   const cancelled = screen.match(/^game-(snakes|ludo|ayo|whot)-unstarted$/)?.[1];
   if (cancelled) return base({ kind: cancelled as never, status: "cancelled", state: {}, started_at: null, ended_at: at(-1) });

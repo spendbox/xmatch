@@ -2,7 +2,7 @@
 
 import { ChatBackdrop } from "@/components/chat/ChatBackdrop";
 import { ChatBgSheet } from "@/components/chat/ChatBgSheet";
-import { chatBgInfo, loadChatBg, saveChatBg, type ChatBgId } from "@/lib/chatBackgrounds";
+import { chatBgInfo, isChatBg, loadChatBg, saveChatBg, saveMyDefaultBg, type ChatBgId } from "@/lib/chatBackgrounds";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import { useRouter } from "next/navigation";
@@ -120,10 +120,12 @@ export function MasqueradeRoom({
         ? `No reply by ${new Date(known.refund_at).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" })}? Your ${keysWord(known.paid_keys)} ${known.paid_keys === 1 ? "comes" : "come"} back.`
         : null;
   const [menu, setMenu] = useState(false);
-  // Your background for this chat (saved on this phone)
-  const [bg, setBg] = useState<ChatBgId>("classic");
+  // The chat background: the one either of you picked for this chat (both see it), else your own default
+  const [sharedBg, setSharedBg] = useState<string | null>(null);
+  const [myBg, setMyBg] = useState<ChatBgId>("classic");
   const [bgOpen, setBgOpen] = useState(false);
-  useEffect(() => setBg(loadChatBg(`s-${initial.id}`)), [initial.id]);
+  useEffect(() => setMyBg(loadChatBg(`s-${initial.id}`)), [initial.id]);
+  const bg: ChatBgId = isChatBg(sharedBg) ? sharedBg : myBg;
   const [reporting, setReporting] = useState(false);
   const [voting, setVoting] = useState(false);
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
@@ -195,9 +197,21 @@ export function MasqueradeRoom({
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "masquerade_sessions", filter: `id=eq.${initial.id}` },
-        () => refresh(),
+        (p) => {
+          // A new chat background from either of you
+          const next = (p.new as { chat_bg?: string | null }).chat_bg;
+          if (next !== undefined) setSharedBg(next);
+          void refresh();
+        },
       )
       .subscribe();
+    // The background already picked for this chat (nothing before update 83 runs)
+    void supabase
+      .from("masquerade_sessions")
+      .select("chat_bg")
+      .eq("id", initial.id)
+      .maybeSingle()
+      .then(({ data }) => setSharedBg(((data as { chat_bg?: string | null } | null)?.chat_bg ?? null)));
     return () => {
       supabase.removeChannel(channel);
     };
@@ -658,9 +672,14 @@ export function MasqueradeRoom({
         onClose={() => setBgOpen(false)}
         value={bg}
         onPick={(id, everywhere) => {
-          setBg(id);
-          saveChatBg(`s-${initial.id}`, id, everywhere);
+          setSharedBg(id);
+          if (everywhere) saveMyDefaultBg(id);
+          // For both of you (before update 83 runs, it's kept on this phone instead)
+          void supabase.rpc("set_chat_bg", { p_bg: id, p_session: initial.id }).then(({ error }) => {
+            if (error) saveChatBg(`s-${initial.id}`, id, false);
+          });
         }}
+        them={theirName}
       />
       <MaskedVoiceSheet
         open={voiceOpen}

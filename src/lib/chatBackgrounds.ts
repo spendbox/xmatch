@@ -62,7 +62,15 @@ export const CHAT_BGS: ChatBg[] = [
 
 const ALL_KEY = "dp_chat_bg";
 const ONE_KEY = (chat: string) => `dp_chat_bg_${chat}`;
-const valid = (id: string | null): id is ChatBgId => !!id && CHAT_BGS.some((b) => b.id === id);
+const valid = (id: string | null | undefined): id is ChatBgId => !!id && CHAT_BGS.some((b) => b.id === id);
+export const isChatBg = valid;
+
+/** Your own default for chats nobody has picked a background for */
+export function saveMyDefaultBg(id: ChatBgId) {
+  try {
+    localStorage.setItem(ALL_KEY, id);
+  } catch {}
+}
 
 /** The background for a chat: its own, else the one for all chats, else Classic */
 export function loadChatBg(chat: string): ChatBgId {

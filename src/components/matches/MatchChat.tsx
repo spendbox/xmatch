@@ -2,10 +2,10 @@
 
 import { ChatBackdrop } from "@/components/chat/ChatBackdrop";
 import { ChatBgSheet } from "@/components/chat/ChatBgSheet";
-import { chatBgInfo, loadChatBg, saveChatBg, type ChatBgId } from "@/lib/chatBackgrounds";
+import { chatBgInfo, isChatBg, loadChatBg, saveChatBg, saveMyDefaultBg, type ChatBgId } from "@/lib/chatBackgrounds";
 import { notify } from "@/lib/pushClient";
 import clsx from "clsx";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Dices, Flag, Gamepad2, Palette, UserX, MoreVertical, Phone, Video, X } from "lucide-react";
@@ -41,6 +41,7 @@ export function MatchChat({
   intent = "dating",
   slowCost = 10,
   source,
+  chatBg,
 }: {
   matchId: string;
   myId: string;
@@ -53,6 +54,8 @@ export function MatchChat({
   slowCost?: number;
   /** "play": the chat was started after a Play game */
   source?: string | null;
+  /** The background either of you picked for this chat */
+  chatBg?: string | null;
 }) {
   const shell = useKeyboardSafe<HTMLDivElement>();
   const { seen, now } = usePresence([other.id]);
@@ -62,10 +65,13 @@ export function MatchChat({
   const supabase = useMemo(() => createClient(), []);
   const [messages, setMessages] = useState(initialMessages);
   const [menu, setMenu] = useState(false);
-  // Your background for this chat (saved on this phone)
-  const [bg, setBg] = useState<ChatBgId>("classic");
+  // The chat background: the one either of you picked for this chat (both see it), else your own default
+  const [sharedBg, setSharedBg] = useState<string | null>(chatBg ?? null);
+  const [myBg, setMyBg] = useState<ChatBgId>("classic");
   const [bgOpen, setBgOpen] = useState(false);
-  useEffect(() => setBg(loadChatBg(`m-${matchId}`)), [matchId]);
+  const iSetBg = useRef<string | null>(null);
+  useEffect(() => setMyBg(loadChatBg(`m-${matchId}`)), [matchId]);
+  const bg: ChatBgId = isChatBg(sharedBg) ? sharedBg : myBg;
   const [showProfile, setShowProfile] = useState(false);
   const [reporting, setReporting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -99,6 +105,14 @@ export function MatchChat({
           setMessages((l) => (l.some((x) => x.id === m.id) ? l : [...l, m]));
         },
       )
+      // They changed the chat background: it changes here too
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "matches", filter: `id=eq.${matchId}` }, (p) => {
+        const next = (p.new as { chat_bg?: string | null }).chat_bg ?? null;
+        setSharedBg((cur) => {
+          if (next !== cur && next !== iSetBg.current && isChatBg(next)) setToast(`${other.display_name?.split(" ")[0] ?? "They"} changed the chat background to ${chatBgInfo(next).name}`);
+          return next;
+        });
+      })
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "messages", filter: `match_id=eq.${matchId}` },
@@ -330,9 +344,15 @@ export function MatchChat({
         onClose={() => setBgOpen(false)}
         value={bg}
         onPick={(id, everywhere) => {
-          setBg(id);
-          saveChatBg(`m-${matchId}`, id, everywhere);
+          setSharedBg(id);
+          iSetBg.current = id;
+          if (everywhere) saveMyDefaultBg(id);
+          // For both of you (before update 83 runs, it's kept on this phone instead)
+          void supabase.rpc("set_chat_bg", { p_bg: id, p_match: matchId }).then(({ error }) => {
+            if (error) saveChatBg(`m-${matchId}`, id, false);
+          });
         }}
+        them={other.display_name?.split(" ")[0] ?? "them"}
       />
 
       <MaskedVoiceSheet

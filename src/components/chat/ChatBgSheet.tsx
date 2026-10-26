@@ -14,7 +14,10 @@ export function ChatBgSheet({
   onClose,
   value,
   onPick,
+  them,
 }: {
+  /** Who else sees it (the background is shared in the chat) */
+  them?: string;
   open: boolean;
   onClose: () => void;
   value: ChatBgId;
@@ -60,7 +63,7 @@ export function ChatBgSheet({
       open={open}
       onClose={onClose}
       title="Chat background"
-      subtitle="Only you see it. Moving scenes pause when you leave the app."
+      subtitle={them ? `It changes for you and ${them}.` : "Moving scenes pause when you leave the app."}
       icon={
         <span className="grid h-10 w-10 place-items-center rounded-full bg-brand-soft text-brand">
           <Palette size={20} />
@@ -82,7 +85,7 @@ export function ChatBgSheet({
           <span className={clsx("relative h-7 w-12 shrink-0 rounded-full transition", everywhere ? "bg-mint" : "bg-line-strong")}>
             <span className={clsx("absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all", everywhere ? "left-6" : "left-1")} />
           </span>
-          Use for all my chats
+          Also use it for my other chats
         </button>
         <p className="mb-2 text-[12px] font-bold tracking-wide text-muted uppercase">Moving scenes</p>
         <div className="grid grid-cols-3 gap-2.5">{group(true).map((b) => tile(b.id, b.name))}</div>
