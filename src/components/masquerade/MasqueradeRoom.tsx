@@ -23,7 +23,6 @@ import { createClient } from "@/lib/supabase/client";
 import { distanceLabel, GENDERS, intentLabel, MASQUERADE_MINUTES, spiceLabel } from "@/lib/constants";
 import type { ChatMessage, MasqueradeState } from "@/lib/types";
 import { MessageList } from "@/components/chat/MessageList";
-import { ChatHints } from "@/components/chat/ChatHints";
 import { Composer } from "@/components/chat/Composer";
 import { refreshMenuBadges } from "@/components/app/useMenuBadges";
 import { YouBoth } from "@/components/matches/YouBoth";
@@ -328,9 +327,8 @@ export function MasqueradeRoom({
     await refresh();
   }
 
-  // Ideas to say: at the start, and when the chat has been quiet for 3 minutes
+  // Text waiting in the message box
   const [hintDraft, setHintDraft] = useState<{ text: string; key: number } | null>(null);
-  const [hintsOn, setHintsOn] = useState(true);
   // An opener you picked on their profile before the chat opened
   useEffect(() => {
     try {
@@ -344,15 +342,6 @@ export function MasqueradeRoom({
       /* private mode */
     }
   }, [initial.id]);
-  const lastText = [...messages].reverse().find((m) => m.sender_id && m.kind === "text");
-  const iSaid = messages.some((m) => m.sender_id === state.me.id && m.kind === "text");
-  const quietNow = !lastText || Date.now() - new Date(lastText.created_at).getTime() > 3 * 60_000;
-  const [, tick] = useState(0);
-  useEffect(() => {
-    const t = setInterval(() => tick((n) => n + 1), 30_000);
-    return () => clearInterval(t);
-  }, []);
-  const showHints = !iSaid || quietNow;
 
   // Games: every masked chat, while it's open.
   // In a game meet the first game comes from the line, so the game button waits for it.
@@ -619,14 +608,10 @@ export function MasqueradeRoom({
 
       {meet && chatting && !(games.game && (games.game.status === "invited" || games.game.status === "active")) && <MeetLine meet={meet} them={theirName} />}
       {chatting && games.banner}
-      {chatting && !demo && (
-        <ChatHints session={state.id} theirInterests={them.interests ?? []} show={showHints} onPick={(text) => setHintDraft({ text, key: Date.now() })} onVisible={setHintsOn} />
-      )}
       {chatting ? (
         <Composer
           saveKey={`s-${state.id}`}
           draft={hintDraft}
-          noTip={hintsOn}
           onSend={send}
           // Masked voice notes: disguised on the phone
           onVoiceTap={() => setVoiceOpen(true)}
