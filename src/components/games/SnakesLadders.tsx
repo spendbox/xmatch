@@ -8,6 +8,7 @@ import { other, type Side } from "@/lib/boardgames/types";
 import { GOLD, PURPLE, Player, type Names } from "./parts";
 import { DiceArt, GamePop, usePops, type Pop } from "./GamePop";
 import { DiceTray } from "./BoardBits";
+import { useMove } from "./useMove";
 
 const C = 60; // one square in board units (10 × 10)
 type Pt = { x: number; y: number };
@@ -49,37 +50,57 @@ const SNAKE_SKINS = [
   { body: "#7c5cf0", deep: "#3a1f9a", spot: "#7dffd8" },
 ];
 
-export function SnakesLadders({ game, names }: { game: Game; names: Names; act: GameActions }) {
+export function SnakesLadders({ game, names, act }: { game: Game; names: Names; act: GameActions }) {
   const me: Side = game.me;
   const them = other(me);
   const demo = !!(game.state as { demo?: boolean }).demo;
-  const [st, setSt] = useState<SnakesState>(() => game.state as unknown as SnakesState);
-  const [shown, setShown] = useState<Record<Side, Pt>>(() => ({ a: at(st.pos.a), b: at(st.pos.b) }));
+  const server = game.state as unknown as SnakesState;
+  // What's been played out on screen (it catches up with the server one roll at a time)
+  const [st, setSt] = useState<SnakesState>(server);
+  const [shown, setShown] = useState<Record<Side, Pt>>(() => ({ a: at(server.pos.a), b: at(server.pos.b) }));
   const [rolling, setRolling] = useState(false);
   const [moving, setMoving] = useState(false);
-  const [face, setFace] = useState(st.last?.roll ?? 3);
+  const [waiting, setWaiting] = useState(false);
+  const [face, setFace] = useState(server.last?.roll ?? 3);
+  const { send, note } = useMove(game, act);
   const pops = usePops();
   const stRef = useRef(st);
   stRef.current = st;
+  const queue = useRef<Promise<void>>(Promise.resolve());
+  const applied = useRef(server.moves);
   const script = useRef([4, 3, 6, 2, 5, 1, 4]);
   const color = (s: Side) => COLORS[s].token;
   const over = st.pos.a === 100 || st.pos.b === 100;
   const myTurn = st.turn === me && !over;
+  const busy = rolling || moving || waiting;
 
-  async function turn(side: Side) {
-    if (rolling || moving || stRef.current.turn !== side) return;
+  // The dice tumbles while rolling
+  useEffect(() => {
+    if (!rolling) return;
+    const t = setInterval(() => setFace(1 + Math.floor(Math.random() * 6)), 70);
+    return () => clearInterval(t);
+  }, [rolling]);
+
+  const snap = (next: SnakesState) => {
+    setSt(next);
+    setShown({ a: at(next.pos.a), b: at(next.pos.b) });
+    if (next.last?.roll) setFace(next.last.roll);
+  };
+  const enqueue = (next: SnakesState) => {
+    queue.current = queue.current.then(() => playOut(next)).catch(() => {});
+  };
+
+  /** Show a roll: the dice lands, the token hops, then climbs or slides */
+  async function playOut(next: SnakesState) {
+    const l = next.last;
+    if (!l) return snap(next);
+    const side = l.by;
+    const mine = side === me;
     setRolling(true);
-    sfx("tap");
-    const n = script.current.shift() ?? 1 + Math.floor(Math.random() * 6);
-    for (let i = 0; i < 7; i++) {
-      setFace(1 + Math.floor(Math.random() * 6));
-      await wait(70);
-    }
-    setFace(n);
+    await wait(mine ? 250 : 520);
     setRolling(false);
+    setFace(l.roll);
     buzz(10);
-    const next = applyRoll(stRef.current, side, n);
-    const l = next.last!;
     setMoving(true);
     for (let p = l.from + 1; p <= l.landed; p++) {
       setShown((s) => ({ ...s, [side]: at(p) }));
@@ -95,9 +116,8 @@ export function SnakesLadders({ game, names }: { game: Game; names: Names; act: 
       }
     }
     setMoving(false);
-    setSt(next);
+    snap(next);
 
-    const mine = side === me;
     let p: Omit<Pop, "id"> | null = null;
     if (l.to === 100) p = mine ? { title: "100!", sub: `You won · ${names.them} was on ${next.pos[them]}`, tone: "win" } : { title: "So close!", sub: `${names.them} reached 100 first`, tone: "bad" };
     else if (l.ladder)
@@ -106,18 +126,41 @@ export function SnakesLadders({ game, names }: { game: Game; names: Names; act: 
         : { title: "Big climb", sub: `${names.them} climbed ${l.landed} → ${l.to}`, tone: "move", art: <LadderArt /> };
     else if (l.snake)
       p = mine ? { title: "Snake bite!", sub: `${l.landed} → ${l.to}`, tone: "bad", art: <SnakeArt /> } : { title: "Ouch!", sub: `${names.them} slid ${l.landed} → ${l.to}`, tone: "good", art: <SnakeArt /> };
-    else if (n === 6 && mine) p = { title: "Six!", sub: "Roll again", tone: "good", art: <DiceArt n={6} /> };
+    else if (l.roll === 6 && mine) p = { title: "Six!", sub: "Roll again", tone: "good", art: <DiceArt n={6} /> };
     else if (mine && l.to >= 94) p = { title: "So close!", sub: `Square ${l.to} · ${100 - l.to} to win`, tone: "move" };
     if (p) pops.show(p);
   }
 
+  // A real game: play out each new roll from the server
+  const serverMoves = server.moves;
+  useEffect(() => {
+    if (demo || serverMoves === applied.current) return;
+    const next = game.state as unknown as SnakesState;
+    const jump = serverMoves !== applied.current + 1;
+    applied.current = serverMoves;
+    if (jump) queue.current = queue.current.then(() => snap(next));
+    else enqueue(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serverMoves, demo]);
+
+  async function turn() {
+    if (busy || stRef.current.turn !== me || over) return;
+    sfx("tap");
+    if (demo) return enqueue(applyRoll(stRef.current, me, script.current.shift() ?? 1 + Math.floor(Math.random() * 6)));
+    setRolling(true);
+    setWaiting(true);
+    const ok = await send({ type: "roll" });
+    setWaiting(false);
+    if (!ok) setRolling(false);
+  }
+
   // Preview: the other player takes their turn on their own
   useEffect(() => {
-    if (!demo || over || st.turn !== them || rolling || moving) return;
-    const t = setTimeout(() => void turn(them), 1300);
+    if (!demo || over || st.turn !== them || busy) return;
+    const t = setTimeout(() => enqueue(applyRoll(stRef.current, them, 1 + Math.floor(Math.random() * 6))), 1300);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [demo, st, rolling, moving]);
+  }, [demo, st, busy]);
 
   // Preview only: show a pop-up straight away so it can be seen
   const demoPop = (game.state as { demo_pop?: string }).demo_pop;
@@ -140,14 +183,16 @@ export function SnakesLadders({ game, names }: { game: Game; names: Names; act: 
   }, [demoPop]);
 
   const sub = (s: Side) => (st.turn === s && !over ? (s === me ? "Your turn" : "Their turn") : `Square ${st.pos[s] || "start"}`);
-  const hint = over
+  const hint = note
+    ? note
+    : over
     ? st.pos[me] === 100
       ? "You won!"
       : `${names.them} won`
     : !myTurn
       ? `${names.them} is rolling…`
-      : moving
-        ? "Moving…"
+      : moving || rolling
+        ? "…"
         : st.pos[me] >= 94
           ? `You need exactly ${100 - st.pos[me]} to win`
           : "Tap the dice to roll";
@@ -155,7 +200,7 @@ export function SnakesLadders({ game, names }: { game: Game; names: Names; act: 
   // Two tokens on one square sit side by side
   const same = Math.hypot(shown.a.x - shown.b.x, shown.a.y - shown.b.y) < 10;
   const dice = (
-    <DiceTray face={face} rolling={rolling} ready={myTurn && !rolling && !moving} onRoll={() => void turn(me)} color={color(st.turn)} label={myTurn ? "Your roll" : `${names.them}'s roll`} />
+    <DiceTray face={face} rolling={rolling} ready={myTurn && !busy && game.status === "active"} onRoll={() => void turn()} color={color(st.turn)} label={myTurn ? "Your roll" : `${names.them}'s roll`} />
   );
 
   return (

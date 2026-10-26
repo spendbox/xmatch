@@ -19,13 +19,15 @@ export type Prices = {
   game_ayo: number;
   game_bomb: number;
   game_gems: number;
+  game_ludo: number;
+  game_snakes: number;
   /** Ghost mode, for 30 days */
   ghost_cost: number;
   /** Masquerade: minutes between new pairs, and how long a pair chat lasts */
   pair_gap_minutes: number;
   pair_minutes: number;
 };
-const DEFAULTS: Prices = { reopen_cost: REOPEN_COST, reveal_cost: 1, free_reveals: 10, game_truths: 1, game_tot: 1, game_c4: 1, game_words: 1, game_whot: 1, game_checkers: 1, game_chess: 1, game_ayo: 1, game_bomb: 1, game_gems: 1, ghost_cost: 100, pair_gap_minutes: 60, pair_minutes: 60 };
+const DEFAULTS: Prices = { reopen_cost: REOPEN_COST, reveal_cost: 1, free_reveals: 10, game_truths: 1, game_tot: 1, game_c4: 1, game_words: 1, game_whot: 1, game_checkers: 1, game_chess: 1, game_ayo: 1, game_bomb: 1, game_gems: 1, game_ludo: 1, game_snakes: 1, ghost_cost: 100, pair_gap_minutes: 60, pair_minutes: 60 };
 
 // Prices are set by the admin in the database. Loaded once per visit and shared.
 let pricesCache: Promise<Prices> | null = null;

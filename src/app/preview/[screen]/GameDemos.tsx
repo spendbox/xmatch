@@ -6,6 +6,8 @@ import { GameLauncher } from "@/components/games/GameLauncher";
 import type { Game, GameActions } from "@/lib/games";
 import * as bomb from "@/lib/boardgames/bomb";
 import * as gems from "@/lib/boardgames/gems";
+import * as ludo from "@/lib/boardgames/ludo";
+import * as snakes from "@/lib/boardgames/snakes";
 import { MoveError } from "@/lib/boardgames/types";
 
 const names = { me: "Velvet Fox", them: "Golden Owl" };
@@ -66,6 +68,9 @@ function demo(screen: string): Game | null {
   const at = (s: number) => new Date(t + s * 1000).toISOString();
   // New board games and the pop-ups (game-ludo, game-ludo-six, game-snakes-ladder, game-whot-pick2 …)
   const [, kind, popName] = screen.match(/^game-(ludo|snakes|whot)(?:-(\w+))?$/) ?? [];
+  // "-live": played through the same rules the server uses, as in a real game
+  if (kind === "ludo" && popName === "live") return base({ kind: "ludo", started_at: at(-60), state: ludo.newLudo() as never });
+  if (kind === "snakes" && popName === "live") return base({ kind: "snakes", started_at: at(-60), state: snakes.newSnakes() as never });
   if (kind === "ludo")
     return base({
       kind: "ludo",
@@ -291,12 +296,17 @@ function useLocalGame(initial: Game | null) {
     const g = ref.current;
     if (!g) return null;
     try {
+      const dice = () => 1 + Math.floor(Math.random() * 6);
       const r =
-        g.kind === "gems"
+        g.kind === "ludo"
+          ? ludo.applyMove(g.state as unknown as ludo.LudoState, side, mv as ludo.LudoMove, dice)
+          : g.kind === "snakes"
+            ? snakes.applyMove(g.state as unknown as snakes.SnakesState, side, mv as snakes.SnakesMove, dice)
+            : g.kind === "gems"
           ? gems.applyMove(g.state as gems.GemsState, side, mv as gems.GemsMove)
           : bomb.applyMove(g.state as bomb.BombState, side, mv as bomb.BombMove, secrets.current);
       if (r.secrets) for (const s of ["a", "b"] as const) if (r.secrets[s]) secrets.current[s] = (r.secrets[s] as bomb.BombSecret).bombs;
-      const next: Game = { ...g, state: r.state, mine: { bombs: secrets.current.a } };
+      const next: Game = { ...g, state: r.state as never, mine: { bombs: secrets.current.a } };
       if (r.over) Object.assign(next, { status: "done", ended_at: new Date().toISOString(), score_a: r.over.score_a, score_b: r.over.score_b, winner: r.over.winner === "a" ? "me" : r.over.winner ? "ada" : null });
       ref.current = next;
       setGame(next);
@@ -311,10 +321,15 @@ function useLocalGame(initial: Game | null) {
   const st = game?.state;
   useEffect(() => {
     const g = ref.current;
-    if (!g || g.status !== "active" || (g.kind !== "gems" && g.kind !== "bomb")) return;
+    if (!g || g.status !== "active" || !["gems", "bomb", "ludo", "snakes"].includes(g.kind)) return;
     const t = setTimeout(() => {
       const s = ref.current!.state;
-      if (g.kind === "bomb") {
+      if (g.kind === "ludo" || g.kind === "snakes") {
+        const st = s as unknown as ludo.LudoState;
+        if (st.turn !== "b") return;
+        if (g.kind === "snakes" || st.roll == null) apply("b", { type: "roll" });
+        else apply("b", { type: "move", token: ludo.pick(st, "b") });
+      } else if (g.kind === "bomb") {
         const b = s as bomb.BombState;
         if (b.phase === "hide" && !b.ready_b) apply("b", { type: "hide", cells: [0, 1, 2, 3, 4, 5, 6, 7, 8].sort(() => Math.random() - 0.5).slice(0, 3) });
         else if (b.phase === "play" && b.turn === "b") {
@@ -329,7 +344,7 @@ function useLocalGame(initial: Game | null) {
         const [a, b] = opts[Math.floor(Math.random() * opts.length)];
         apply("b", { type: "swap", a, b });
       }
-    }, game?.kind === "gems" ? 2600 : 1400);
+    }, game?.kind === "gems" ? 2600 : game?.kind === "ludo" || game?.kind === "snakes" ? 2200 : 1400);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [st]);
@@ -354,7 +369,7 @@ export function GameDemo({ screen }: { screen: string }) {
     <GameArena
       game={game}
       names={names}
-      act={game.kind === "bomb" || game.kind === "gems" ? live.act : act}
+      act={["bomb", "gems", "ludo", "snakes"].includes(game.kind) ? live.act : act}
       onMinimize={() => {}}
       onClose={() => {}}
       peek={screen === "game-c4" ? "you're not winning this one 😤" : null}

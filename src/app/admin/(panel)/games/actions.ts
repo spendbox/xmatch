@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/server";
 
-const KINDS = ["truths", "tot", "c4", "words", "whot", "checkers", "chess", "ayo", "bomb", "gems"];
+const KINDS = ["truths", "tot", "c4", "words", "whot", "checkers", "chess", "ayo", "bomb", "gems", "ludo", "snakes"];
 
 export async function setGameOn(kind: string, on: boolean) {
   await requireAdmin();

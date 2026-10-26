@@ -121,7 +121,7 @@ export function GameLauncher({
   );
 }
 
-const NEW: GameKind[] = ["bomb", "gems"];
+const NEW: GameKind[] = ["ludo", "snakes"];
 
 /** The little picture of each game, as on its card */
 export function GameArt({ kind }: { kind: GameKind }) {
@@ -211,6 +211,29 @@ export function GameArt({ kind }: { kind: GameKind }) {
             {i === 4 && <BombIcon className="h-[82%] w-[82%]" />}
           </span>
         ))}
+      </div>
+    );
+  if (kind === "ludo")
+    return (
+      <div className="mx-auto grid h-full w-[86px] grid-cols-2 content-center gap-1">
+        {["#8f6bff", "#2bb39f", "#ff7a6b", "#f2b33d"].map((c, i) => (
+          <span key={i} className="grid aspect-square place-items-center rounded-[10px]" style={{ background: c, boxShadow: "inset 0 -3px 0 rgba(0,0,0,0.2)" }}>
+            {(i === 0 || i === 3) && <span className="h-4 w-4 rounded-full border-2 border-white" style={{ background: i === 0 ? "#5b3fd9" : "#c98a12" }} />}
+          </span>
+        ))}
+      </div>
+    );
+  if (kind === "snakes")
+    return (
+      <div className="relative mx-auto grid h-full w-[86px] grid-cols-4 content-center gap-0.5">
+        {Array.from({ length: 16 }, (_, i) => (
+          <span key={i} className="aspect-square rounded-[4px]" style={{ background: `hsl(${168 + Math.floor(i / 4) * 30} 70% ${(i + Math.floor(i / 4)) % 2 ? 88 : 78}%)` }} />
+        ))}
+        <svg viewBox="0 0 86 86" className="pointer-events-none absolute inset-0 m-auto h-[86px] w-[86px]" aria-hidden>
+          <path d="M20 70c10-20 30 0 40-20s0-30 8-36" fill="none" stroke="#0b5a3c" strokeWidth="8" strokeLinecap="round" />
+          <path d="M20 70c10-20 30 0 40-20s0-30 8-36" fill="none" stroke="#1fa36f" strokeWidth="5.5" strokeLinecap="round" />
+          <circle cx="68" cy="14" r="6" fill="#1fa36f" stroke="#0b5a3c" strokeWidth="2" />
+        </svg>
       </div>
     );
   if (kind === "gems")

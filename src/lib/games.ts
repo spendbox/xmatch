@@ -8,7 +8,7 @@ import { haptic } from "@/lib/haptics";
 export type GameKind = "truths" | "tot" | "c4" | "words" | "whot" | "checkers" | "chess" | "ayo" | "bomb" | "gems" | "ludo" | "snakes";
 
 /** Games whose moves go through the app's server (rules in src/lib/boardgames) */
-export const BOARD_GAMES: GameKind[] = ["whot", "checkers", "chess", "ayo", "bomb", "gems"];
+export const BOARD_GAMES: GameKind[] = ["whot", "checkers", "chess", "ayo", "bomb", "gems", "ludo", "snakes"];
 export type GameStatus = "invited" | "active" | "done" | "declined" | "expired" | "cancelled";
 export type Side = "a" | "b";
 
@@ -141,10 +141,6 @@ export const GAMES: {
     card: "linear-gradient(160deg, #c27a32 0%, #7a4516 100%)",
     edge: "#4d2a0c",
   },
-];
-
-/** Games still in design: shown in previews only, not in the game list or Admin yet */
-export const PREVIEW_GAMES: typeof GAMES = [
   {
     kind: "ludo",
     title: "Ludo",
@@ -165,7 +161,7 @@ export const PREVIEW_GAMES: typeof GAMES = [
   },
 ];
 
-export const gameInfo = (k: string | undefined) => GAMES.find((g) => g.kind === k) ?? PREVIEW_GAMES.find((g) => g.kind === k) ?? GAMES[0];
+export const gameInfo = (k: string | undefined) => GAMES.find((g) => g.kind === k) ?? GAMES[0];
 
 /** Who is who, from my side */
 export function sides(g: Pick<Game, "me">) {

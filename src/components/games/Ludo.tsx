@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import { buzz, sfx, type Game, type GameActions } from "@/lib/games";
 import { afterRoll, HOME, legal, moveToken, pick, SAFE, START, won, type LudoState } from "@/lib/boardgames/ludo";
+import { useMove } from "./useMove";
 import { other, type Side } from "@/lib/boardgames/types";
 import { GOLD, PURPLE, Player, type Names } from "./parts";
 import { DiceArt, GamePop, usePops } from "./GamePop";
@@ -56,92 +57,160 @@ function spot(side: Side, p: number, k: number): { x: number; y: number } {
   return { x: (c + 0.5) * C, y: (r + 0.5) * C };
 }
 
-export function Ludo({ game, names }: { game: Game; names: Names; act: GameActions }) {
+export function Ludo({ game, names, act }: { game: Game; names: Names; act: GameActions }) {
   const me: Side = game.me;
   const them = other(me);
   const demo = !!(game.state as { demo?: boolean }).demo;
-  const [st, setSt] = useState<LudoState>(() => game.state as unknown as LudoState);
-  // What's drawn: moves step by step, a square at a time
-  const [shown, setShown] = useState(st.tokens);
+  const server = game.state as unknown as LudoState;
+  // What's been played out on screen (it catches up with the server one move at a time)
+  const [st, setSt] = useState<LudoState>(server);
+  const [shown, setShown] = useState(server.tokens);
   const [rolling, setRolling] = useState(false);
-  const [face, setFace] = useState(st.last?.roll ?? 6);
+  const [face, setFace] = useState(server.last?.roll ?? 6);
   const [animating, setAnimating] = useState(false);
+  const [waiting, setWaiting] = useState(false);
+  const { send, note } = useMove(game, act);
   const pops = usePops();
   const stRef = useRef(st);
   stRef.current = st;
+  const queue = useRef<Promise<void>>(Promise.resolve());
+  const applied = useRef(server.moves);
+  // Your own token moves play straight away; the server's copy of the same move is then skipped
+  const echo = useRef<number | null>(null);
   const script = useRef([6, 6, 4, 3, 6, 5, 2, 6, 1, 4]);
   const color = (s: Side) => COLORS[s].token;
   const flip = me === "b"; // you're always bottom right
   const view = (pt: { x: number; y: number }) => (flip ? { x: 15 * C - pt.x, y: 15 * C - pt.y } : pt);
 
-  const can = st.turn === me && st.roll != null && !animating ? legal(st, me) : [];
+  const busy = animating || rolling || waiting;
+  const can = st.turn === me && st.roll != null && !busy && game.status === "active" ? legal(st, me) : [];
   const over = won(st, "a") || won(st, "b");
 
-  function nextRoll() {
-    const s = script.current.shift();
-    return s ?? 1 + Math.floor(Math.random() * 6);
-  }
+  // The dice tumbles while rolling
+  useEffect(() => {
+    if (!rolling) return;
+    const t = setInterval(() => setFace(1 + Math.floor(Math.random() * 6)), 70);
+    return () => clearInterval(t);
+  }, [rolling]);
 
-  async function roll(side: Side) {
-    if (rolling || animating) return;
-    setRolling(true);
-    sfx("tap");
-    const n = nextRoll();
-    // Tumble through faces, then land
-    for (let i = 0; i < 7; i++) {
-      setFace(1 + Math.floor(Math.random() * 6));
-      await wait(70);
-    }
-    setFace(n);
-    setRolling(false);
-    buzz(n === 6 ? [20, 40, 20] : 10);
-    const next = afterRoll(stRef.current, side, n);
-    if (n === 6) pops.show(side === me ? { title: "Six!", sub: "Roll again after you move", tone: "good", art: <DiceArt n={6} /> } : { title: "Six!", sub: `${names.them} rolled a 6`, tone: "move", art: <DiceArt n={6} /> });
+  const enqueue = (next: LudoState) => {
+    queue.current = queue.current.then(() => playOut(next)).catch(() => {});
+  };
+  const snap = (next: LudoState) => {
     setSt(next);
-  }
+    setShown(next.tokens);
+    if (next.last?.roll) setFace(next.last.roll);
+  };
 
-  const moving = useRef(false);
-  async function move(side: Side, token: number) {
-    if (moving.current) return;
-    moving.current = true;
-    const before = stRef.current;
-    const next = moveToken(before, side, token);
-    const l = next.last!;
+  /** Show what just happened: a roll, or a token hopping along */
+  async function playOut(next: LudoState) {
+    const l = next.last;
+    if (!l) return snap(next);
+    const mine = l.by === me;
+    if (l.rolled) {
+      setRolling(true);
+      await wait(mine ? 250 : 520);
+      setRolling(false);
+      setFace(l.roll);
+      buzz(l.roll === 6 ? [20, 40, 20] : 10);
+      sfx("drop");
+      if (l.roll === 6 && !l.passed)
+        pops.show(mine ? { title: "Six!", sub: "Roll again after you move", tone: "good", art: <DiceArt n={6} /> } : { title: "Six!", sub: `${names.them} rolled a 6`, tone: "move", art: <DiceArt n={6} /> });
+      snap(next);
+      if (l.passed) await wait(700);
+      return;
+    }
+    const token = l.token!;
     setAnimating(true);
     // Hop along square by square
     const path = l.from! < 0 ? [0] : Array.from({ length: l.to! - l.from! }, (_, i) => l.from! + i + 1);
     for (const p of path) {
-      setShown((t) => ({ ...t, [side]: t[side].map((q, i) => (i === token ? p : q)) }));
+      setShown((t) => ({ ...t, [l.by]: t[l.by].map((q, i) => (i === token ? p : q)) }));
       sfx("tick");
       await wait(150);
     }
-    if (l.captured?.length) {
-      await wait(120);
-      setShown(next.tokens);
-    } else setShown(next.tokens);
+    if (l.captured?.length) await wait(120);
+    setShown(next.tokens);
     setAnimating(false);
     setSt(next);
-    moving.current = false;
 
-    const mine = side === me;
-    const homeCount = next.tokens[side].filter((p) => p === HOME).length;
-    if (won(next, side)) pops.show(mine ? { title: "Check!", sub: "All 4 home · you won", tone: "win" } : { title: "So close!", sub: `${names.them} got all 4 home`, tone: "bad" });
-    else if (l.captured?.length) pops.show(mine ? { title: "Captured!", sub: `${names.them}'s token goes home · roll again`, tone: "good", art: <TokenArt color={color(them)} size={86} cross /> } : { title: "Sent home!", sub: `${names.them} captured your token`, tone: "bad", art: <TokenArt color={color(me)} size={86} cross /> });
-    else if (l.home) pops.show(mine ? { title: "Home!", sub: `${homeCount} of 4 home · roll again`, tone: "good", art: <TokenArt color={color(me)} size={86} /> } : { title: "Home!", sub: `${names.them} has ${homeCount} of 4 home`, tone: "move" });
+    const homeCount = next.tokens[l.by].filter((p) => p === HOME).length;
+    if (won(next, l.by)) pops.show(mine ? { title: "Check!", sub: "All 4 home · you won", tone: "win" } : { title: "So close!", sub: `${names.them} got all 4 home`, tone: "bad" });
+    else if (l.captured?.length)
+      pops.show(
+        mine
+          ? { title: "Captured!", sub: `${names.them}'s token goes home · roll again`, tone: "good", art: <TokenArt color={color(them)} size={86} cross /> }
+          : { title: "Sent home!", sub: `${names.them} captured your token`, tone: "bad", art: <TokenArt color={color(me)} size={86} cross /> },
+      );
+    else if (l.home)
+      pops.show(
+        mine ? { title: "Home!", sub: `${homeCount} of 4 home · roll again`, tone: "good", art: <TokenArt color={color(me)} size={86} /> } : { title: "Home!", sub: `${names.them} has ${homeCount} of 4 home`, tone: "move" },
+      );
     else if (l.out && mine) pops.show({ title: "You're out!", sub: "A new token joins the race", tone: "good", art: <TokenArt color={color(me)} size={86} /> });
     else if (l.safe && mine) pops.show({ title: "Safe!", sub: "Nobody can capture you on a star", tone: "move" });
   }
 
+  // A real game: play out each new state from the server
+  const serverMoves = server.moves;
+  useEffect(() => {
+    if (demo || serverMoves === applied.current) return;
+    const next = game.state as unknown as LudoState;
+    const jump = serverMoves !== applied.current + 1;
+    applied.current = serverMoves;
+    if (echo.current === serverMoves) {
+      echo.current = null;
+      queue.current = queue.current.then(() => snap(next));
+    } else if (jump) queue.current = queue.current.then(() => snap(next));
+    else enqueue(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serverMoves, demo]);
+
+  async function roll() {
+    if (busy || st.turn !== me || st.roll != null) return;
+    sfx("tap");
+    if (demo) return enqueue(afterRoll(stRef.current, me, script.current.shift() ?? 1 + Math.floor(Math.random() * 6)));
+    setRolling(true);
+    setWaiting(true);
+    const ok = await send({ type: "roll" });
+    setWaiting(false);
+    if (!ok) setRolling(false);
+  }
+
+  async function move(token: number) {
+    if (busy || !can.includes(token)) return;
+    let next: LudoState;
+    try {
+      next = moveToken(stRef.current, me, token);
+    } catch {
+      return;
+    }
+    if (demo) return enqueue(next);
+    // Play it now; the server checks the same rules
+    echo.current = next.moves;
+    enqueue(next);
+    setWaiting(true);
+    const ok = await send({ type: "move", token });
+    setWaiting(false);
+    if (!ok) {
+      echo.current = null;
+      queue.current = queue.current.then(() => snap(game.state as unknown as LudoState));
+    }
+  }
+
   // Preview: the other player rolls and moves on their own
   useEffect(() => {
-    if (!demo || over || st.turn !== them || rolling || animating) return;
-    const t = setTimeout(() => {
-      if (stRef.current.roll == null) void roll(them);
-      else void move(them, pick(stRef.current, them));
-    }, st.roll == null ? 1100 : 800);
+    if (!demo || over || st.turn !== them || busy) return;
+    const t = setTimeout(
+      () => {
+        const cur = stRef.current;
+        if (cur.roll == null) enqueue(afterRoll(cur, them, script.current.shift() ?? 1 + Math.floor(Math.random() * 6)));
+        else enqueue(moveToken(cur, them, pick(cur, them)));
+      },
+      st.roll == null ? 1100 : 800,
+    );
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [demo, st, rolling, animating]);
+  }, [demo, st, busy]);
 
   // Preview only: show a pop-up straight away so it can be seen
   const demoPop = (game.state as { demo_pop?: string }).demo_pop;
@@ -168,17 +237,25 @@ export function Ludo({ game, names }: { game: Game; names: Names; act: GameActio
   const out = (s: Side) => st.tokens[s].filter((p) => p >= 0 && p < HOME).length;
   const sub = (s: Side) => (st.turn === s && !over ? (s === me ? "Your turn" : "Their turn") : `${home(s)} home · ${out(s)} out`);
   const myTurn = st.turn === me && !over;
-  const hint = over
-    ? won(st, me)
-      ? "You won!"
-      : `${names.them} won`
-    : !myTurn
-      ? `${names.them} is ${st.roll == null ? "rolling" : "moving"}…`
-      : st.roll == null
-        ? "Tap the dice to roll"
-        : can.length > 1
-          ? "Tap a glowing token to move it"
-          : "Tap the glowing token";
+  const passedMe = st.last?.passed && st.last.by === me;
+  const passedThem = st.last?.passed && st.last.by === them;
+  const hint = note
+    ? note
+    : over
+      ? won(st, me)
+        ? "You won!"
+        : `${names.them} won`
+      : !myTurn
+        ? passedMe
+          ? `No move with a ${st.last!.roll}. ${names.them}'s turn`
+          : `${names.them} is ${st.roll == null ? "rolling" : "moving"}…`
+        : st.roll == null
+          ? passedThem
+            ? `${names.them} couldn't move. Your roll`
+            : "Tap the dice to roll"
+          : can.length > 1
+            ? "Tap a glowing token to move it"
+            : "Tap the glowing token";
 
   // Tokens drawn on the board, nudged apart when they share a square
   const pieces = useMemo(() => {
@@ -197,8 +274,8 @@ export function Ludo({ game, names }: { game: Game; names: Names; act: GameActio
     <DiceTray
       face={face}
       rolling={rolling}
-      ready={myTurn && st.roll == null && !animating && !rolling}
-      onRoll={() => void roll(me)}
+      ready={myTurn && st.roll == null && !busy && game.status === "active"}
+      onRoll={() => void roll()}
       color={color(st.turn)}
       label={myTurn ? (st.roll == null ? "Your roll" : `You rolled ${st.roll}`) : `${names.them}'s roll`}
     />
@@ -250,8 +327,8 @@ export function Ludo({ game, names }: { game: Game; names: Names; act: GameActio
                   key={`${t.s}${t.k}`}
                   style={{ transform: `translate(${t.x}px, ${t.y}px)`, transition: `transform ${t.p < 0 ? 420 : 140}ms cubic-bezier(.3,1.4,.5,1)` }}
                   // Moves on touch-down: the board redraws while tokens pulse, which can swallow a normal tap
-                  onPointerDown={movable ? () => void move(me, t.k) : undefined}
-                  onKeyDown={movable ? (e) => (e.key === "Enter" || e.key === " ") && void move(me, t.k) : undefined}
+                  onPointerDown={movable ? () => void move(t.k) : undefined}
+                  onKeyDown={movable ? (e) => (e.key === "Enter" || e.key === " ") && void move(t.k) : undefined}
                   tabIndex={movable ? 0 : undefined}
                   className={movable ? "cursor-pointer outline-none" : undefined}
                   role={movable ? "button" : undefined}

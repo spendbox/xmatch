@@ -113,7 +113,7 @@ export function GameArena({
       over &&
       !showResults &&
       ((game.kind === "truths" && game.state.phase === "reveal") || (game.kind === "c4" && endedAgo < 10) ||
-        (["tot", "whot", "checkers", "chess", "ayo", "gems"].includes(game.kind) && endedAgo < 3) || (game.kind === "bomb" && endedAgo < 4));
+        (["tot", "whot", "checkers", "chess", "ayo", "gems", "ludo", "snakes"].includes(game.kind) && endedAgo < 3) || (game.kind === "bomb" && endedAgo < 4));
     if (over && !holdEnd) {
       resultsView = true;
       body = (
@@ -353,7 +353,7 @@ function VsIntro({ game, names, act }: { game: Game; names: Names; act: GameActi
   );
 }
 
-const TURN_GAMES = ["c4", "whot", "checkers", "chess", "ayo", "gems", "bomb"];
+const TURN_GAMES = ["c4", "whot", "checkers", "chess", "ayo", "gems", "bomb", "ludo", "snakes"];
 /** Board games that use the whole screen on computers */
 const WIDE_GAMES = ["ludo", "snakes"];
 
