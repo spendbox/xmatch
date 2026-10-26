@@ -31,7 +31,12 @@ export function Waiting({ prefs, userId, onCancel }: { prefs: SetupPrefs; userId
       const { data } = await supabase.rpc("poll_masquerade");
       if (data) go(data as string);
     };
-    const pollTimer = setInterval(poll, 3000);
+    // Every 3 seconds while you're watching; every 12 while the app is in the background
+    let n = 0;
+    const pollTimer = setInterval(() => {
+      n++;
+      if (document.visibilityState === "visible" || n % 4 === 0) void poll();
+    }, 3000);
     const clock = setInterval(() => setSeconds((s) => s + 1), 1000);
 
     const channel = supabase.channel(`waiting-${userId}`);

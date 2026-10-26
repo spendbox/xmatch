@@ -12,7 +12,15 @@ export async function POST(req: Request) {
   const message = cut(body?.message, 500);
   if (!message) return NextResponse.json({ ok: false }, { status: 400 });
   const { user } = await getAuth().catch(() => ({ user: null }));
-  await createAdminClient()
+  const db = createAdminClient();
+  // Now and then, clear out reports older than 30 days so the list stays small
+  if (Math.random() < 0.05) {
+    await db.from("client_errors").delete().lt("created_at", new Date(Date.now() - 30 * 86400_000).toISOString()).then(
+      () => null,
+      () => null,
+    );
+  }
+  await db
     .from("client_errors")
     .insert({ user_id: user?.id ?? null, message, stack: cut(body?.stack, 4000), url: cut(body?.url, 300), agent: cut(req.headers.get("user-agent"), 300) })
     .then(

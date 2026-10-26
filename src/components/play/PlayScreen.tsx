@@ -14,7 +14,7 @@ import { KeyCoin } from "@/components/keys/KeyIcon";
 import { GameArt } from "@/components/games/GameLauncher";
 import { BigButton } from "@/components/games/parts";
 import { usePlayGames } from "./PlayGame";
-import { GameArena } from "@/components/games/GameArena";
+import { GameArena } from "@/components/games/LazyGameArena";
 import { PRACTICE_GAMES, usePracticeGame } from "@/components/games/practice";
 
 export type PlayStatus = {

@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { Sticky } from "@/components/ui/Sticky";
 import { PeopleForYou } from "./PeopleForYou";
-import { WelcomeTour } from "./WelcomeTour";
 import { GettingStarted } from "./GettingStarted";
 import type { Thing } from "@/lib/things";
 import type { ExploreList, Viewers } from "@/lib/explore";
@@ -21,11 +21,9 @@ import { useWallet } from "@/components/keys/useWallet";
 import { EventCard } from "@/components/events/EventCard";
 import { PactCard, type PactListItem } from "@/components/pacts/PactCard";
 import type { DashpadEvent } from "@/lib/events";
-import { MeetSheet } from "./MeetSheet";
 import { PlayCard } from "./PlayCard";
 import { MasqueradeCard, useMasqueradeHour } from "./MasqueradeCard";
 import { PastPairs } from "./PastPairs";
-import { PlacePicker } from "./PlacePicker";
 import { intentLabel } from "@/lib/constants";
 import { INTENT_ICONS } from "@/components/ui/icons";
 import { prefsFromProfile, type SetupPrefs } from "./prefs";
@@ -33,12 +31,17 @@ import type { MeetList } from "@/lib/meets";
 import { useNow } from "@/components/events/EventCard";
 import { MeetCard } from "@/components/meets/MeetCard";
 import { MeetFab } from "@/components/meets/MeetFab";
-import { PostMeetSheet } from "@/components/meets/PostMeetSheet";
 import { YourMeet } from "@/components/meets/YourMeet";
 import { useMeets } from "@/components/meets/useMeets";
 import { FEATURES } from "@/lib/features";
 import { ProfileViews } from "./ProfileViews";
 import { RecentChats, type RecentMasked } from "./RecentChats";
+
+// Pop-ups that only open when tapped: downloaded then, not with the page
+const WelcomeTour = dynamic(() => import("./WelcomeTour").then((m) => m.WelcomeTour), { ssr: false });
+const MeetSheet = dynamic(() => import("./MeetSheet").then((m) => m.MeetSheet), { ssr: false });
+const PlacePicker = dynamic(() => import("./PlacePicker").then((m) => m.PlacePicker), { ssr: false });
+const PostMeetSheet = dynamic(() => import("@/components/meets/PostMeetSheet").then((m) => m.PostMeetSheet), { ssr: false });
 
 export type HomeStats = { online: number; week_chats: number; week_unmasks: number; gifts_received: number };
 

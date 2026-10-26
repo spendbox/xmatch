@@ -9,7 +9,7 @@ import { chime } from "@/lib/chime";
 import { buzz, cleanError, gameInfo, type Game, type GameActions } from "@/lib/games";
 import { keysError } from "@/components/keys/GiftSheet";
 import { Avatar } from "@/components/ui/Avatar";
-import { GameArena } from "@/components/games/GameArena";
+import { GameArena } from "@/components/games/LazyGameArena";
 import type { PlayPerson } from "@/components/games/GameSocial";
 
 const PlayCtx = createContext<{ open: (gameId: string) => void }>({ open: () => {} });
@@ -145,7 +145,7 @@ function usePlayGame(gameId: string, onSwitch: (id: string) => void) {
   // Safety net: re-check every few seconds in case a live update was missed
   useEffect(() => {
     if (!live) return;
-    const t = setInterval(() => void load(), 6000);
+    const t = setInterval(() => document.visibilityState === "visible" && void load(), 6000);
     return () => clearInterval(t);
   }, [live, load]);
 
