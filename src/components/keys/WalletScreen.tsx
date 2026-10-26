@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import clsx from "clsx";
 import { ArrowLeft, Check, CircleAlert, Clock3, Eye, Gift, RotateCcw, ShieldCheck } from "lucide-react";
 import Link from "next/link";
-import { KEY_PACKS, naira, type KeyPack, type Wallet } from "@/lib/keys";
+import { KEY_PACKS, KEY_REASONS, naira, type KeyPack, type Wallet } from "@/lib/keys";
 import { usePrices } from "./usePrices";
 import { buyKeys } from "@/app/(app)/wallet/actions";
 import { Button, tapFeedback } from "@/components/ui/Button";
@@ -13,28 +13,7 @@ import { useWallet } from "./useWallet";
 
 export type KeyTx = { id: number; amount: number; reason: string; created_at: string };
 
-const REASONS: Record<string, string> = {
-  purchase: "Bought Keys",
-  gift: "Sent a gift",
-  extend: "Added 2 minutes",
-  extra_masquerade: "Extra masquerade",
-  reopen: "Reopened a past pair",
-  reveal: "Revealed a photo",
-  feed_gift: "Sent a gift",
-  feed_chat: "Started a chat",
-  refund: "Refund",
-  event: "Masquerade Night entry",
-  meet: "Posted a meet",
-  photos: "Unlocked someone's photos",
-  explore_message: "Messaged someone from Meet",
-  explore_refund: "Keys back: no reply in 48 hours",
-  ghost: "Ghost mode (30 days)",
-  wave: "Waved at someone",
-  setup: "Getting set up",
-  signup: "Welcome gift for joining",
-  gift_received: "Received a gift",
-  slow_reveal: "Saw a slow reveal early",
-};
+const REASONS = KEY_REASONS;
 
 export function WalletScreen({
   userId,

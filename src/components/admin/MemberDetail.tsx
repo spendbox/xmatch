@@ -1,5 +1,6 @@
 "use client";
 
+import { KEY_REASONS } from "@/lib/keys";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -40,18 +41,11 @@ export type MemberInfo = {
   reports_made: number;
   transactions: { id: number; amount: number; reason: string; ref: string | null; created_at: string }[];
   paid_naira: number;
+  gifts_sent?: number;
+  gifts_received?: number;
 };
 
-const REASONS: Record<string, string> = {
-  purchase: "Bought Keys",
-  gift: "Sent a gift",
-  extend: "+2 minutes",
-  extra_masquerade: "Extra masquerade",
-  event: "Event entry",
-  refund: "Refund",
-  reveal: "Photo reveal",
-  admin: "Admin change",
-};
+const REASONS = KEY_REASONS;
 
 const when = (iso: string | null) =>
   iso ? new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }) : "—";
@@ -166,6 +160,10 @@ export function MemberDetail({ id, info }: { id: string; info: MemberInfo }) {
               <dd className="font-medium">{p.open_to_masquerade ? "On" : "Off"}</dd>
               <dt className="text-muted">Spent on Keys</dt>
               <dd className="font-medium">₦{Number(info.paid_naira ?? 0).toLocaleString()}</dd>
+              <dt className="text-muted">Gifts sent</dt>
+              <dd className="font-medium">{info.gifts_sent ?? 0}</dd>
+              <dt className="text-muted">Gifts received</dt>
+              <dd className="font-medium">{info.gifts_received ?? 0}</dd>
               <dt className="text-muted">Reports they made</dt>
               <dd className="font-medium">{info.reports_made}</dd>
             </dl>
