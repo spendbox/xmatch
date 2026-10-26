@@ -33,13 +33,20 @@ export function useMenuBadges(userId: string): MenuBadges {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const refresh = useCallback(async () => {
-    const [chats, eventChats, event, feedChats, masked] = await Promise.all([
-      supabase.rpc("unread_chats"),
-      supabase.rpc("unread_event_chats"),
-      supabase.rpc("next_event"),
-      supabase.rpc("unread_feed_chats"),
-      supabase.rpc("unread_masked_chats"),
-    ]);
+    // One request for everything (update 95); before that runs, the five separate ones
+    type All = { chats?: number; event_chats?: number; feed_chats?: number; masked?: number; event?: unknown };
+    const one = await supabase.rpc("menu_badges");
+    const all = one.error ? null : (one.data as All | null);
+    const wrap = (data: unknown) => ({ data, error: null });
+    const [chats, eventChats, event, feedChats, masked] = all
+      ? [wrap(all.chats), wrap(all.event_chats), wrap(all.event), wrap(all.feed_chats), wrap(all.masked)]
+      : await Promise.all([
+          supabase.rpc("unread_chats"),
+          supabase.rpc("unread_event_chats"),
+          supabase.rpc("next_event"),
+          supabase.rpc("unread_feed_chats"),
+          supabase.rpc("unread_masked_chats"),
+        ]);
     const ev = event.data as { i_am_going?: boolean; starts_at?: string; ends_at?: string } | null;
     const now = Date.now();
     const eventLive =
