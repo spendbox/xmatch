@@ -431,6 +431,7 @@ export function MasqueradeRoom({
             can open their profile instead (chats you started from Meet, or where you both waved). */}
         {!known?.id && about && (
         <div className="flex animate-fade-up items-center gap-2 overflow-x-auto px-4 pb-3 no-scrollbar lg:hidden">
+          {them.age ? <Tag strong>{them.age} years old</Tag> : null}
           <Tag strong>{connectionsLabel(them.connections)}</Tag>
           <Tag>{replyLabel(them.reply_seconds)}</Tag>
           {state.intent !== "friends" && (
