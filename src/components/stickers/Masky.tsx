@@ -2,6 +2,7 @@
 
 import "@fontsource/lilita-one/latin-400.css";
 import "./masky.css";
+import { useEffect, useRef, useState } from "react";
 import type { StickerPose } from "@/lib/stickers";
 import { EXTRA_POSES } from "./morePoses";
 
@@ -28,6 +29,7 @@ export function Masky({
   color = "#7a5cf0",
   size = 140,
   still,
+  playFor = 6000,
   className,
 }: {
   pose: StickerPose;
@@ -36,8 +38,43 @@ export function Masky({
   size?: number;
   /** No moving (e.g. small previews) */
   still?: boolean;
+  /** Moves for this long when it comes on screen, then rests (tap to play again). Lots of moving
+      stickers at once make phones slow, so off-screen ones never move. */
+  playFor?: number;
   className?: string;
 }) {
+  const box = useRef<HTMLDivElement>(null);
+  const [playing, setPlaying] = useState(false);
+  const [round, setRound] = useState(0);
+  useEffect(() => {
+    const el = box.current;
+    if (!el || still) return;
+    let t: ReturnType<typeof setTimeout> | null = null;
+    const start = () => {
+      setPlaying(true);
+      if (t) clearTimeout(t);
+      if (Number.isFinite(playFor)) t = setTimeout(() => setPlaying(false), playFor);
+    };
+    if (round > 0) start();
+    if (typeof IntersectionObserver === "undefined") {
+      start();
+      return () => {
+        if (t) clearTimeout(t);
+      };
+    }
+    const io = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) start();
+      else {
+        if (t) clearTimeout(t);
+        setPlaying(false);
+      }
+    });
+    io.observe(el);
+    return () => {
+      io.disconnect();
+      if (t) clearTimeout(t);
+    };
+  }, [still, playFor, round]);
   const X = EXTRA_POSES[pose];
   const P = POSES[pose] ?? X ?? POSES.wave;
   const dancing = pose === "dance" || X?.feet === "dance";
@@ -54,7 +91,14 @@ export function Masky({
     feetStill: !dancing,
   };
   return (
-    <div className={["mk flex flex-col items-center", still && "mk-still", className].filter(Boolean).join(" ")} style={{ width: size }} role="img" aria-label={`${caption} sticker`}>
+    <div
+      ref={box}
+      onClick={() => !still && !playing && setRound((n) => n + 1)}
+      className={["mk flex flex-col items-center", (still || !playing) && "mk-still", className].filter(Boolean).join(" ")}
+      style={{ width: size }}
+      role="img"
+      aria-label={`${caption} sticker`}
+    >
       <svg viewBox="0 0 200 205" className="block w-full overflow-visible" aria-hidden>
       <ellipse cx="100" cy="190" rx="52" ry="7" fill="#1c1828" opacity="0.13" />
       <g className={cx(v.anim)}>

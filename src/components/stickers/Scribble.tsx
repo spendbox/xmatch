@@ -11,8 +11,8 @@ function useCanvas(size: number) {
   useEffect(() => {
     const c = ref.current;
     if (!c) return;
-    // Sharp on high-res screens, but kept under the canvas size iPhones allow
-    const dpr = Math.min(3, window.devicePixelRatio || 1, 2048 / size);
+    // Sharp enough on high-res screens, without the cost of 3× (and under the size iPhones allow)
+    const dpr = Math.min(2, window.devicePixelRatio || 1, 2048 / size);
     c.width = Math.round(size * dpr);
     c.height = Math.round(size * dpr);
   }, [size]);
@@ -41,7 +41,8 @@ export function ScribbleView({ drawing, size = 170, className, still }: { drawin
     const frame = (now: number) => {
       const p = Math.min(1, (now - t0) / length);
       // Mostly steady, like a hand drawing, easing off at the end
-      drawScribble(ctx, drawing, p >= 1 ? Infinity : total * (0.6 * p + 0.4 * (1 - Math.pow(1 - p, 2))), times);
+      // The soft shadow only on the last frame: it's the slow part on phones
+      drawScribble(ctx, drawing, p >= 1 ? Infinity : total * (0.6 * p + 0.4 * (1 - Math.pow(1 - p, 2))), times, { shadow: p >= 1 });
       if (p < 1) raf = requestAnimationFrame(frame);
     };
     raf = requestAnimationFrame(frame);
@@ -133,16 +134,30 @@ export function ScribblePad({
     return () => ro.disconnect();
   }, [maxSize]);
 
+  // The lines already drawn are kept as a picture, so each finger move only draws the line in progress
+  const done = useRef<HTMLCanvasElement | null>(null);
   const paint = useCallback(() => {
     cancelAnimationFrame(raf.current);
     raf.current = requestAnimationFrame(() => {
-      const ctx = canvas.current?.getContext("2d");
-      if (!ctx) return;
-      const d = live.current ? { ...draft.current, strokes: [...draft.current.strokes, live.current.stroke] } : draft.current;
-      drawScribble(ctx, d, Infinity, timeline(d).times);
+      const c = canvas.current;
+      const ctx = c?.getContext("2d");
+      if (!c || !ctx || !done.current) return;
+      ctx.clearRect(0, 0, c.width, c.height);
+      ctx.drawImage(done.current, 0, 0);
+      const l = live.current;
+      if (l) drawScribble(ctx, { v: 1, strokes: [l.stroke] }, Infinity, timeline({ v: 1, strokes: [l.stroke] }).times, { clear: false, shadow: false });
     });
   }, [canvas]);
-  useEffect(paint, [drawing, box, paint]);
+  useEffect(() => {
+    const c = canvas.current;
+    if (!c) return;
+    const d = (done.current ??= document.createElement("canvas"));
+    d.width = c.width;
+    d.height = c.height;
+    const ctx = d.getContext("2d");
+    if (ctx) drawScribble(ctx, drawing, Infinity, timeline(drawing).times);
+    paint();
+  }, [drawing, box, paint, canvas]);
 
   function at(e: { clientX: number; clientY: number }) {
     const r = canvas.current!.getBoundingClientRect();

@@ -54,10 +54,17 @@ function rand(seed: number) {
  * Draws a scribble. `upTo` is how far through its timeline to draw (Infinity: all of it).
  * Sticker look: a white edge and a soft shadow round every line.
  */
-export function drawScribble(ctx: CanvasRenderingContext2D, d: Drawing, upTo = Infinity, times = timeline(d).times, outline = true) {
+export function drawScribble(
+  ctx: CanvasRenderingContext2D,
+  d: Drawing,
+  upTo = Infinity,
+  times = timeline(d).times,
+  /** shadow: the soft drop shadow (costly on phones, so only for the finished picture). clear: wipe first. */
+  { outline = true, shadow = true, clear = true }: { outline?: boolean; shadow?: boolean; clear?: boolean } = {},
+) {
   const W = ctx.canvas.width;
   const k = W / SCRIBBLE_SIZE;
-  ctx.clearRect(0, 0, W, ctx.canvas.height);
+  if (clear) ctx.clearRect(0, 0, W, ctx.canvas.height);
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
 
@@ -104,14 +111,30 @@ export function drawScribble(ctx: CanvasRenderingContext2D, d: Drawing, upTo = I
     }
   };
 
-  // The white sticker edge, with a soft shadow
+  // One smooth line through the points at one width: cheap, and see-through colours don't build up at the joins
+  const whole = (pts: { x: number; y: number; w: number }[], width: number, style: string) => {
+    if (!pts.length) return;
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    if (pts.length === 1) ctx.lineTo(pts[0].x + 0.01, pts[0].y);
+    for (let n = 1; n < pts.length - 1; n++) ctx.quadraticCurveTo(pts[n].x, pts[n].y, (pts[n].x + pts[n + 1].x) / 2, (pts[n].y + pts[n + 1].y) / 2);
+    if (pts.length > 1) ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
+    ctx.strokeStyle = style;
+    ctx.lineWidth = width;
+    ctx.stroke();
+  };
+  const avg = (pts: { w: number }[]) => pts.reduce((a, p) => a + p.w, 0) / Math.max(1, pts.length);
+
+  // The white sticker edge (with a soft shadow on the finished picture)
   if (outline) {
-    ctx.save();
-    ctx.shadowColor = "rgba(28,24,40,0.28)";
-    ctx.shadowBlur = 8 * k;
-    ctx.shadowOffsetY = 2 * k;
-    visible.forEach((pts) => path(pts, (w) => w + 10 * k, () => "#ffffff"));
-    ctx.restore();
+    if (shadow) {
+      ctx.save();
+      ctx.shadowColor = "rgba(28,24,40,0.28)";
+      ctx.shadowBlur = 8 * k;
+      ctx.shadowOffsetY = 2 * k;
+      visible.forEach((pts) => whole(pts, avg(pts) * 1.1 + 10 * k, "#ffffff"));
+      ctx.restore();
+    }
     visible.forEach((pts) => path(pts, (w) => w + 10 * k, () => "#ffffff"));
   }
 
@@ -119,13 +142,12 @@ export function drawScribble(ctx: CanvasRenderingContext2D, d: Drawing, upTo = I
     const pts = visible[i];
     if (!pts.length) return;
     if (s.b === "neon") {
-      ctx.save();
-      ctx.shadowColor = s.c;
-      ctx.shadowBlur = s.s * 2.2 * k;
-      path(pts, (w) => w, () => s.c);
-      path(pts, (w) => w, () => s.c);
-      ctx.restore();
-      path(pts, (w) => w * 0.38, () => "rgba(255,255,255,0.92)");
+      // The glow: wide see-through lines under the bright one (a real blur is too slow on phones)
+      const w = avg(pts);
+      whole(pts, w * 3.2, alpha(s.c, 0.14));
+      whole(pts, w * 2.1, alpha(s.c, 0.26));
+      path(pts, (x) => x, () => s.c);
+      path(pts, (x) => x * 0.38, () => "rgba(255,255,255,0.92)");
     } else if (s.b === "rainbow") {
       const hue0 = (i * 47) % 360;
       path(pts, (w) => w, (n) => `hsl(${(hue0 + n * 6) % 360}, 92%, 58%)`); // commas: older browsers need them
@@ -146,6 +168,13 @@ export function drawScribble(ctx: CanvasRenderingContext2D, d: Drawing, upTo = I
       path(pts, (w) => w, () => s.c);
     }
   });
+}
+
+function alpha(hex: string, a: number) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex);
+  if (!m) return `rgba(255,122,168,${a})`;
+  const n = parseInt(m[1], 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
 }
 
 function star(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, fill: string) {
