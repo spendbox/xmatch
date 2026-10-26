@@ -383,7 +383,7 @@ export function MasqueradeRoom({
             {pact && <p className="truncate text-[12px] font-semibold text-[#a26b00]">{pact} match</p>}
             <p className="truncate text-[13px] text-muted">
               <span className={them.online ? "font-semibold text-mint" : undefined}>{presenceText(them.online, them.seen_minutes)}</span>
-              {[gender, (them.same_place ? "Near you" : them.place) ?? distanceLabel(them.distance_km) ?? intentLabel(state.intent)]
+              {[them.age ? String(them.age) : null, gender, (them.same_place ? "Near you" : them.place) ?? distanceLabel(them.distance_km) ?? intentLabel(state.intent)]
                 .filter(Boolean)
                 .map((t) => ` · ${t}`)
                 .join("")}
@@ -658,7 +658,7 @@ export function MasqueradeRoom({
         </button>
         <p className="mt-4 font-display text-[26px] font-semibold">{theirName}</p>
         <p className="text-[14px] text-muted">
-          {[gender, them.place ?? distanceLabel(them.distance_km)].filter(Boolean).join(" · ")}
+          {[them.age ? String(them.age) : null, gender, them.place ?? distanceLabel(them.distance_km)].filter(Boolean).join(" · ")}
         </p>
         {!lapsed && !state.reopened && (
           <>

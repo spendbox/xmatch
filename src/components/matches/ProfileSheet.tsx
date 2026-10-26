@@ -6,7 +6,7 @@ import { thumbFallback, thumbUrl } from "@/lib/photos";
 import clsx from "clsx";
 import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, Lock, Quote, X } from "lucide-react";
-import { GENDERS } from "@/lib/constants";
+import { ageFromBirthdate, GENDERS } from "@/lib/constants";
 import { promptOf } from "@/lib/things";
 import type { Profile } from "@/lib/types";
 import { InterestIcon } from "@/components/ui/icons";
@@ -21,6 +21,7 @@ export function ProfileSheet({
   footer,
   locked,
   commonWith,
+  age: ageIn,
 }: {
   profile: Profile;
   onClose: () => void;
@@ -34,6 +35,8 @@ export function ProfileSheet({
   locked?: { count: number; note: string; action?: React.ReactNode };
   /** Their id: shows what you have in common ("You both…") */
   commonWith?: string;
+  /** Their age, when you don't have their birthday (Meet) */
+  age?: number | null;
 }) {
   const [i, setI] = useState(0);
   const [mounted, setMounted] = useState(false);
@@ -52,6 +55,9 @@ export function ProfileSheet({
   const lockedCount = locked?.count ?? 0;
   const slides = photos.length + lockedCount;
   const gender = GENDERS.find((g) => g.value === profile.gender)?.label;
+  // Age and sex, small, under their name
+  const age = ageIn ?? ageFromBirthdate(profile.birthdate ?? null);
+  const about = [age ? String(age) : null, gender].filter(Boolean).join(" · ");
   if (!mounted) return null;
 
   const prev = () => setI(Math.max(0, i - 1));
@@ -144,7 +150,7 @@ export function ProfileSheet({
             <h2 className="font-display text-[36px] leading-none font-semibold">
               {profile.display_name}
             </h2>
-            {gender && <p className="mt-1.5 text-[14px] text-white/80">{gender}</p>}
+            {about && <p className="mt-1.5 text-[14px] text-white/80">{about}</p>}
           </div>
         </div>
 
@@ -155,7 +161,7 @@ export function ProfileSheet({
               <h2 className="font-display text-[44px] leading-none font-semibold">
                 {profile.display_name}
               </h2>
-              {gender && <p className="mt-2 text-[15px] text-muted">{gender}</p>}
+              {about && <p className="mt-2 text-[15px] text-muted">{about}</p>}
             </div>
             <button onClick={onClose} className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-line-strong bg-surface text-ink transition hover:bg-cream" aria-label="Close">
               <X size={20} />

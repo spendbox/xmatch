@@ -161,6 +161,7 @@ export function ExploreProfileSheet({
   return (
     <ProfileSheet
       profile={profile}
+      age={p.age}
       locked={
         hidden > 0
           ? { count: hidden, note: canPay ? "Unlock them now, or they show free once you're connected." : "They show once you're connected.", action: canPay ? unlockButton : undefined }
