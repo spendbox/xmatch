@@ -50,6 +50,8 @@ export function useGameHost({
     seen.current = { id: game.id, status: game.status };
     const initial = first.current;
     first.current = false;
+    // Opening a chat with a game that's just starting (Play pairs you straight into one): open it
+    if (initial && game.status === "active" && game.started_at && Date.now() - new Date(game.started_at).getTime() < 60_000) return setOpen(true);
     if (!changed || initial) return;
     if (game.status === "invited" && game.me === "b") setOpen(true);
     else if (game.status === "active") setOpen(true);

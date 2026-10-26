@@ -17,7 +17,7 @@ export function AppChrome({ user, children }: { user: ChromeUser; children: Reac
   const path = usePathname();
   const router = useRouter();
   // Full-screen chats hide the phone tab bar
-  const fullScreen = /^\/masquerade\/[^/]+|^\/matches\/(?!people)[^/]+|^\/events\/[^/]+\/chat\/|^\/feed\/chat\//.test(path);
+  const fullScreen = /^\/play$|^\/masquerade\/[^/]+|^\/matches\/(?!people)[^/]+|^\/events\/[^/]+\/chat\/|^\/feed\/chat\//.test(path);
   useHeartbeat();
   const badges = useMenuBadges(user.id);
   // Background helper for notifications; keeps this phone's subscription fresh

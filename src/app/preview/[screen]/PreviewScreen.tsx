@@ -40,6 +40,7 @@ import { MasqueradeHealth } from "@/components/admin/MasqueradeHealth";
 import { FeedChat } from "@/components/feed/FeedChat";
 import { PromptManager } from "@/components/admin/PromptManager";
 import { PromptAnswers } from "@/components/admin/PromptAnswers";
+import { PlayScreen } from "@/components/play/PlayScreen";
 import { GameDemo } from "./GameDemos";
 import { GamesManager } from "@/components/admin/GamesManager";
 import type { Feed, FeedAnswer, FeedGift } from "@/lib/feed";
@@ -277,6 +278,25 @@ export function PreviewScreen({ screen }: { screen: string }) {
 function ScreenBody({ screen }: { screen: string }) {
   if (screen.startsWith("game-")) return <GameDemo screen={screen} />;
   switch (screen) {
+    case "play":
+    case "play-waiting":
+    case "play-found":
+    case "play-keys": {
+      const status = {
+        waiting: screen === "play-waiting",
+        joined_at: new Date(now - 23_000).toISOString(),
+        session_id: null,
+        game: "ludo" as const,
+        intent: "friends" as const,
+        cost: 1,
+        balance: screen === "play-keys" ? 0 : 120,
+        games: ["whot", "ayo", "ludo", "snakes"] as ("whot" | "ayo" | "ludo" | "snakes")[],
+        in_line: screen === "play-waiting" ? 0 : 2,
+        playing: 7,
+        server_now: new Date(now).toISOString(),
+      };
+      return <PlayScreen userId="me" demo={{ status, phase: screen === "play-waiting" ? "waiting" : screen === "play-found" ? "found" : "idle" }} />;
+    }
     case "room-games":
       return (
         <MasqueradeRoom
@@ -328,7 +348,7 @@ function ScreenBody({ screen }: { screen: string }) {
     case "people":
       return <div className="pb-24"><YourPeople matches={recent} myId="me" /><BottomNav /></div>;
     case "admin-prices":
-      return <AdminShell><PricesManager settings={{ reopen_cost: 10, reveal_cost: 1, free_reveals: 10, invite_reward: 10, meet_cost: 10, meet_free_posts: 1, meet_hours: 3, explore_message_cost: 15, explore_photos_cost: 5, explore_photos_paid: 1, ghost_cost: 100, wave_cost: 0, pair_gap_minutes: 60, pair_minutes: 60, setup_reward: 5, signup_keys: 5, slow_reveal_cost: 10, gift_share_percent: 50 }} invites={{ joined: 64, joined_7d: 12, buyers: 19, keys_paid: 410, top: [{ name: "Tolu", joined: 9, earned: 90 }, { name: "Kemi", joined: 6, earned: 40 }] }}
+      return <AdminShell><PricesManager settings={{ reopen_cost: 10, reveal_cost: 1, free_reveals: 10, invite_reward: 10, meet_cost: 10, meet_free_posts: 1, meet_hours: 3, explore_message_cost: 15, explore_photos_cost: 5, explore_photos_paid: 1, ghost_cost: 100, wave_cost: 0, pair_gap_minutes: 60, pair_minutes: 60, setup_reward: 5, signup_keys: 5, slow_reveal_cost: 10, gift_share_percent: 50, play_cost: 1 }} invites={{ joined: 64, joined_7d: 12, buyers: 19, keys_paid: 410, top: [{ name: "Tolu", joined: 9, earned: 90 }, { name: "Kemi", joined: 6, earned: 40 }] }}
         gifts={[{ id: "fire", name: "Fire", emoji: "🔥", price: 5, sort: 1, retired: false }, { id: "rose", name: "Rose", emoji: "🌹", price: 5, sort: 2, retired: false }, { id: "jollof", name: "Jollof", emoji: "🍛", price: 15, sort: 5, retired: false }, { id: "teddy", name: "Teddy bear", emoji: "🧸", price: 30, sort: 91, retired: true }]}
         packs={[{ id: "p50", keys: 50, naira: 750, tag: null, sort: 1, active: true }, { id: "p150", keys: 150, naira: 2000, tag: "Popular", sort: 2, active: true }, { id: "p500", keys: 500, naira: 4500, tag: "Best value", sort: 3, active: true }]} /></AdminShell>;
     case "admin-masquerade": {

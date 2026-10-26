@@ -69,5 +69,6 @@ export const KEY_REASONS: Record<string, string> = {
   signup: "Welcome gift for joining",
   invite: "Invited a friend",
   slow_reveal: "Saw a slow reveal early",
+  play: "Played a stranger",
   admin: "Admin change",
 };
