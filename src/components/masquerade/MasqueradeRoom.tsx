@@ -23,6 +23,8 @@ import { createClient } from "@/lib/supabase/client";
 import { distanceLabel, GENDERS, intentLabel, MASQUERADE_MINUTES, spiceLabel } from "@/lib/constants";
 import type { ChatMessage, MasqueradeState } from "@/lib/types";
 import type { StickerPick } from "@/components/stickers/StickerSheet";
+import type { ScribbleSend } from "@/components/stickers/StickerSheet";
+import { useSavedScribbles } from "@/components/stickers/useSavedScribbles";
 import { MessageList } from "@/components/chat/MessageList";
 import { Composer } from "@/components/chat/Composer";
 import { refreshMenuBadges } from "@/components/app/useMenuBadges";
@@ -132,6 +134,7 @@ export function MasqueradeRoom({
   const [voting, setVoting] = useState(false);
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
   const [editing, setEditing] = useState<ChatMessage | null>(null);
+  const savedScribbles = useSavedScribbles();
   const [chatNote, setChatNote] = useState<string | null>(null);
   useEffect(() => {
     if (!chatNote) return;
@@ -288,6 +291,26 @@ export function MasqueradeRoom({
       if (error || !data) return without;
       return without.some((m) => m.id === data.id) ? without : [...without, data as ChatMessage];
     });
+  }
+
+  // A scribble costs Keys, so the server sends it (and takes them)
+  async function sendScribble(x: ScribbleSend): Promise<string | null> {
+    if (demo) return null;
+    const { data, error } = await supabase.rpc("send_scribble", {
+      p_drawing: x.drawing ?? null,
+      p_session: state.id,
+      p_reply: replyTo?.id && replyTo.id > 0 ? replyTo.id : null,
+      p_saved: x.saved ?? null,
+      p_keep: x.keep,
+    });
+    if (error) return error.message.includes("send_scribble") ? "Scribbles are coming soon." : error.message.includes("too big") || error.message.includes("Draw") ? error.message : keysError(error.message);
+    const m = data as ChatMessage;
+    setReplyTo(null);
+    setMessages((l) => (l.some((x) => x.id === m.id) ? l : [...l, m]));
+    notify({ kind: "masked_message", sessionId: state.id });
+    refreshWallet();
+    if (x.keep) savedScribbles.refresh();
+    return null;
   }
 
   // React (or take yours back): shows straight away, undone if it doesn't save
@@ -607,6 +630,7 @@ export function MasqueradeRoom({
           genderOf={(id) => (id === state.me.id ? null : state.them.gender)}
           onReply={setReplyTo}
           onReact={react}
+          onSaveScribble={demo ? undefined : async (m) => setChatNote((await savedScribbles.save(m.id, true)) ?? "Saved. Send it again free from Scribble.")}
           onEdit={
             chatting
               ? (m) => {
@@ -692,6 +716,7 @@ export function MasqueradeRoom({
           draft={hintDraft}
           onSend={send}
           onSendSticker={sendSticker}
+          onSendScribble={sendScribble}
           editing={editing}
           onEdit={saveEdit}
           onCancelEdit={() => setEditing(null)}

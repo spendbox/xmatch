@@ -31,6 +31,8 @@ import { useGameHost } from "@/components/games/GameHost";
 import { MaskedVoiceSheet } from "@/components/chat/MaskedVoiceSheet";
 import type { VoiceStyle } from "@/lib/voiceDisguise";
 import type { StickerPick } from "@/components/stickers/StickerSheet";
+import type { ScribbleSend } from "@/components/stickers/StickerSheet";
+import { useSavedScribbles } from "@/components/stickers/useSavedScribbles";
 
 export function MatchChat({
   matchId,
@@ -79,6 +81,7 @@ export function MatchChat({
   const [voiceOpen, setVoiceOpen] = useState(false);
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
   const [editing, setEditing] = useState<ChatMessage | null>(null);
+  const savedScribbles = useSavedScribbles();
   const { startCall, call } = useCall();
   const [giftOpen, setGiftOpen] = useState(false);
   const { wallet, refresh: refreshWallet } = useWallet(myId);
@@ -173,6 +176,25 @@ export function MatchChat({
   async function sendSticker(st: StickerPick) {
     const meta = { pose: st.pose, color: st.color };
     await deliver(draft("sticker", st.caption, { media_meta: meta }), async () => ({ kind: "sticker", body: st.caption, media_meta: meta }));
+  }
+
+  // A scribble costs Keys, so the server sends it (and takes them)
+  async function sendScribble(x: ScribbleSend): Promise<string | null> {
+    const { data, error } = await supabase.rpc("send_scribble", {
+      p_drawing: x.drawing ?? null,
+      p_match: matchId,
+      p_reply: replyTo?.id && replyTo.id > 0 ? replyTo.id : null,
+      p_saved: x.saved ?? null,
+      p_keep: x.keep,
+    });
+    if (error) return error.message.includes("send_scribble") ? "Scribbles are coming soon." : error.message.includes("too big") || error.message.includes("Draw") ? error.message : keysError(error.message);
+    const m = data as ChatMessage;
+    setReplyTo(null);
+    setMessages((l) => (l.some((x) => x.id === m.id) ? l : [...l, m]));
+    if (!activeNow()) notify({ kind: "message", matchId });
+    refreshWallet();
+    if (x.keep) savedScribbles.refresh();
+    return null;
   }
 
   // React (or take yours back): shows straight away, undone if it doesn't save
@@ -343,7 +365,7 @@ export function MatchChat({
           )}
           {messages.length === 0 && <p className="mt-3 text-[14px] text-muted">Say hi to {other.display_name} 👋</p>}
         </div>
-        <MessageList messages={messages} myId={myId} nameOf={nameOf} genderOf={(id) => (id === other.id ? other.gender : null)} onReply={setReplyTo} onDelete={remove} onReact={react} onEdit={(m) => { setReplyTo(null); setEditing(m); }} showDates onGameAgain={games.rematch} slow={{ cost: slowCost, onReveal: revealSlow }} />
+        <MessageList messages={messages} myId={myId} nameOf={nameOf} genderOf={(id) => (id === other.id ? other.gender : null)} onReply={setReplyTo} onDelete={remove} onReact={react} onSaveScribble={async (m) => setToast((await savedScribbles.save(m.id, false)) ?? "Saved. Send it again free from Scribble.")} onEdit={(m) => { setReplyTo(null); setEditing(m); }} showDates onGameAgain={games.rematch} slow={{ cost: slowCost, onReveal: revealSlow }} />
       </div>
       </div>
 
@@ -361,6 +383,7 @@ export function MatchChat({
         ]}
         onSend={send}
         onSendSticker={sendSticker}
+        onSendScribble={sendScribble}
         editing={editing}
         onEdit={saveEdit}
         onCancelEdit={() => setEditing(null)}

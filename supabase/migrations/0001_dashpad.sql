@@ -14296,3 +14296,257 @@ do $$ begin
   end if;
 exception when undefined_object then null;
 end $$;
+
+-- ---------------------------------------------------------------------------
+-- Dashpad update: premium sticker packs and scribbles (Part 93)
+-- Run this once in Supabase: SQL Editor -> New query -> paste -> Run. Safe to run more than once.
+-- Run update 92 first. Four Masky packs (Savage, Naija, Love, Owambe), bought once with Keys and
+-- kept for good; everyone sees them, only owners can send them. Scribbles: draw something and
+-- send it as a sticker that draws itself in the chat. Prices are set in Admin -> Prices.
+
+insert into public.app_settings (key, value) values ('sticker_pack_cost', 40) on conflict (key) do nothing;
+insert into public.app_settings (key, value) values ('scribble_cost', 1) on conflict (key) do nothing;
+
+create table if not exists public.sticker_packs_owned (
+  user_id uuid not null references public.profiles on delete cascade,
+  pack_id text not null check (pack_id in ('savage', 'naija', 'love', 'owambe')),
+  keys_paid int not null default 0,
+  bought_at timestamptz not null default now(),
+  primary key (user_id, pack_id)
+);
+alter table public.sticker_packs_owned enable row level security;
+drop policy if exists "see my sticker packs" on public.sticker_packs_owned;
+create policy "see my sticker packs" on public.sticker_packs_owned for select using (user_id = auth.uid());
+
+-- Which pack a pose is in (null = free)
+create or replace function public.sticker_pack_of(p_pose text) returns text
+language sql immutable as $$
+  select case
+    when p_pose in ('devil', 'sideeye', 'tea', 'micdrop', 'facepalm', 'seen') then 'savage'
+    when p_pose in ('japa', 'sapa', 'odogwu', 'pray', 'wahala', 'abeg') then 'naija'
+    when p_pose in ('hearthands', 'rose', 'shy', 'letter', 'call', 'hug') then 'love'
+    when p_pose in ('gele', 'spray', 'cheers', 'confetti', 'cake', 'dj') then 'owambe'
+  end
+$$;
+
+-- A sticker names one of Masky's poses (from a pack you own) and colours, with at most 24 characters
+create or replace function public.sticker_ok(p_kind text, p_body text, p_meta jsonb) returns boolean
+language sql stable security definer set search_path = public as $$
+  select p_kind <> 'sticker' or (
+    char_length(p_body) <= 24
+    and p_meta ->> 'color' in ('#7a5cf0', '#ff7aa8', '#2fb3a0', '#ffb02e', '#e5484d', '#5b6cff')
+    and (
+      p_meta ->> 'pose' in ('wave', 'kiss', 'lol', 'shock', 'sleep', 'dance', 'peek', 'stamp', 'jollof', 'dice')
+      or exists (select 1 from sticker_packs_owned o where o.user_id = auth.uid() and o.pack_id = public.sticker_pack_of(p_meta ->> 'pose'))
+    )
+  )
+$$;
+
+-- Packs you own
+create or replace function public.my_sticker_packs() returns text[]
+language sql stable security definer set search_path = public as $$
+  select coalesce(array_agg(pack_id order by bought_at), '{}') from sticker_packs_owned where user_id = auth.uid()
+$$;
+revoke execute on function public.my_sticker_packs() from public, anon;
+grant execute on function public.my_sticker_packs() to authenticated;
+
+-- Buy a pack (once; buying one you have costs nothing). Returns your Keys left.
+create or replace function public.buy_sticker_pack(p_pack text) returns int
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  cost int := greatest(0, public.setting_int('sticker_pack_cost', 40));
+  bal int;
+begin
+  if uid is null then raise exception 'Not signed in'; end if;
+  if p_pack not in ('savage', 'naija', 'love', 'owambe') then raise exception 'Unknown pack'; end if;
+  perform pg_advisory_xact_lock(hashtext('sticker_pack:' || uid::text));
+  if exists (select 1 from sticker_packs_owned where user_id = uid and pack_id = p_pack) then
+    select balance into bal from wallets where user_id = uid;
+    return coalesce(bal, 0);
+  end if;
+  if cost > 0 then
+    bal := public.spend_keys(uid, cost, 'sticker_pack', p_pack);
+  else
+    select balance into bal from wallets where user_id = uid;
+  end if;
+  insert into sticker_packs_owned (user_id, pack_id, keys_paid) values (uid, p_pack, cost);
+  return coalesce(bal, 0);
+end $$;
+revoke execute on function public.buy_sticker_pack(text) from public, anon;
+grant execute on function public.buy_sticker_pack(text) to authenticated;
+
+-- Scribbles are a kind of message: the drawing (its strokes) goes in media_meta
+alter table public.messages drop constraint if exists messages_kind_check;
+alter table public.messages add constraint messages_kind_check
+  check (kind in ('text', 'image', 'video', 'audio', 'call', 'gift', 'game', 'masked', 'sticker', 'scribble'));
+alter table public.messages drop constraint if exists messages_content_check;
+alter table public.messages add constraint messages_content_check check (
+  char_length(body) <= 2000 and (
+    (kind = 'text' and (char_length(body) >= 1 or deleted_at is not null))
+    or (kind in ('image', 'video', 'audio') and (media_path is not null or deleted_at is not null))
+    or (kind = 'sticker' and (char_length(body) <= 24 or deleted_at is not null))
+    or kind in ('call', 'gift', 'game', 'masked', 'scribble')
+  )
+);
+alter table public.messages drop constraint if exists messages_meta_small;
+alter table public.messages add constraint messages_meta_small check (
+  media_meta is null or pg_column_size(media_meta) <= 4000
+  or (kind = 'masked' and pg_column_size(media_meta) <= 400000)
+  or (kind = 'scribble' and pg_column_size(media_meta) <= 60000)
+) not valid;
+alter table public.masquerade_messages drop constraint if exists masquerade_messages_kind_check;
+alter table public.masquerade_messages add constraint masquerade_messages_kind_check
+  check (kind in ('text', 'icebreaker', 'gift', 'system', 'game', 'meet', 'audio', 'sticker', 'scribble'));
+
+-- Send a scribble (paid). In a chat (p_match) or a masked chat (p_session). Returns the message.
+create or replace function public.send_scribble(p_drawing jsonb, p_match uuid default null, p_session uuid default null, p_reply bigint default null) returns json
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  cost int := greatest(0, public.setting_int('scribble_cost', 1));
+  out json;
+begin
+  if uid is null then raise exception 'Not signed in'; end if;
+  if jsonb_typeof(p_drawing -> 'strokes') <> 'array' or jsonb_array_length(p_drawing -> 'strokes') not between 1 and 300 then
+    raise exception 'Draw something first';
+  end if;
+  if pg_column_size(p_drawing) > 60000 then raise exception 'That scribble is too big. Try fewer lines.'; end if;
+  if p_match is not null then
+    if not exists (select 1 from matches where id = p_match and (user_a = uid or user_b = uid)) then raise exception 'Not your match'; end if;
+    if cost > 0 then perform public.spend_keys(uid, cost, 'scribble', p_match::text); end if;
+    insert into messages (match_id, sender_id, kind, body, media_meta, reply_to)
+    values (p_match, uid, 'scribble', 'Scribble', p_drawing,
+      (select id from messages where id = p_reply and match_id = p_match))
+    returning row_to_json(messages.*) into out;
+  elsif p_session is not null then
+    if not exists (select 1 from masquerade_sessions where id = p_session and (user_a = uid or user_b = uid)
+      and status = 'active' and now() < ends_at) then raise exception 'This chat has ended'; end if;
+    if cost > 0 then perform public.spend_keys(uid, cost, 'scribble', p_session::text); end if;
+    insert into masquerade_messages (session_id, sender_id, kind, body, media_meta, reply_to)
+    values (p_session, uid, 'scribble', 'Scribble', p_drawing,
+      (select id from masquerade_messages where id = p_reply and session_id = p_session))
+    returning row_to_json(masquerade_messages.*) into out;
+  else
+    raise exception 'Choose who to send it to';
+  end if;
+  return out;
+end $$;
+revoke execute on function public.send_scribble(jsonb, uuid, uuid, bigint) from public, anon;
+grant execute on function public.send_scribble(jsonb, uuid, uuid, bigint) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Dashpad update: saved scribbles (Part 94)
+-- Run this once in Supabase: SQL Editor -> New query -> paste -> Run. Safe to run more than once.
+-- Run update 93 first. Keep a scribble you sent, or one you were sent, and send it again for free.
+-- Up to 60 each. Saved ones are copied from the chat by the server, so only real scribbles are kept.
+
+create table if not exists public.saved_scribbles (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles on delete cascade,
+  drawing jsonb not null,
+  hash text not null,
+  created_at timestamptz not null default now(),
+  unique (user_id, hash)
+);
+create index if not exists saved_scribbles_user on public.saved_scribbles (user_id, created_at desc);
+alter table public.saved_scribbles enable row level security;
+drop policy if exists "see my saved scribbles" on public.saved_scribbles;
+create policy "see my saved scribbles" on public.saved_scribbles for select using (user_id = auth.uid());
+
+-- Keep a drawing (once; saving the same one again gives back the one you have)
+create or replace function public.keep_scribble(uid uuid, d jsonb) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare
+  h text := md5(d::text);
+  out uuid;
+begin
+  select id into out from saved_scribbles where user_id = uid and hash = h;
+  if out is not null then return out; end if;
+  if (select count(*) from saved_scribbles where user_id = uid) >= 60 then
+    raise exception 'You have 60 saved scribbles. Delete one to save another.';
+  end if;
+  insert into saved_scribbles (user_id, drawing, hash) values (uid, d, h) returning id into out;
+  return out;
+end $$;
+revoke execute on function public.keep_scribble(uuid, jsonb) from public, anon, authenticated;
+
+-- Save a scribble from a chat you're in (yours or theirs)
+create or replace function public.save_scribble(p_message bigint, p_masked boolean default false) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  d jsonb;
+begin
+  if uid is null then raise exception 'Not signed in'; end if;
+  if p_masked then
+    select x.media_meta into d from masquerade_messages x join masquerade_sessions s on s.id = x.session_id
+    where x.id = p_message and x.kind = 'scribble' and (s.user_a = uid or s.user_b = uid);
+  else
+    select x.media_meta into d from messages x join matches m on m.id = x.match_id
+    where x.id = p_message and x.kind = 'scribble' and x.deleted_at is null and (m.user_a = uid or m.user_b = uid);
+  end if;
+  if d is null then raise exception 'Scribble not found'; end if;
+  return public.keep_scribble(uid, d);
+end $$;
+revoke execute on function public.save_scribble(bigint, boolean) from public, anon;
+grant execute on function public.save_scribble(bigint, boolean) to authenticated;
+
+create or replace function public.delete_saved_scribble(p_id uuid) returns void
+language sql security definer set search_path = public as $$
+  delete from saved_scribbles where id = p_id and user_id = auth.uid()
+$$;
+revoke execute on function public.delete_saved_scribble(uuid) from public, anon;
+grant execute on function public.delete_saved_scribble(uuid) to authenticated;
+
+-- Send a scribble: a new drawing (paid, and kept if p_keep), or one you saved (free)
+drop function if exists public.send_scribble(jsonb, uuid, uuid, bigint);
+create or replace function public.send_scribble(
+  p_drawing jsonb default null, p_match uuid default null, p_session uuid default null, p_reply bigint default null,
+  p_saved uuid default null, p_keep boolean default false
+) returns json
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  cost int := greatest(0, public.setting_int('scribble_cost', 1));
+  out json;
+begin
+  if uid is null then raise exception 'Not signed in'; end if;
+  if p_saved is not null then
+    select drawing into p_drawing from saved_scribbles where id = p_saved and user_id = uid;
+    if p_drawing is null then raise exception 'That saved scribble is gone'; end if;
+    cost := 0;
+  end if;
+  if jsonb_typeof(p_drawing -> 'strokes') is distinct from 'array' or jsonb_array_length(p_drawing -> 'strokes') not between 1 and 300 then
+    raise exception 'Draw something first';
+  end if;
+  if pg_column_size(p_drawing) > 60000 then raise exception 'That scribble is too big. Try fewer lines.'; end if;
+  if p_match is not null then
+    if not exists (select 1 from matches where id = p_match and (user_a = uid or user_b = uid)) then raise exception 'Not your match'; end if;
+    if cost > 0 then perform public.spend_keys(uid, cost, 'scribble', p_match::text); end if;
+    insert into messages (match_id, sender_id, kind, body, media_meta, reply_to)
+    values (p_match, uid, 'scribble', 'Scribble', p_drawing,
+      (select id from messages where id = p_reply and match_id = p_match))
+    returning row_to_json(messages.*) into out;
+  elsif p_session is not null then
+    if not exists (select 1 from masquerade_sessions where id = p_session and (user_a = uid or user_b = uid)
+      and status = 'active' and now() < ends_at) then raise exception 'This chat has ended'; end if;
+    if cost > 0 then perform public.spend_keys(uid, cost, 'scribble', p_session::text); end if;
+    insert into masquerade_messages (session_id, sender_id, kind, body, media_meta, reply_to)
+    values (p_session, uid, 'scribble', 'Scribble', p_drawing,
+      (select id from masquerade_messages where id = p_reply and session_id = p_session))
+    returning row_to_json(masquerade_messages.*) into out;
+  else
+    raise exception 'Choose who to send it to';
+  end if;
+  -- Keeping it is a bonus: a full collection doesn't stop the send
+  if p_keep and p_saved is null then
+    begin
+      perform public.keep_scribble(uid, p_drawing);
+    exception when others then null;
+    end;
+  end if;
+  return out;
+end $$;
+revoke execute on function public.send_scribble(jsonb, uuid, uuid, bigint, uuid, boolean) from public, anon;
+grant execute on function public.send_scribble(jsonb, uuid, uuid, bigint, uuid, boolean) to authenticated;

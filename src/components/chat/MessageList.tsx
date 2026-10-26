@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import {
-  Ban, Clock3, Copy, Gamepad2, Hourglass, MessageCircle, Timer, CornerUpLeft, MessageCircleQuestion, Pencil, Phone, PhoneIncoming, PhoneMissed, PhoneOutgoing, Play, Plus, Reply, Trash2, Video,
+  Ban, Clock3, Copy, Gamepad2, Hourglass, MessageCircle, Timer, CornerUpLeft, MessageCircleQuestion, Bookmark, Pencil, Phone, PhoneIncoming, PhoneMissed, PhoneOutgoing, Play, Plus, Reply, Trash2, Video,
 } from "lucide-react";
 import type { ChatMessage, Gender } from "@/lib/types";
 import { formatDuration } from "@/lib/chatMedia";
@@ -25,6 +25,8 @@ import { useSignedUrl } from "./useSignedUrl";
 import { KeyCoin } from "@/components/keys/KeyIcon";
 import { Masky } from "@/components/stickers/Masky";
 import { stickerOf } from "@/components/stickers/StickerSheet";
+import { ScribbleView } from "@/components/stickers/Scribble";
+import { isDrawing } from "@/lib/scribble";
 
 /** Quick reactions when you hold a message (😈 because Dashpad) */
 export const QUICK_REACTIONS = ["❤️", "😂", "😈", "🔥", "😮", "😢"];
@@ -51,6 +53,8 @@ type Props = {
   onReact?: (m: ChatMessage, emoji: string) => void;
   /** Turn on editing your own messages (within 15 minutes) */
   onEdit?: (m: ChatMessage) => void;
+  /** Turn on keeping scribbles (yours or theirs) to send again for free */
+  onSaveScribble?: (m: ChatMessage) => void;
 };
 
 /** A slow reveal clears fully after 5 messages from each of you */
@@ -75,12 +79,14 @@ export function snippet(m: ChatMessage | undefined) {
       return `🎮 ${m.body}`;
     case "sticker":
       return `Sticker · ${m.body}`;
+    case "scribble":
+      return "✍️ Scribble";
     default:
       return m.body.replace(/^💬 /, "");
   }
 }
 
-export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDates, footer, onGameAgain, slow, genderOf, onReact, onEdit }: Props) {
+export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDates, footer, onGameAgain, slow, genderOf, onReact, onEdit, onSaveScribble }: Props) {
   // How far each slow reveal has cleared: messages after it from each person, up to 5 each (0 to 10)
   const slowProgress = useMemo(() => {
     const out = new Map<number, number>();
@@ -319,7 +325,11 @@ export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDat
               onDoubleTap={canReact(m) && m.kind !== "image" && m.kind !== "video" ? () => react(m, m.reactions?.[myId] === "❤️" ? "" : "❤️") : undefined}
             >
               <div className={clsx("flex flex-col", mine ? "items-end" : "items-start", firstOfGroup && "mt-2")} data-msg={m.id}>
-                {m.kind === "sticker" && !m.deleted_at ? (
+                {m.kind === "scribble" && !m.deleted_at && isDrawing(m.media_meta) ? (
+                  <div className={clsx("rounded-[24px] transition-shadow duration-500", flash === m.id && "ring-4 ring-gold/70")}>
+                    <ScribbleView drawing={m.media_meta} size={170} />
+                  </div>
+                ) : m.kind === "sticker" && !m.deleted_at ? (
                   <StickerMessage
                     m={m}
                     mine={mine}
@@ -420,10 +430,13 @@ export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDat
           {onReply && (
             <MenuButton icon={<Reply size={19} />} label="Reply" onClick={() => { onReply(menu!); closeMenu(); }} />
           )}
+          {menu && onSaveScribble && menu.kind === "scribble" && menu.id > 0 && !menu.deleted_at && (
+            <MenuButton icon={<Bookmark size={19} />} label="Save scribble (free to send again)" onClick={() => { onSaveScribble(menu); closeMenu(); }} />
+          )}
           {menu && canEdit(menu) && (
             <MenuButton icon={<Pencil size={19} />} label="Edit" onClick={() => { onEdit?.(menu); closeMenu(); }} />
           )}
-          {menu && menu.body && menu.kind !== "audio" && menu.kind !== "sticker" ? (
+          {menu && menu.body && menu.kind !== "audio" && menu.kind !== "sticker" && menu.kind !== "scribble" ? (
             <MenuButton
               icon={<Copy size={19} />}
               label="Copy text"

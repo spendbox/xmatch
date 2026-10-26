@@ -87,7 +87,7 @@ export type MasqueradeState = {
   };
 };
 
-export type MessageKind = "text" | "icebreaker" | "image" | "video" | "audio" | "call" | "gift" | "system" | "game" | "meet" | "masked" | "sticker";
+export type MessageKind = "text" | "icebreaker" | "image" | "video" | "audio" | "call" | "gift" | "system" | "game" | "meet" | "masked" | "sticker" | "scribble";
 
 export type MediaMeta = {
   /** Masked voice notes: where the file is stored (played from our storage address), and once it's been deleted */

@@ -18,6 +18,39 @@ import { NightEditor } from "@/components/admin/NightEditor";
 import { IcebreakerManager } from "@/components/admin/IcebreakerManager";
 import type { DashpadEvent } from "@/lib/events";
 import { MasqueradeRoom } from "@/components/masquerade/MasqueradeRoom";
+import { StickerSheet } from "@/components/stickers/StickerSheet";
+import { Masky } from "@/components/stickers/Masky";
+import { STICKER_PACKS } from "@/lib/stickers";
+import type { Drawing } from "@/lib/scribble";
+
+// A sample scribble: a neon heart, a rainbow swoosh and glitter stars
+const sampleScribble: Drawing = (() => {
+  const heart: number[] = [];
+  for (let i = 0; i <= 60; i++) {
+    const t = (i / 60) * Math.PI * 2;
+    heart.push(Math.round(150 + 72 * Math.pow(Math.sin(t), 3)), Math.round(128 - (58 * Math.cos(t) - 22 * Math.cos(2 * t) - 9 * Math.cos(3 * t) - 4 * Math.cos(4 * t))), 16);
+  }
+  const swoosh: number[] = [];
+  for (let i = 0; i <= 40; i++) swoosh.push(40 + i * 5.5, Math.round(250 - Math.sin((i / 40) * Math.PI) * 30), 14);
+  const star = (cx: number, cy: number, r: number) => {
+    const out: number[] = [];
+    for (let i = 0; i <= 10; i++) {
+      const a = (i / 10) * Math.PI * 2 - Math.PI / 2;
+      const rr = i % 2 ? r * 0.45 : r;
+      out.push(Math.round(cx + Math.cos(a) * rr), Math.round(cy + Math.sin(a) * rr), 30);
+    }
+    return out;
+  };
+  return {
+    v: 1,
+    strokes: [
+      { b: "neon", c: "#ff7aa8", s: 11, p: heart },
+      { b: "rainbow", c: "#000", s: 12, p: swoosh },
+      { b: "glitter", c: "#ffb02e", s: 7, p: star(60, 60, 26) },
+      { b: "glitter", c: "#7a5cf0", s: 6, p: star(248, 52, 20) },
+    ],
+  };
+})();
 import { MaskedVoiceSheet } from "@/components/chat/MaskedVoiceSheet";
 import { Outcome } from "@/components/masquerade/Outcome";
 import { MatchesList } from "@/components/matches/MatchesList";
@@ -392,7 +425,7 @@ function ScreenBody({ screen }: { screen: string }) {
     case "people":
       return <div className="pb-24"><YourPeople matches={recent} myId="me" /><BottomNav /></div>;
     case "admin-prices":
-      return <AdminShell><PricesManager settings={{ reopen_cost: 10, reveal_cost: 1, free_reveals: 10, invite_reward: 10, meet_cost: 10, meet_free_posts: 1, meet_hours: 3, explore_message_cost: 15, explore_photos_cost: 5, explore_photos_paid: 1, ghost_cost: 100, wave_cost: 0, pair_gap_minutes: 60, pair_minutes: 60, setup_reward: 5, signup_keys: 5, slow_reveal_cost: 10, gift_share_percent: 50, play_cost: 1 }} invites={{ joined: 64, joined_7d: 12, buyers: 19, keys_paid: 410, top: [{ name: "Tolu", joined: 9, earned: 90 }, { name: "Kemi", joined: 6, earned: 40 }] }}
+      return <AdminShell><PricesManager settings={{ reopen_cost: 10, reveal_cost: 1, free_reveals: 10, invite_reward: 10, meet_cost: 10, meet_free_posts: 1, meet_hours: 3, explore_message_cost: 15, explore_photos_cost: 5, explore_photos_paid: 1, ghost_cost: 100, wave_cost: 0, pair_gap_minutes: 60, pair_minutes: 60, setup_reward: 5, signup_keys: 5, slow_reveal_cost: 10, gift_share_percent: 50, play_cost: 1, sticker_pack_cost: 40, scribble_cost: 1 }} invites={{ joined: 64, joined_7d: 12, buyers: 19, keys_paid: 410, top: [{ name: "Tolu", joined: 9, earned: 90 }, { name: "Kemi", joined: 6, earned: 40 }] }}
         gifts={[{ id: "fire", name: "Fire", emoji: "🔥", price: 5, sort: 1, retired: false }, { id: "rose", name: "Rose", emoji: "🌹", price: 5, sort: 2, retired: false }, { id: "jollof", name: "Jollof", emoji: "🍛", price: 15, sort: 5, retired: false }, { id: "teddy", name: "Teddy bear", emoji: "🧸", price: 30, sort: 91, retired: true }]}
         packs={[{ id: "p50", keys: 50, naira: 750, tag: null, sort: 1, active: true }, { id: "p150", keys: 150, naira: 2000, tag: "Popular", sort: 2, active: true }, { id: "p500", keys: 500, naira: 4500, tag: "Best value", sort: 3, active: true }]} /></AdminShell>;
     case "admin-masquerade": {
@@ -532,6 +565,30 @@ function ScreenBody({ screen }: { screen: string }) {
       return <HomeScreen demoPeople={homePeople} demoSetup={{ place: true, push: false, things: 4, claimed: false, reward: 5 }} profile={me} wallet={null} stats={null} matches={[]} hour={demoHour("next")} />;
     case "chat":
       return <MasqueradeRoom initial={session()} initialMessages={msgs} demo={{ remaining: 121 }} />;
+    case "sticker-packs":
+      return (
+        <div className="min-h-dvh bg-cream p-6">
+          {STICKER_PACKS.map((p) => (
+            <section key={p.id} className="mb-6" data-pack={p.id}>
+              <h2 className="mb-1 text-[20px] font-semibold">
+                {p.name} {p.emoji} <span className="text-[14px] font-medium text-muted">· {p.free ? "Free" : "Premium"} · {p.tagline}</span>
+              </h2>
+              <div className="grid grid-cols-6 gap-2">
+                {p.stickers.map((st) => (
+                  <div key={st.pose} className="flex flex-col items-center rounded-3xl bg-surface p-2 shadow-card">
+                    <Masky pose={st.pose} caption={st.caption} color={st.color} size={150} />
+                    <span className="mt-1 text-center text-[11.5px] font-medium text-muted">{st.move}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      );
+    case "scribble-pad":
+      return <StickerSheet open onClose={() => {}} onSend={() => {}} owned={[]} price={40} scribbleCost={1} onSendScribble={async () => null} startMode="scribble" />;
+    case "sticker-store":
+      return <StickerSheet open onClose={() => {}} onSend={() => {}} owned={[]} price={40} onBuy={async () => null} startTab="savage" />;
     case "chat-stickers":
       return (
         <MasqueradeRoom
@@ -541,7 +598,8 @@ function ScreenBody({ screen }: { screen: string }) {
             { id: 5, sender_id: "me", body: "Same, but I'm judging the jollof at every stop", created_at: iso(120), reactions: { ada: "😂", me: "😈" } },
             { id: 8, sender_id: "ada", kind: "sticker", body: "Jollof?", media_meta: { pose: "jollof", color: "#ffb02e" }, created_at: iso(3), reactions: { me: "❤️" } },
             { id: 9, sender_id: "me", body: "Party jollof, no argument", created_at: new Date(Date.now() - 60_000).toISOString(), edited_at: iso(1) },
-            { id: 10, sender_id: "me", kind: "sticker", body: "Gbam, Ada!", media_meta: { pose: "stamp", color: "#e5484d" }, created_at: iso(1) },
+            { id: 10, sender_id: "me", kind: "sticker", body: "Goodnight Su", media_meta: { pose: "sleep", color: "#e5484d" }, created_at: iso(1) },
+            { id: 11, sender_id: "ada", kind: "scribble", body: "Scribble", media_meta: sampleScribble as unknown as ChatMessage["media_meta"], created_at: iso(1), reactions: { me: "😍" } },
           ]}
           demo={{ remaining: 1800 }}
         />

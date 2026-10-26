@@ -13,6 +13,8 @@ import { AudioPlayer } from "./AudioPlayer";
 import { VoiceIcon } from "./VoiceIcon";
 import { Masky } from "@/components/stickers/Masky";
 import { stickerOf } from "@/components/stickers/StickerSheet";
+import { ScribbleView } from "@/components/stickers/Scribble";
+import { isDrawing } from "@/lib/scribble";
 
 type Line = { s: string | null; k: string; b: string; m: { key?: string; duration?: number; title?: string; pose?: string; color?: string } | null; t: string };
 export type MaskedCardMeta = {
@@ -104,7 +106,9 @@ export function MaskedHistoryCard({ meta, myId, theirName }: { meta: MaskedCardM
             return (
               <div key={i} className={clsx("flex flex-col", mine ? "items-end" : "items-start")}>
                 {showName && <span className="mb-0.5 ml-2 text-[11.5px] font-bold" style={{ color }}>{theirAlias}</span>}
-                {l.k === "sticker" ? (
+                {l.k === "scribble" && isDrawing(l.m) ? (
+                  <ScribbleView drawing={l.m} size={130} />
+                ) : l.k === "sticker" ? (
                   (() => {
                     const st = stickerOf(l.m, l.b);
                     return <Masky pose={st.pose} caption={st.caption} color={st.color} size={110} />;

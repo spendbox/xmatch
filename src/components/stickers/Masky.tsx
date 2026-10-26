@@ -3,9 +3,10 @@
 import "@fontsource/lilita-one/latin-400.css";
 import "./masky.css";
 import type { StickerPose } from "@/lib/stickers";
+import { EXTRA_POSES } from "./morePoses";
 
 // Each pose: its eyes, mouth and how the whole body moves
-const POSES: Record<StickerPose, { e: string; m: string; anim: string; blush?: boolean; mask?: string }> = {
+const POSES: Record<string, { e: string; m: string; anim: string; blush?: boolean; mask?: string }> = {
   wave: { e: "wink", m: "smile", anim: "a-bob" },
   kiss: { e: "happy", m: "kiss", anim: "a-bob", blush: true },
   lol: { e: "happy", m: "laugh", anim: "a-shake" },
@@ -37,7 +38,9 @@ export function Masky({
   still?: boolean;
   className?: string;
 }) {
-  const P = POSES[pose] ?? POSES.wave;
+  const X = EXTRA_POSES[pose];
+  const P = POSES[pose] ?? X ?? POSES.wave;
+  const dancing = pose === "dance" || X?.feet === "dance";
   const v = {
     color,
     shade: color,
@@ -47,16 +50,17 @@ export function Masky({
     holes: P.e !== "shock",
     eOpen: P.e === "open", eWink: P.e === "wink", eHappy: P.e === "happy", eSleep: P.e === "sleep", eHearts: P.e === "hearts", eShock: P.e === "shock", eStars: P.e === "stars",
     mSmile: P.m === "smile", mLaugh: P.m === "laugh", mO: P.m === "o", mKiss: P.m === "kiss", mSmall: P.m === "small", mTongue: P.m === "tongue",
-    pWave: pose === "wave", pKiss: pose === "kiss", pLol: pose === "lol", pShock: pose === "shock", pSleep: pose === "sleep", pDance: pose === "dance", pPeek: pose === "peek", pStamp: pose === "stamp", pJollof: pose === "jollof", pDice: pose === "dice",
-    feetStill: pose !== "dance",
+    pWave: pose === "wave", pKiss: pose === "kiss", pLol: pose === "lol", pShock: pose === "shock", pSleep: pose === "sleep", pDance: pose === "dance", feetDance: dancing, pPeek: pose === "peek", pStamp: pose === "stamp", pJollof: pose === "jollof", pDice: pose === "dice",
+    feetStill: !dancing,
   };
   return (
     <div className={["mk flex flex-col items-center", still && "mk-still", className].filter(Boolean).join(" ")} style={{ width: size }} role="img" aria-label={`${caption} sticker`}>
       <svg viewBox="0 0 200 205" className="block w-full overflow-visible" aria-hidden>
       <ellipse cx="100" cy="190" rx="52" ry="7" fill="#1c1828" opacity="0.13" />
       <g className={cx(v.anim)}>
+      {X?.back?.(color)}
 
-      {v.pDance && (<>
+      {v.feetDance && (<>
       <g className="mk-footA"><ellipse cx="78" cy="180" rx="16" ry="9" fill={v.shade} stroke="#1c1828" strokeWidth="3.5" /></g>
       <g className="mk-footB"><ellipse cx="122" cy="180" rx="16" ry="9" fill={v.shade} stroke="#1c1828" strokeWidth="3.5" /></g>
       </>)}
@@ -273,13 +277,14 @@ export function Masky({
       <g className="mk-dice"><rect x="150" y="158" width="26" height="26" rx="6" fill="#ffffff" stroke="#1c1828" strokeWidth="3" /><circle cx="157" cy="165" r="2.6" fill="#e5484d" /><circle cx="163" cy="171" r="2.6" fill="#e5484d" /><circle cx="169" cy="177" r="2.6" fill="#e5484d" /></g>
       <g className="mk-dice2"><rect x="172" y="164" width="22" height="22" rx="5" fill="#ffffff" stroke="#1c1828" strokeWidth="3" /><circle cx="178" cy="170" r="2.3" fill="#1c1828" /><circle cx="188" cy="180" r="2.3" fill="#1c1828" /></g>
       </>)}
+      {X?.art(color)}
 
       </g>
       </svg>
       {caption && (
         <span
           className="mk-caption"
-          style={{ fontSize: Math.round(size * (caption.length > 12 ? 0.13 : 0.17)), WebkitTextStroke: `${Math.max(3, Math.round(size * 0.035))}px #1c1828` }}
+          style={{ fontSize: Math.round(size * Math.min(0.17, Math.max(0.105, 1.75 / Math.max(1, caption.length)))), WebkitTextStroke: `${Math.max(3, Math.round(size * 0.035))}px #1c1828` }}
         >
           {caption}
         </span>
