@@ -95,9 +95,9 @@ begin
     on conflict (user_a, user_b) do update set session_id = excluded.session_id
     returning id into mid;
 
-    -- A brand new chat carries on where the masked chat left off; a chat you already had
-    -- gets a card instead ("Amaka was Purple Heron") that opens the masked chat
-    perform public.move_masked_messages(s.id, mid, exists (select 1 from messages x where x.match_id = mid));
+    -- The masked chat never mixes into the normal chat: it shows as one card
+    -- ("Amaka was Purple Heron") that opens it
+    perform public.move_masked_messages(s.id, mid, true);
     update masquerade_sessions set status = 'matched', match_id = mid where id = s.id;
     -- Any other masked chat you two have going (Masquerade, Meet, a wave) joins this chat too
     perform public.merge_pair_chats(s.user_a, s.user_b, mid, s.id);
@@ -135,3 +135,15 @@ end $$;
 
 revoke all on function public.move_masked_messages(uuid, uuid, boolean) from public, anon, authenticated;
 revoke all on function public.merge_pair_chats(uuid, uuid, uuid, uuid) from public, anon, authenticated;
+
+-- Fix chats already caught in this: other masked chats with someone you unmasked with become a card
+do $$
+declare r record;
+begin
+  for r in select distinct on (s.match_id) s.user_a, s.user_b, s.match_id, s.id from masquerade_sessions s
+           where s.status = 'matched' and s.match_id is not null and coalesce(s.ended_reason, '') <> 'merged'
+           order by s.match_id, s.started_at desc
+  loop
+    perform public.merge_pair_chats(r.user_a, r.user_b, r.match_id, r.id);
+  end loop;
+end $$;

@@ -117,18 +117,6 @@ end $$;
 revoke all on function public.move_masked_messages(uuid, uuid) from public, anon, authenticated;
 revoke all on function public.merge_pair_chats(uuid, uuid, uuid, uuid) from public, anon, authenticated;
 
--- Fix chats already caught in this: people who unmasked while another masked chat was still open
-do $$
-declare r record;
-begin
-  for r in select distinct on (s.match_id) s.user_a, s.user_b, s.match_id, s.id from masquerade_sessions s
-           where s.status = 'matched' and s.match_id is not null and coalesce(s.ended_reason, '') <> 'merged'
-           order by s.match_id, s.started_at desc
-  loop
-    perform public.merge_pair_chats(r.user_a, r.user_b, r.match_id, r.id);
-  end loop;
-end $$;
-
 -- Ages show in masked chats too (small, next to whether they're a man or a woman)
 create or replace function public.get_masquerade(p_session uuid) returns json
 language plpgsql security definer set search_path = public as $$
