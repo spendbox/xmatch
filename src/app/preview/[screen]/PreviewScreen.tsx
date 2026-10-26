@@ -532,6 +532,20 @@ function ScreenBody({ screen }: { screen: string }) {
       return <HomeScreen demoPeople={homePeople} demoSetup={{ place: true, push: false, things: 4, claimed: false, reward: 5 }} profile={me} wallet={null} stats={null} matches={[]} hour={demoHour("next")} />;
     case "chat":
       return <MasqueradeRoom initial={session()} initialMessages={msgs} demo={{ remaining: 121 }} />;
+    case "chat-stickers":
+      return (
+        <MasqueradeRoom
+          initial={session()}
+          initialMessages={[
+            ...msgs.slice(0, 4),
+            { id: 5, sender_id: "me", body: "Same, but I'm judging the jollof at every stop", created_at: iso(120), reactions: { ada: "😂", me: "😈" } },
+            { id: 8, sender_id: "ada", kind: "sticker", body: "Jollof?", media_meta: { pose: "jollof", color: "#ffb02e" }, created_at: iso(3), reactions: { me: "❤️" } },
+            { id: 9, sender_id: "me", body: "Party jollof, no argument", created_at: new Date(Date.now() - 60_000).toISOString(), edited_at: iso(1) },
+            { id: 10, sender_id: "me", kind: "sticker", body: "Gbam, Ada!", media_meta: { pose: "stamp", color: "#e5484d" }, created_at: iso(1) },
+          ]}
+          demo={{ remaining: 1800 }}
+        />
+      );
     case "voice-chat":
       return (
         <MasqueradeRoom

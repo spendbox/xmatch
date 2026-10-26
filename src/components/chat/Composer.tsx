@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
-import { Camera, Gift, Hourglass, Images, Mic, Plus, SendHorizontal, Trash2, X } from "lucide-react";
+import { Camera, Check, Gift, Hourglass, Images, Mic, Pencil, Plus, SendHorizontal, Sticker, Trash2, X } from "lucide-react";
 import type { ChatMessage } from "@/lib/types";
 import { MAX_MEDIA_BYTES, formatDuration } from "@/lib/chatMedia";
 import { Sheet } from "@/components/ui/Sheet";
@@ -11,6 +11,7 @@ import { Toggle } from "@/components/ui/Toggle";
 import { snippet } from "./MessageList";
 import { loadDraft, saveDraft, sweepDrafts } from "@/lib/chatDraft";
 import { useVoiceRecorder } from "./useVoiceRecorder";
+import { StickerSheet, type StickerPick } from "@/components/stickers/StickerSheet";
 
 export type MediaKind = "image" | "video";
 
@@ -44,6 +45,12 @@ type Props = {
   saveKey?: string;
   /** Hold back the "Tap + for more" tip (something else is showing above the box) */
   noTip?: boolean;
+  /** Turn on Masky stickers */
+  onSendSticker?: (s: StickerPick) => Promise<void> | void;
+  /** Your own message being edited: its words go in the box, and sending saves the change */
+  editing?: ChatMessage | null;
+  onEdit?: (m: ChatMessage, text: string) => Promise<void> | void;
+  onCancelEdit?: () => void;
 };
 
 export function Composer({
@@ -62,8 +69,13 @@ export function Composer({
   draft,
   saveKey,
   noTip,
+  onSendSticker,
+  editing,
+  onEdit,
+  onCancelEdit,
 }: Props) {
   const [text, setText] = useState("");
+  const [stickersOpen, setStickersOpen] = useState(false);
   // What you typed last time you were in this chat
   const restored = useRef(false);
   useEffect(() => {
@@ -75,10 +87,28 @@ export function Composer({
     sweepDrafts();
   }, [saveKey]);
   useEffect(() => {
-    if (!saveKey || !restored.current) return;
+    // While editing a sent message, the box holds that message, not your draft
+    if (!saveKey || !restored.current || editing) return;
     const t = setTimeout(() => saveDraft(saveKey, text), 300);
     return () => clearTimeout(t);
-  }, [saveKey, text]);
+  }, [saveKey, text, editing]);
+  // Editing: put the message's words in the box; done or cancelled: back to your draft
+  const editingId = editing?.id ?? null;
+  useEffect(() => {
+    if (editingId == null) {
+      if (restored.current && saveKey) setText(loadDraft(saveKey));
+      return;
+    }
+    const body = editing?.body ?? "";
+    setText(body);
+    requestAnimationFrame(() => {
+      const el = area.current;
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(body.length, body.length);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingId]);
   const [attachOpen, setAttachOpen] = useState(false);
   const [picked, setPicked] = useState<{ file: File; url: string; kind: MediaKind } | null>(null);
   const [caption, setCaption] = useState("");
@@ -146,6 +176,13 @@ export function Composer({
     e?.preventDefault();
     if (!hasText || disabled) return;
     const t = text.trim();
+    if (editing && onEdit) {
+      tapFeedback();
+      const m = editing;
+      if (t !== m.body) await onEdit(m, t);
+      else onCancelEdit?.();
+      return;
+    }
     setText("");
     saveDraft(saveKey, "");
     tapFeedback();
@@ -185,7 +222,21 @@ export function Composer({
 
   return (
     <div className="border-t border-line bg-surface pb-safe lg:[&>*]:mx-auto lg:[&>*]:max-w-3xl">
-      {replyTo && (
+      {editing && (
+        <div className="flex animate-fade-up items-center gap-3 px-4 pt-3">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand-soft text-brand">
+            <Pencil size={16} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[12px] font-semibold text-brand">Editing message</p>
+            <p className="truncate text-[13px] text-muted">{snippet(editing)}</p>
+          </div>
+          <button type="button" onClick={onCancelEdit} className="grid h-9 w-9 place-items-center rounded-full text-muted hover:bg-ink/5" aria-label="Cancel editing">
+            <X size={18} />
+          </button>
+        </div>
+      )}
+      {replyTo && !editing && (
         <div className="flex animate-fade-up items-center gap-3 px-4 pt-3">
           <div className="min-w-0 flex-1 rounded-xl border-l-[3px] border-brand bg-brand-soft/70 px-3 py-1.5">
             <p className="text-[12px] font-semibold text-brand">Replying to {replyName}</p>
@@ -276,17 +327,31 @@ export function Composer({
             className="no-scrollbar max-h-[132px] min-h-10 min-w-0 flex-1 resize-none bg-transparent px-2.5 py-[9px] text-[16px] leading-[22px] outline-none placeholder:text-muted disabled:opacity-60"
             aria-label="Message"
           />
-          {hasText || (!onSendVoice && !onVoiceTap) ? (
+          {onSendSticker && !hasText && !editing && (
+            <button
+              type="button"
+              onClick={() => {
+                tapFeedback();
+                setStickersOpen(true);
+              }}
+              disabled={disabled}
+              aria-label="Stickers"
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-ink-soft transition hover:bg-ink/5 active:scale-95 disabled:opacity-50"
+            >
+              <Sticker size={21} />
+            </button>
+          )}
+          {hasText || editing || (!onSendVoice && !onVoiceTap) ? (
             <button
               type="submit"
               disabled={!hasText || disabled}
-              aria-label="Send"
+              aria-label={editing ? "Save edit" : "Send"}
               className={clsx(
                 "grid h-10 w-10 shrink-0 place-items-center rounded-full transition active:scale-95",
                 hasText ? "animate-pop bg-brand text-white shadow-[0_6px_16px_-6px_rgb(91_63_217/0.7)]" : "bg-line text-muted",
               )}
             >
-              <SendHorizontal size={18} />
+              {editing ? <Check size={19} /> : <SendHorizontal size={18} />}
             </button>
           ) : (
             <button
@@ -309,6 +374,8 @@ export function Composer({
 
       <input ref={gallery} type="file" accept="image/*,video/*" className="hidden" onChange={(e) => { choose(e.target.files); e.target.value = ""; }} />
       <input ref={camera} type="file" accept="image/*,video/*" capture="environment" className="hidden" onChange={(e) => { choose(e.target.files); e.target.value = ""; }} />
+
+      {onSendSticker && <StickerSheet open={stickersOpen} onClose={() => setStickersOpen(false)} onSend={(s) => void onSendSticker(s)} />}
 
       <Sheet open={attachOpen} onClose={() => setAttachOpen(false)} title="More">
         <div className="grid grid-cols-3 gap-2.5 pb-2">

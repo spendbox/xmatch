@@ -18,6 +18,8 @@ export function chatPreview(kind: string | null | undefined, body: string | null
       return "🎁 Gift";
     case "game":
       return `🎮 ${text || "Game"}`;
+    case "sticker":
+      return `✨ Sticker${text ? `: ${text}` : ""}`;
     case "masked":
       return "🎭 Your masked chat";
     default:
