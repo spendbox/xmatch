@@ -6,6 +6,7 @@ import { buzz, sfx, type Game, type GameActions } from "@/lib/games";
 import { canPlay, parse, SHAPES, type Shape, type WhotState } from "@/lib/boardgames/whot";
 import { GOLD, PURPLE, Player, useTicker, type Names } from "./parts";
 import { useMove } from "./useMove";
+import { GamePop, usePops, type Pop } from "./GamePop";
 
 const MAROON = "#8f1d3a";
 const CARD_W = 64;
@@ -47,6 +48,7 @@ export function Whot({ game, names, act }: { game: Game; names: Names; act: Game
   const seen = useRef(st.moves);
   const mine = useRef<string | null>(null);
   const n = useRef(0);
+  const pops = usePops();
 
   const rect = (el: Element | null | undefined) => el?.getBoundingClientRect() ?? new DOMRect();
   const land = (card: string) => setPile((p) => (p[p.length - 1] === card ? p : [...p.slice(-4), card]));
@@ -67,6 +69,8 @@ export function Whot({ game, names, act }: { game: Game; names: Names; act: Game
       return;
     }
     const byMe = l.by === me;
+    const p = whotPop(st, byMe, names.them);
+    if (p) setTimeout(() => pops.show(p), 380);
     if (l.card) {
       if (byMe && mine.current === l.card) {
         // Yours is already on its way
@@ -89,6 +93,29 @@ export function Whot({ game, names, act }: { game: Game; names: Names; act: Game
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [st.moves]);
+
+  // Check up: the game is over
+  const ended = game.status === "done";
+  useEffect(() => {
+    if (!ended || !game.winner) return;
+    pops.show(game.winner === me ? { title: "Check up!", sub: "You finished first", tone: "win" } : { title: "Check up!", sub: `${names.them} finished first`, tone: "bad" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ended]);
+
+  // Previews only: show one pop-up again and again so it can be seen
+  const demoPop = (st as { demo_pop?: string }).demo_pop;
+  useEffect(() => {
+    if (!demoPop) return;
+    const p = DEMO_POPS(names.them)[demoPop];
+    if (!p) return;
+    const t = setTimeout(() => pops.show(p), 500);
+    const i = setInterval(() => pops.show(p), 3000);
+    return () => {
+      clearTimeout(t);
+      clearInterval(i);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [demoPop]);
 
   async function playCard(card: string, call?: Shape) {
     // Send it flying from your hand right away
@@ -255,6 +282,8 @@ export function Whot({ game, names, act }: { game: Game; names: Names; act: Game
         ))}
       </div>
 
+      <GamePop pop={pops.pop} />
+
       {calling && (
         <div className="absolute inset-0 z-40 grid place-items-center bg-black/60 px-6" onClick={() => setCalling(null)}>
           <div className="gm-burst w-full max-w-xs rounded-[26px] bg-white p-4 text-ink" onClick={(e) => e.stopPropagation()}>
@@ -368,3 +397,48 @@ export function ShapeIcon({ shape, size, color }: { shape: Shape; size: number; 
     </svg>
   );
 }
+
+const bigCard = (card: string) => (
+  <span className="block scale-[1.45]">
+    <Card card={card} />
+  </span>
+);
+
+/** The pop-up for a power card (or a last card), from your side of the table */
+function whotPop(st: WhotState, byMe: boolean, them: string): Omit<Pop, "id"> | null {
+  const l = st.last;
+  if (!l?.card) return null;
+  const c = parse(l.card);
+  const art = bigCard(l.card);
+  if (c.shape === "whot") {
+    const want = st.called ?? l.called;
+    return byMe
+      ? { title: "Whot!", sub: want ? `You asked for ${want}` : "You called a shape", tone: "good", art }
+      : { title: "Whot!", sub: want ? `${them} wants ${want}` : `${them} called a shape`, tone: "move", art };
+  }
+  if (c.n === 2) {
+    const owed = st.pending ?? 2;
+    const title = owed > 2 ? `Pick ${owed === 4 ? "Four" : owed === 6 ? "Six" : owed}!` : "Pick Two!";
+    return byMe ? { title, sub: `${them} picks ${owed} · unless they play a 2`, tone: "good", art } : { title, sub: `Play a 2 or pick ${owed}`, tone: "bad", art };
+  }
+  if (c.n === 5) return byMe ? { title: "Pick Three!", sub: `${them} picks 3`, tone: "good", art } : { title: "Pick Three!", sub: "You pick 3", tone: "bad", art };
+  if (c.n === 1) return byMe ? { title: "Hold On!", sub: "You go again", tone: "good", art } : { title: "Hold On!", sub: `${them} goes again`, tone: "move", art };
+  if (c.n === 8) return byMe ? { title: "Suspension!", sub: `${them} misses a turn`, tone: "good", art } : { title: "Suspension!", sub: "You miss a turn", tone: "bad", art };
+  if (c.n === 14) return byMe ? { title: "General Market!", sub: `${them} picks 1 · you go again`, tone: "good", art } : { title: "General Market!", sub: "You pick 1", tone: "bad", art };
+  const left = l.by === "a" ? st.count_a : st.count_b;
+  if (left === 1) return byMe ? { title: "Last Card!", sub: "One more and you win", tone: "move" } : { title: "Last Card!", sub: `${them} has one card left`, tone: "bad" };
+  return null;
+}
+
+/** Previews: every pop-up by name */
+const DEMO_POPS = (them: string): Record<string, Omit<Pop, "id">> => ({
+  pick2: { title: "Pick Two!", sub: `${them} picks 2 · unless they play a 2`, tone: "good", art: bigCard("star:2") },
+  pick2in: { title: "Pick Two!", sub: "Play a 2 or pick 2", tone: "bad", art: bigCard("circle:2") },
+  pick3: { title: "Pick Three!", sub: `${them} picks 3`, tone: "good", art: bigCard("circle:5") },
+  hold: { title: "Hold On!", sub: "You go again", tone: "good", art: bigCard("triangle:1") },
+  susp: { title: "Suspension!", sub: "You miss a turn", tone: "bad", art: bigCard("star:8") },
+  gen: { title: "General Market!", sub: `${them} picks 1 · you go again`, tone: "good", art: bigCard("square:14") },
+  whot: { title: "Whot!", sub: `${them} wants star`, tone: "move", art: bigCard("whot:20") },
+  last: { title: "Last Card!", sub: `${them} has one card left`, tone: "bad" },
+  check: { title: "Check up!", sub: "You finished first", tone: "win" },
+});

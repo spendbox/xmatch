@@ -64,6 +64,20 @@ function base(over: Partial<Game>): Game {
 function demo(screen: string): Game | null {
   const t = Date.now();
   const at = (s: number) => new Date(t + s * 1000).toISOString();
+  // New board games and the pop-ups (game-ludo, game-ludo-six, game-snakes-ladder, game-whot-pick2 …)
+  const [, kind, popName] = screen.match(/^game-(ludo|snakes|whot)(?:-(\w+))?$/) ?? [];
+  if (kind === "ludo")
+    return base({
+      kind: "ludo",
+      state: { demo: true, demo_pop: popName, tokens: { a: [-1, 7, 20, 56], b: [-1, -1, 31, 12] }, turn: "a", roll: null, moves: 6, last: null },
+    });
+  if (kind === "snakes") return base({ kind: "snakes", state: { demo: true, demo_pop: popName, pos: { a: 58, b: 47 }, turn: "a", moves: 8, last: null } });
+  if (kind === "whot" && popName)
+    return base({
+      kind: "whot",
+      state: { demo_pop: popName, top: "circle:7", called: null, turn: "a", count_a: 6, count_b: 4, market: 33, last: { by: "b", card: "circle:7", note: "" }, moves: 9 },
+      mine: { hand: ["circle:2", "star:7", "whot:20", "square:11", "triangle:4", "cross:13"] },
+    });
   switch (screen) {
     case "game-challenge":
       return base({ status: "invited", me: "b", deadline_at: at(24), started_at: null, record: { played: 1, won: 1, lost: 0, alike: null } });

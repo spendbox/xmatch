@@ -18,6 +18,8 @@ import { ChessGame } from "./ChessGame";
 import { Ayo } from "./Ayo";
 import { Bombshell } from "./Bombshell";
 import { GemClash } from "./GemClash";
+import { Ludo } from "./Ludo";
+import { SnakesLadders } from "./SnakesLadders";
 import { ReactionButton, ReactionHint, ReactionLayer, ReactionTray, useReactionHint, useReactions } from "./Reactions";
 
 /** The full-screen game: challenge, 3-2-1, the game itself, then results */
@@ -133,6 +135,8 @@ export function GameArena({
     else if (game.kind === "ayo") body = <Ayo game={game} names={names} act={act} />;
     else if (game.kind === "bomb") body = <Bombshell game={game} names={names} act={act} />;
     else if (game.kind === "gems") body = <GemClash game={game} names={names} act={act} />;
+    else if (game.kind === "ludo") body = <Ludo game={game} names={names} act={act} />;
+    else if (game.kind === "snakes") body = <SnakesLadders game={game} names={names} act={act} />;
     else body = <WordHunt game={game} names={names} act={act} />;
   }
 
@@ -143,7 +147,7 @@ export function GameArena({
   if (!mounted) return null;
   return createPortal(
     <div className="gm-arena fixed inset-0 z-[60] flex justify-center bg-[#0b0720] animate-fade-in" role="dialog" aria-label={info.title}>
-      <div className="relative flex h-dvh w-full max-w-md flex-col overflow-hidden" style={{ background: info.bg }}>
+      <div className={`relative flex h-dvh w-full flex-col overflow-hidden ${WIDE_GAMES.includes(game.kind) ? "max-w-md lg:max-w-none" : "max-w-md"}`} style={{ background: info.bg }}>
         {bar && (
           <div className="flex shrink-0 items-center gap-2 px-3 pt-[max(12px,env(safe-area-inset-top))] pb-1">
             <button
@@ -350,6 +354,8 @@ function VsIntro({ game, names, act }: { game: Game; names: Names; act: GameActi
 }
 
 const TURN_GAMES = ["c4", "whot", "checkers", "chess", "ayo", "gems", "bomb"];
+/** Board games that use the whole screen on computers */
+const WIDE_GAMES = ["ludo", "snakes"];
 
 /** A big "Your turn!" for a moment whenever it becomes your move */
 function TurnStamp({ on }: { on: boolean }) {
