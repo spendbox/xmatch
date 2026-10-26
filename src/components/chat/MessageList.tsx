@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import {
-  Ban, Clock3, Copy, Gamepad2, Hourglass, MessageCircle, Timer, CornerUpLeft, MessageCircleQuestion, Phone, PhoneIncoming, PhoneMissed, PhoneOutgoing, Play, Reply, Trash2, Video,
+  Ban, Clock3, Copy, Gamepad2, Hourglass, MessageCircle, Timer, CornerUpLeft, MessageCircleQuestion, Pencil, Phone, PhoneIncoming, PhoneMissed, PhoneOutgoing, Play, Plus, Reply, Trash2, Video,
 } from "lucide-react";
 import type { ChatMessage, Gender } from "@/lib/types";
 import { formatDuration } from "@/lib/chatMedia";
@@ -23,6 +23,14 @@ import { MaskFace } from "@/components/ui/MaskFace";
 import { Photo } from "@/components/ui/Photo";
 import { useSignedUrl } from "./useSignedUrl";
 import { KeyCoin } from "@/components/keys/KeyIcon";
+import { Masky } from "@/components/stickers/Masky";
+import { stickerOf } from "@/components/stickers/StickerSheet";
+
+/** Quick reactions when you hold a message (😈 because Dashpad) */
+export const QUICK_REACTIONS = ["❤️", "😂", "😈", "🔥", "😮", "😢"];
+const MORE_REACTIONS = ["👏", "🙏", "😍", "🥰", "😘", "😭", "🤣", "😅", "🙄", "😏", "😎", "🤔", "😳", "🥺", "💯", "🎉", "💃", "👀", "💜", "👍", "👎", "🤝", "😡", "🤯"];
+/** You can fix your own message for this long after sending it */
+export const EDIT_MINUTES = 15;
 
 type Props = {
   messages: ChatMessage[];
@@ -39,6 +47,10 @@ type Props = {
   slow?: { cost: number; onReveal: (m: ChatMessage) => Promise<void> | void };
   /** Whether a sender is a man or a woman: picks the mask shown if their photo won't load */
   genderOf?: (senderId: string | null) => Gender | null | undefined;
+  /** Turn on reactions (hold a message, or double-tap for ❤️). An empty emoji takes yours back. */
+  onReact?: (m: ChatMessage, emoji: string) => void;
+  /** Turn on editing your own messages (within 15 minutes) */
+  onEdit?: (m: ChatMessage) => void;
 };
 
 /** A slow reveal clears fully after 5 messages from each of you */
@@ -61,12 +73,14 @@ export function snippet(m: ChatMessage | undefined) {
       return `Gift · ${giftById(m.media_meta?.gift ?? m.body)?.name ?? "Surprise"}`;
     case "game":
       return `🎮 ${m.body}`;
+    case "sticker":
+      return `Sticker · ${m.body}`;
     default:
       return m.body.replace(/^💬 /, "");
   }
 }
 
-export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDates, footer, onGameAgain, slow, genderOf }: Props) {
+export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDates, footer, onGameAgain, slow, genderOf, onReact, onEdit }: Props) {
   // How far each slow reveal has cleared: messages after it from each person, up to 5 each (0 to 10)
   const slowProgress = useMemo(() => {
     const out = new Map<number, number>();
@@ -91,6 +105,20 @@ export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDat
   const [menu, setMenu] = useState<ChatMessage | null>(null);
   const [viewer, setViewer] = useState<ViewerItem | null>(null);
   const [flash, setFlash] = useState<number | null>(null);
+  const [moreReactions, setMoreReactions] = useState(false);
+  // Who reacted to a message (tap the reactions under it)
+  const [who, setWho] = useState<ChatMessage | null>(null);
+  const canReact = (m: ChatMessage) => !!onReact && m.id > 0 && !m.deleted_at && !m.pending;
+  const canEdit = (m: ChatMessage) =>
+    !!onEdit && m.id > 0 && m.sender_id === myId && (m.kind ?? "text") === "text" && !m.deleted_at && Date.now() - new Date(m.created_at).getTime() < EDIT_MINUTES * 60_000;
+  function closeMenu() {
+    setMenu(null);
+    setMoreReactions(false);
+  }
+  function react(m: ChatMessage, emoji: string) {
+    tapFeedback();
+    onReact?.(m, emoji);
+  }
   const byId = useRef(new Map<number, ChatMessage>());
   byId.current = new Map(messages.map((m) => [m.id, m]));
 
@@ -288,8 +316,19 @@ export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDat
               disabled={!onReply || !!m.deleted_at || m.pending}
               onReply={() => onReply?.(m)}
               onLongPress={() => !m.pending && setMenu(m)}
+              onDoubleTap={canReact(m) && m.kind !== "image" && m.kind !== "video" ? () => react(m, m.reactions?.[myId] === "❤️" ? "" : "❤️") : undefined}
             >
               <div className={clsx("flex flex-col", mine ? "items-end" : "items-start", firstOfGroup && "mt-2")} data-msg={m.id}>
+                {m.kind === "sticker" && !m.deleted_at ? (
+                  <StickerMessage
+                    m={m}
+                    mine={mine}
+                    flash={flash === m.id}
+                    quote={m.reply_to ? byId.current.get(m.reply_to) : undefined}
+                    quoteName={(q) => (q.sender_id === myId ? "You" : nameOf(q.sender_id))}
+                    onQuote={() => m.reply_to && jumpTo(m.reply_to)}
+                  />
+                ) : (
                 <Bubble
                   m={m}
                   mine={mine}
@@ -302,6 +341,8 @@ export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDat
                   tail={lastOfGroup}
                   slow={m.slow ? { progress: slowProgress.get(m.id) ?? 0, cost: slow?.cost ?? 10, onReveal: slow?.onReveal } : undefined}
                 />
+                )}
+                {!m.deleted_at && <ReactionPill reactions={m.reactions} myId={myId} mine={mine} onOpen={() => setWho(m)} />}
                 {lastOfGroup && (
                   <span className="chat-meta mt-1 flex items-center gap-1 px-1 text-[11px] text-muted">
                     {m.failed ? (
@@ -323,27 +364,163 @@ export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDat
       {footer}
       <div ref={end} />
 
-      <Sheet open={!!menu} onClose={() => setMenu(null)} title="Message" subtitle={menu ? snippet(menu).slice(0, 80) : undefined}>
+      <Sheet open={!!menu} onClose={closeMenu} title="Message" subtitle={menu ? snippet(menu).slice(0, 80) : undefined}>
         <div className="space-y-1.5 pb-2">
-          {onReply && (
-            <MenuButton icon={<Reply size={19} />} label="Reply" onClick={() => { onReply(menu!); setMenu(null); }} />
+          {menu && canReact(menu) && (
+            <div className="mb-2">
+              <div className="flex items-center justify-between gap-1 rounded-full bg-cream p-1.5">
+                {QUICK_REACTIONS.map((e) => (
+                  <button
+                    key={e}
+                    type="button"
+                    onClick={() => {
+                      react(menu, menu.reactions?.[myId] === e ? "" : e);
+                      closeMenu();
+                    }}
+                    aria-label={`React ${e}`}
+                    aria-pressed={menu.reactions?.[myId] === e}
+                    className={clsx(
+                      "grid h-11 w-11 place-items-center rounded-full text-[26px] leading-none transition active:scale-90",
+                      menu.reactions?.[myId] === e ? "bg-brand-soft ring-2 ring-brand/40" : "hover:bg-surface",
+                    )}
+                  >
+                    {e}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setMoreReactions((v) => !v)}
+                  aria-label="More reactions"
+                  aria-expanded={moreReactions}
+                  className={clsx("grid h-11 w-11 place-items-center rounded-full text-muted transition active:scale-90", moreReactions ? "bg-surface" : "hover:bg-surface")}
+                >
+                  <Plus size={20} className={clsx("transition-transform", moreReactions && "rotate-45")} />
+                </button>
+              </div>
+              {moreReactions && (
+                <div className="mt-2 grid animate-fade-up grid-cols-8 gap-1">
+                  {MORE_REACTIONS.map((e) => (
+                    <button
+                      key={e}
+                      type="button"
+                      onClick={() => {
+                        react(menu, menu.reactions?.[myId] === e ? "" : e);
+                        closeMenu();
+                      }}
+                      aria-label={`React ${e}`}
+                      className={clsx("grid aspect-square place-items-center rounded-xl text-[24px] leading-none transition active:scale-90", menu.reactions?.[myId] === e ? "bg-brand-soft" : "hover:bg-cream")}
+                    >
+                      {e}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
-          {menu && menu.body && menu.kind !== "audio" ? (
+          {onReply && (
+            <MenuButton icon={<Reply size={19} />} label="Reply" onClick={() => { onReply(menu!); closeMenu(); }} />
+          )}
+          {menu && canEdit(menu) && (
+            <MenuButton icon={<Pencil size={19} />} label="Edit" onClick={() => { onEdit?.(menu); closeMenu(); }} />
+          )}
+          {menu && menu.body && menu.kind !== "audio" && menu.kind !== "sticker" ? (
             <MenuButton
               icon={<Copy size={19} />}
               label="Copy text"
               onClick={() => {
                 navigator.clipboard?.writeText(menu!.body.replace(/^💬 /, "")).catch(() => {});
-                setMenu(null);
+                closeMenu();
               }}
             />
           ) : null}
           {onDelete && menu?.sender_id === myId && !menu.deleted_at && (
-            <MenuButton danger icon={<Trash2 size={19} />} label="Delete for everyone" onClick={() => { onDelete(menu!); setMenu(null); }} />
+            <MenuButton danger icon={<Trash2 size={19} />} label="Delete for everyone" onClick={() => { onDelete(menu!); closeMenu(); }} />
           )}
         </div>
       </Sheet>
+      <Sheet open={!!who} onClose={() => setWho(null)} title="Reactions">
+        <div className="space-y-1 pb-2">
+          {who &&
+            Object.entries(who.reactions ?? {})
+              .sort(([a], [b]) => (a === myId ? -1 : b === myId ? 1 : 0))
+              .map(([id, e]) => (
+                <button
+                  key={id}
+                  type="button"
+                  disabled={id !== myId}
+                  onClick={() => {
+                    react(who, "");
+                    setWho(null);
+                  }}
+                  className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition enabled:hover:bg-cream enabled:active:scale-[0.98]"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[15px] font-semibold">{id === myId ? "You" : nameOf(id)}</span>
+                    {id === myId && <span className="block text-[12.5px] text-muted">Tap to remove</span>}
+                  </span>
+                  <span className="text-[26px] leading-none">{e}</span>
+                </button>
+              ))}
+        </div>
+      </Sheet>
       <MediaViewer item={viewer} onClose={() => setViewer(null)} />
+    </div>
+  );
+}
+
+/** The reactions under a message: each emoji once, and how many if more than one */
+function ReactionPill({ reactions, myId, mine, onOpen }: { reactions?: Record<string, string> | null; myId: string; mine: boolean; onOpen: () => void }) {
+  const list = Object.values(reactions ?? {});
+  if (!list.length) return null;
+  const counts = new Map<string, number>();
+  list.forEach((e) => counts.set(e, (counts.get(e) ?? 0) + 1));
+  const emojis = [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([e]) => e).slice(0, 3);
+  const minePicked = !!reactions?.[myId];
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-label={`Reactions: ${list.join(" ")}. See who`}
+      className={clsx(
+        "relative z-[1] -mt-2 flex h-[26px] animate-pop items-center gap-0.5 rounded-full border-2 border-cream px-1.5 text-[14px] leading-none shadow-card transition active:scale-95",
+        mine ? "mr-2" : "ml-2",
+        minePicked ? "bg-brand-soft" : "bg-surface",
+      )}
+    >
+      {emojis.map((e) => (
+        <span key={e}>{e}</span>
+      ))}
+      {list.length > 1 && <span className="ml-0.5 text-[12px] font-bold text-ink-soft">{list.length}</span>}
+    </button>
+  );
+}
+
+/** A Masky sticker: no bubble, just Masky (with the message it answers above, if any) */
+function StickerMessage({
+  m,
+  mine,
+  flash,
+  quote,
+  quoteName,
+  onQuote,
+}: {
+  m: ChatMessage;
+  mine: boolean;
+  flash: boolean;
+  quote?: ChatMessage;
+  quoteName: (q: ChatMessage) => string;
+  onQuote: () => void;
+}) {
+  const s = stickerOf(m.media_meta, m.body);
+  return (
+    <div className={clsx("flex flex-col rounded-[24px] transition-shadow duration-500", mine ? "items-end" : "items-start", flash && "ring-4 ring-gold/70")}>
+      {m.reply_to ? (
+        <button type="button" onClick={onQuote} className="mb-1 max-w-[220px] rounded-[14px] border-l-[3px] border-brand bg-surface px-3 py-1.5 text-left shadow-card">
+          <span className="block text-[12px] font-semibold text-brand">{quote ? quoteName(quote) : "Reply"}</span>
+          <span className="line-clamp-1 text-[13px] text-muted">{snippet(quote)}</span>
+        </button>
+      ) : null}
+      <Masky pose={s.pose} caption={s.caption} color={s.color} size={140} className={clsx("mx-3", m.pending && "opacity-70")} />
     </div>
   );
 }
@@ -374,13 +551,16 @@ function SwipeRow({
   disabled,
   onReply,
   onLongPress,
+  onDoubleTap,
 }: {
   children: React.ReactNode;
   mine: boolean;
   disabled?: boolean;
   onReply: () => void;
   onLongPress: () => void;
+  onDoubleTap?: () => void;
 }) {
+  const lastTap = useRef(0);
   const [dx, setDx] = useState(0);
   const start = useRef<{ x: number; y: number; t: ReturnType<typeof setTimeout> | null; locked: boolean } | null>(null);
   const swallowClick = useRef(false);
@@ -416,6 +596,14 @@ function SwipeRow({
   function up() {
     const s = start.current;
     if (s?.t) clearTimeout(s.t);
+    // A quick tap that didn't move: two in a row is a double-tap
+    if (s && s.t && !s.locked && onDoubleTap) {
+      const now = Date.now();
+      if (now - lastTap.current < 320) {
+        lastTap.current = 0;
+        onDoubleTap();
+      } else lastTap.current = now;
+    }
     if (dx > 54) {
       tapFeedback();
       onReply();
@@ -563,7 +751,10 @@ function Bubble({
         </div>
       ) : null}
       {(m.kind === "text" || !m.kind || (media && m.body)) && m.body ? (
-        <p className={clsx("text-[15px] leading-snug whitespace-pre-wrap", media ? "px-3 pt-1.5 pb-2" : "px-4 py-2.5")}>{m.body}</p>
+        <p className={clsx("text-[15px] leading-snug whitespace-pre-wrap", media ? "px-3 pt-1.5 pb-2" : "px-4 py-2.5")}>
+          {m.body}
+          {m.edited_at && <span className={clsx("ml-1.5 text-[11px] italic", mine ? "text-white/65" : "text-muted")}>edited</span>}
+        </p>
       ) : null}
     </div>
   );

@@ -30,6 +30,7 @@ import { refreshMenuBadges } from "@/components/app/useMenuBadges";
 import { useGameHost } from "@/components/games/GameHost";
 import { MaskedVoiceSheet } from "@/components/chat/MaskedVoiceSheet";
 import type { VoiceStyle } from "@/lib/voiceDisguise";
+import type { StickerPick } from "@/components/stickers/StickerSheet";
 
 export function MatchChat({
   matchId,
@@ -77,6 +78,7 @@ export function MatchChat({
   const [toast, setToast] = useState<string | null>(null);
   const [voiceOpen, setVoiceOpen] = useState(false);
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
+  const [editing, setEditing] = useState<ChatMessage | null>(null);
   const { startCall, call } = useCall();
   const [giftOpen, setGiftOpen] = useState(false);
   const { wallet, refresh: refreshWallet } = useWallet(myId);
@@ -133,7 +135,8 @@ export function MatchChat({
     return () => clearTimeout(t);
   }, [toast]);
 
-  const COLUMNS = "id, sender_id, kind, body, created_at, media_path, media_meta, reply_to, deleted_at, slow, slow_paid_at";
+  // Everything, so reactions and edits come back too (and nothing breaks before update 92 runs)
+  const COLUMNS = "*";
 
   /** Shows the message straight away, then swaps in the saved one. */
   async function deliver(temp: ChatMessage, save: () => Promise<Record<string, unknown>>) {
@@ -165,6 +168,36 @@ export function MatchChat({
 
   async function send(text: string) {
     await deliver(draft("text", text), async () => ({ kind: "text", body: text }));
+  }
+
+  async function sendSticker(st: StickerPick) {
+    const meta = { pose: st.pose, color: st.color };
+    await deliver(draft("sticker", st.caption, { media_meta: meta }), async () => ({ kind: "sticker", body: st.caption, media_meta: meta }));
+  }
+
+  // React (or take yours back): shows straight away, undone if it doesn't save
+  async function react(m: ChatMessage, emoji: string) {
+    const before = m.reactions ?? {};
+    const next = { ...before };
+    if (!emoji || before[myId] === emoji) delete next[myId];
+    else next[myId] = emoji;
+    setMessages((l) => l.map((x) => (x.id === m.id ? { ...x, reactions: next } : x)));
+    const { data, error } = await supabase.rpc("react_message", { p_message: m.id, p_emoji: emoji === before[myId] ? "" : emoji });
+    if (error) {
+      setMessages((l) => l.map((x) => (x.id === m.id ? { ...x, reactions: before } : x)));
+      setToast(error.message.includes("react_message") ? "Reactions are coming soon." : "Couldn't react. Check your connection.");
+    } else if (data) setMessages((l) => l.map((x) => (x.id === m.id ? { ...x, reactions: data as Record<string, string> } : x)));
+  }
+
+  async function saveEdit(m: ChatMessage, text: string) {
+    setEditing(null);
+    const before = { body: m.body, edited_at: m.edited_at ?? null };
+    setMessages((l) => l.map((x) => (x.id === m.id ? { ...x, body: text, edited_at: new Date().toISOString() } : x)));
+    const { error } = await supabase.rpc("edit_message", { p_message: m.id, p_body: text });
+    if (error) {
+      setMessages((l) => l.map((x) => (x.id === m.id ? { ...x, ...before } : x)));
+      setToast(error.message.includes("15 minutes") ? "You can only edit a message in the first 15 minutes." : "Couldn't save your edit. Check your connection.");
+    }
   }
 
   async function sendMedia(file: File, kind: MediaKind, caption: string, slow: boolean) {
@@ -310,7 +343,7 @@ export function MatchChat({
           )}
           {messages.length === 0 && <p className="mt-3 text-[14px] text-muted">Say hi to {other.display_name} 👋</p>}
         </div>
-        <MessageList messages={messages} myId={myId} nameOf={nameOf} genderOf={(id) => (id === other.id ? other.gender : null)} onReply={setReplyTo} onDelete={remove} showDates onGameAgain={games.rematch} slow={{ cost: slowCost, onReveal: revealSlow }} />
+        <MessageList messages={messages} myId={myId} nameOf={nameOf} genderOf={(id) => (id === other.id ? other.gender : null)} onReply={setReplyTo} onDelete={remove} onReact={react} onEdit={(m) => { setReplyTo(null); setEditing(m); }} showDates onGameAgain={games.rematch} slow={{ cost: slowCost, onReveal: revealSlow }} />
       </div>
       </div>
 
@@ -327,6 +360,10 @@ export function MatchChat({
             : []),
         ]}
         onSend={send}
+        onSendSticker={sendSticker}
+        editing={editing}
+        onEdit={saveEdit}
+        onCancelEdit={() => setEditing(null)}
         onSendMedia={sendMedia}
         onVoiceTap={() => setVoiceOpen(true)}
         replyTo={replyTo}

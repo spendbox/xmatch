@@ -1,0 +1,59 @@
+/* Masky stickers: each pose's moves (see Masky.tsx) */
+.mk *{transform-box:view-box}
+@keyframes mk-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@keyframes mk-shake{0%,100%{transform:rotate(0)}10%{transform:rotate(-5deg) translateY(-3px)}20%{transform:rotate(5deg)}30%{transform:rotate(-4deg) translateY(-3px)}40%{transform:rotate(4deg)}50%{transform:rotate(0)}}
+@keyframes mk-jump{0%,100%{transform:translateY(0) scale(1,1)}12%{transform:translateY(0) scale(1.12,.86)}30%{transform:translateY(-34px) scale(.9,1.12)}50%{transform:translateY(0) scale(1.14,.86)}62%{transform:translateY(-6px) scale(.98,1.03)}74%{transform:translateY(0) scale(1,1)}}
+@keyframes mk-sway{0%,100%{transform:rotate(-9deg) translateY(0)}25%{transform:rotate(0) translateY(-8px)}50%{transform:rotate(9deg) translateY(0)}75%{transform:rotate(0) translateY(-8px)}}
+@keyframes mk-breathe{0%,100%{transform:scale(1,1)}50%{transform:scale(1.04,.97)}}
+@keyframes mk-dip{0%,40%,100%{transform:translateY(0) scale(1,1)}52%{transform:translateY(5px) scale(1.06,.93)}64%{transform:translateY(0)}}
+@keyframes mk-blink{0%,88%,100%{transform:scaleY(1)}92%{transform:scaleY(.08)}96%{transform:scaleY(1)}}
+@keyframes mk-wave{0%,100%{transform:rotate(-12deg)}25%{transform:rotate(26deg)}50%{transform:rotate(-12deg)}75%{transform:rotate(26deg)}}
+@keyframes mk-heart{0%{transform:translate(0,0) scale(.2);opacity:0}15%{opacity:1}70%{transform:translate(46px,-74px) scale(1.25);opacity:1}100%{transform:translate(58px,-96px) scale(1.4);opacity:0}}
+@keyframes mk-tearL{0%{transform:translate(0,0);opacity:0}10%{opacity:1}100%{transform:translate(-34px,26px);opacity:0}}
+@keyframes mk-tearR{0%{transform:translate(0,0);opacity:0}10%{opacity:1}100%{transform:translate(34px,26px);opacity:0}}
+@keyframes mk-pop{0%,100%{transform:scale(0) rotate(-20deg);opacity:0}20%{transform:scale(1.25) rotate(6deg);opacity:1}35%,80%{transform:scale(1) rotate(0);opacity:1}}
+@keyframes mk-up{0%{transform:translate(0,0) scale(.6);opacity:0}20%{opacity:1}100%{transform:translate(18px,-70px) scale(1.2);opacity:0}}
+@keyframes mk-bubble{0%,100%{transform:scale(.25)}70%{transform:scale(1)}78%{transform:scale(1.1);opacity:1}80%{transform:scale(1.3);opacity:0}}
+@keyframes mk-armA{0%,100%{transform:rotate(-70deg)}50%{transform:rotate(20deg)}}
+@keyframes mk-armB{0%,100%{transform:rotate(20deg)}50%{transform:rotate(-70deg)}}
+@keyframes mk-footA{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes mk-footB{0%,100%{transform:translateY(-10px)}50%{transform:translateY(0)}}
+@keyframes mk-lift{0%,25%,100%{transform:translateY(0) rotate(0)}45%,75%{transform:translateY(-22px) rotate(-8deg)}}
+@keyframes mk-slam{0%,30%{transform:rotate(-52deg)}48%{transform:rotate(6deg)}56%,100%{transform:rotate(0)}}
+@keyframes mk-impact{0%,46%{transform:scale(0);opacity:0}54%{transform:scale(1.3);opacity:1}80%{transform:scale(1);opacity:1}100%{transform:scale(1);opacity:0}}
+@keyframes mk-steam{0%{transform:translateY(0) scaleX(1);opacity:0}30%{opacity:.9}100%{transform:translateY(-26px) scaleX(-1);opacity:0}}
+@keyframes mk-dice{0%{transform:translate(-120px,-40px) rotate(-540deg)}55%{transform:translate(0,0) rotate(0)}65%{transform:translate(0,-10px) rotate(8deg)}75%,100%{transform:translate(0,0) rotate(0)}}
+@keyframes mk-sweat{0%{transform:translate(0,0);opacity:0}20%{opacity:1}100%{transform:translate(6px,22px);opacity:0}}
+.mk .mk-a-bob{animation:mk-bob 1.6s ease-in-out infinite}
+.mk .mk-a-shake{animation:mk-shake 1s ease-in-out infinite;transform-origin:100px 180px}
+.mk .mk-a-jump{animation:mk-jump 1.6s cubic-bezier(.3,.7,.4,1) infinite;transform-origin:100px 182px}
+.mk .mk-a-sway{animation:mk-sway 1.2s ease-in-out infinite;transform-origin:100px 182px}
+.mk .mk-a-breathe{animation:mk-breathe 3s ease-in-out infinite;transform-origin:100px 182px}
+.mk .mk-a-dip{animation:mk-dip 1.8s ease-in-out infinite;transform-origin:100px 182px}
+.mk .mk-blink{animation:mk-blink 3.2s ease-in-out infinite;transform-origin:100px 90px}
+.mk .mk-wave{animation:mk-wave 1.4s ease-in-out infinite;transform-origin:146px 110px}
+.mk .mk-heart{animation:mk-heart 1.8s ease-out infinite;transform-origin:128px 126px}
+.mk .mk-heart2{animation:mk-heart 1.8s ease-out .9s infinite;transform-origin:128px 126px}
+.mk .mk-tearL{animation:mk-tearL .8s ease-out infinite}
+.mk .mk-tearR{animation:mk-tearR .8s ease-out .4s infinite}
+.mk .mk-pop1{animation:mk-pop 1.6s ease-in-out infinite;transform-origin:center;transform-box:fill-box}
+.mk .mk-pop2{animation:mk-pop 1.6s ease-in-out .8s infinite;transform-origin:center;transform-box:fill-box}
+.mk .mk-up1{animation:mk-up 2.6s ease-out infinite;transform-box:fill-box;transform-origin:center}
+.mk .mk-up2{animation:mk-up 2.6s ease-out .9s infinite;transform-box:fill-box;transform-origin:center}
+.mk .mk-up3{animation:mk-up 2.6s ease-out 1.8s infinite;transform-box:fill-box;transform-origin:center}
+.mk .mk-bubble{animation:mk-bubble 3s ease-in infinite;transform-box:fill-box;transform-origin:0% 50%}
+.mk .mk-armA{animation:mk-armA .6s ease-in-out infinite;transform-origin:56px 112px}
+.mk .mk-armB{animation:mk-armB .6s ease-in-out infinite;transform-origin:144px 112px}
+.mk .mk-footA{animation:mk-footA .6s ease-in-out infinite}
+.mk .mk-footB{animation:mk-footB .6s ease-in-out infinite}
+.mk .mk-lift{animation:mk-lift 2.4s ease-in-out infinite;transform-origin:100px 100px}
+.mk .mk-slam{animation:mk-slam 1.8s cubic-bezier(.6,0,.4,1) infinite;transform-origin:146px 108px}
+.mk .mk-impact{animation:mk-impact 1.8s ease-out infinite;transform-box:fill-box;transform-origin:center}
+.mk .mk-steam1{animation:mk-steam 1.6s ease-out infinite;transform-box:fill-box;transform-origin:center}
+.mk .mk-steam2{animation:mk-steam 1.6s ease-out .8s infinite;transform-box:fill-box;transform-origin:center}
+.mk .mk-dice{animation:mk-dice 2.4s cubic-bezier(.3,.6,.4,1) infinite;transform-box:fill-box;transform-origin:center}
+.mk .mk-dice2{animation:mk-dice 2.4s cubic-bezier(.3,.6,.4,1) .15s infinite;transform-box:fill-box;transform-origin:center}
+.mk .mk-sweat{animation:mk-sweat 1.6s ease-in infinite}
+@media (prefers-reduced-motion: reduce){.mk *{animation:none !important}}
+.mk-still *{animation:none !important}
+.mk-caption{margin-top:-6px;max-width:100%;padding:0 4px;font-family:'Lilita One','Arial Rounded MT Bold',sans-serif;line-height:1.05;color:#fff;paint-order:stroke fill;text-align:center;transform:rotate(-3deg);overflow-wrap:anywhere}

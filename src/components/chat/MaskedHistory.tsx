@@ -11,8 +11,10 @@ import { MaskIcon } from "@/components/ui/MaskIcon";
 import { GiftArt } from "@/components/keys/GiftArt";
 import { AudioPlayer } from "./AudioPlayer";
 import { VoiceIcon } from "./VoiceIcon";
+import { Masky } from "@/components/stickers/Masky";
+import { stickerOf } from "@/components/stickers/StickerSheet";
 
-type Line = { s: string | null; k: string; b: string; m: { key?: string; duration?: number; title?: string } | null; t: string };
+type Line = { s: string | null; k: string; b: string; m: { key?: string; duration?: number; title?: string; pose?: string; color?: string } | null; t: string };
 export type MaskedCardMeta = {
   aliases: Record<string, string>;
   from: string;
@@ -102,7 +104,12 @@ export function MaskedHistoryCard({ meta, myId, theirName }: { meta: MaskedCardM
             return (
               <div key={i} className={clsx("flex flex-col", mine ? "items-end" : "items-start")}>
                 {showName && <span className="mb-0.5 ml-2 text-[11.5px] font-bold" style={{ color }}>{theirAlias}</span>}
-                {l.k === "gift" ? (
+                {l.k === "sticker" ? (
+                  (() => {
+                    const st = stickerOf(l.m, l.b);
+                    return <Masky pose={st.pose} caption={st.caption} color={st.color} size={110} />;
+                  })()
+                ) : l.k === "gift" ? (
                   <span className="flex items-center gap-1.5 rounded-2xl bg-gold-soft px-3 py-1.5 text-[13px] font-semibold text-[#8a5a00]">
                     <GiftArt id={l.b} size={26} /> {mine ? "You sent" : "Sent you"} {gift?.name ?? "a gift"}
                   </span>

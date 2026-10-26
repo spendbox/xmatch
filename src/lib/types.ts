@@ -87,7 +87,7 @@ export type MasqueradeState = {
   };
 };
 
-export type MessageKind = "text" | "icebreaker" | "image" | "video" | "audio" | "call" | "gift" | "system" | "game" | "meet" | "masked";
+export type MessageKind = "text" | "icebreaker" | "image" | "video" | "audio" | "call" | "gift" | "system" | "game" | "meet" | "masked" | "sticker";
 
 export type MediaMeta = {
   /** Masked voice notes: where the file is stored (played from our storage address), and once it's been deleted */
@@ -117,6 +117,9 @@ export type MediaMeta = {
   by?: string | null;
   /** The meet a masked chat was opened from: who posted it */
   alias?: string;
+  /** Stickers: Masky's pose and colour (the words are the message body) */
+  pose?: string;
+  color?: string;
 };
 
 export type ChatMessage = {
@@ -132,6 +135,10 @@ export type ChatMessage = {
   /** A slow reveal photo or video: blurred for the other person until you've both chatted (or they pay) */
   slow?: boolean;
   slow_paid_at?: string | null;
+  /** Who reacted with what: { [person]: "😂" } (update 92) */
+  reactions?: Record<string, string> | null;
+  /** When the words were last changed (update 92) */
+  edited_at?: string | null;
   /** Only on the sender's screen while a file is still uploading */
   local_url?: string;
   pending?: boolean;

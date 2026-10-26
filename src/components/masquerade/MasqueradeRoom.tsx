@@ -22,6 +22,7 @@ import { usePrices } from "@/components/keys/usePrices";
 import { createClient } from "@/lib/supabase/client";
 import { distanceLabel, GENDERS, intentLabel, MASQUERADE_MINUTES, spiceLabel } from "@/lib/constants";
 import type { ChatMessage, MasqueradeState } from "@/lib/types";
+import type { StickerPick } from "@/components/stickers/StickerSheet";
 import { MessageList } from "@/components/chat/MessageList";
 import { Composer } from "@/components/chat/Composer";
 import { refreshMenuBadges } from "@/components/app/useMenuBadges";
@@ -130,6 +131,13 @@ export function MasqueradeRoom({
   const [reporting, setReporting] = useState(false);
   const [voting, setVoting] = useState(false);
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
+  const [editing, setEditing] = useState<ChatMessage | null>(null);
+  const [chatNote, setChatNote] = useState<string | null>(null);
+  useEffect(() => {
+    if (!chatNote) return;
+    const t = setTimeout(() => setChatNote(null), 2500);
+    return () => clearTimeout(t);
+  }, [chatNote]);
   const [giftOpen, setGiftOpen] = useState(false);
   const [extending, setExtending] = useState(false);
   const [keysNote, setKeysNote] = useState<string | null>(null);
@@ -195,6 +203,15 @@ export function MasqueradeRoom({
           setMessages((list) => (list.some((x) => x.id === m.id) ? list : [...list, m]));
         },
       )
+      // Reactions and edits
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "masquerade_messages", filter: `session_id=eq.${initial.id}` },
+        (p) => {
+          const m = p.new as ChatMessage;
+          setMessages((list) => list.map((x) => (x.id === m.id ? { ...x, ...m } : x)));
+        },
+      )
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "masquerade_sessions", filter: `id=eq.${initial.id}` },
@@ -250,6 +267,55 @@ export function MasqueradeRoom({
       if (error || !data) return without;
       return without.some((m) => m.id === data.id) ? without : [...without, data as ChatMessage];
     });
+  }
+
+  async function sendSticker(st: StickerPick) {
+    if (demo) return;
+    const reply = replyTo?.id && replyTo.id > 0 ? replyTo.id : null;
+    const meta = { pose: st.pose, color: st.color };
+    const temp: ChatMessage = { id: -Date.now(), sender_id: state.me.id, kind: "sticker", body: st.caption, media_meta: meta, created_at: new Date().toISOString(), reply_to: reply, pending: true };
+    setMessages((l) => [...l, temp]);
+    setReplyTo(null);
+    const { data, error } = await supabase
+      .from("masquerade_messages")
+      .insert({ session_id: state.id, sender_id: state.me.id, kind: "sticker", body: st.caption, media_meta: meta, reply_to: reply })
+      .select("*")
+      .single();
+    if (!error && data) notify({ kind: "masked_message", sessionId: state.id });
+    if (error) setChatNote("Sticker not sent. Check your connection.");
+    setMessages((l) => {
+      const without = l.filter((m) => m.id !== temp.id);
+      if (error || !data) return without;
+      return without.some((m) => m.id === data.id) ? without : [...without, data as ChatMessage];
+    });
+  }
+
+  // React (or take yours back): shows straight away, undone if it doesn't save
+  async function react(m: ChatMessage, emoji: string) {
+    const me = state.me.id;
+    const before = m.reactions ?? {};
+    const next = { ...before };
+    if (!emoji || before[me] === emoji) delete next[me];
+    else next[me] = emoji;
+    setMessages((l) => l.map((x) => (x.id === m.id ? { ...x, reactions: next } : x)));
+    if (demo) return;
+    const { data, error } = await supabase.rpc("react_message", { p_message: m.id, p_emoji: emoji === before[me] ? "" : emoji, p_masked: true });
+    if (error) {
+      setMessages((l) => l.map((x) => (x.id === m.id ? { ...x, reactions: before } : x)));
+      setChatNote("Couldn't react. Check your connection.");
+    } else if (data) setMessages((l) => l.map((x) => (x.id === m.id ? { ...x, reactions: data as Record<string, string> } : x)));
+  }
+
+  async function saveEdit(m: ChatMessage, text: string) {
+    setEditing(null);
+    const before = { body: m.body, edited_at: m.edited_at ?? null };
+    setMessages((l) => l.map((x) => (x.id === m.id ? { ...x, body: text, edited_at: new Date().toISOString() } : x)));
+    if (demo) return;
+    const { error } = await supabase.rpc("edit_message", { p_message: m.id, p_body: text, p_masked: true });
+    if (error) {
+      setMessages((l) => l.map((x) => (x.id === m.id ? { ...x, ...before } : x)));
+      setChatNote(error.message.includes("15 minutes") ? "You can only edit a message in the first 15 minutes." : "Couldn't save your edit. Check your connection.");
+    }
   }
 
   async function vote(unmask: boolean) {
@@ -540,6 +606,15 @@ export function MasqueradeRoom({
           nameOf={(id) => (id === state.me.id ? "You" : theirName)}
           genderOf={(id) => (id === state.me.id ? null : state.them.gender)}
           onReply={setReplyTo}
+          onReact={react}
+          onEdit={
+            chatting
+              ? (m) => {
+                  setReplyTo(null);
+                  setEditing(m);
+                }
+              : undefined
+          }
           onGameAgain={chatting ? games.rematch : undefined}
         />
       </div>
@@ -561,6 +636,9 @@ export function MasqueradeRoom({
             {extending ? <Spinner className="h-4 w-4" /> : <KeyCoin size={18} />} +2 min · {EXTEND_COST}
           </button>
         </div>
+      )}
+      {chatNote && (
+        <div className="fixed inset-x-4 top-4 z-50 mx-auto max-w-sm animate-fade-up rounded-2xl bg-ink px-4 py-3 text-center text-sm font-medium text-white shadow-lift">{chatNote}</div>
       )}
       {keysNote && (
         <div className="flex items-center gap-3 border-t border-line bg-gold-soft px-4 py-2.5 text-[13px]">
@@ -613,6 +691,10 @@ export function MasqueradeRoom({
           saveKey={`s-${state.id}`}
           draft={hintDraft}
           onSend={send}
+          onSendSticker={sendSticker}
+          editing={editing}
+          onEdit={saveEdit}
+          onCancelEdit={() => setEditing(null)}
           // Masked voice notes: disguised on the phone
           onVoiceTap={() => setVoiceOpen(true)}
           placeholder={state.hourly ? "Message" : undefined}
