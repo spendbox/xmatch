@@ -196,7 +196,7 @@ export function PlayScreen({ userId, demo }: { userId: string; demo?: { status: 
           <>
             <h1 className="text-center font-display text-[34px] leading-tight font-bold text-balance">Play someone new</h1>
             <p className="mx-auto mt-2 max-w-[300px] text-center text-[14.5px] text-white/75">
-              Dashpad pairs you with someone online in your mood and picks the game. You're both masked.
+              Dashpad pairs you with someone online who fits your settings, and picks the game. You're both masked.
             </p>
 
             <div className="mt-6 grid grid-cols-4 gap-2">
@@ -218,7 +218,7 @@ export function PlayScreen({ userId, demo }: { userId: string; demo?: { status: 
               >
                 <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-gold text-ink">{INTENT_ICONS[st.intent]({ size: 22, strokeWidth: 2 })}</span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[11.5px] font-extrabold tracking-[0.12em] text-white/60 uppercase">Paired using your settings</span>
+                  <span className="block text-[11.5px] font-extrabold tracking-[0.12em] text-white/60 uppercase">Your Masquerade settings</span>
                   <span className="block truncate text-[15px] font-bold">
                     {INTENTS.find((m) => m.value === st.intent)?.label} · {seekingLabel(st.seeking)} · {st.age_min}–{st.age_max}
                   </span>
