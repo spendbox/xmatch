@@ -49,7 +49,8 @@ export async function decodeRecording(blob: Blob): Promise<AudioBuffer> {
 export async function disguise(src: AudioBuffer, style: VoiceStyle): Promise<{ blob: Blob; seconds: number }> {
   const rate = style === "deep" ? 0.78 : style === "light" ? 1.28 : style === "robot" ? 0.96 : 1;
   const tail = 0;
-  const outRate = src.duration / rate > 60 ? LONG_RATE : RATE;
+  // 16 kHz is plenty for a voice and keeps files small (a minute is about 2 MB)
+  const outRate = LONG_RATE;
   const length = Math.ceil((src.duration / rate + tail) * outRate);
   const ctx = new (offlineCtx())(1, Math.max(1, length), outRate);
 

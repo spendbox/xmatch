@@ -44,6 +44,8 @@ export function MaskedVoiceSheet({
   const supabase = useMemo(() => createClient(), []);
   const voice = useVoiceRecorder();
   const [raw, setRaw] = useState<AudioBuffer | null>(null);
+  // The recording as the phone made it (small and compressed): sent as is for your normal voice
+  const original = useRef<{ blob: Blob; seconds: number } | null>(null);
   const styles = allowNormal ? VOICE_STYLES : MASKED_STYLES;
   const [style, setStyle] = useState<VoiceStyle>(() => {
     try {
@@ -109,6 +111,7 @@ export function MaskedVoiceSheet({
 
   async function stop() {
     const r = await voice.stop();
+    original.current = r ?? null;
     if (!r || r.seconds < 1) return setError("That was too short. Hold on a little longer.");
     try {
       setBusy("disguise");
@@ -134,7 +137,9 @@ export function MaskedVoiceSheet({
     setBusy("send");
     setError(null);
     if (onSendBlob) {
-      const e = await onSendBlob(out.blob, out.seconds, style);
+      // Your own voice: the phone's compressed recording, about a tenth of the size of a disguised one
+      const plain = style === "normal" && original.current ? original.current : null;
+      const e = await onSendBlob(plain ? plain.blob : out.blob, plain ? Math.max(1, plain.seconds) : out.seconds, style);
       setBusy(null);
       if (e) return setError(e);
       onClose();

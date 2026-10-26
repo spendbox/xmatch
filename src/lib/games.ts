@@ -400,7 +400,7 @@ export function useChatGame({
   // Safety net while a game is on: re-check every few seconds in case a live update was missed
   useEffect(() => {
     if (!gid || !live) return;
-    const t = setInterval(() => void loadOne(gid), 6000);
+    const t = setInterval(() => document.visibilityState === "visible" && void loadOne(gid), 6000);
     return () => clearInterval(t);
   }, [gid, live, loadOne]);
 

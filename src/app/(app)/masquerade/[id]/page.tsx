@@ -15,7 +15,8 @@ export default async function RoomPage({ params }: { params: Promise<{ id: strin
   if (!state) notFound();
 
   const [{ data: messages }, { data: eventId }, { data: pact }, { data: paid }] = await Promise.all([
-    supabase.from("masquerade_messages").select("*").eq("session_id", id).order("id"),
+    // The latest 500 messages (newest first from the database, then put back in order)
+    supabase.from("masquerade_messages").select("*").eq("session_id", id).order("id", { ascending: false }).limit(500),
     supabase.rpc("session_event", { p_session: id }),
     supabase.rpc("pact_chat_info", { p_session: id }),
     // Who's who in chats started from Meet, so the chat opens in the right layout
@@ -28,7 +29,7 @@ export default async function RoomPage({ params }: { params: Promise<{ id: strin
   return (
     <MasqueradeRoom
       initial={state as MasqueradeState}
-      initialMessages={(messages ?? []) as ChatMessage[]}
+      initialMessages={((messages ?? []) as ChatMessage[]).reverse()}
       eventId={(eventId as string | null) ?? null}
       pact={pactInfo?.name ?? null}
       initialPaid={(paid && typeof paid === "object" ? paid : undefined) as Record<string, PaidChatPerson> | undefined}

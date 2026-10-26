@@ -222,8 +222,14 @@ export function MasqueradeRoom({
   useEffect(() => {
     if (demo || state.status !== "active") return;
     // Changes arrive live; this only keeps the timer and "online" fresh, so every 20s is plenty
-    const t = setInterval(refresh, timeUp ? 3000 : 20000);
-    return () => clearInterval(t);
+    // Not while the app is in the background; back in it, check straight away
+    const t = setInterval(() => document.visibilityState === "visible" && void refresh(), timeUp ? 3000 : 20000);
+    const onShow = () => document.visibilityState === "visible" && void refresh();
+    document.addEventListener("visibilitychange", onShow);
+    return () => {
+      clearInterval(t);
+      document.removeEventListener("visibilitychange", onShow);
+    };
   }, [refresh, timeUp, state.status, demo]);
 
   async function send(text: string) {

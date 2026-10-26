@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Gamepad2, X } from "lucide-react";
 import { tapFeedback } from "@/components/ui/Button";
 import { gameInfo, useChatGame, type GameKind } from "@/lib/games";
-import { GameArena } from "./GameArena";
+import { GameArena } from "./LazyGameArena";
 import { GameLauncher } from "./GameLauncher";
 import { secondsLeft, useTicker, type Names } from "./parts";
 
