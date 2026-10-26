@@ -44,7 +44,7 @@ const STEPS: Step[] = [
   {
     icon: <Gamepad2 size={22} />,
     title: "Games, gifts and voice notes",
-    body: "In any chat, tap + for games and gifts. In masked chats, the mic sends a voice note in a disguised voice that disappears after 24 hours.",
+    body: "In any chat, tap + for games and gifts. In masked chats, the mic sends a voice note in a disguised voice.",
   },
 ];
 

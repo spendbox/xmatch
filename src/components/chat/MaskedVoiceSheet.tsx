@@ -14,11 +14,11 @@ import { Button, Spinner, tapFeedback } from "@/components/ui/Button";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { useVoiceRecorder } from "./useVoiceRecorder";
 
-const MAX = 30;
+const MAX = 300;
 const VOICE_KEY = "dp_voice_style";
 
 /**
- * A masked voice note: record (up to 30 seconds), pick a voice, listen, send.
+ * A masked voice note: record (up to 5 minutes), pick a voice, listen, send.
  * The disguise happens on this phone; only the disguised sound is uploaded.
  */
 export function MaskedVoiceSheet({
@@ -70,7 +70,7 @@ export function MaskedVoiceSheet({
     setPlaying(false);
   }, [open]);
 
-  // Up to 30 seconds
+  // Up to 5 minutes
   useEffect(() => {
     if (voice.recording && voice.seconds >= MAX) void stop();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -144,7 +144,7 @@ export function MaskedVoiceSheet({
       const res = await fetch("/api/media/voice", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sessionId }) });
       const link = (await res.json().catch(() => null)) as { key?: string; upload?: string; error?: string } | null;
       if (!res.ok || !link?.key || !link.upload) throw new Error(link?.error || "Couldn't send. Try again.");
-      const put = await fetch(link.upload, { method: "PUT", body: out.blob, headers: { "Content-Type": "audio/wav", "Cache-Control": "public, max-age=86400" } });
+      const put = await fetch(link.upload, { method: "PUT", body: out.blob, headers: { "Content-Type": "audio/wav", "Cache-Control": "public, max-age=31536000, immutable" } });
       if (!put.ok) throw new Error("Couldn't upload. Check your connection and try again.");
       const { data, error: err } = await supabase.rpc("send_masked_voice", { p_session: sessionId, p_key: link.key, p_seconds: out.seconds, p_voice: style });
       if (err || !data) throw new Error(err?.message?.replace(/^.*?: /, "") || "Couldn't send. Try again.");
@@ -172,7 +172,7 @@ export function MaskedVoiceSheet({
       subtitle={
         allowNormal
           ? "Send your own voice, or disguise it for fun. Disguises happen on your phone."
-          : "Your voice is disguised on your phone. Only the disguised sound is sent, and it disappears after 24 hours."
+          : "Your voice is disguised on your phone. Only the disguised sound is sent."
       }
       icon={allowNormal ? <VoiceIcon style="normal" size={24} className="text-brand" /> : <MaskIcon className="w-6" />}
     >
@@ -196,7 +196,7 @@ export function MaskedVoiceSheet({
               {step === "recording" ? `${formatDuration(voice.seconds)} / ${formatDuration(MAX)}` : "Tap to record"}
             </p>
             <p className="max-w-[260px] text-center text-[12.5px] text-muted">
-              {step === "recording" ? "Tap again to stop" : "Dashpad only listens while you're recording. Up to 30 seconds."}
+              {step === "recording" ? "Tap again to stop" : "Dashpad only listens while you're recording. Up to 5 minutes."}
             </p>
           </div>
         )}

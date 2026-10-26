@@ -15,7 +15,9 @@ export const VOICE_STYLES: { id: VoiceStyle; label: string }[] = [
 ];
 export const MASKED_STYLES = VOICE_STYLES.filter((v) => v.id !== "normal");
 
+// Clear speech; long notes use a slightly lower rate so a 5 minute note stays small (about 10 MB)
 const RATE = 22050;
+const LONG_RATE = 16000;
 
 type AC = typeof AudioContext;
 type OAC = typeof OfflineAudioContext;
@@ -24,7 +26,13 @@ const offlineCtx = (): OAC => window.OfflineAudioContext || (window as unknown a
 
 /** Turn the recording into sound we can change */
 export async function decodeRecording(blob: Blob): Promise<AudioBuffer> {
-  const ctx = new (audioCtx())();
+  // Decode at a speech rate, not the phone's 48 kHz, so a 5 minute note doesn't fill the memory
+  let ctx: AudioContext;
+  try {
+    ctx = new (audioCtx())({ sampleRate: RATE });
+  } catch {
+    ctx = new (audioCtx())();
+  }
   try {
     const data = await blob.arrayBuffer();
     return await new Promise<AudioBuffer>((resolve, reject) => {
@@ -41,8 +49,9 @@ export async function decodeRecording(blob: Blob): Promise<AudioBuffer> {
 export async function disguise(src: AudioBuffer, style: VoiceStyle): Promise<{ blob: Blob; seconds: number }> {
   const rate = style === "deep" ? 0.78 : style === "light" ? 1.28 : style === "robot" ? 0.96 : 1;
   const tail = 0;
-  const length = Math.ceil((src.duration / rate + tail) * RATE);
-  const ctx = new (offlineCtx())(1, Math.max(1, length), RATE);
+  const outRate = src.duration / rate > 60 ? LONG_RATE : RATE;
+  const length = Math.ceil((src.duration / rate + tail) * outRate);
+  const ctx = new (offlineCtx())(1, Math.max(1, length), outRate);
 
   const s = ctx.createBufferSource();
   s.buffer = src;

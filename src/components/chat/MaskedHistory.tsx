@@ -95,8 +95,8 @@ export function MaskedHistoryCard({ meta, myId, theirName }: { meta: MaskedCardM
                 </p>
               );
             const gift = l.k === "gift" ? GIFTS.find((g) => g.id === l.b) : null;
-            // Disguised voice notes are deleted after 24 hours
-            const voiceGone = l.k === "audio" && (!l.m?.key || Date.now() - new Date(l.t).getTime() > 24 * 3600_000);
+            // Only very old voice notes (from before they were kept for good) can be missing
+            const voiceGone = l.k === "audio" && !l.m?.key;
             return (
               <div key={i} className={clsx("flex flex-col", mine ? "items-end" : "items-start")}>
                 {showName && <span className="mb-0.5 ml-2 text-[11.5px] font-bold" style={{ color }}>{theirAlias}</span>}
@@ -107,7 +107,7 @@ export function MaskedHistoryCard({ meta, myId, theirName }: { meta: MaskedCardM
                 ) : l.k === "audio" ? (
                   voiceGone ? (
                     <span className={clsx("flex items-center gap-1.5 rounded-2xl px-3.5 py-2 text-[13.5px] italic", mine ? "bg-brand/80 text-white" : "bg-cream text-muted")}>
-                      <VoiceIcon style="normal" size={15} /> Voice note · gone after 24 hours
+                      <VoiceIcon style="normal" size={15} /> Voice note · no longer available
                     </span>
                   ) : (
                     <span className={clsx("rounded-2xl px-2 py-1", mine ? "bg-brand" : "bg-cream")}>
