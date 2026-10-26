@@ -1,5 +1,6 @@
 "use client";
 
+import { chatPreview } from "@/lib/chatPreview";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import clsx from "clsx";
@@ -78,7 +79,7 @@ export function MatchesList({
   // Masked chats sit in the same list as everyone else, by their latest message
   const masked = useMaskedChats(maskedDemo);
   const paid = usePaidChatPeople(!!maskedDemo);
-  const unreadOf = (m: MatchSummary) => m.unread ?? (!!m.last_message && m.last_sender === m.other_id);
+  const unreadOf = (m: MatchSummary) => m.unread ?? (m.last_message != null && m.last_sender === m.other_id);
   const all: Item[] = [
     ...(masked ?? []).map((c) => ({ key: `s-${c.id}`, at: c.last_at, unread: c.unread, masked: c })),
     ...matches.map((m) => ({ key: m.id, at: m.last_message_at, unread: unreadOf(m), match: m })),
@@ -187,7 +188,7 @@ type Item = { key: string; at: string; unread: boolean; masked?: MaskedChat; mat
 
 /** One chat with someone you're connected with */
 function MatchRow({ m, myId, unread, online, active }: { m: MatchSummary; myId: string; unread: boolean; online: boolean; active: boolean }) {
-  const theirTurn = !!m.last_message && m.last_sender === myId;
+  const theirTurn = m.last_message != null && m.last_sender === myId;
   return (
     <li className="animate-fade-up">
       <Link
@@ -218,7 +219,7 @@ function MatchRow({ m, myId, unread, online, active }: { m: MatchSummary; myId: 
           </div>
           <div className="mt-0.5 flex items-center gap-2">
             <p className={clsx("min-w-0 flex-1 truncate text-[14px]", unread ? "font-medium text-ink" : "text-muted")}>
-              {m.last_message ? `${theirTurn ? "You: " : ""}${m.last_message.replace(/^💬 /, "")}` : "You matched! Start the conversation"}
+              {m.last_message != null ? `${theirTurn ? "You: " : ""}${chatPreview(m.last_kind, m.last_message, m.last_deleted)}` : "You matched! Start the conversation"}
             </p>
             {unread && <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-brand" aria-label="New messages" />}
           </div>

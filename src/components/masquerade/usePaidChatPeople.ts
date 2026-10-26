@@ -1,5 +1,6 @@
 "use client";
 
+import { CHATS_EVENT } from "@/components/app/useMenuBadges";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -25,9 +26,22 @@ export function usePaidChatPeople(skip?: boolean, initial?: Record<string, PaidC
   const [people, setPeople] = useState<Record<string, PaidChatPerson>>(initial ?? {});
   useEffect(() => {
     if (skip) return;
-    supabase.rpc("paid_chat_people").then(({ data, error }) => {
-      if (!error && data && typeof data === "object") setPeople(data as Record<string, PaidChatPerson>);
-    });
+    const load = () =>
+      supabase.rpc("paid_chat_people").then(({ data, error }) => {
+        if (!error && data && typeof data === "object") setPeople(data as Record<string, PaidChatPerson>);
+      });
+    void load();
+    // A new chat (from a wave or a message on Meet) shows who it's with, not their mask name
+    let t: ReturnType<typeof setTimeout> | null = null;
+    const again = () => {
+      if (t) clearTimeout(t);
+      t = setTimeout(load, 800);
+    };
+    window.addEventListener(CHATS_EVENT, again);
+    return () => {
+      window.removeEventListener(CHATS_EVENT, again);
+      if (t) clearTimeout(t);
+    };
   }, [supabase, skip]);
   return people;
 }

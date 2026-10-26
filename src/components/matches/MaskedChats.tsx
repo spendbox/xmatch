@@ -1,5 +1,6 @@
 "use client";
 
+import { chatPreview } from "@/lib/chatPreview";
 import { Photo } from "@/components/ui/Photo";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -28,6 +29,8 @@ export type MaskedChat = {
   /** They're in the app right now (update 89) */
   online?: boolean;
   last_message: string | null;
+  /** What the last message was (update 91) */
+  last_kind?: string | null;
   last_mine: boolean | null;
   last_at: string;
   unread: boolean;
@@ -127,8 +130,8 @@ export function MaskedChatRow({ c, known }: { c: MaskedChat; known?: PaidChatPer
             <span className={clsx("min-w-0 flex-1 truncate text-[14px]", c.unread ? "font-medium text-ink" : "text-muted")}>
               {c.they_unmasked && c.my_vote !== true
                 ? `${name} unmasked · your move`
-                : c.last_message
-                  ? `${c.last_mine ? "You: " : ""}${c.last_message}`
+                : c.last_message != null
+                  ? `${c.last_mine ? "You: " : ""}${chatPreview(c.last_kind, c.last_message)}`
                   : c.pact
                     ? `${c.pact} match · say hi`
                     : c.live_pair

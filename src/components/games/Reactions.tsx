@@ -8,10 +8,10 @@ import { buzz } from "@/lib/games";
 
 // The first row is the favourites; the rest sit below them
 export const REACTIONS = [
-  "😂", "🔥", "😮", "😍", "😤", "👏", "💀", "🙈",
-  "🤣", "😭", "🤯", "🥳", "😎", "😏", "🙄", "😬",
-  "🥰", "😘", "🫣", "🤭", "👀", "🥵", "💔", "🫶",
-  "💯", "🙌", "🙏", "🎯", "🏆", "⚡", "🍿", "🤝",
+  "😂", "🔥", "😈", "😮", "😍", "😤", "👏", "💀",
+  "🙈", "🤣", "😭", "🤯", "🥳", "😎", "😏", "🙄",
+  "😬", "🥰", "😘", "🫣", "🤭", "👀", "🥵", "💔",
+  "🫶", "💯", "🙌", "🙏", "🎯", "🏆", "⚡", "🍿",
 ];
 
 type Float = { id: number; e: string; mine: boolean; x: number; dx: number; size: number };
