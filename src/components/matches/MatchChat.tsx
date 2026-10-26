@@ -35,6 +35,7 @@ export function MatchChat({
   matchedAt,
   intent = "dating",
   slowCost = 10,
+  source,
 }: {
   matchId: string;
   myId: string;
@@ -45,6 +46,8 @@ export function MatchChat({
   intent?: Intent;
   /** Keys to clear a slow reveal straight away */
   slowCost?: number;
+  /** "play": the chat was started after a Play game */
+  source?: string | null;
 }) {
   const shell = useKeyboardSafe<HTMLDivElement>();
   const { seen, now } = usePresence([other.id]);
@@ -254,7 +257,7 @@ export function MatchChat({
               <Avatar src={other.photos?.[0]} name={other.display_name} size={56} />
             </span>
           </div>
-          <p className="mt-3 text-[16px] font-semibold">You unmasked each other</p>
+          <p className="mt-3 text-[16px] font-semibold">{source === "play" ? "You met over a game" : "You unmasked each other"}</p>
           <p className="mt-0.5 inline-flex items-center gap-1.5 text-[13px] text-muted">
             {INTENT_ICONS[intent]({ size: 14 })} {intentLabel(intent)}
             {matchedAt && <> · {new Date(matchedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</>}

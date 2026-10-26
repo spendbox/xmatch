@@ -14,6 +14,7 @@ export function Sheet({
   icon,
   children,
   footer,
+  layer = "z-50",
 }: {
   open: boolean;
   onClose: () => void;
@@ -22,6 +23,8 @@ export function Sheet({
   icon?: React.ReactNode;
   children: React.ReactNode;
   footer?: React.ReactNode;
+  /** Stacking: games sit above the app, so a sheet opened from a game goes higher */
+  layer?: string;
 }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -39,7 +42,7 @@ export function Sheet({
 
   if (!open || !mounted) return null;
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-label={title}>
+    <div className={`fixed inset-0 ${layer} flex items-end justify-center sm:items-center sm:p-6`} role="dialog" aria-modal="true" aria-label={title}>
       <button className="absolute inset-0 animate-fade-in bg-ink/40" aria-label="Close" onClick={onClose} />
       <div className="relative max-h-[88dvh] w-full max-w-md animate-sheet-up overflow-y-auto rounded-t-[32px] bg-surface px-5 pt-3 pb-safe shadow-lift sm:max-w-lg sm:animate-pop sm:rounded-[32px] sm:px-7 sm:pt-7 sm:pb-6">
         <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-line-strong sm:hidden" />

@@ -10,6 +10,7 @@ import { MenuBadgesContext, useMenuBadges } from "./useMenuBadges";
 import { CallProvider } from "@/components/calls/CallProvider";
 import { EventMediaProvider } from "@/components/events/media/EventMediaProvider";
 import { MediaHelp } from "./MediaHelp";
+import { PlayProvider } from "@/components/play/PlayGame";
 import { chime } from "@/lib/chime";
 import { claimSavedPacts, takeAfterJoin } from "@/components/pacts/pactTokens";
 
@@ -44,7 +45,9 @@ export function AppChrome({ user, children }: { user: ChromeUser; children: Reac
       <EventMediaProvider userId={user.id}>
         <Sidebar user={user} badges={badges} />
         <MenuBadgesContext.Provider value={badges}>
-        <div className={(fullScreen ? "" : "pb-24 ") + "lg:pb-0 lg:pl-[var(--sidebar-w)] lg:transition-[padding] lg:duration-300"}>{children}</div>
+          <PlayProvider userId={user.id}>
+            <div className={(fullScreen ? "" : "pb-24 ") + "lg:pb-0 lg:pl-[var(--sidebar-w)] lg:transition-[padding] lg:duration-300"}>{children}</div>
+          </PlayProvider>
         </MenuBadgesContext.Provider>
         {!fullScreen && <BottomNav badges={badges} />}
         <MediaHelp />

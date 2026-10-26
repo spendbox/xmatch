@@ -98,7 +98,11 @@ export function Whot({ game, names, act }: { game: Game; names: Names; act: Game
   const ended = game.status === "done";
   useEffect(() => {
     if (!ended || !game.winner) return;
-    pops.show(game.winner === me ? { title: "Check up!", sub: "You finished first", tone: "win" } : { title: "Check up!", sub: `${names.them} finished first`, tone: "bad" });
+    pops.show(
+      game.winner === me
+        ? { title: "Check up!", sub: "You finished first", tone: "win", gift: `Good game. Send ${names.them} a gift` }
+        : { title: "Check up!", sub: `${names.them} finished first`, tone: "bad", gift: "Say well played with a gift" },
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ended]);
 
@@ -151,9 +155,9 @@ export function Whot({ game, names, act }: { game: Game; names: Names; act: Game
   return (
     <div className="relative flex h-full flex-col px-3 pt-2 pb-4">
       <div className="flex items-center gap-2.5">
-        <Player name="You" color={color(me)} active={st.turn === me} sub={st.turn === me && game.status === "active" ? "Your turn" : `${hand.length} cards`} />
+        <Player name="You" photo={names.mePhoto} color={color(me)} active={st.turn === me} sub={st.turn === me && game.status === "active" ? "Your turn" : `${hand.length} cards`} />
         <div className="text-[13px] font-bold text-white/60">vs</div>
-        <Player right name={names.them} color={color(them)} active={st.turn === them} sub={st.turn === them && game.status === "active" ? "Their turn" : `${theirCount} cards`} />
+        <Player right name={names.them} photo={names.themPhoto} onClick={names.onThem} color={color(them)} active={st.turn === them} sub={st.turn === them && game.status === "active" ? "Their turn" : `${theirCount} cards`} />
       </div>
 
       {/* The table */}
@@ -419,12 +423,12 @@ function whotPop(st: WhotState, byMe: boolean, them: string): Omit<Pop, "id"> | 
   if (c.n === 2) {
     const owed = st.pending ?? 2;
     const title = owed > 2 ? `Pick ${owed === 4 ? "Four" : owed === 6 ? "Six" : owed}!` : "Pick Two!";
-    return byMe ? { title, sub: `${them} picks ${owed} · unless they play a 2`, tone: "good", art } : { title, sub: `Play a 2 or pick ${owed}`, tone: "bad", art };
+    return byMe ? { title, sub: `${them} picks ${owed} · unless they play a 2`, tone: "good", art } : { title, sub: `Play a 2 or pick ${owed}`, tone: "bad", art, gift: `Respect. Send ${them} a 🔥` };
   }
-  if (c.n === 5) return byMe ? { title: "Pick Three!", sub: `${them} picks 3`, tone: "good", art } : { title: "Pick Three!", sub: "You pick 3", tone: "bad", art };
+  if (c.n === 5) return byMe ? { title: "Pick Three!", sub: `${them} picks 3`, tone: "good", art } : { title: "Pick Three!", sub: "You pick 3", tone: "bad", art, gift: `Respect. Send ${them} a 🔥` };
   if (c.n === 1) return byMe ? { title: "Hold On!", sub: "You go again", tone: "good", art } : { title: "Hold On!", sub: `${them} goes again`, tone: "move", art };
-  if (c.n === 8) return byMe ? { title: "Suspension!", sub: `${them} misses a turn`, tone: "good", art } : { title: "Suspension!", sub: "You miss a turn", tone: "bad", art };
-  if (c.n === 14) return byMe ? { title: "General Market!", sub: `${them} picks 1 · you go again`, tone: "good", art } : { title: "General Market!", sub: "You pick 1", tone: "bad", art };
+  if (c.n === 8) return byMe ? { title: "Suspension!", sub: `${them} misses a turn`, tone: "good", art } : { title: "Suspension!", sub: "You miss a turn", tone: "bad", art, gift: `Respect. Send ${them} a 🔥` };
+  if (c.n === 14) return byMe ? { title: "General Market!", sub: `${them} picks 1 · you go again`, tone: "good", art } : { title: "General Market!", sub: "You pick 1", tone: "bad", art, gift: `Respect. Send ${them} a 🔥` };
   const left = l.by === "a" ? st.count_a : st.count_b;
   if (left === 1) return byMe ? { title: "Last Card!", sub: "One more and you win", tone: "move" } : { title: "Last Card!", sub: `${them} has one card left`, tone: "bad" };
   return null;

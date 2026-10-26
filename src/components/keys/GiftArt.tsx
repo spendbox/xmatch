@@ -84,6 +84,88 @@ export function GiftArt({ id, size = 48, className }: { id: string; size?: numbe
           <path d="M56 40l2 5M50 46l-1 5M58 52l4 1" stroke="#f2b33d" strokeWidth="2.6" strokeLinecap="round" />
         </svg>
       );
+    case "gg":
+      return (
+        <svg {...common}>
+          <defs>
+            <linearGradient id={g("pad")} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor="#8f6bff" />
+              <stop offset="1" stopColor="#4a2fc0" />
+            </linearGradient>
+          </defs>
+          <path d="M14 22h36c6 0 10 6 10 14 0 9-4 16-9 16-4 0-6-4-9-7H22c-3 3-5 7-9 7-5 0-9-7-9-16 0-8 4-14 10-14Z" fill={url("pad")} />
+          <path d="M14 26h36" stroke="#fff" strokeOpacity=".25" strokeWidth="2" strokeLinecap="round" />
+          <text x="32" y="41" textAnchor="middle" fontSize="15" fontWeight="900" fill="#fff" fontFamily="system-ui, sans-serif">GG</text>
+          <circle cx="15" cy="34" r="3" fill="#f2b33d" />
+          <circle cx="49" cy="34" r="3" fill="#7dffb8" />
+        </svg>
+      );
+    case "dice":
+      return (
+        <svg {...common}>
+          <g transform="rotate(-12 32 32)">
+            <rect x="12" y="14" width="40" height="40" rx="10" fill="#c7bce6" />
+            <rect x="12" y="10" width="40" height="40" rx="10" fill="#fff" />
+            <rect x="15" y="12" width="34" height="9" rx="4.5" fill="#fff" opacity=".7" />
+            {[
+              [22, 20],
+              [42, 20],
+              [32, 30],
+              [22, 40],
+              [42, 40],
+            ].map(([x, y], i) => (
+              <circle key={i} cx={x} cy={y} r="4" fill="#e5484d" />
+            ))}
+          </g>
+        </svg>
+      );
+    case "clover":
+      return (
+        <svg {...common}>
+          <path d="M32 34c-2 8-6 16-12 22" stroke="#178a50" strokeWidth="4" strokeLinecap="round" fill="none" />
+          {[0, 90, 180, 270].map((r) => (
+            <path key={r} transform={`rotate(${r} 32 32)`} d="M32 31c-3-7-12-10-15-4-3 5 3 9 15 4Z" fill="#1fb36f" stroke="#0e7a46" strokeWidth="1.5" />
+          ))}
+          <circle cx="32" cy="32" r="3" fill="#0e7a46" />
+          <path d="M22 22c2-2 4-2 5-1" stroke="#fff" strokeWidth="2" strokeLinecap="round" opacity=".6" />
+        </svg>
+      );
+    case "medal":
+      return (
+        <svg {...common}>
+          <path d="M20 4h10l6 18h-10Z" fill="#e5484d" />
+          <path d="M44 4H34l-6 18h10Z" fill="#5b3fd9" />
+          <circle cx="32" cy="40" r="18" fill="#c98a12" />
+          <circle cx="32" cy="38" r="17" fill="#f2b33d" />
+          <circle cx="32" cy="38" r="12" fill="#ffd36b" />
+          <text x="32" y="44" textAnchor="middle" fontSize="16" fontWeight="900" fill="#a26b00" fontFamily="system-ui, sans-serif">1</text>
+          <path d="M22 31c2-4 6-6 10-6" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" fill="none" opacity=".6" />
+        </svg>
+      );
+    case "rocket":
+      return (
+        <svg {...common}>
+          <path d="M24 44c-6 2-10 8-10 14 6 0 12-4 14-10Z" fill="#f2b33d" />
+          <path d="M26 46c-3 1-5 4-5 7 3 0 6-2 7-5Z" fill="#e5484d" />
+          <path d="M44 8c8 0 12 4 12 12-2 12-12 22-22 28l-18-18C22 20 32 10 44 8Z" fill="#eef0ff" />
+          <path d="M16 30l8-8c-6-1-12 2-15 6Z M34 48l8-8c1 6-2 12-6 15Z" fill="#e5484d" />
+          <circle cx="40" cy="24" r="6" fill="#5b3fd9" stroke="#fff" strokeWidth="2.5" />
+          <path d="M44 8c8 0 12 4 12 12-1 4-3 8-5 11L33 13c3-2 7-4 11-5Z" fill="#8f6bff" opacity=".35" />
+        </svg>
+      );
+    case "goat":
+      return (
+        <svg {...common}>
+          <path d="M18 18c-6-6-12-4-12 2 4-1 8 0 12 4Z M46 18c6-6 12-4 12 2-4-1-8 0-12 4Z" fill="#c98a12" />
+          <path d="M20 20c0-6 5-10 12-10s12 4 12 10v12c0 10-5 18-12 18s-12-8-12-18Z" fill="#f4ede0" />
+          <path d="M26 50c2 6 4 10 6 10s4-4 6-10Z" fill="#e0d4bd" />
+          <circle cx="26" cy="28" r="3" fill="#1c1828" />
+          <circle cx="38" cy="28" r="3" fill="#1c1828" />
+          <ellipse cx="32" cy="40" rx="5" ry="3.5" fill="#f2a5b0" />
+          <path d="M14 8l-4-4M50 8l4-4" stroke="#f2b33d" strokeWidth="3" strokeLinecap="round" />
+          <path d="M22 6l5 5 5-7 5 7 5-5-2 9H24Z" fill="#f2b33d" stroke="#a26b00" strokeWidth="1.5" strokeLinejoin="round" />
+        </svg>
+      );
     case "trophy":
       return (
         <svg {...common}>

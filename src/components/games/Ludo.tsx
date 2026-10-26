@@ -135,12 +135,16 @@ export function Ludo({ game, names, act }: { game: Game; names: Names; act: Game
     setSt(next);
 
     const homeCount = next.tokens[l.by].filter((p) => p === HOME).length;
-    if (won(next, l.by)) pops.show(mine ? { title: "Check!", sub: "All 4 home · you won", tone: "win" } : { title: "So close!", sub: `${names.them} got all 4 home`, tone: "bad" });
+    if (won(next, l.by)) pops.show(
+        mine
+          ? { title: "Check!", sub: "All 4 home · you won", tone: "win", gift: `Good game. Send ${names.them} a gift` }
+          : { title: "So close!", sub: `${names.them} got all 4 home`, tone: "bad", gift: "Say well played with a gift" },
+      );
     else if (l.captured?.length)
       pops.show(
         mine
-          ? { title: "Captured!", sub: `${names.them}'s token goes home · roll again`, tone: "good", art: <TokenArt color={color(them)} size={86} cross /> }
-          : { title: "Sent home!", sub: `${names.them} captured your token`, tone: "bad", art: <TokenArt color={color(me)} size={86} cross /> },
+          ? { title: "Captured!", sub: `${names.them}'s token goes home · roll again`, tone: "good", art: <TokenArt color={color(them)} size={86} cross />, gift: "Soften the blow with a gift" }
+          : { title: "Sent home!", sub: `${names.them} captured your token`, tone: "bad", art: <TokenArt color={color(me)} size={86} cross />, gift: `Respect. Send ${names.them} a 🔥` },
       );
     else if (l.home)
       pops.show(
@@ -219,7 +223,7 @@ export function Ludo({ game, names, act }: { game: Game; names: Names; act: Game
     const list: Record<string, Parameters<typeof pops.show>[0]> = {
       six: { title: "Six!", sub: "Roll again after you move", tone: "good", art: <DiceArt n={6} /> },
       capture: { title: "Captured!", sub: `${names.them}'s token goes home · roll again`, tone: "good", art: <TokenArt color={color(them)} size={86} cross /> },
-      sent: { title: "Sent home!", sub: `${names.them} captured your token`, tone: "bad", art: <TokenArt color={color(me)} size={86} cross /> },
+      sent: { title: "Sent home!", sub: `${names.them} captured your token`, tone: "bad", art: <TokenArt color={color(me)} size={86} cross />, gift: `Respect. Send ${names.them} a 🔥` },
       home: { title: "Home!", sub: "2 of 4 home · roll again", tone: "good", art: <TokenArt color={color(me)} size={86} /> },
       win: { title: "Check!", sub: "All 4 home · you won", tone: "win" },
     };
@@ -285,20 +289,20 @@ export function Ludo({ game, names, act }: { game: Game; names: Names; act: Game
     <div className="relative flex h-full min-h-0 flex-col px-3 pt-2 pb-3 lg:flex-row lg:gap-8 lg:px-10 lg:pt-4 lg:pb-8">
       {/* Phones: players along the top */}
       <div className="flex items-center gap-2.5 lg:hidden">
-        <Player name="You" color={color(me)} active={myTurn} sub={sub(me)} />
+        <Player name="You" photo={names.mePhoto} color={color(me)} active={myTurn} sub={sub(me)} />
         <div className="font-display text-[22px] font-bold tabular-nums">
           {home(me)}–{home(them)}
         </div>
-        <Player right name={names.them} color={color(them)} active={st.turn === them && !over} sub={sub(them)} />
+        <Player right name={names.them} photo={names.themPhoto} onClick={names.onThem} color={color(them)} active={st.turn === them && !over} sub={sub(them)} />
       </div>
 
       {/* Computers: players and dice beside the board */}
       <aside className="hidden w-[300px] shrink-0 flex-col justify-center gap-3 lg:flex">
         <div className="flex">
-          <Player name={names.them} color={color(them)} active={st.turn === them && !over} sub={sub(them)} />
+          <Player name={names.them} photo={names.themPhoto} onClick={names.onThem} color={color(them)} active={st.turn === them && !over} sub={sub(them)} />
         </div>
         <div className="flex">
-          <Player name="You" color={color(me)} active={myTurn} sub={sub(me)} />
+          <Player name="You" photo={names.mePhoto} color={color(me)} active={myTurn} sub={sub(me)} />
         </div>
         <div className="mt-4 grid justify-items-center gap-3 rounded-[28px] bg-white/6 p-6">
           {dice}

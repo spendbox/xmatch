@@ -11,6 +11,7 @@ import * as gems from "@/lib/boardgames/gems";
 import * as ludo from "@/lib/boardgames/ludo";
 import * as snakes from "@/lib/boardgames/snakes";
 import { randomInt } from "node:crypto";
+import { pushToUsers } from "@/lib/push";
 
 /**
  * A move in Whot, Checkers, Chess, Ayo, Bombshell, Gem Clash, Ludo or Snakes & Ladders.
@@ -91,6 +92,19 @@ export async function POST(req: Request) {
 
   if (g.kind !== "bomb") await saveSecrets();
   if (result.priv !== undefined) await db.from("game_private").upsert({ game_id: g.id, data: result.priv });
+
+  // Play games aren't in a chat: if it's now their turn and they've left the app, tell them
+  const nextTurn = (result.state as { turn?: Side } | null)?.turn;
+  if (g.play && !result.over && nextTurn && nextTurn !== side) {
+    const them = nextTurn === "a" ? g.player_a : g.player_b;
+    const { data: me } = await db.from("profiles").select("display_name, photos").eq("id", user.id).single();
+    const title = ({ whot: "Whot", ayo: "Ayo", ludo: "Ludo", snakes: "Snakes & Ladders" } as Record<string, string>)[g.kind as string] ?? "your game";
+    await pushToUsers(
+      [them],
+      { title: `Your turn in ${title} 🎲`, body: `${((me?.display_name as string) ?? "They").split(" ")[0]} made their move.`, url: `/home?game=${g.id}`, tag: `turn-${g.id}`, icon: (me?.photos as string[] | null)?.[0] ?? null },
+      { skipIfActive: true },
+    ).catch(() => {});
+  }
 
   if (result.over) {
     const winner = result.over.winner ? (result.over.winner === "a" ? g.player_a : g.player_b) : null;

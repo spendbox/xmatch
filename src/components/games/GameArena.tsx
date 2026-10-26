@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { lockScroll } from "@/lib/scrollLock";
 import { createPortal } from "react-dom";
-import { ChevronLeft, Volume2, VolumeX, X } from "lucide-react";
+import { ChevronLeft, Gift, Volume2, VolumeX, X } from "lucide-react";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { buzz, gameInfo, sfx, useGameSound, type Game, type GameActions } from "@/lib/games";
 import { BigButton, secondsLeft, useTicker, type Names } from "./parts";
@@ -19,6 +19,12 @@ import { Ayo } from "./Ayo";
 import { Bombshell } from "./Bombshell";
 import { GemClash } from "./GemClash";
 import { Ludo } from "./Ludo";
+import { GamePop, GIFT_EVENT, usePops } from "./GamePop";
+import { ChatFab, ChatPanel, PersonSheet, useGameChat, useGameSignals, type PlayPerson } from "./GameSocial";
+import { GiftArt } from "@/components/keys/GiftArt";
+import { GIFTS } from "@/lib/keys";
+import { GiftSheet, keysError } from "@/components/keys/GiftSheet";
+import { createClient } from "@/lib/supabase/client";
 import { SnakesLadders } from "./SnakesLadders";
 import { ReactionButton, ReactionHint, ReactionLayer, ReactionTray, useReactionHint, useReactions } from "./Reactions";
 
@@ -31,6 +37,11 @@ export function GameArena({
   onClose,
   peek,
   unmask,
+  practice,
+  chat,
+  person,
+  results,
+  onGiftSend,
 }: {
   game: Game;
   names: Names;
@@ -41,6 +52,16 @@ export function GameArena({
   onClose: () => void;
   peek?: string | null;
   unmask?: { onUnmask: () => void; done: boolean } | null;
+  /** Against the computer while waiting for a player: nothing is sent anywhere */
+  practice?: boolean;
+  /** Play games: the chat with the other player (none yet until someone pays to start it) */
+  chat?: { matchId: string | null; cost: number; balance: number | null; onStart: () => Promise<string | null>; onRefresh?: () => void } | null;
+  /** Play games: who you're playing (tap their name to see them) */
+  person?: { open: boolean; setOpen: (v: boolean) => void; info: PlayPerson | null } | null;
+  /** Play games: more ways on from the results */
+  results?: { onNew: () => void; closeLabel?: string } | null;
+  /** Play games send gifts their own way */
+  onGiftSend?: (giftId: string) => Promise<string | null>;
 }) {
   useTicker(250);
   const [mounted, setMounted] = useState(false);
@@ -49,13 +70,75 @@ export function GameArena({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const sound = useGameSound();
-  const reacting = game.status === "active" || game.status === "done" || game.status === "cancelled";
+  const reacting = !practice && (game.status === "active" || game.status === "done" || game.status === "cancelled");
   const reactions = useReactions(reacting ? game.id : null);
   const [tray, setTray] = useState(false);
   const reactHint = useReactionHint(game.status === "active");
   const info = gameInfo(game.kind);
   const over = game.status === "done" || game.status === "cancelled";
   const endedAgo = game.ended_at ? (act.now() - new Date(game.ended_at).getTime()) / 1000 : 99;
+
+  // A big moment: offer to send a gift (real games only, at most once a minute)
+  const [giftLine, setGiftLine] = useState<string | null>(null);
+  const [giftOpen, setGiftOpen] = useState(false);
+  const [balance, setBalance] = useState<number | null>(null);
+  const lastOffer = useRef(0);
+  const canGift = !practice && !!(game.session_id || game.match_id || game.play);
+  const myId = game.me === "a" ? game.player_a : game.player_b;
+  // Chat inside the game: Play games and games with your people (masked chats already have their chat)
+  const chatMatch = chat ? chat.matchId : game.match_id;
+  const chatOn = !practice && !game.session_id && (!!chat || !!game.match_id);
+  const [chatOpen, setChatOpen] = useState(false);
+  const talk = useGameChat(chatOn ? chatMatch : null, myId, chatOpen);
+  const pops = usePops();
+  const signal = useGameSignals(practice ? null : game.id, (event, payload) => {
+    if (event === "gift") {
+      const g = GIFTS.find((x) => x.id === payload.gift);
+      pops.show({ title: `${g?.name ?? "Gift"}!`, sub: `${names.them} sent you ${g ? `a ${g.name}` : "a gift"}`, tone: "good", art: <GiftArt id={payload.gift} size={110} /> });
+    }
+    // They just started a chat: show it here straight away
+    if (event === "chat") chat?.onRefresh?.();
+  });
+  async function sendGift(giftId: string) {
+    const e = onGiftSend
+      ? await onGiftSend(giftId)
+      : await createClient()
+          .rpc("send_gift", { p_gift: giftId, p_session: game.session_id, p_match: game.match_id })
+          .then(({ error }) => (error ? keysError(error.message) : null));
+    if (e) return e;
+    signal("gift", { gift: giftId });
+    const g = GIFTS.find((x) => x.id === giftId);
+    setGiftOpen(false);
+    pops.show({ title: "Sent!", sub: `You sent ${names.them} ${g ? `a ${g.name}` : "a gift"}`, tone: "good", art: <GiftArt id={giftId} size={100} /> });
+    return null;
+  }
+  async function startChat() {
+    if (!chat) return null;
+    const e = await chat.onStart();
+    if (!e) signal("chat");
+    return e;
+  }
+  useEffect(() => {
+    if (!canGift) return;
+    const on = (e: Event) => {
+      if (Date.now() - lastOffer.current < 60_000) return;
+      lastOffer.current = Date.now();
+      setGiftLine((e as CustomEvent<string>).detail);
+    };
+    window.addEventListener(GIFT_EVENT, on);
+    return () => window.removeEventListener(GIFT_EVENT, on);
+  }, [canGift]);
+  useEffect(() => {
+    if (!giftLine) return;
+    const t = setTimeout(() => setGiftLine(null), 7000);
+    return () => clearTimeout(t);
+  }, [giftLine]);
+  async function openGifts() {
+    setGiftLine(null);
+    setGiftOpen(true);
+    const { data } = await createClient().rpc("my_wallet");
+    setBalance((data as { balance?: number } | null)?.balance ?? null);
+  }
 
   // Lock the page behind
   useEffect(() => {
@@ -72,6 +155,7 @@ export function GameArena({
   }, [game.id]);
 
   async function leave() {
+    if (practice) return onClose();
     if (game.status === "active" && !confirm(`Leave ${info.title}? ${names.them} wins this one.`)) return;
     await act.cancel();
     if (game.status !== "active") onClose();
@@ -124,6 +208,7 @@ export function GameArena({
           onRematch={rematch}
           rematching={busy}
           unmask={unmask}
+          more={results ? { onNew: results.onNew, onMessage: chatOn ? () => setChatOpen(true) : undefined, closeLabel: results.closeLabel } : undefined}
         />
       );
     } else if (game.kind === "c4") body = <ConnectFour game={game} names={names} act={act} peek={peek} onPeek={onMinimize} />;
@@ -160,12 +245,12 @@ export function GameArena({
             </button>
             {myTurn ? (
               <p className="min-w-0 flex-1 text-center">
-                <span className="gm-pulse inline-block rounded-full bg-gradient-to-b from-[#ffd36b] to-gold px-4 py-1.5 font-display text-[15px] font-black tracking-[0.12em] text-ink uppercase shadow-[0_0_0_3px_rgba(242,179,61,0.3),0_6px_20px_-4px_rgba(242,179,61,0.8)]">
+                <span className="gm-pulse inline-block rounded-full bg-gradient-to-b from-[#ffd36b] to-gold px-3 py-1.5 font-display text-[13px] font-black tracking-[0.08em] whitespace-nowrap text-ink uppercase min-[400px]:px-4 min-[400px]:text-[15px] min-[400px]:tracking-[0.12em] shadow-[0_0_0_3px_rgba(242,179,61,0.3),0_6px_20px_-4px_rgba(242,179,61,0.8)]">
                   Your turn
                 </span>
               </p>
             ) : (
-              <p className="min-w-0 flex-1 truncate text-center text-[11px] font-extrabold tracking-[0.16em] text-gold uppercase">{info.title}</p>
+              <p className="min-w-0 flex-1 truncate text-center text-[11px] font-extrabold tracking-[0.16em] text-gold uppercase">{practice ? `Practice · ${info.title}` : info.title}</p>
             )}
             {reacting && (
               <ReactionButton
@@ -210,6 +295,69 @@ export function GameArena({
         )}
         {reacting && tray && <ReactionTray onSend={reactions.send} onIdle={() => setTray(false)} />}
         <ReactionLayer floats={reactions.floats} />
+        {/* Gifts: a tab on the side of the screen, halfway down, always in reach */}
+        {canGift && !resultsView && (
+          <button
+            type="button"
+            onClick={() => void openGifts()}
+            aria-label={`Send ${names.them} a gift`}
+            className="absolute top-1/2 right-0 z-40 flex -translate-y-1/2 flex-col items-center gap-0.5 rounded-l-2xl bg-gradient-to-b from-[#ffd36b] to-gold py-3 pr-1.5 pl-2.5 text-ink shadow-[0_10px_24px_-8px_rgba(0,0,0,0.6)] transition active:scale-95"
+          >
+            <Gift size={22} />
+            <span className="text-[10px] font-extrabold tracking-wide uppercase">Gift</span>
+          </button>
+        )}
+        {chatOn && <ChatFab unread={talk.unread} locked={!chatMatch} onOpen={() => setChatOpen(true)} />}
+        {chatOn && (
+          <ChatPanel
+            open={chatOpen}
+            onClose={() => setChatOpen(false)}
+            them={{ name: names.them, photo: names.themPhoto }}
+            matchId={chatMatch}
+            myId={myId}
+            messages={talk.messages}
+            onSend={talk.send}
+            cost={chat?.cost ?? 0}
+            balance={chat?.balance ?? null}
+            onStart={startChat}
+          />
+        )}
+        {person && (
+          <PersonSheet
+            open={person.open}
+            onClose={() => person.setOpen(false)}
+            person={person.info}
+            onMessage={() => {
+              person.setOpen(false);
+              setChatOpen(true);
+            }}
+          />
+        )}
+        <GamePop pop={pops.pop} big={WIDE_GAMES.includes(game.kind)} />
+        {giftLine && (
+          <div className="pointer-events-none absolute inset-x-0 top-[calc(max(12px,env(safe-area-inset-top))+52px)] z-50 flex justify-center px-4">
+            <button
+              type="button"
+              onClick={() => void openGifts()}
+              className="gm-burst pointer-events-auto flex items-center gap-2.5 rounded-full bg-white py-1.5 pr-1.5 pl-3 text-ink shadow-[0_12px_30px_-8px_rgba(0,0,0,0.6)]"
+            >
+              <Gift size={18} className="shrink-0 text-chili" />
+              <span className="text-[13.5px] font-semibold">{giftLine}</span>
+              <span className="rounded-full bg-gold px-3 py-1.5 text-[13px] font-extrabold">Send</span>
+            </button>
+          </div>
+        )}
+        {canGift && (
+          <GiftSheet
+            open={giftOpen}
+            onClose={() => setGiftOpen(false)}
+            layer="z-[70]"
+            balance={balance}
+            toName={names.them}
+            subtitle={chatMatch || game.session_id ? "It pops up in your chat, and they get Keys from it." : "It pops up on their screen now, and they get Keys from it."}
+            onSend={(g) => sendGift(g.id)}
+          />
+        )}
         {err && (
           <p className="absolute inset-x-4 bottom-24 rounded-2xl bg-white px-4 py-3 text-center text-[14px] font-semibold text-ink shadow-lift">{err}</p>
         )}

@@ -189,11 +189,11 @@ export function Ayo({ game, names, act }: { game: Game; names: Names; act: GameA
   return (
     <div className="flex h-full min-h-0 flex-col px-3 pt-2 pb-4">
       <div className="flex items-center gap-2.5">
-        <Player name="You" color={color(me)} active={st.turn === me} sub={sub(me)} />
+        <Player name="You" photo={names.mePhoto} color={color(me)} active={st.turn === me} sub={sub(me)} />
         <div className="font-display text-[22px] font-bold tabular-nums">
           {store[me]}–{store[them]}
         </div>
-        <Player right name={names.them} color={color(them)} active={st.turn === them} sub={sub(them)} />
+        <Player right name={names.them} photo={names.themPhoto} onClick={names.onThem} color={color(them)} active={st.turn === them} sub={sub(them)} />
       </div>
 
       <div

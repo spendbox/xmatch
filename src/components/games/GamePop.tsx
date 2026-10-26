@@ -6,7 +6,18 @@ import { Confetti } from "./parts";
 
 /** good: your big move · bad: a hit against you · move: a game moment · win: the end */
 export type PopTone = "good" | "bad" | "move" | "win";
-export type Pop = { id: number; title: string; sub?: string; tone: PopTone; art?: React.ReactNode };
+export type Pop = {
+  id: number;
+  title: string;
+  sub?: string;
+  tone: PopTone;
+  art?: React.ReactNode;
+  /** A good moment to send a gift: the game screen offers it with this line */
+  gift?: string;
+};
+
+/** Heard by the game screen: offer a gift */
+export const GIFT_EVENT = "dp:game-gift";
 
 const TONES: Record<PopTone, { a: string; b: string; ink: string; ribbon: string }> = {
   good: { a: "#fff1b8", b: "#f2b33d", ink: "#5a3200", ribbon: "#e08a12" },
@@ -30,6 +41,11 @@ export function usePops() {
       if (p.tone === "bad") buzz([30, 50, 60]);
       else buzz(p.tone === "win" ? [20, 40, 20, 40, 60] : [15, 30, 15]);
       sfx(p.tone === "bad" ? "lose" : p.tone === "win" ? "win" : "go");
+      if (p.gift) {
+        const line = p.gift;
+        // After the pop-up has had its moment
+        setTimeout(() => window.dispatchEvent(new CustomEvent(GIFT_EVENT, { detail: line })), p.tone === "win" ? 2400 : 1600);
+      }
     },
   };
 }

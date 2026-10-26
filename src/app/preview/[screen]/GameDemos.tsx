@@ -353,7 +353,47 @@ function useLocalGame(initial: Game | null) {
   return { game, act: local };
 }
 
+/** A face for previews: a coloured square with a letter */
+const face = (a: string, b: string, l: string) =>
+  `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 125"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient></defs><rect width="100" height="125" fill="url(#g)"/><circle cx="50" cy="48" r="22" fill="#fff" opacity=".35"/><rect x="18" y="80" width="64" height="60" rx="30" fill="#fff" opacity=".35"/><text x="50" y="58" text-anchor="middle" font-size="26" font-family="sans-serif" font-weight="700" fill="#fff">${l}</text></svg>`)}`;
+
+/** A Play game: real names and photos, chat, gifts and their profile */
+function PlayDemo({ screen }: { screen: string }) {
+  const initial = useMemo(() => {
+    const g = demo("game-ludo-live");
+    if (!g) return null;
+    const base = { ...g, play: true, session_id: null, match_id: null, started_at: new Date(Date.now() - 60_000).toISOString() };
+    // The end of a game: you won
+    return screen === "game-play-results"
+      ? { ...base, status: "done" as const, winner: base.player_a, score_a: 4, score_b: 2, ended_at: new Date(Date.now() - 10_000).toISOString() }
+      : base;
+  }, [screen]);
+  const live = useLocalGame(initial);
+  const [personOpen, setPersonOpen] = useState(screen === "game-play-profile");
+  const [matchId, setMatchId] = useState<string | null>(null);
+  if (!live.game) return null;
+  const amaka = { id: "ada", name: "Amaka", age: 26, gender: "woman", photos: [face("#e5484d", "#f2b33d", "A"), face("#5b3fd9", "#1f9d6b", "A")], bio: "Ludo champion of my street since 2009. Looking for someone who can actually beat me.", interests: ["Afrobeats", "Food", "Travel"], place: "Yaba, Lagos", online: true, me_photo: face("#7b5cf0", "#f2b33d", "T"), match_id: matchId, cost: 15, balance: 120 };
+  return (
+    <GameArena
+      game={live.game}
+      names={{ me: "You", them: "Amaka", mePhoto: amaka.me_photo, themPhoto: amaka.photos[0], onThem: () => setPersonOpen(true) }}
+      act={live.act}
+      onMinimize={() => {}}
+      onClose={() => {}}
+      chat={{ matchId, cost: 15, balance: 120, onStart: async () => (setMatchId("demo-match"), null) }}
+      person={{ open: personOpen, setOpen: setPersonOpen, info: amaka }}
+      results={{ onNew: () => {}, closeLabel: "Close" }}
+      onGiftSend={async () => null}
+    />
+  );
+}
+
 export function GameDemo({ screen }: { screen: string }) {
+  if (screen.startsWith("game-play")) return <PlayDemo screen={screen} />;
+  return <GameDemoInner screen={screen} />;
+}
+
+function GameDemoInner({ screen }: { screen: string }) {
   const initial = useMemo(() => demo(screen), [screen]);
   const live = useLocalGame(initial);
   const game = live.game;

@@ -18,6 +18,7 @@ export function GiftSheet({
   toName,
   onSend,
   subtitle = "Gifts pop up in the chat. A fun way to stand out.",
+  layer,
 }: {
   open: boolean;
   onClose: () => void;
@@ -25,6 +26,7 @@ export function GiftSheet({
   toName: string;
   onSend: (gift: Gift) => Promise<string | null>; // returns an error message, or null
   subtitle?: string;
+  layer?: string;
 }) {
   const all = useGifts();
   const GIFTS = all.filter((g) => !g.retired);
@@ -47,6 +49,7 @@ export function GiftSheet({
     <Sheet
       open={open}
       onClose={onClose}
+      layer={layer}
       title={`Send ${toName} a gift`}
       subtitle={subtitle}
       footer={
