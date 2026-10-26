@@ -76,7 +76,7 @@ export function MasqueradeRoom({
   // Chats from a wave need no explaining: you both chose each other
   const whoSees = paidChat?.waved ? null : known?.name ? (
     <>
-      You&apos;re <span className="font-semibold text-ink">{state.me.alias}</span>. You found {known.name} on Meet, so you can see their name. They only see your mask name until you both unmask.
+      You&apos;re <span className="font-semibold text-ink">{state.me.alias}</span>. You found {known.name} on Meet, so you can see their name and photo.
     </>
   ) : theyPaid ? (
     <>
@@ -104,7 +104,7 @@ export function MasqueradeRoom({
       if (m.kind !== "system" || !m.body) return m;
       let body = m.body;
       if (body.startsWith(`${mine} unmasked`)) body = `You unmasked. If ${theirName} unmasks too, you're connected.`;
-      else if (body.startsWith(`${mine} found you on Meet`)) body = `You started this chat from Meet. ${theirName} sees your mask name until you both unmask.`;
+      else if (body.startsWith(`${mine} found you on Meet`)) body = `You started this chat from Meet.`;
       else if (body.startsWith(`${mine} `)) body = `You ${body.slice(mine.length + 1)}`;
       else if (theirName !== theirs && body.includes(theirs)) body = body.split(theirs).join(theirName);
       return body === m.body ? m : { ...m, body };
