@@ -16,7 +16,8 @@ import { MaskIcon } from "@/components/ui/MaskIcon";
 import { Photo } from "@/components/ui/Photo";
 import { Sheet } from "@/components/ui/Sheet";
 import { snippet } from "@/components/chat/MessageList";
-import { usePaidChatPeople } from "@/components/masquerade/usePaidChatPeople";
+import { usePaidChatPeople, type PaidChatPerson } from "@/components/masquerade/usePaidChatPeople";
+import { chatPreview } from "@/lib/chatPreview";
 import type { MaskedChat } from "@/components/matches/MaskedChats";
 import { CHATS_EVENT, refreshMenuBadges } from "./useMenuBadges";
 
@@ -73,22 +74,32 @@ export function MessagePops({ userId, demo }: { userId: string; demo?: { banner?
       const key = `m:${c.id}`;
       const at = new Date(c.last_message_at).getTime();
       next.set(key, at);
-      if (at > (seen.current.get(key) ?? since.current) && c.last_sender === c.other_id && c.last_message) {
-        fresh.push({ key, kind: "match", id: c.id, href: `/matches/${c.id}`, name: c.display_name, photo: c.photos?.[0], personId: c.other_id, text: c.last_message.replace(/^💬 /, ""), count: 1 });
+      if (at > (seen.current.get(key) ?? since.current) && c.last_sender === c.other_id && c.last_message != null) {
+        fresh.push({ key, kind: "match", id: c.id, href: `/matches/${c.id}`, name: c.display_name, photo: c.photos?.[0], personId: c.other_id, text: chatPreview(c.last_kind, c.last_message, c.last_deleted), count: 1 });
       }
     }
     for (const c of (Array.isArray(s.data) ? s.data : []) as MaskedChat[]) {
       const key = `s:${c.id}`;
       const at = new Date(c.last_at).getTime();
       next.set(key, at);
-      if (at > (seen.current.get(key) ?? since.current) && c.last_mine === false && c.last_message && !(c.pact && !c.pact_seen)) {
-        fresh.push({ key, kind: "masked", id: c.id, href: `/masquerade/${c.id}`, name: c.alias, alias: c.alias, text: c.last_message, count: 1 });
+      if (at > (seen.current.get(key) ?? since.current) && c.last_mine === false && c.last_message != null && !(c.pact && !c.pact_seen)) {
+        fresh.push({ key, kind: "masked", id: c.id, href: `/masquerade/${c.id}`, name: c.alias, alias: c.alias, text: chatPreview(c.last_kind, c.last_message), count: 1 });
       }
     }
     seen.current = next;
     const { path: now, open: reading, playing: game } = here.current;
     const shown = fresh.filter((p) => p.href !== now && p.key !== reading);
     if (!shown.length) return;
+    // Masked chats from Meet or a wave: you know who they are, so their name and photo, fresh
+    // (a chat that started after this page opened isn't in any list loaded earlier)
+    if (shown.some((p) => p.kind === "masked")) {
+      const { data } = await supabase.rpc("paid_chat_people");
+      const people = (data && typeof data === "object" ? data : {}) as Record<string, PaidChatPerson>;
+      for (const p of shown) {
+        const known = p.kind === "masked" ? people[p.id] : undefined;
+        if (known?.name) Object.assign(p, { name: known.name, photo: known.photo, personId: known.id });
+      }
+    }
     const stamp = Date.now() + BUBBLE_MS;
     shown.forEach((p) => until.current.set(p.key, stamp));
     // Newest first; a chat that already has a bubble counts one more

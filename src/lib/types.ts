@@ -148,6 +148,9 @@ export type MatchSummary = {
   photos: string[];
   age: number;
   last_message: string | null;
+  /** What the last message was (voice note, gift…), so the list can say so (update 91) */
+  last_kind?: string | null;
+  last_deleted?: boolean | null;
   last_sender: string | null;
   shared?: number;
   /** Something new from them since you last opened the chat */
