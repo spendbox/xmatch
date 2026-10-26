@@ -128,7 +128,7 @@ export function drawScribble(ctx: CanvasRenderingContext2D, d: Drawing, upTo = I
       path(pts, (w) => w * 0.38, () => "rgba(255,255,255,0.92)");
     } else if (s.b === "rainbow") {
       const hue0 = (i * 47) % 360;
-      path(pts, (w) => w, (n) => `hsl(${(hue0 + n * 6) % 360} 92% 58%)`);
+      path(pts, (w) => w, (n) => `hsl(${(hue0 + n * 6) % 360}, 92%, 58%)`); // commas: older browsers need them
     } else if (s.b === "glitter") {
       path(pts, (w) => w, () => s.c);
       // Sparkles along the line

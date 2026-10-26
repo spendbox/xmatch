@@ -11,9 +11,8 @@ import { Toggle } from "@/components/ui/Toggle";
 import { snippet } from "./MessageList";
 import { loadDraft, saveDraft, sweepDrafts } from "@/lib/chatDraft";
 import { useVoiceRecorder } from "./useVoiceRecorder";
-import { StickerSheet, type StickerPick } from "@/components/stickers/StickerSheet";
+import { StickerSheet, type ScribbleSend, type StickerPick } from "@/components/stickers/StickerSheet";
 import { StickerIcon } from "@/components/stickers/StickerIcon";
-import type { Drawing } from "@/lib/scribble";
 
 export type MediaKind = "image" | "video";
 
@@ -50,7 +49,7 @@ type Props = {
   /** Turn on Masky stickers */
   onSendSticker?: (s: StickerPick) => Promise<void> | void;
   /** Turn on scribbles (in the sticker pop-up): returns an error to show, or null */
-  onSendScribble?: (d: Drawing) => Promise<string | null>;
+  onSendScribble?: (s: ScribbleSend) => Promise<string | null>;
   /** Your own message being edited: its words go in the box, and sending saves the change */
   editing?: ChatMessage | null;
   onEdit?: (m: ChatMessage, text: string) => Promise<void> | void;

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import clsx from "clsx";
-import { Eraser, Undo2 } from "lucide-react";
+import { Eraser, Maximize2, Minimize2, Undo2 } from "lucide-react";
 import { tapFeedback } from "@/components/ui/Button";
 import { BRUSHES, INKS, SCRIBBLE_MAX_POINTS, SCRIBBLE_SIZE, WIDTHS, drawScribble, pointCount, timeline, type Brush, type Drawing, type Stroke } from "@/lib/scribble";
 
@@ -11,7 +11,8 @@ function useCanvas(size: number) {
   useEffect(() => {
     const c = ref.current;
     if (!c) return;
-    const dpr = Math.min(3, window.devicePixelRatio || 1);
+    // Sharp on high-res screens, but kept under the canvas size iPhones allow
+    const dpr = Math.min(3, window.devicePixelRatio || 1, 2048 / size);
     c.width = Math.round(size * dpr);
     c.height = Math.round(size * dpr);
   }, [size]);
@@ -19,7 +20,7 @@ function useCanvas(size: number) {
 }
 
 /** A scribble in a chat: draws itself the first time you see it (tap to watch it again) */
-export function ScribbleView({ drawing, size = 170, className }: { drawing: Drawing; size?: number; className?: string }) {
+export function ScribbleView({ drawing, size = 170, className, still }: { drawing: Drawing; size?: number; className?: string; /** Just the finished drawing (thumbnails) */ still?: boolean }) {
   const canvas = useCanvas(size);
   const [run, setRun] = useState(0);
   const played = useRef(false);
@@ -30,7 +31,7 @@ export function ScribbleView({ drawing, size = 170, className }: { drawing: Draw
     if (!c || !ctx) return () => {};
     const { times, total } = timeline(drawing);
     const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    if (reduce || !total) {
+    if (reduce || still || !total) {
       drawScribble(ctx, drawing, Infinity, times);
       return () => {};
     }
@@ -45,7 +46,7 @@ export function ScribbleView({ drawing, size = 170, className }: { drawing: Draw
     };
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
-  }, [canvas, drawing]);
+  }, [canvas, drawing, still]);
 
   // Plays when it first scrolls into view
   useEffect(() => {
@@ -53,6 +54,12 @@ export function ScribbleView({ drawing, size = 170, className }: { drawing: Draw
     if (!c) return;
     let stop = () => {};
     if (run > 0) {
+      stop = play();
+      return () => stop();
+    }
+    // Browsers without IntersectionObserver: just play it
+    if (typeof IntersectionObserver === "undefined") {
+      played.current = true;
       stop = play();
       return () => stop();
     }
@@ -68,6 +75,7 @@ export function ScribbleView({ drawing, size = 170, className }: { drawing: Draw
     };
   }, [canvas, play, run]);
 
+  if (still) return <canvas ref={canvas} style={{ width: size, height: size }} className={clsx("block", className)} aria-label="Scribble" />;
   return (
     <button
       type="button"
@@ -84,7 +92,21 @@ export function ScribbleView({ drawing, size = 170, className }: { drawing: Draw
 }
 
 /** Draw a scribble. Every line is saved with its timing, so it draws itself again when they see it. */
-export function ScribblePad({ drawing, onChange }: { drawing: Drawing; onChange: (d: Drawing) => void }) {
+export function ScribblePad({
+  drawing,
+  onChange,
+  maxSize = 360,
+  expanded,
+  onExpand,
+}: {
+  drawing: Drawing;
+  onChange: (d: Drawing) => void;
+  /** Largest the drawing space gets (bigger when expanded) */
+  maxSize?: number;
+  expanded?: boolean;
+  /** Switch between the small and the big drawing space */
+  onExpand?: () => void;
+}) {
   const [box, setBox] = useState(300);
   const wrap = useRef<HTMLDivElement>(null);
   const canvas = useCanvas(box);
@@ -100,10 +122,16 @@ export function ScribblePad({ drawing, onChange }: { drawing: Drawing; onChange:
   useEffect(() => {
     const el = wrap.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => setBox(Math.min(360, Math.round(el.clientWidth))));
+    const fit = () => setBox(Math.max(200, Math.min(maxSize, Math.round(el.clientWidth))));
+    fit();
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", fit);
+      return () => window.removeEventListener("resize", fit);
+    }
+    const ro = new ResizeObserver(fit);
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [maxSize]);
 
   const paint = useCallback(() => {
     cancelAnimationFrame(raf.current);
@@ -159,21 +187,35 @@ export function ScribblePad({ drawing, onChange }: { drawing: Drawing; onChange:
   const empty = drawing.strokes.length === 0;
   return (
     <div className="space-y-3">
-      <div ref={wrap} className="relative mx-auto w-full max-w-[360px]">
+      <div ref={wrap} className="relative mx-auto w-full" style={{ maxWidth: maxSize }}>
         <canvas
           ref={canvas}
           onPointerDown={down}
           onPointerMove={move}
           onPointerUp={up}
           onPointerCancel={up}
-          style={{ width: box, height: box }}
-          className="block touch-none rounded-[28px] bg-[radial-gradient(circle,rgb(28_24_40/0.09)_1.2px,transparent_1.4px)] bg-[length:18px_18px] bg-[#f6f2fd] ring-1 ring-brand/15"
+          onContextMenu={(e) => e.preventDefault()}
+          style={{ width: box, height: box, WebkitTouchCallout: "none", WebkitUserSelect: "none", userSelect: "none" }}
+          className="mx-auto block touch-none rounded-[28px] bg-[radial-gradient(circle,rgb(28_24_40/0.09)_1.2px,transparent_1.4px)] bg-[length:18px_18px] bg-[#f6f2fd] ring-1 ring-brand/15"
           aria-label="Drawing space"
         />
         {empty && (
           <p className="pointer-events-none absolute inset-0 grid place-items-center px-10 text-center text-[15px] font-medium text-brand/60">
             Draw anything. It&apos;ll draw itself again when they see it ✨
           </p>
+        )}
+        {onExpand && (
+          <button
+            type="button"
+            onClick={() => {
+              tapFeedback();
+              onExpand();
+            }}
+            className="absolute top-2.5 left-2.5 grid h-9 w-9 place-items-center rounded-full bg-surface text-ink-soft shadow-card transition active:scale-90"
+            aria-label={expanded ? "Make the drawing space smaller" : "Make the drawing space bigger"}
+          >
+            {expanded ? <Minimize2 size={17} /> : <Maximize2 size={17} />}
+          </button>
         )}
         <div className="absolute top-2.5 right-2.5 flex gap-1.5">
           <button

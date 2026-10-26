@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import {
-  Ban, Clock3, Copy, Gamepad2, Hourglass, MessageCircle, Timer, CornerUpLeft, MessageCircleQuestion, Pencil, Phone, PhoneIncoming, PhoneMissed, PhoneOutgoing, Play, Plus, Reply, Trash2, Video,
+  Ban, Clock3, Copy, Gamepad2, Hourglass, MessageCircle, Timer, CornerUpLeft, MessageCircleQuestion, Bookmark, Pencil, Phone, PhoneIncoming, PhoneMissed, PhoneOutgoing, Play, Plus, Reply, Trash2, Video,
 } from "lucide-react";
 import type { ChatMessage, Gender } from "@/lib/types";
 import { formatDuration } from "@/lib/chatMedia";
@@ -53,6 +53,8 @@ type Props = {
   onReact?: (m: ChatMessage, emoji: string) => void;
   /** Turn on editing your own messages (within 15 minutes) */
   onEdit?: (m: ChatMessage) => void;
+  /** Turn on keeping scribbles (yours or theirs) to send again for free */
+  onSaveScribble?: (m: ChatMessage) => void;
 };
 
 /** A slow reveal clears fully after 5 messages from each of you */
@@ -84,7 +86,7 @@ export function snippet(m: ChatMessage | undefined) {
   }
 }
 
-export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDates, footer, onGameAgain, slow, genderOf, onReact, onEdit }: Props) {
+export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDates, footer, onGameAgain, slow, genderOf, onReact, onEdit, onSaveScribble }: Props) {
   // How far each slow reveal has cleared: messages after it from each person, up to 5 each (0 to 10)
   const slowProgress = useMemo(() => {
     const out = new Map<number, number>();
@@ -427,6 +429,9 @@ export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDat
           )}
           {onReply && (
             <MenuButton icon={<Reply size={19} />} label="Reply" onClick={() => { onReply(menu!); closeMenu(); }} />
+          )}
+          {menu && onSaveScribble && menu.kind === "scribble" && menu.id > 0 && !menu.deleted_at && (
+            <MenuButton icon={<Bookmark size={19} />} label="Save scribble (free to send again)" onClick={() => { onSaveScribble(menu); closeMenu(); }} />
           )}
           {menu && canEdit(menu) && (
             <MenuButton icon={<Pencil size={19} />} label="Edit" onClick={() => { onEdit?.(menu); closeMenu(); }} />

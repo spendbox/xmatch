@@ -8,12 +8,19 @@ import { Button, tapFeedback } from "@/components/ui/Button";
 import { KeyCoin } from "@/components/keys/KeyIcon";
 import { STICKER_COLORS, STICKER_MAX, STICKER_PACKS, isPose, isStickerColor, packOf, type Sticker, type StickerPack, type StickerPose } from "@/lib/stickers";
 import { Masky } from "./Masky";
-import { ScribblePad, emptyDrawing } from "./Scribble";
+import { createPortal } from "react-dom";
+import { X } from "lucide-react";
+import { Toggle } from "@/components/ui/Toggle";
+import { ScribblePad, ScribbleView, emptyDrawing } from "./Scribble";
+import { useSavedScribbles } from "./useSavedScribbles";
 import { useStickerPacks } from "./useStickerPacks";
 import { usePrices } from "@/components/keys/usePrices";
 import type { Drawing } from "@/lib/scribble";
 
 export type StickerPick = { pose: StickerPose; caption: string; color: string };
+export type ScribbleSend = { drawing?: Drawing; saved?: string; keep: boolean };
+
+const KEEP_KEY = "dp_keep_scribbles";
 
 const RECENT_KEY = "dp_recent_stickers";
 const TAB_KEY = "dp_sticker_tab";
@@ -58,8 +65,8 @@ export function StickerSheet({
   /** Buy a pack: returns an error to show, or null */
   onBuy?: (pack: StickerPack) => Promise<string | null>;
   startTab?: string;
-  /** Turn on scribbles: send a drawing (returns an error to show, or null) */
-  onSendScribble?: (d: Drawing) => Promise<string | null>;
+  /** Turn on scribbles: send a new drawing (keep: also save it), or a saved one (free). Returns an error to show, or null. */
+  onSendScribble?: (s: ScribbleSend) => Promise<string | null>;
   scribbleCost?: number;
   startMode?: "stickers" | "scribble";
 }) {
@@ -72,6 +79,26 @@ export function StickerSheet({
   const [mode, setMode] = useState<"stickers" | "scribble">(startMode);
   const [drawing, setDrawing] = useState<Drawing>(emptyDrawing);
   const [sending, setSending] = useState(false);
+  const { saved, remove: removeSaved } = useSavedScribbles();
+  const [savedPick, setSavedPick] = useState<string | null>(null);
+  const [keep, setKeep] = useState(true);
+  const [expanded, setExpanded] = useState(false);
+  const [bigSize, setBigSize] = useState(360);
+  useEffect(() => {
+    try {
+      setKeep(localStorage.getItem(KEEP_KEY) !== "0");
+    } catch {
+      /* private mode */
+    }
+  }, []);
+  // The big drawing space fills the screen, leaving room for the tools
+  useEffect(() => {
+    if (!expanded) return;
+    const fit = () => setBigSize(Math.max(220, Math.min(window.innerWidth - 24, window.innerHeight - 290, 720)));
+    fit();
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, [expanded]);
   const [picked, setPicked] = useState<{ base: Sticker; caption: string; color: string } | null>(null);
   const [recent, setRecent] = useState<StickerPick[]>([]);
   const [tab, setTab] = useState<string>("masky");
@@ -85,6 +112,8 @@ export function StickerSheet({
     setError(null);
     setMode(onSendScribble ? startMode : "stickers");
     setDrawing(emptyDrawing());
+    setSavedPick(null);
+    setExpanded(false);
     const r = loadRecent();
     setRecent(r);
     let t = startTab;
@@ -139,17 +168,33 @@ export function StickerSheet({
   }
 
   async function sendScribble() {
-    if (!onSendScribble || !drawing.strokes.length) return;
+    if (!onSendScribble || (!savedPick && !drawing.strokes.length)) return;
     tapFeedback();
     setSending(true);
     setError(null);
-    const err = await onSendScribble(drawing);
+    const err = await onSendScribble(savedPick ? { saved: savedPick, keep: false } : { drawing, keep });
     setSending(false);
     if (err) return setError(err);
+    setExpanded(false);
     onClose();
   }
 
   const scribbling = mode === "scribble" && !picked;
+  const pickedSaved = saved.find((x) => x.id === savedPick);
+  const canSendScribble = !!pickedSaved || drawing.strokes.length > 0;
+  const sendLabel = (
+    <>
+      <SendHorizontal size={18} /> {pickedSaved ? "Send" : "Send scribble"}
+      {pickedSaved ? (
+        <> · Free</>
+      ) : scribbleCost > 0 ? (
+        <>
+          {" "}
+          · <KeyCoin size={18} /> {scribbleCost}
+        </>
+      ) : null}
+    </>
+  );
 
   const buyButton = (p: StickerPack, full?: boolean) => (
     <Button onClick={() => void buy(p)} loading={buying} className={clsx("h-12 rounded-full", full ? "w-full" : "flex-1")}>
@@ -165,16 +210,30 @@ export function StickerSheet({
       subtitle={picked ? (locked ? "Get the pack to send this one, with your own words" : "Change the words, then send") : undefined}
       footer={
         scribbling ? (
-          <div className="space-y-2">
+          <div className="space-y-2.5">
+            {!pickedSaved && (
+              <label className="flex cursor-pointer items-center gap-3 rounded-2xl bg-cream px-3.5 py-2.5">
+                <span className="min-w-0 flex-1 text-[13.5px] leading-snug">
+                  <span className="block font-semibold">Save a copy</span>
+                  <span className="block text-muted">Send it again any time, for free</span>
+                </span>
+                <Toggle
+                  checked={keep}
+                  onChange={(v) => {
+                    setKeep(v);
+                    try {
+                      localStorage.setItem(KEEP_KEY, v ? "1" : "0");
+                    } catch {
+                      /* private mode */
+                    }
+                  }}
+                  label="Save a copy"
+                />
+              </label>
+            )}
             {error && <p className="text-center text-[13px] font-medium text-chili">{error}</p>}
-            <Button onClick={() => void sendScribble()} loading={sending} disabled={!drawing.strokes.length} className="h-12 w-full rounded-full">
-              <SendHorizontal size={18} /> Send scribble
-              {scribbleCost > 0 && (
-                <>
-                  {" "}
-                  · <KeyCoin size={18} /> {scribbleCost}
-                </>
-              )}
+            <Button onClick={() => void sendScribble()} loading={sending} disabled={!canSendScribble} className="h-12 w-full rounded-full">
+              {sendLabel}
             </Button>
           </div>
         ) : picked ? (
@@ -221,7 +280,77 @@ export function StickerSheet({
         </div>
       )}
       {scribbling ? (
-        <ScribblePad drawing={drawing} onChange={setDrawing} />
+        <div className="space-y-3">
+          {pickedSaved ? (
+            <div className="relative grid place-items-center rounded-[28px] bg-[#f6f2fd] py-4 ring-1 ring-brand/15">
+              <ScribbleView key={pickedSaved.id} drawing={pickedSaved.drawing} size={240} />
+              <button
+                type="button"
+                onClick={() => setSavedPick(null)}
+                className="absolute top-2.5 left-2.5 inline-flex h-9 items-center gap-1.5 rounded-full bg-surface px-3 text-[13px] font-semibold text-ink-soft shadow-card transition active:scale-95"
+              >
+                <ArrowLeft size={15} /> Draw instead
+              </button>
+            </div>
+          ) : expanded ? (
+            <div className="grid h-40 place-items-center rounded-[28px] bg-[#f6f2fd] text-[14px] font-medium text-brand/60">Drawing in the big space…</div>
+          ) : (
+            <ScribblePad drawing={drawing} onChange={setDrawing} maxSize={260} onExpand={() => setExpanded(true)} />
+          )}
+          {saved.length > 0 && (
+            <div>
+              <p className="mb-1.5 text-[12px] font-bold tracking-wide text-muted uppercase">Saved · free to send</p>
+              <div className="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5 pt-1.5 pb-1">
+                {saved.map((x) => (
+                  <div key={x.id} className="relative shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        tapFeedback();
+                        setSavedPick(savedPick === x.id ? null : x.id);
+                        setError(null);
+                      }}
+                      aria-pressed={savedPick === x.id}
+                      aria-label="Saved scribble"
+                      className={clsx("grid h-[72px] w-[72px] place-items-center rounded-2xl bg-cream transition active:scale-95", savedPick === x.id && "ring-2 ring-brand")}
+                    >
+                      <ScribbleView drawing={x.drawing} size={64} still />
+                    </button>
+                    {savedPick === x.id && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSavedPick(null);
+                          void removeSaved(x.id);
+                        }}
+                        className="absolute -top-1.5 -right-1.5 grid h-6 w-6 place-items-center rounded-full bg-ink text-white shadow-card"
+                        aria-label="Delete this saved scribble"
+                      >
+                        <X size={13} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {expanded &&
+            createPortal(
+              <div className="fixed inset-0 z-[60] flex flex-col bg-surface pb-safe" style={{ paddingTop: "env(safe-area-inset-top)" }} role="dialog" aria-modal="true" aria-label="Scribble, big">
+                <div className="flex items-center gap-2 px-3 py-2.5">
+                  <span className="min-w-0 flex-1 px-2 text-[18px] font-semibold">Scribble</span>
+                  <Button onClick={() => void sendScribble()} loading={sending} disabled={!drawing.strokes.length} className="h-11 rounded-full px-4">
+                    {sendLabel}
+                  </Button>
+                </div>
+                {error && <p className="px-4 pb-1 text-center text-[13px] font-medium text-chili">{error}</p>}
+                <div className="flex min-h-0 flex-1 flex-col justify-center overflow-y-auto px-3 pb-3">
+                  <ScribblePad drawing={drawing} onChange={setDrawing} maxSize={bigSize} expanded onExpand={() => setExpanded(false)} />
+                </div>
+              </div>,
+              document.body,
+            )}
+        </div>
       ) : picked ? (
         <div className="space-y-4">
           <div className="grid place-items-center rounded-3xl bg-brand-soft/60 py-3">
