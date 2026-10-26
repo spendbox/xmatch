@@ -250,13 +250,18 @@ export function Whot({ game, names, act }: { game: Game; names: Names; act: Game
 
       {/* Your hand, fanned */}
       <div className="mt-3">
-        <p className="mb-1 text-center text-[11px] font-extrabold tracking-[0.14em] text-gold uppercase">Your cards · {hand.length}</p>
-        <div ref={myHand} className="no-scrollbar -mx-3 flex justify-center overflow-x-auto px-6 pt-4 pb-2">
-          <div className="flex">
+        <p className="mb-1 text-center text-[11px] font-extrabold tracking-[0.14em] text-gold uppercase">
+          Your cards · {hand.length}
+          {hand.length > 9 && <span className="font-bold tracking-normal text-white/60 normal-case"> · swipe to see them all</span>}
+        </p>
+        {/* Centred when it fits; when it doesn't, it scrolls all the way to both ends */}
+        <div ref={myHand} className="no-scrollbar -mx-3 touch-pan-x overflow-x-auto overscroll-x-contain px-6 pt-4 pb-2">
+          <div className="mx-auto flex w-max pr-3 pl-3">
             {mineShown.map((c, k) => {
               const ok = myTurn && canPlay(st, c);
               const mid = (mineShown.length - 1) / 2;
-              const spread = mineShown.length > 7 ? 2 : 4;
+              const many = mineShown.length;
+              const spread = many > 12 ? 1 : many > 7 ? 2 : 4;
               return (
                 <button
                   key={`${c}-${k}`}
@@ -268,8 +273,8 @@ export function Whot({ game, names, act }: { game: Game; names: Names; act: Game
                   onClick={() => play(c)}
                   disabled={!myTurn || busy}
                   aria-label={`${cardName(c)}${ok ? ", playable" : ""}`}
-                  className={clsx("relative shrink-0 origin-bottom transition-transform duration-200", mineShown.length > 5 ? "-mx-[10px]" : "mx-0.5", !ok && myTurn && "saturate-50")}
-                  style={{ transform: `rotate(${(k - mid) * spread}deg) translateY(${ok ? -14 : Math.abs(k - mid) * 2}px)`, zIndex: k }}
+                  className={clsx("relative shrink-0 origin-bottom transition-transform duration-200", many > 10 ? "-mx-[14px]" : many > 5 ? "-mx-[10px]" : "mx-0.5", !ok && myTurn && "saturate-50")}
+                  style={{ transform: `rotate(${(k - mid) * spread}deg) translateY(${ok ? -14 : Math.min(Math.abs(k - mid) * 2, many > 10 ? 4 : 99)}px)`, zIndex: k }}
                 >
                   <Card card={c} glow={ok} />
                 </button>

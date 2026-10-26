@@ -179,6 +179,12 @@ function demo(screen: string): Game | null {
           guess_b: 0,
         },
       });
+    case "game-bighand":
+      return base({
+        kind: "whot",
+        state: { top: "circle:7", called: null, turn: "a", count_a: 16, count_b: 4, market: 20, last: { by: "b", card: "circle:7", note: "" }, moves: 19 },
+        mine: { hand: ["circle:2", "star:7", "whot:20", "square:11", "triangle:4", "cross:13", "circle:1", "star:3", "square:5", "triangle:8", "cross:2", "circle:12", "star:14", "square:1", "triangle:10", "circle:4"] },
+      });
     case "game-whot":
       return base({
         kind: "whot",
