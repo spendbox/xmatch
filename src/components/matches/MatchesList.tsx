@@ -13,7 +13,8 @@ import { MaskIcon } from "@/components/ui/MaskIcon";
 import { INTENT_ICONS } from "@/components/ui/icons";
 import { intentLabel } from "@/lib/constants";
 import { LiveEventChats, LiveFeedChats } from "./LiveEventChats";
-import { MaskedChats } from "./MaskedChats";
+import { MaskedChatRow, maskedMatches, useMaskedChats, type MaskedChat } from "./MaskedChats";
+import { usePaidChatPeople } from "@/components/masquerade/usePaidChatPeople";
 import { FEATURES } from "@/lib/features";
 import { isOnline, usePresence } from "@/lib/usePresence";
 import type { Intent, MatchSummary } from "@/lib/types";
@@ -28,9 +29,12 @@ export function MatchesList({
   matches,
   myId,
   variant = "page",
+  maskedDemo,
 }: {
   matches: MatchSummary[];
   myId: string;
+  /** Sample masked chats (design preview) */
+  maskedDemo?: MaskedChat[];
   /** "sidebar" = the list beside an open chat on computers */
   variant?: "page" | "sidebar";
 }) {
@@ -57,12 +61,26 @@ export function MatchesList({
   const { seen, now } = usePresence(matches.map((m) => m.other_id));
   const online = (id: string) => isOnline(seen[id], now);
   const [q, setQ] = useState("");
-  // Masked chats count as chats: the "No chats yet" box shows only once we know there are none
-  const [masked, setMasked] = useState<number | null>(null);
+  const [filter, setFilter] = useState<"all" | "unread">("all");
   const term = q.trim().toLowerCase();
-  const shown = term
-    ? matches.filter((m) => m.display_name.toLowerCase().includes(term) || (m.last_message ?? "").toLowerCase().includes(term))
-    : matches;
+  // Masked chats sit in the same list as everyone else, by their latest message
+  const masked = useMaskedChats(maskedDemo);
+  const paid = usePaidChatPeople(!!maskedDemo);
+  const unreadOf = (m: MatchSummary) => m.unread ?? (!!m.last_message && m.last_sender === m.other_id);
+  const all: Item[] = [
+    ...(masked ?? []).map((c) => ({ key: `s-${c.id}`, at: c.last_at, unread: c.unread, masked: c })),
+    ...matches.map((m) => ({ key: m.id, at: m.last_message_at, unread: unreadOf(m), match: m })),
+  ].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
+  const unreadCount = all.filter((i) => i.unread).length;
+  const shown = all.filter(
+    (i) =>
+      (filter === "all" || i.unread) &&
+      (i.masked
+        ? maskedMatches(i.masked, paid[i.masked.id], term)
+        : !term || i.match!.display_name.toLowerCase().includes(term) || (i.match!.last_message ?? "").toLowerCase().includes(term)),
+  );
+  // "No chats yet" only once we know there are no masked chats either
+  const none = matches.length === 0 && masked !== null && masked.length === 0;
 
   return (
     <main className={side ? "px-4 pt-7 pb-6" : "mx-auto max-w-md px-5 pt-6 lg:max-w-3xl lg:px-10 lg:pt-10"}>
@@ -79,12 +97,11 @@ export function MatchesList({
         </Link>
       </header>
 
-      {matches.length === 0 ? (
+      {none ? (
         <>
-          <MaskedChats onCount={setMasked} />
           <LiveEventChats compact={side} userId={myId} />
           {FEATURES.feed && <LiveFeedChats compact={side} userId={myId} />}
-          {masked === 0 && (side ? <p className="mt-6 rounded-2xl bg-surface p-4 text-[14px] text-muted">Your chats will appear here.</p> : <Empty />)}
+          {side ? <p className="mt-6 rounded-2xl bg-surface p-4 text-[14px] text-muted">Your chats will appear here.</p> : <Empty />}
         </>
       ) : (
         <>
@@ -107,68 +124,95 @@ export function MatchesList({
               </button>
             )}
           </label>
+          <div className="mt-2.5 flex gap-2" role="tablist" aria-label="Show">
+            {(["all", "unread"] as const).map((f) => (
+              <button
+                key={f}
+                type="button"
+                role="tab"
+                aria-selected={filter === f}
+                onClick={() => setFilter(f)}
+                className={clsx(
+                  "inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-[14px] font-semibold transition",
+                  filter === f ? "bg-ink text-white" : "border border-line-strong bg-surface text-ink-soft hover:bg-ink/5",
+                )}
+              >
+                {f === "all" ? "All" : "Unread"}
+                {f === "unread" && unreadCount > 0 && (
+                  <span className={clsx("grid h-5 min-w-5 place-items-center rounded-full px-1.5 text-[11px]", filter === f ? "bg-white text-ink" : "bg-brand text-white")}>{unreadCount}</span>
+                )}
+              </button>
+            ))}
+          </div>
           </Sticky>
 
-          <MaskedChats term={term} />
           <LiveEventChats compact={side} divided userId={myId} />
           {FEATURES.feed && <LiveFeedChats divided userId={myId} />}
 
           <section className="mt-3">
-            {shown.length === 0 && <p className="rounded-2xl bg-surface p-4 text-center text-[14px] text-muted">No chats match “{q.trim()}”.</p>}
+            {shown.length === 0 && (
+              <p className="rounded-2xl bg-surface p-4 text-center text-[14px] text-muted">
+                {term ? `No chats match “${q.trim()}”.` : filter === "unread" ? "No unread chats. You're all caught up." : "Your chats will appear here."}
+              </p>
+            )}
             <ul className="space-y-2.5">
-              {shown.map((m, i) => {
-                const theirTurn = !!m.last_message && m.last_sender === myId;
-                const mine = m.unread ?? (!!m.last_message && m.last_sender === m.other_id);
-                return (
-                  <li key={m.id} className="animate-fade-up" style={{ animationDelay: `${i * 50}ms` }}>
-                    <Link
-                      href={`/matches/${m.id}`}
-                      className={clsx(
-                        "flex items-center gap-3.5 rounded-3xl border p-3 pr-4 shadow-card transition hover:border-line-strong active:scale-[0.98]",
-                        path === `/matches/${m.id}` ? "border-brand bg-brand-soft/60 ring-1 ring-brand" : "border-line bg-surface",
-                      )}
-                    >
-                      <span className="relative shrink-0">
-                        <Avatar src={m.photos?.[0]} name={m.display_name} id={m.other_id} size={56} />
-                        <span
-                          className={clsx("absolute top-0.5 right-0.5 h-3.5 w-3.5 rounded-full ring-2 ring-surface", online(m.other_id) ? "bg-mint" : "bg-[#b9b3c4]")}
-                          aria-label={online(m.other_id) ? "Online" : "Offline"}
-                          title={online(m.other_id) ? "Online" : "Offline"}
-                        />
-                        <span
-                          className={clsx("absolute -right-0.5 -bottom-0.5 grid h-6 w-6 place-items-center rounded-full ring-2 ring-surface", INTENT_TONE[m.intent])}
-                          title={intentLabel(m.intent)}
-                        >
-                          {INTENT_ICONS[m.intent]({ size: 12, strokeWidth: 2.5 })}
-                        </span>
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-baseline justify-between gap-2">
-                          <p className="truncate text-[16px] font-semibold">
-                            {m.display_name}
-                          </p>
-                          <span className={clsx("shrink-0 text-[12px]", mine ? "font-semibold text-brand" : "text-muted")}>
-                            {timeAgo(m.last_message_at)}
-                          </span>
-                        </div>
-                        <div className="mt-0.5 flex items-center gap-2">
-                          <p className={clsx("min-w-0 flex-1 truncate text-[14px]", mine ? "font-medium text-ink" : "text-muted")}>
-                            {m.last_message
-                              ? `${theirTurn ? "You: " : ""}${m.last_message.replace(/^💬 /, "")}`
-                              : "You matched! Start the conversation"}
-                          </p>
-                          {mine && <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-brand" aria-label="New messages" />}
-                        </div>
-                      </div>
-                    </Link>
-                  </li>
-                );
-              })}
+              {shown.map((i) =>
+                i.masked ? (
+                  <MaskedChatRow key={i.key} c={i.masked} known={paid[i.masked.id]} />
+                ) : (
+                  <MatchRow key={i.key} m={i.match!} myId={myId} unread={i.unread} online={online(i.match!.other_id)} active={path === `/matches/${i.match!.id}`} />
+                ),
+              )}
             </ul>
           </section>
         </>
       )}
     </main>
+  );
+}
+
+type Item = { key: string; at: string; unread: boolean; masked?: MaskedChat; match?: MatchSummary };
+
+/** One chat with someone you're connected with */
+function MatchRow({ m, myId, unread, online, active }: { m: MatchSummary; myId: string; unread: boolean; online: boolean; active: boolean }) {
+  const theirTurn = !!m.last_message && m.last_sender === myId;
+  return (
+    <li className="animate-fade-up">
+      <Link
+        href={`/matches/${m.id}`}
+        className={clsx(
+          "flex items-center gap-3.5 rounded-3xl border p-3 pr-4 shadow-card transition hover:border-line-strong active:scale-[0.98]",
+          active ? "border-brand bg-brand-soft/60 ring-1 ring-brand" : "border-line bg-surface",
+        )}
+      >
+        <span className="relative shrink-0">
+          <Avatar src={m.photos?.[0]} name={m.display_name} id={m.other_id} size={56} />
+          <span
+            className={clsx("absolute top-0.5 right-0.5 h-3.5 w-3.5 rounded-full ring-2 ring-surface", online ? "bg-mint" : "bg-[#b9b3c4]")}
+            aria-label={online ? "Online" : "Offline"}
+            title={online ? "Online" : "Offline"}
+          />
+          <span
+            className={clsx("absolute -right-0.5 -bottom-0.5 grid h-6 w-6 place-items-center rounded-full ring-2 ring-surface", INTENT_TONE[m.intent])}
+            title={intentLabel(m.intent)}
+          >
+            {INTENT_ICONS[m.intent]({ size: 12, strokeWidth: 2.5 })}
+          </span>
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="truncate text-[16px] font-semibold">{m.display_name}</p>
+            <span className={clsx("shrink-0 text-[12px]", unread ? "font-semibold text-brand" : "text-muted")}>{timeAgo(m.last_message_at)}</span>
+          </div>
+          <div className="mt-0.5 flex items-center gap-2">
+            <p className={clsx("min-w-0 flex-1 truncate text-[14px]", unread ? "font-medium text-ink" : "text-muted")}>
+              {m.last_message ? `${theirTurn ? "You: " : ""}${m.last_message.replace(/^💬 /, "")}` : "You matched! Start the conversation"}
+            </p>
+            {unread && <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-brand" aria-label="New messages" />}
+          </div>
+        </div>
+      </Link>
+    </li>
   );
 }
 

@@ -563,6 +563,10 @@ function ScreenBody({ screen }: { screen: string }) {
         <div className="pb-24">
           <MatchesList
             myId="me"
+            maskedDemo={[
+              { id: "s1", alias: "Misty Moth", my_alias: "Golden Fox", from_meet: false, live_pair: true, ends_at: iso(-53 * 60), my_vote: null, they_unmasked: false, online: false, last_message: "Voice note", last_mine: true, last_at: iso(240), unread: false },
+              { id: "s2", alias: "Coral Heron", my_alias: "Golden Fox", from_meet: true, my_vote: null, they_unmasked: false, online: true, last_message: "Hiii", last_mine: false, last_at: iso(30), unread: true },
+            ]}
             matches={[
               { id: "m1", created_at: iso(3000), last_message_at: iso(200), intent: "dating", other_id: "ada", display_name: "Ada", photos: ada.photos, age: 26, last_message: "When the conversation just flows…", last_sender: "ada", shared: 2 },
               { id: "m2", created_at: iso(90000), last_message_at: iso(7200), intent: "friends", other_id: "x", display_name: "Kemi", photos: [photo("#1f9d6b", "#f2b33d", "K")], age: 24, last_message: "Haha see you Saturday!", last_sender: "me", shared: 3 },
