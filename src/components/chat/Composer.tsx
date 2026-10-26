@@ -13,6 +13,7 @@ import { loadDraft, saveDraft, sweepDrafts } from "@/lib/chatDraft";
 import { useVoiceRecorder } from "./useVoiceRecorder";
 import { StickerSheet, type StickerPick } from "@/components/stickers/StickerSheet";
 import { StickerIcon } from "@/components/stickers/StickerIcon";
+import type { Drawing } from "@/lib/scribble";
 
 export type MediaKind = "image" | "video";
 
@@ -48,6 +49,8 @@ type Props = {
   noTip?: boolean;
   /** Turn on Masky stickers */
   onSendSticker?: (s: StickerPick) => Promise<void> | void;
+  /** Turn on scribbles (in the sticker pop-up): returns an error to show, or null */
+  onSendScribble?: (d: Drawing) => Promise<string | null>;
   /** Your own message being edited: its words go in the box, and sending saves the change */
   editing?: ChatMessage | null;
   onEdit?: (m: ChatMessage, text: string) => Promise<void> | void;
@@ -71,6 +74,7 @@ export function Composer({
   saveKey,
   noTip,
   onSendSticker,
+  onSendScribble,
   editing,
   onEdit,
   onCancelEdit,
@@ -337,9 +341,9 @@ export function Composer({
               }}
               disabled={disabled}
               aria-label="Stickers"
-              className="group grid h-10 w-10 shrink-0 place-items-center rounded-full transition hover:bg-ink/5 active:scale-90 disabled:opacity-50"
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-ink-soft transition hover:bg-ink/5 active:scale-95 disabled:opacity-50"
             >
-              <StickerIcon size={28} className="transition-transform duration-200 group-hover:-rotate-12 group-active:scale-110" />
+              <StickerIcon size={23} />
             </button>
           )}
           {hasText || editing || (!onSendVoice && !onVoiceTap) ? (
@@ -376,7 +380,7 @@ export function Composer({
       <input ref={gallery} type="file" accept="image/*,video/*" className="hidden" onChange={(e) => { choose(e.target.files); e.target.value = ""; }} />
       <input ref={camera} type="file" accept="image/*,video/*" capture="environment" className="hidden" onChange={(e) => { choose(e.target.files); e.target.value = ""; }} />
 
-      {onSendSticker && <StickerSheet open={stickersOpen} onClose={() => setStickersOpen(false)} onSend={(s) => void onSendSticker(s)} />}
+      {onSendSticker && <StickerSheet open={stickersOpen} onClose={() => setStickersOpen(false)} onSend={(s) => void onSendSticker(s)} onSendScribble={onSendScribble} />}
 
       <Sheet open={attachOpen} onClose={() => setAttachOpen(false)} title="More">
         <div className="grid grid-cols-3 gap-2.5 pb-2">

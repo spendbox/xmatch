@@ -25,6 +25,8 @@ import { useSignedUrl } from "./useSignedUrl";
 import { KeyCoin } from "@/components/keys/KeyIcon";
 import { Masky } from "@/components/stickers/Masky";
 import { stickerOf } from "@/components/stickers/StickerSheet";
+import { ScribbleView } from "@/components/stickers/Scribble";
+import { isDrawing } from "@/lib/scribble";
 
 /** Quick reactions when you hold a message (😈 because Dashpad) */
 export const QUICK_REACTIONS = ["❤️", "😂", "😈", "🔥", "😮", "😢"];
@@ -75,6 +77,8 @@ export function snippet(m: ChatMessage | undefined) {
       return `🎮 ${m.body}`;
     case "sticker":
       return `Sticker · ${m.body}`;
+    case "scribble":
+      return "✍️ Scribble";
     default:
       return m.body.replace(/^💬 /, "");
   }
@@ -319,7 +323,11 @@ export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDat
               onDoubleTap={canReact(m) && m.kind !== "image" && m.kind !== "video" ? () => react(m, m.reactions?.[myId] === "❤️" ? "" : "❤️") : undefined}
             >
               <div className={clsx("flex flex-col", mine ? "items-end" : "items-start", firstOfGroup && "mt-2")} data-msg={m.id}>
-                {m.kind === "sticker" && !m.deleted_at ? (
+                {m.kind === "scribble" && !m.deleted_at && isDrawing(m.media_meta) ? (
+                  <div className={clsx("rounded-[24px] transition-shadow duration-500", flash === m.id && "ring-4 ring-gold/70")}>
+                    <ScribbleView drawing={m.media_meta} size={170} />
+                  </div>
+                ) : m.kind === "sticker" && !m.deleted_at ? (
                   <StickerMessage
                     m={m}
                     mine={mine}
@@ -423,7 +431,7 @@ export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDat
           {menu && canEdit(menu) && (
             <MenuButton icon={<Pencil size={19} />} label="Edit" onClick={() => { onEdit?.(menu); closeMenu(); }} />
           )}
-          {menu && menu.body && menu.kind !== "audio" && menu.kind !== "sticker" ? (
+          {menu && menu.body && menu.kind !== "audio" && menu.kind !== "sticker" && menu.kind !== "scribble" ? (
             <MenuButton
               icon={<Copy size={19} />}
               label="Copy text"

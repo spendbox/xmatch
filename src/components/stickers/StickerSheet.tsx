@@ -8,6 +8,10 @@ import { Button, tapFeedback } from "@/components/ui/Button";
 import { KeyCoin } from "@/components/keys/KeyIcon";
 import { STICKER_COLORS, STICKER_MAX, STICKER_PACKS, isPose, isStickerColor, packOf, type Sticker, type StickerPack, type StickerPose } from "@/lib/stickers";
 import { Masky } from "./Masky";
+import { ScribblePad, emptyDrawing } from "./Scribble";
+import { useStickerPacks } from "./useStickerPacks";
+import { usePrices } from "@/components/keys/usePrices";
+import type { Drawing } from "@/lib/scribble";
 
 export type StickerPick = { pose: StickerPose; caption: string; color: string };
 
@@ -36,10 +40,13 @@ export function StickerSheet({
   open,
   onClose,
   onSend,
-  owned = [],
-  price = 40,
-  onBuy,
+  owned: ownedProp,
+  price: priceProp,
+  onBuy: onBuyProp,
   startTab,
+  onSendScribble,
+  scribbleCost: scribbleProp,
+  startMode = "stickers",
 }: {
   open: boolean;
   onClose: () => void;
@@ -51,7 +58,20 @@ export function StickerSheet({
   /** Buy a pack: returns an error to show, or null */
   onBuy?: (pack: StickerPack) => Promise<string | null>;
   startTab?: string;
+  /** Turn on scribbles: send a drawing (returns an error to show, or null) */
+  onSendScribble?: (d: Drawing) => Promise<string | null>;
+  scribbleCost?: number;
+  startMode?: "stickers" | "scribble";
 }) {
+  const packs = useStickerPacks();
+  const prices = usePrices();
+  const owned = ownedProp ?? packs.owned;
+  const price = priceProp ?? prices.sticker_pack_cost;
+  const onBuy = onBuyProp ?? packs.buy;
+  const scribbleCost = scribbleProp ?? prices.scribble_cost;
+  const [mode, setMode] = useState<"stickers" | "scribble">(startMode);
+  const [drawing, setDrawing] = useState<Drawing>(emptyDrawing);
+  const [sending, setSending] = useState(false);
   const [picked, setPicked] = useState<{ base: Sticker; caption: string; color: string } | null>(null);
   const [recent, setRecent] = useState<StickerPick[]>([]);
   const [tab, setTab] = useState<string>("masky");
@@ -63,6 +83,8 @@ export function StickerSheet({
     if (!open) return;
     setPicked(null);
     setError(null);
+    setMode(onSendScribble ? startMode : "stickers");
+    setDrawing(emptyDrawing());
     const r = loadRecent();
     setRecent(r);
     let t = startTab;
@@ -116,6 +138,19 @@ export function StickerSheet({
     if (err) setError(err);
   }
 
+  async function sendScribble() {
+    if (!onSendScribble || !drawing.strokes.length) return;
+    tapFeedback();
+    setSending(true);
+    setError(null);
+    const err = await onSendScribble(drawing);
+    setSending(false);
+    if (err) return setError(err);
+    onClose();
+  }
+
+  const scribbling = mode === "scribble" && !picked;
+
   const buyButton = (p: StickerPack, full?: boolean) => (
     <Button onClick={() => void buy(p)} loading={buying} className={clsx("h-12 rounded-full", full ? "w-full" : "flex-1")}>
       Get {p.name} · <KeyCoin size={18} /> {price}
@@ -126,10 +161,23 @@ export function StickerSheet({
     <Sheet
       open={open}
       onClose={onClose}
-      title={picked ? (locked ? `${pickedPack?.name} pack ${pickedPack?.emoji}` : "Make it yours") : "Stickers"}
+      title={picked ? (locked ? `${pickedPack?.name} pack ${pickedPack?.emoji}` : "Make it yours") : scribbling ? "Scribble" : "Stickers"}
       subtitle={picked ? (locked ? "Get the pack to send this one, with your own words" : "Change the words, then send") : undefined}
       footer={
-        picked ? (
+        scribbling ? (
+          <div className="space-y-2">
+            {error && <p className="text-center text-[13px] font-medium text-chili">{error}</p>}
+            <Button onClick={() => void sendScribble()} loading={sending} disabled={!drawing.strokes.length} className="h-12 w-full rounded-full">
+              <SendHorizontal size={18} /> Send scribble
+              {scribbleCost > 0 && (
+                <>
+                  {" "}
+                  · <KeyCoin size={18} /> {scribbleCost}
+                </>
+              )}
+            </Button>
+          </div>
+        ) : picked ? (
           <div className="space-y-2">
             {error && <p className="text-center text-[13px] font-medium text-chili">{error}</p>}
             <div className="flex gap-2.5">
@@ -152,7 +200,29 @@ export function StickerSheet({
         ) : undefined
       }
     >
-      {picked ? (
+      {!picked && onSendScribble && (
+        <div role="tablist" aria-label="Stickers or scribble" className="-mt-2 mb-3 grid grid-cols-2 rounded-full bg-cream p-1">
+          {(["stickers", "scribble"] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              role="tab"
+              aria-selected={mode === m}
+              onClick={() => {
+                tapFeedback();
+                setMode(m);
+                setError(null);
+              }}
+              className={clsx("h-10 rounded-full text-[14.5px] font-semibold transition", mode === m ? "bg-surface text-ink shadow-card" : "text-muted")}
+            >
+              {m === "stickers" ? "Stickers" : "Scribble"}
+            </button>
+          ))}
+        </div>
+      )}
+      {scribbling ? (
+        <ScribblePad drawing={drawing} onChange={setDrawing} />
+      ) : picked ? (
         <div className="space-y-4">
           <div className="grid place-items-center rounded-3xl bg-brand-soft/60 py-3">
             <Masky pose={picked.base.pose} caption={picked.caption.trim() || picked.base.caption} color={picked.color} size={170} />
@@ -229,7 +299,7 @@ export function StickerSheet({
                     <p className="text-[13.5px] text-white/80">
                       {pack.tagline} · {pack.stickers.length} moving stickers, your own words on every one. Yours to keep.
                     </p>
-                    <div className="mt-3">{onBuy ? buyButton(pack, true) : null}</div>
+                    <div className="mt-3">{buyButton(pack, true)}</div>
                     {error && <p className="mt-2 text-center text-[13px] font-medium text-[#ffb4b4]">{error}</p>}
                   </div>
                 )}

@@ -78,5 +78,7 @@ export const KEY_REASONS: Record<string, string> = {
   slow_reveal: "Saw a slow reveal early",
   play: "Played a stranger",
   play_message: "Messaged a player",
+  sticker_pack: "Bought a sticker pack",
+  scribble: "Sent a scribble",
   admin: "Admin change",
 };

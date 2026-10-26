@@ -31,6 +31,7 @@ import { useGameHost } from "@/components/games/GameHost";
 import { MaskedVoiceSheet } from "@/components/chat/MaskedVoiceSheet";
 import type { VoiceStyle } from "@/lib/voiceDisguise";
 import type { StickerPick } from "@/components/stickers/StickerSheet";
+import type { Drawing } from "@/lib/scribble";
 
 export function MatchChat({
   matchId,
@@ -173,6 +174,18 @@ export function MatchChat({
   async function sendSticker(st: StickerPick) {
     const meta = { pose: st.pose, color: st.color };
     await deliver(draft("sticker", st.caption, { media_meta: meta }), async () => ({ kind: "sticker", body: st.caption, media_meta: meta }));
+  }
+
+  // A scribble costs Keys, so the server sends it (and takes them)
+  async function sendScribble(d: Drawing): Promise<string | null> {
+    const { data, error } = await supabase.rpc("send_scribble", { p_drawing: d, p_match: matchId, p_reply: replyTo?.id && replyTo.id > 0 ? replyTo.id : null });
+    if (error) return error.message.includes("send_scribble") ? "Scribbles are coming soon." : error.message.includes("too big") || error.message.includes("Draw") ? error.message : keysError(error.message);
+    const m = data as ChatMessage;
+    setReplyTo(null);
+    setMessages((l) => (l.some((x) => x.id === m.id) ? l : [...l, m]));
+    if (!activeNow()) notify({ kind: "message", matchId });
+    refreshWallet();
+    return null;
   }
 
   // React (or take yours back): shows straight away, undone if it doesn't save
@@ -361,6 +374,7 @@ export function MatchChat({
         ]}
         onSend={send}
         onSendSticker={sendSticker}
+        onSendScribble={sendScribble}
         editing={editing}
         onEdit={saveEdit}
         onCancelEdit={() => setEditing(null)}

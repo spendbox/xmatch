@@ -23,6 +23,7 @@ import { createClient } from "@/lib/supabase/client";
 import { distanceLabel, GENDERS, intentLabel, MASQUERADE_MINUTES, spiceLabel } from "@/lib/constants";
 import type { ChatMessage, MasqueradeState } from "@/lib/types";
 import type { StickerPick } from "@/components/stickers/StickerSheet";
+import type { Drawing } from "@/lib/scribble";
 import { MessageList } from "@/components/chat/MessageList";
 import { Composer } from "@/components/chat/Composer";
 import { refreshMenuBadges } from "@/components/app/useMenuBadges";
@@ -288,6 +289,19 @@ export function MasqueradeRoom({
       if (error || !data) return without;
       return without.some((m) => m.id === data.id) ? without : [...without, data as ChatMessage];
     });
+  }
+
+  // A scribble costs Keys, so the server sends it (and takes them)
+  async function sendScribble(d: Drawing): Promise<string | null> {
+    if (demo) return null;
+    const { data, error } = await supabase.rpc("send_scribble", { p_drawing: d, p_session: state.id, p_reply: replyTo?.id && replyTo.id > 0 ? replyTo.id : null });
+    if (error) return error.message.includes("send_scribble") ? "Scribbles are coming soon." : error.message.includes("too big") || error.message.includes("Draw") ? error.message : keysError(error.message);
+    const m = data as ChatMessage;
+    setReplyTo(null);
+    setMessages((l) => (l.some((x) => x.id === m.id) ? l : [...l, m]));
+    notify({ kind: "masked_message", sessionId: state.id });
+    refreshWallet();
+    return null;
   }
 
   // React (or take yours back): shows straight away, undone if it doesn't save
@@ -692,6 +706,7 @@ export function MasqueradeRoom({
           draft={hintDraft}
           onSend={send}
           onSendSticker={sendSticker}
+          onSendScribble={sendScribble}
           editing={editing}
           onEdit={saveEdit}
           onCancelEdit={() => setEditing(null)}
