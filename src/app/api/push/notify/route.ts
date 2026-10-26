@@ -162,6 +162,21 @@ export async function POST(req: Request) {
     return ok;
   }
 
+  // Play paired you with someone who was waiting: tell them the game is on
+  if (b.kind === "play_match" && b.sessionId) {
+    const { data: s } = await db.from("masquerade_sessions").select("id, user_a, user_b, alias_b, source, status, started_at").eq("id", b.sessionId).maybeSingle();
+    if (!s || s.user_b !== uid || s.source !== "play" || s.status !== "active" || Date.now() - new Date(s.started_at as string).getTime() > RECENT_MS) return ok;
+    const { data: g } = await db.from("games").select("kind").eq("session_id", s.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
+    const title = ({ whot: "Whot", ayo: "Ayo", ludo: "Ludo", snakes: "Snakes & Ladders" } as Record<string, string>)[(g?.kind as string) ?? ""] ?? "a game";
+    await pushToUsers([s.user_a as string], {
+      title: `Game on! 🎲 ${title}`,
+      body: `You're playing ${s.alias_b}. Masked, until you both decide.`,
+      url: `/masquerade/${s.id}`,
+      tag: `play-${s.id}`,
+    });
+    return ok;
+  }
+
   // Someone found you on Meet and opened a masked chat
   if (b.kind === "masked_start" && b.sessionId) {
     const { data: s } = await db.from("masquerade_sessions").select("id, user_a, user_b, alias_a, source, status, started_at").eq("id", b.sessionId).maybeSingle();

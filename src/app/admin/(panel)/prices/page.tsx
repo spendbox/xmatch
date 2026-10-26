@@ -35,6 +35,7 @@ export default async function PricesPage() {
         signup_keys: s.signup_keys ?? 5,
         slow_reveal_cost: s.slow_reveal_cost ?? 10,
         gift_share_percent: s.gift_share_percent ?? 50,
+        play_cost: s.play_cost ?? 1,
       }}
       invites={(invites as InviteStats | null) ?? null}
       gifts={(gifts ?? []) as AdminGift[]}

@@ -39,6 +39,8 @@ export type MasqueradeState = {
   reopened?: boolean;
   /** Started from Meet (open until you both unmask) */
   explore?: boolean;
+  /** Paired by Play for a game */
+  play?: boolean;
   /** Opened from a meet (hourly is also true: decide any time) */
   meet?: {
     id: string;

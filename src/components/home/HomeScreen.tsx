@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Sticky } from "@/components/ui/Sticky";
 import { PeopleForYou } from "./PeopleForYou";
@@ -22,6 +22,7 @@ import { EventCard } from "@/components/events/EventCard";
 import { PactCard, type PactListItem } from "@/components/pacts/PactCard";
 import type { DashpadEvent } from "@/lib/events";
 import { MeetSheet } from "./MeetSheet";
+import { PlayCard } from "./PlayCard";
 import { MasqueradeCard, useMasqueradeHour } from "./MasqueradeCard";
 import { PastPairs } from "./PastPairs";
 import { PlacePicker } from "./PlacePicker";
@@ -84,6 +85,14 @@ export function HomeScreen({
   const now = useNow(30_000);
   const [prefs, setPrefs] = useState<SetupPrefs>(() => prefsFromProfile(profile));
   const [meetOpen, setMeetOpen] = useState(demoSheet === "meet");
+  const backToPlay = useRef(false);
+  // Opened from Play's "Change": go straight to your Masquerade settings
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("settings") !== "1") return;
+    backToPlay.current = true;
+    setMeetOpen(true);
+    window.history.replaceState(null, "", "/home");
+  }, []);
   const [greeting, setGreeting] = useState("Hello");
   const ctl = useMasqueradeHour(profile.id, initialHour);
   const [placeOpen, setPlaceOpen] = useState(false);
@@ -163,6 +172,7 @@ export function HomeScreen({
       <div className="lg:mt-8 lg:grid lg:grid-cols-12 lg:items-start lg:gap-8">
       <div className="mt-5 lg:col-span-7 lg:mt-0">
         <MasqueradeCard userId={profile.id} ctl={ctl} prefs={prefs} onSettings={() => setMeetOpen(true)} />
+        <PlayCard />
 
         {pact && (
           <section className="mt-6">
@@ -223,9 +233,11 @@ export function HomeScreen({
       <MeetSheet
         open={meetOpen}
         onClose={() => setMeetOpen(false)}
-        onSave={(next) => {
+        onSave={async (next) => {
           setMeetOpen(false);
-          void savePrefs(next);
+          await savePrefs(next);
+          // Came from Play: go back there with the new settings
+          if (backToPlay.current) window.location.assign("/play");
         }}
         prefs={prefs}
         place={place.label}

@@ -24,6 +24,7 @@ type Settings = {
   explore_message_cost: number;
   slow_reveal_cost: number;
   gift_share_percent: number;
+  play_cost: number;
   explore_photos_cost: number;
   /** 1: people can pay to see someone's other photos. 0: only once they're connected */
   explore_photos_paid: number;
@@ -87,6 +88,7 @@ export function PricesManager({ settings, gifts, packs, invites = null }: { sett
         <h2 className="text-[16px] font-semibold">Chats</h2>
         <p className="mt-1 text-[13px] text-muted">Slow reveal photos and videos clear by themselves after 5 messages from each person.</p>
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <SettingField k="play_cost" label="Play a stranger" hint="Keys each player pays when Play pairs them for a game. 0 makes it free." value={settings.play_cost} />
           <SettingField k="slow_reveal_cost" label="See a slow reveal now" hint="Keys to clear a slow reveal photo or video straight away" value={settings.slow_reveal_cost} />
         </div>
       </section>

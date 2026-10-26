@@ -393,7 +393,7 @@ export function MasqueradeRoom({
           {lapsed ? (
             <span className="shrink-0 rounded-full bg-cream px-2.5 py-1 text-[12px] font-semibold text-muted">{meet ? "Meet over" : "Hour over"}</span>
           ) : state.reopened ? (
-            <span className="shrink-0 rounded-full bg-mint-soft px-2.5 py-1 text-[12px] font-semibold text-mint">{state.explore ? "Open chat" : "Reopened"}</span>
+            <span className="shrink-0 rounded-full bg-mint-soft px-2.5 py-1 text-[12px] font-semibold text-mint">{state.play ? "Game chat" : state.explore ? "Open chat" : "Reopened"}</span>
           ) : (
             <TimerRing remaining={remaining} total={total} />
           )}
