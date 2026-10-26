@@ -4,6 +4,7 @@ import "@fontsource-variable/fraunces";
 import "./globals.css";
 import { NavProgress } from "@/components/ui/NavProgress";
 import { TapFeedback } from "@/components/ui/TapFeedback";
+import { ErrorListener } from "@/components/ui/ErrorListener";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://dashpad.site"),
@@ -47,6 +48,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-dvh">
         <NavProgress />
         <TapFeedback />
+        <ErrorListener />
         {children}
       </body>
     </html>

@@ -44,6 +44,7 @@ import { PlayScreen } from "@/components/play/PlayScreen";
 import { GameDemo } from "./GameDemos";
 import { GamesManager } from "@/components/admin/GamesManager";
 import { ThingsManager } from "@/components/admin/ThingsManager";
+import { ErrorsList } from "@/components/admin/ErrorsList";
 import { PROMPTS, TONES } from "@/lib/things";
 import type { Feed, FeedAnswer, FeedGift } from "@/lib/feed";
 import type { MasqueradeHour } from "@/lib/hourly";
@@ -338,6 +339,17 @@ function ScreenBody({ screen }: { screen: string }) {
           />
         </AdminShell>
       );
+    case "admin-errors": {
+      const e = (id: number, message: string, mins: number, name: string | null) => ({
+        id, message, created_at: iso(mins * 60), name, url: "/matches/420d8", agent: "Mozilla/5.0 (Linux; Android 14) Chrome/130",
+        stack: "build 442a40e\nTypeError: Cannot read properties of undefined (reading 'a')\n    at tp (6637-c81759582b61c099.js:1:117167)",
+      });
+      return (
+        <AdminShell>
+          <ErrorsList rows={[e(3, "[game snakes cancelled] Cannot read properties of undefined (reading 'a')", 5, "Plenty"), e(2, "[game snakes cancelled] Cannot read properties of undefined (reading 'a')", 40, "Tolu"), e(1, "[hidden] Couldn't load voice note", 90, null)]} />
+        </AdminShell>
+      );
+    }
     case "admin-games":
       return (
         <AdminShell>

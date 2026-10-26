@@ -67,6 +67,9 @@ function demo(screen: string): Game | null {
   const t = Date.now();
   const at = (s: number) => new Date(t + s * 1000).toISOString();
   // New board games and the pop-ups (game-ludo, game-ludo-six, game-snakes-ladder, game-whot-pick2 …)
+  // A "Play again" challenge that was cancelled before it started (nothing on the board yet)
+  const cancelled = screen.match(/^game-(snakes|ludo|ayo|whot)-unstarted$/)?.[1];
+  if (cancelled) return base({ kind: cancelled as never, status: "cancelled", state: {}, started_at: null, ended_at: at(-1) });
   const [, kind, popName] = screen.match(/^game-(ludo|snakes|whot)(?:-(\w+))?$/) ?? [];
   // "-live": played through the same rules the server uses, as in a real game
   if (kind === "ludo" && popName === "live") return base({ kind: "ludo", started_at: at(-60), state: ludo.newLudo() as never });
