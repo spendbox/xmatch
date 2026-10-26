@@ -1,5 +1,6 @@
 "use client";
 
+import { Photo } from "@/components/ui/Photo";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -97,8 +98,7 @@ export function MaskedChats({ term = "", demo, onCount }: { term?: string; demo?
             >
               <span className="relative grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-full" style={{ background: nameColor(c.alias) }}>
                 {known?.photo ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={known.photo} alt="" className="h-full w-full object-cover" />
+                  <Photo src={known.photo} id={known.id} className="h-full w-full object-cover" />
                 ) : (
                   <MaskIcon className="w-8 text-white" eyes={nameColor(c.alias)} />
                 )}

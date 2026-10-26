@@ -310,7 +310,7 @@ export function MatchChat({
           )}
           {messages.length === 0 && <p className="mt-3 text-[14px] text-muted">Say hi to {other.display_name} 👋</p>}
         </div>
-        <MessageList messages={messages} myId={myId} nameOf={nameOf} onReply={setReplyTo} onDelete={remove} showDates onGameAgain={games.rematch} slow={{ cost: slowCost, onReveal: revealSlow }} />
+        <MessageList messages={messages} myId={myId} nameOf={nameOf} genderOf={(id) => (id === other.id ? other.gender : null)} onReply={setReplyTo} onDelete={remove} showDates onGameAgain={games.rematch} slow={{ cost: slowCost, onReveal: revealSlow }} />
       </div>
       </div>
 

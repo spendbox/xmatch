@@ -1,5 +1,6 @@
 "use client";
 
+import { Photo } from "@/components/ui/Photo";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import clsx from "clsx";
@@ -157,8 +158,7 @@ export function CallScreen({
       ) : (
         <>
           {call.peer.photo && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={call.peer.photo} alt="" className="absolute inset-0 h-full w-full scale-110 object-cover opacity-40 blur-2xl" />
+            <Photo src={call.peer.photo} small={false} fallback={null} className="absolute inset-0 h-full w-full scale-110 object-cover opacity-40 blur-2xl" />
           )}
           <div className="absolute inset-0 bg-gradient-to-b from-brand/40 via-ink/60 to-ink" />
         </>

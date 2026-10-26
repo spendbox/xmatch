@@ -1,5 +1,7 @@
 "use client";
 
+import { Photo } from "@/components/ui/Photo";
+import type { Gender } from "@/lib/types";
 import { loadDraft, saveDraft } from "@/lib/chatDraft";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
@@ -354,8 +356,7 @@ export function PersonSheet({ open, onClose, person, onMessage }: { open: boolea
     <Sheet open={open} onClose={onClose} title={`${person.name}${person.age ? `, ${person.age}` : ""}`} subtitle={[person.place, person.online ? "Online now" : null].filter(Boolean).join(" · ") || undefined} layer="z-[70]">
       {photos.length > 0 && (
         <button type="button" onClick={() => setI((n) => (n + 1) % photos.length)} className="relative block aspect-[4/5] w-full overflow-hidden rounded-[24px] bg-cream" aria-label="Next photo">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={photos[i % photos.length]} alt="" className="h-full w-full object-cover" />
+          <Photo src={photos[i % photos.length]} small={false} id={person.id} gender={person.gender as Gender | null} className="h-full w-full object-cover" />
           {photos.length > 1 && (
             <span className="absolute inset-x-3 top-2.5 flex gap-1">
               {photos.map((_, k) => (

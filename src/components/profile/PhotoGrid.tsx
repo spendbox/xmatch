@@ -1,5 +1,6 @@
 "use client";
 
+import { Photo } from "@/components/ui/Photo";
 import { useEffect, useRef, useState } from "react";
 import { Plus, Star, X } from "lucide-react";
 import clsx from "clsx";
@@ -169,8 +170,16 @@ export function PhotoGrid({
                   drag && !held && "opacity-90",
                 )}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={url} alt={`Photo ${i + 1}`} draggable={false} className="pointer-events-none h-full w-full object-cover" />
+                <Photo
+                  src={url}
+                  alt={`Photo ${i + 1}`}
+                  className="pointer-events-none h-full w-full object-cover"
+                  fallback={
+                    <span className="pointer-events-none absolute inset-0 grid place-items-center bg-chili-soft p-2 text-center text-[12px] leading-snug font-semibold text-chili">
+                      This photo won&apos;t load. Remove it and add it again.
+                    </span>
+                  }
+                />
                 {i === 0 ? (
                   <span className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-white/90 px-2 py-0.5 text-[11px] font-semibold text-ink">
                     <Star size={11} className="fill-gold text-gold" /> Main

@@ -12,16 +12,22 @@ export function Photo({
   id,
   gender,
   small = true,
+  fallback,
+  onFail,
   alt = "",
   loading,
   className,
   style,
 }: {
   src: string;
-  /** Picks their mask and colour */
-  id: string;
+  /** Picks their mask and colour (without it, the photo's address does) */
+  id?: string | null;
   gender?: Gender | null;
   small?: boolean;
+  /** Shown instead of their mask (null: nothing) */
+  fallback?: React.ReactNode;
+  /** Neither copy loaded */
+  onFail?: () => void;
   alt?: string;
   loading?: "lazy" | "eager";
   className?: string;
@@ -35,7 +41,10 @@ export function Photo({
     const el = img.current;
     if (url && el?.complete && el.naturalWidth === 0) setFailed((f) => [...f, url]);
   }, [url]);
-  if (!url) return <MaskFace id={id} gender={gender} className={clsx(className, "grid place-items-center")} />;
+  useEffect(() => {
+    if (!url) onFail?.();
+  }, [url, onFail]);
+  if (!url) return fallback !== undefined ? fallback : <MaskFace id={id ?? src} gender={gender} className={clsx(className, "grid place-items-center")} style={style} />;
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img ref={img} key={url} src={url} onError={() => setFailed((f) => [...f, url])} alt={alt} loading={loading} className={className} style={style} />

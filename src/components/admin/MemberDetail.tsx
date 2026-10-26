@@ -1,5 +1,7 @@
 "use client";
 
+import type { Gender } from "@/lib/types";
+import { Photo } from "@/components/ui/Photo";
 import { KEY_REASONS } from "@/lib/keys";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -84,8 +86,7 @@ export function MemberDetail({ id, info }: { id: string; info: MemberInfo }) {
       <section className="flex flex-wrap items-center gap-4 rounded-3xl border border-line bg-surface p-5 shadow-card">
         <div className="h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-line">
           {p.photos?.[0] && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={p.photos[0]} alt="" className="h-full w-full object-cover" />
+            <Photo src={p.photos[0]} id={p.id} gender={p.gender as Gender | null} className="h-full w-full object-cover" />
           )}
         </div>
         <div className="min-w-0 flex-1">
@@ -132,8 +133,7 @@ export function MemberDetail({ id, info }: { id: string; info: MemberInfo }) {
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
                 {p.photos.map((url) => (
                   <button key={url} onClick={() => setPhoto(url)} className="relative aspect-[3/4] overflow-hidden rounded-xl bg-line">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={url} alt="" className="h-full w-full object-cover" />
+                    <Photo src={url} id={p.id} gender={p.gender as Gender | null} className="h-full w-full object-cover" />
                   </button>
                 ))}
               </div>
@@ -348,8 +348,12 @@ export function MemberDetail({ id, info }: { id: string; info: MemberInfo }) {
       <Sheet open={!!photo} onClose={() => setPhoto(null)} title="Photo" subtitle="Remove it if it breaks the rules. They'll keep their other photos.">
         {photo && (
           <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={photo} alt="" className="mx-auto max-h-[55dvh] rounded-2xl object-contain" />
+            <Photo
+              src={photo}
+              small={false}
+              className="mx-auto max-h-[55dvh] rounded-2xl object-contain"
+              fallback={<p className="rounded-2xl bg-chili-soft p-4 text-center text-[14px] font-semibold text-chili">This photo won&apos;t load. The file may be missing from storage.</p>}
+            />
             <Button
               size="lg"
               variant="danger"
