@@ -1,5 +1,6 @@
 "use client";
 
+import { isOnline, usePresence } from "@/lib/usePresence";
 import { Photo } from "@/components/ui/Photo";
 import type { Gender } from "@/lib/types";
 import { loadDraft, saveDraft } from "@/lib/chatDraft";
@@ -350,10 +351,13 @@ export type PlayPerson = {
 /** Who you're playing: their profile, on top of the game */
 export function PersonSheet({ open, onClose, person, onMessage }: { open: boolean; onClose: () => void; person: PlayPerson | null; onMessage: () => void }) {
   const [i, setI] = useState(0);
+  // Checked live, like everywhere else
+  const presence = usePresence(person ? [person.id] : []);
   if (!person) return null;
   const photos = person.photos ?? [];
+  const online = person.id in presence.seen ? isOnline(presence.seen[person.id], presence.now) : person.online;
   return (
-    <Sheet open={open} onClose={onClose} title={`${person.name}${person.age ? `, ${person.age}` : ""}`} subtitle={[person.place, person.online ? "Online now" : null].filter(Boolean).join(" · ") || undefined} layer="z-[70]">
+    <Sheet open={open} onClose={onClose} title={`${person.name}${person.age ? `, ${person.age}` : ""}`} subtitle={[person.place, online ? "Online now" : null].filter(Boolean).join(" · ") || undefined} layer="z-[70]">
       {photos.length > 0 && (
         <button type="button" onClick={() => setI((n) => (n + 1) % photos.length)} className="relative block aspect-[4/5] w-full overflow-hidden rounded-[24px] bg-cream" aria-label="Next photo">
           <Photo src={photos[i % photos.length]} small={false} id={person.id} gender={person.gender as Gender | null} className="h-full w-full object-cover" />

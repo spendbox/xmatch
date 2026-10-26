@@ -1,5 +1,6 @@
 "use client";
 
+import { isOnline, usePresence } from "@/lib/usePresence";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
@@ -46,6 +47,9 @@ export function ProfileViews({ demo, onKeys }: { demo?: Viewers; /** Keys were s
   const [person, setPerson] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Who's online right now, checked live like everywhere else
+  const presence = usePresence(demo ? [] : (data?.people ?? []).map((p) => p.id));
+  const online = (v: Viewer) => (v.id in presence.seen ? isOnline(presence.seen[v.id], presence.now) : v.online);
 
   const load = useCallback(async () => {
     if (demo) return;
@@ -138,7 +142,7 @@ export function ProfileViews({ demo, onKeys }: { demo?: Viewers; /** Keys were s
               <button type="button" onClick={() => setPerson(v.id)} className="flex min-w-0 flex-1 items-center gap-3 text-left" aria-label={`See ${v.name}'s profile`}>
                 <span className="relative">
                   <Face v={v} size={48} />
-                  {v.online && <span className="absolute right-0 bottom-0 h-3.5 w-3.5 rounded-full bg-mint ring-2 ring-surface" aria-label="Online" />}
+                  {online(v) && <span className="absolute right-0 bottom-0 h-3.5 w-3.5 rounded-full bg-mint ring-2 ring-surface" aria-label="Online" />}
                 </span>
                 <span className="min-w-0">
                   <span className="block truncate text-[15px] font-semibold">{v.name.split(" ")[0]}</span>

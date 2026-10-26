@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 /** Someone counts as online if the app checked in within this time (it checks in every minute while open,
- * and says when you leave). The database uses the same 2.5 minutes. */
+ * and says when you leave). The database uses the same 150 seconds everywhere (update 88). */
 export const ONLINE_MS = 2.5 * 60 * 1000;
 
 export function isOnline(lastSeen?: string | null, now = Date.now()) {
@@ -36,9 +36,17 @@ export function usePresence(ids: string[]) {
     const list = key.split(",");
     let alive = true;
     const load = async () => {
-      const { data } = await supabase.from("profiles").select("id, last_seen_at").in("id", list);
-      if (!alive || !data) return;
-      setSeen(Object.fromEntries(data.map((r) => [r.id as string, r.last_seen_at as string])));
+      // Anyone the app shows you (update 88). Before that runs, only people you've matched with.
+      // (100 at a time)
+      const batches = await Promise.all(
+        Array.from({ length: Math.ceil(list.length / 100) }, (_, i) => supabase.rpc("presence", { p_ids: list.slice(i * 100, i * 100 + 100) })),
+      );
+      const failed = batches.some((b) => b.error);
+      const rows = failed ? (await supabase.from("profiles").select("id, last_seen_at").in("id", list)).data : batches.flatMap((b) => b.data ?? []);
+      if (!alive || !rows) return;
+      const found = Object.fromEntries((rows as { id: string; last_seen_at: string | null }[]).map((r) => [r.id, r.last_seen_at ?? ""]));
+      // Someone it didn't return isn't shown as online (an older list's "online" could be minutes out of date)
+      setSeen(failed ? found : { ...Object.fromEntries(list.map((id) => [id, ""])), ...found });
       setNow(Date.now());
     };
     load();
