@@ -2,11 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import clsx from "clsx";
-import { Check, Lightbulb, Lock, MessageCircle, RefreshCw, ShieldCheck } from "lucide-react";
+import { Check, Lock, MessageCircle, ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { clearNotice, notify } from "@/lib/pushClient";
-import { buildOpeners, hintPage, type HintData } from "@/lib/chatHints";
 import { isOnline, usePresence } from "@/lib/usePresence";
 import type { ExploreProfile } from "@/lib/explore";
 import type { Profile } from "@/lib/types";
@@ -15,10 +13,7 @@ import { KeyCoin } from "@/components/keys/KeyIcon";
 import { keysError } from "@/components/keys/GiftSheet";
 import { ProfileSheet } from "@/components/matches/ProfileSheet";
 
-/** Where a picked opener waits for the chat to open (read once by the masked chat) */
-export const sayKey = (sessionId: string) => `dp_say_${sessionId}`;
-
-/** Someone's profile from Meet or Home: wave, say hi with an opener, or see their other photos */
+/** Someone's profile from Meet or Home: wave, message, or see their other photos */
 export function ExploreProfileSheet({
   personId,
   onClose,
@@ -40,10 +35,6 @@ export function ExploreProfileSheet({
   const [p, setP] = useState<ExploreProfile | null>(demo ?? null);
   const [busy, setBusy] = useState<"photos" | "message" | "wave" | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [common, setCommon] = useState<HintData | null>(null);
-  const [page, setPage] = useState(0);
-  const [picked, setPicked] = useState<string | null>(null);
-  const [seed] = useState(() => Math.floor(Math.random() * 1000));
   // Online, checked the same way as everywhere else
   const presence = usePresence(demo ? [] : [personId]);
 
@@ -56,12 +47,7 @@ export function ExploreProfileSheet({
     // They'll see you viewed them (unless you're in ghost mode)
     // (.then makes the request actually go out)
     supabase.rpc("log_profile_view", { p_id: personId }).then(() => {});
-    supabase.rpc("in_common", { p_other: personId, p_session: null }).then(({ data, error: err }) => {
-      if (!err && data) setCommon(data as HintData);
-    });
   }, [supabase, personId, demo]);
-
-  const openers = useMemo(() => buildOpeners(common, p?.interests ?? [], new Date(), seed), [common, p?.interests, seed]);
 
   async function unlock() {
     setBusy("photos");
@@ -78,13 +64,6 @@ export function ExploreProfileSheet({
   }
 
   function openChat(r: { kind: "match" | "masked"; id: string }) {
-    if (picked && r.kind === "masked") {
-      try {
-        sessionStorage.setItem(sayKey(r.id), picked);
-      } catch {
-        /* private mode: they can still type it */
-      }
-    }
     router.push(r.kind === "match" ? `/matches/${r.id}` : `/masquerade/${r.id}`);
   }
 
@@ -156,7 +135,6 @@ export function ExploreProfileSheet({
       {busy === "photos" ? <Spinner className="h-4 w-4" /> : <KeyCoin size={18} />} Unlock · {p.photos_cost}
     </button>
   );
-  const shown = hintPage(openers, page);
 
   return (
     <ProfileSheet
@@ -180,49 +158,6 @@ export function ExploreProfileSheet({
                 <p className="text-[15px] font-semibold text-ink">{first} waved at you</p>
                 <p className="text-[13px] text-ink-soft">Wave back and your chat opens, free.</p>
               </div>
-            </section>
-          )}
-
-          {fresh && shown.length > 0 && (
-            <section className="rounded-3xl bg-surface p-4 shadow-card" aria-label="Ideas to say hi">
-              <div className="mb-2.5 flex items-center gap-1.5 text-[13px] font-semibold text-muted">
-                <Lightbulb size={15} className="text-gold" /> A reason to say hi
-                <span className="flex-1" />
-                {openers.length > 3 && (
-                  <button type="button" onClick={() => setPage((n) => n + 1)} className="grid h-8 w-8 place-items-center rounded-full hover:bg-ink/5" aria-label="More ideas">
-                    <RefreshCw size={14} />
-                  </button>
-                )}
-              </div>
-              <div className="space-y-2">
-                {shown.map((h) => {
-                  const on = picked === h.text;
-                  return (
-                    <button
-                      key={h.id}
-                      type="button"
-                      onClick={() => {
-                        tapFeedback();
-                        setPicked(on ? null : h.text);
-                      }}
-                      aria-pressed={on}
-                      className={clsx(
-                        "flex w-full items-start gap-3 rounded-2xl border px-3.5 py-2.5 text-left transition active:scale-[0.99]",
-                        on ? "border-brand bg-brand-soft" : "border-line bg-cream/60",
-                      )}
-                    >
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-[11.5px] font-semibold text-brand">{h.label}</span>
-                        <span className="mt-0.5 block text-[14px] leading-snug text-ink">{h.text}</span>
-                      </span>
-                      <span className={clsx("mt-1 grid h-5 w-5 shrink-0 place-items-center rounded-full border", on ? "border-brand bg-brand text-white" : "border-line-strong")}>
-                        {on && <Check size={13} strokeWidth={3} />}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-              <p className="mt-2 text-[12px] text-muted">Pick one and it&apos;s ready to send when your chat opens.</p>
             </section>
           )}
 
@@ -292,7 +227,7 @@ export function ExploreProfileSheet({
                 {!p.waved_me && (
                   <Button size="lg" onClick={message} loading={busy === "message"} loadingText="Opening chat…" className="min-w-0 flex-1">
                     <MessageCircle size={20} />
-                    {picked ? "Send this" : "Message"} · <KeyCoin size={20} /> {p.message_cost}
+                    Message · <KeyCoin size={20} /> {p.message_cost}
                   </Button>
                 )}
               </div>
