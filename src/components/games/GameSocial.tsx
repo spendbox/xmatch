@@ -1,5 +1,6 @@
 "use client";
 
+import { loadDraft, saveDraft } from "@/lib/chatDraft";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import { MessageCircle, Send } from "lucide-react";
@@ -205,7 +206,13 @@ export function ChatPanel({
   balance: number | null;
   onStart: () => Promise<string | null>;
 }) {
-  const [text, setText] = useState("");
+  const key = matchId ? `m-${matchId}` : undefined;
+  // Same unsent message as in the chat itself
+  const [text, setText] = useState(() => (typeof window === "undefined" ? "" : loadDraft(key)));
+  useEffect(() => {
+    const t = setTimeout(() => saveDraft(key, text), 300);
+    return () => clearTimeout(t);
+  }, [key, text]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const list = useRef<HTMLDivElement>(null);
@@ -224,6 +231,7 @@ export function ChatPanel({
     const t = text;
     if (!t.trim()) return;
     setText("");
+    saveDraft(key, "");
     const e = await onSend(t);
     if (e) {
       setErr(e);

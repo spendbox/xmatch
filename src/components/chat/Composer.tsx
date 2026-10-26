@@ -9,6 +9,7 @@ import { Sheet } from "@/components/ui/Sheet";
 import { Button, tapFeedback } from "@/components/ui/Button";
 import { Toggle } from "@/components/ui/Toggle";
 import { snippet } from "./MessageList";
+import { loadDraft, saveDraft, sweepDrafts } from "@/lib/chatDraft";
 import { useVoiceRecorder } from "./useVoiceRecorder";
 
 export type MediaKind = "image" | "video";
@@ -39,6 +40,8 @@ type Props = {
   plusDot?: boolean;
   /** Put this in the message box (a suggested opener); change `key` to put it in again */
   draft?: { text: string; key: number } | null;
+  /** Keep what you typed if you leave the chat (one key per chat) */
+  saveKey?: string;
   /** Hold back the "Tap + for more" tip (something else is showing above the box) */
   noTip?: boolean;
 };
@@ -57,9 +60,25 @@ export function Composer({
   actions = [],
   plusDot,
   draft,
+  saveKey,
   noTip,
 }: Props) {
   const [text, setText] = useState("");
+  // What you typed last time you were in this chat
+  const restored = useRef(false);
+  useEffect(() => {
+    if (!saveKey) return;
+    restored.current = false;
+    const t = loadDraft(saveKey);
+    setText(t);
+    restored.current = true;
+    sweepDrafts();
+  }, [saveKey]);
+  useEffect(() => {
+    if (!saveKey || !restored.current) return;
+    const t = setTimeout(() => saveDraft(saveKey, text), 300);
+    return () => clearTimeout(t);
+  }, [saveKey, text]);
   const [attachOpen, setAttachOpen] = useState(false);
   const [picked, setPicked] = useState<{ file: File; url: string; kind: MediaKind } | null>(null);
   const [caption, setCaption] = useState("");
@@ -128,6 +147,7 @@ export function Composer({
     if (!hasText || disabled) return;
     const t = text.trim();
     setText("");
+    saveDraft(saveKey, "");
     tapFeedback();
     await onSend(t);
   }

@@ -302,3 +302,34 @@ input[type="number"]::-webkit-outer-spin-button {
 @media (prefers-reduced-motion: reduce) {
   .gm-pop-title, .gm-pop-art, .gm-pop-ribbon, .gm-pop-burst, .gm-pop-rays, .gm-pop-spark, .gm-pop-flash, .gm-pop-shake, .gm-roll, .gm-ring { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
 }
+
+/* ---------------------------------------------------------------------------
+   Chat backgrounds. Scenes only move things with transform and opacity (cheap for
+   phones), stop when the app is in the background, and stay still for people who
+   turn motion off. */
+.cbg { position: absolute; inset: 0; overflow: hidden; pointer-events: none; contain: strict; }
+.cbg * { position: absolute; }
+.cbg-paused *, .cbg-still * { animation-play-state: paused !important; }
+@media (prefers-reduced-motion: reduce) { .cbg * { animation: none !important; } }
+/* Falling / rising things: a full-height lane that slides, with the thing at its top */
+.cbg-lane { top: 0; height: 100%; will-change: transform; }
+@keyframes cbg-fall { from { transform: translate3d(0, -8%, 0); } to { transform: translate3d(0, 104%, 0); } }
+@keyframes cbg-rise { from { transform: translate3d(0, 104%, 0); } to { transform: translate3d(0, -8%, 0); } }
+@keyframes cbg-slide { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-50%, 0, 0); } }
+@keyframes cbg-drift { from { transform: translate3d(-35%, 0, 0); } to { transform: translate3d(135%, 0, 0); } }
+@keyframes cbg-sway { 0%, 100% { transform: translateX(-6px) rotate(-3deg); } 50% { transform: translateX(6px) rotate(3deg); } }
+@keyframes cbg-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(5px); } }
+@keyframes cbg-twinkle { 0%, 100% { opacity: 0.25; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.1); } }
+@keyframes cbg-glow { 0%, 100% { opacity: 0.85; transform: scale(1); } 50% { opacity: 1; transform: scale(1.06); } }
+@keyframes cbg-shoot { 0%, 88% { opacity: 0; transform: translate3d(0, 0, 0) rotate(-28deg); } 90% { opacity: 1; } 100% { opacity: 0; transform: translate3d(-260px, 140px, 0) rotate(-28deg); } }
+@keyframes cbg-float { 0%, 100% { transform: translate3d(0, 0, 0) scale(1); } 33% { transform: translate3d(28px, -22px, 0) scale(1.08); } 66% { transform: translate3d(-22px, 16px, 0) scale(0.94); } }
+@keyframes cbg-fly { 0%, 100% { transform: translate3d(0, 0, 0); opacity: 0.2; } 25% { opacity: 1; } 50% { transform: translate3d(22px, -30px, 0); opacity: 0.5; } 75% { opacity: 1; } }
+@keyframes cbg-blink { 0%, 100% { opacity: 0.15; } 40%, 60% { opacity: 0.95; } }
+@keyframes cbg-shimmer { 0%, 100% { opacity: 0.25; transform: scaleX(0.7); } 50% { opacity: 0.9; transform: scaleX(1); } }
+@keyframes cbg-ray { 0%, 100% { transform: skewX(-14deg) translateX(-10px); opacity: 0.35; } 50% { transform: skewX(-8deg) translateX(10px); opacity: 0.6; } }
+@keyframes cbg-heart { 0% { transform: translate3d(0, 104%, 0); } 100% { transform: translate3d(0, -10%, 0); } }
+@keyframes cbg-heart-x { 0%, 100% { transform: translateX(-10px) rotate(-8deg); opacity: 0; } 15%, 80% { opacity: 0.8; } 50% { transform: translateX(10px) rotate(8deg); } }
+@keyframes cbg-foam { 0%, 100% { transform: translateY(0) scaleY(1); } 50% { transform: translateY(-4px) scaleY(1.15); } }
+/* On a chat background, the little time / "Seen" line under messages sits on a soft pill so it stays readable */
+[data-bg] .chat-meta { width: fit-content; border-radius: 999px; padding: 1px 8px; background: rgba(255, 255, 255, 0.85); color: #5f5873; }
+[data-bg-dark] .chat-meta { background: rgba(12, 10, 30, 0.5); color: rgba(255, 255, 255, 0.88); }

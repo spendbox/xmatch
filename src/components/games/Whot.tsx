@@ -42,6 +42,8 @@ export function Whot({ game, names, act }: { game: Game; names: Names; act: Game
   const table = useRef<HTMLDivElement>(null);
   const pileRef = useRef<HTMLDivElement>(null);
   const marketRef = useRef<HTMLButtonElement>(null);
+  // How thick the market looks: a full deck stands tall, the last few cards lie nearly flat
+  const depth = Math.max(0, Math.min(10, Math.ceil(((st.market as number) ?? 0) / 4) - 1));
   const theirHand = useRef<HTMLDivElement>(null);
   const myHand = useRef<HTMLDivElement>(null);
   const cardEls = useRef(new Map<string, HTMLElement>());
@@ -199,18 +201,24 @@ export function Whot({ game, names, act }: { game: Game; names: Names; act: Game
               className={clsx("relative transition active:scale-95", myTurn && !anyPlayable && "gm-pulse")}
               aria-label={owed && myTurn ? `Pick ${owed} cards` : `Go to market. ${st.market} cards left`}
             >
-              {/* A deck has depth */}
-              <span className="absolute top-[5px] left-[5px]">
-                <CardBack />
-              </span>
-              <span className="absolute top-[2.5px] left-[2.5px]">
-                <CardBack />
-              </span>
-              <span className="relative block">
-                <CardBack />
-              </span>
+              {/* The deck gets thinner as cards are picked: one edge for every few cards left */}
+              {Array.from({ length: depth }, (_, i) => depth - i).map((d) => (
+                <span key={d} className="absolute transition-all duration-500" style={{ top: d * 1.3, left: d * 1.3 }}>
+                  <CardBack />
+                </span>
+              ))}
+              {st.market > 0 ? (
+                <span className="relative block transition-transform duration-500">
+                  <CardBack />
+                </span>
+              ) : (
+                // Market's empty
+                <span className="relative block opacity-30 grayscale">
+                  <CardBack />
+                </span>
+              )}
               <span className="absolute -top-2 -right-3 rounded-full bg-gold px-2 py-0.5 text-[12px] font-extrabold text-ink tabular-nums shadow">{st.market}</span>
-              <span className={clsx("mt-2 block text-center text-[11px] font-bold", owed && myTurn ? "text-gold" : "text-white/75")}>
+              <span className={clsx("block text-center text-[11px] font-bold", owed && myTurn ? "text-gold" : "text-white/75")} style={{ marginTop: 8 + depth * 1.3 }}>
                 {owed && myTurn ? `Pick ${owed}` : "Market"}
               </span>
             </button>
@@ -250,13 +258,18 @@ export function Whot({ game, names, act }: { game: Game; names: Names; act: Game
 
       {/* Your hand, fanned */}
       <div className="mt-3">
-        <p className="mb-1 text-center text-[11px] font-extrabold tracking-[0.14em] text-gold uppercase">Your cards · {hand.length}</p>
-        <div ref={myHand} className="no-scrollbar -mx-3 flex justify-center overflow-x-auto px-6 pt-4 pb-2">
-          <div className="flex">
+        <p className="mb-1 text-center text-[11px] font-extrabold tracking-[0.14em] text-gold uppercase">
+          Your cards · {hand.length}
+          {hand.length > 9 && <span className="font-bold tracking-normal text-white/60 normal-case"> · swipe to see them all</span>}
+        </p>
+        {/* Centred when it fits; when it doesn't, it scrolls all the way to both ends */}
+        <div ref={myHand} className="no-scrollbar -mx-3 touch-pan-x overflow-x-auto overscroll-x-contain px-6 pt-4 pb-2">
+          <div className="mx-auto flex w-max pr-3 pl-3">
             {mineShown.map((c, k) => {
               const ok = myTurn && canPlay(st, c);
               const mid = (mineShown.length - 1) / 2;
-              const spread = mineShown.length > 7 ? 2 : 4;
+              const many = mineShown.length;
+              const spread = many > 12 ? 1 : many > 7 ? 2 : 4;
               return (
                 <button
                   key={`${c}-${k}`}
@@ -268,8 +281,8 @@ export function Whot({ game, names, act }: { game: Game; names: Names; act: Game
                   onClick={() => play(c)}
                   disabled={!myTurn || busy}
                   aria-label={`${cardName(c)}${ok ? ", playable" : ""}`}
-                  className={clsx("relative shrink-0 origin-bottom transition-transform duration-200", mineShown.length > 5 ? "-mx-[10px]" : "mx-0.5", !ok && myTurn && "saturate-50")}
-                  style={{ transform: `rotate(${(k - mid) * spread}deg) translateY(${ok ? -14 : Math.abs(k - mid) * 2}px)`, zIndex: k }}
+                  className={clsx("relative shrink-0 origin-bottom transition-transform duration-200", many > 10 ? "-mx-[14px]" : many > 5 ? "-mx-[10px]" : "mx-0.5", !ok && myTurn && "saturate-50")}
+                  style={{ transform: `rotate(${(k - mid) * spread}deg) translateY(${ok ? -14 : Math.min(Math.abs(k - mid) * 2, many > 10 ? 4 : 99)}px)`, zIndex: k }}
                 >
                   <Card card={c} glow={ok} />
                 </button>
