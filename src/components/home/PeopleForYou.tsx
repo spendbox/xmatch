@@ -1,5 +1,6 @@
 "use client";
 
+import { MaskIcon } from "@/components/ui/MaskIcon";
 import { useState } from "react";
 import { thumbFallback, thumbUrl } from "@/lib/photos";
 import Link from "next/link";
@@ -65,8 +66,14 @@ export function PeopleForYou({ userId, demo }: { userId: string; demo?: ExploreL
                       )}
                     </span>
                     {p.online && <span className="absolute right-0.5 bottom-0.5 h-3.5 w-3.5 rounded-full bg-mint ring-2 ring-surface" aria-label="Online" />}
+                    {/* Still masked to you */}
+                    {!p.connected && (
+                      <span className="absolute -top-0.5 -right-0.5 grid h-[18px] w-[18px] place-items-center rounded-full bg-ink/70 ring-2 ring-surface">
+                        <MaskIcon className="w-3 text-white" eyes="rgba(0,0,0,0.4)" />
+                      </span>
+                    )}
                   </span>
-                  <span className={clsx("w-full truncate text-center text-[11.5px] font-medium", p.connected ? "text-brand" : "text-ink-soft")}>
+                  <span className={clsx("w-full truncate text-center text-[11.5px] font-medium", "text-ink-soft")}>
                     {p.name.split(" ")[0]}
                   </span>
                 </button>
