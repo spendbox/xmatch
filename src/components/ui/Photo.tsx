@@ -6,6 +6,9 @@ import { thumbUrl } from "@/lib/photos";
 import type { Gender } from "@/lib/types";
 import { MaskFace } from "./MaskFace";
 
+/** Small copies that don't exist (older photos): asked for once per visit, not on every page */
+const missing = new Set<string>();
+
 /** Someone's photo (the small copy first, then the full one). If neither loads, their mask instead of a broken image. */
 export function Photo({
   src,
@@ -34,12 +37,17 @@ export function Photo({
   style?: React.CSSProperties;
 }) {
   const [failed, setFailed] = useState<string[]>([]);
-  const url = [small ? (thumbUrl(src) ?? src) : src, src].find((u) => !failed.includes(u));
+  const url = [small ? (thumbUrl(src) ?? src) : src, src].find((u) => !failed.includes(u) && (u === src || !missing.has(u)));
   const img = useRef<HTMLImageElement>(null);
+  const fail = (u: string) => {
+    if (u !== src) missing.add(u);
+    setFailed((f) => [...f, u]);
+  };
   // A photo that failed before the page was ready never calls onError: catch it here
   useEffect(() => {
     const el = img.current;
-    if (url && el?.complete && el.naturalWidth === 0) setFailed((f) => [...f, url]);
+    if (url && el?.complete && el.naturalWidth === 0) fail(url);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [url]);
   useEffect(() => {
     if (!url) onFail?.();
@@ -47,6 +55,6 @@ export function Photo({
   if (!url) return fallback !== undefined ? fallback : <MaskFace id={id ?? src} gender={gender} className={clsx(className, "grid place-items-center")} style={style} />;
   return (
     // eslint-disable-next-line @next/next/no-img-element
-    <img ref={img} key={url} src={url} onError={() => setFailed((f) => [...f, url])} alt={alt} loading={loading} className={className} style={style} />
+    <img ref={img} key={url} src={url} onError={() => fail(url)} alt={alt} loading={loading} className={className} style={style} />
   );
 }

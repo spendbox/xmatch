@@ -30,11 +30,14 @@ export function MatchesList({
   myId,
   variant = "page",
   maskedDemo,
+  renderId,
 }: {
   matches: MatchSummary[];
   myId: string;
   /** Sample masked chats (design preview) */
   maskedDemo?: MaskedChat[];
+  /** Different on every server render: tells a fresh list from an old copy shown again (going back) */
+  renderId?: string;
   /** "sidebar" = the list beside an open chat on computers */
   variant?: "page" | "sidebar";
 }) {
@@ -49,7 +52,16 @@ export function MatchesList({
       if (wait.current) clearTimeout(wait.current);
       wait.current = setTimeout(() => router.refresh(), 700);
     };
-    router.refresh();
+    // Only an old copy needs fetching again; a list that just came from the server is already fresh
+    let shownBefore = true;
+    try {
+      const k = `dp_chats_${renderId}`;
+      shownBefore = !renderId || !!sessionStorage.getItem(k);
+      if (renderId) sessionStorage.setItem(k, "1");
+    } catch {
+      /* no storage: always fetch */
+    }
+    if (shownBefore) router.refresh();
     window.addEventListener("dp:badges", again);
     window.addEventListener(CHATS_EVENT, again);
     return () => {
@@ -57,7 +69,7 @@ export function MatchesList({
       window.removeEventListener(CHATS_EVENT, again);
       if (wait.current) clearTimeout(wait.current);
     };
-  }, [router]);
+  }, [router, renderId]);
   const { seen, now } = usePresence(matches.map((m) => m.other_id));
   const online = (id: string) => isOnline(seen[id], now);
   const [q, setQ] = useState("");

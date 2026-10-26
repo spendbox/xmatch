@@ -56,8 +56,10 @@ export function MessagePops({ userId, demo }: { userId: string; demo?: { banner?
   const [banner, setBanner] = useState<Pop | null>(demo?.banner ?? null);
   const [bubbles, setBubbles] = useState<Pop[]>(demo?.bubbles ?? []);
   const [open, setOpen] = useState<Pop | null>(demo?.open ?? null);
-  // When each chat's latest message was, the last time we looked (nothing pops for what was already there)
-  const seen = useRef<Map<string, number> | null>(null);
+  // When each chat's latest message was, the last time we looked. Nothing from before this page
+  // opened pops, so there's nothing to load until a chat actually changes.
+  const seen = useRef<Map<string, number>>(new Map());
+  const since = useRef(Date.now());
   const until = useRef<Map<string, number>>(new Map());
   const here = useRef({ path, open: null as string | null, playing });
   here.current = { path, open: open?.key ?? null, playing };
@@ -71,8 +73,7 @@ export function MessagePops({ userId, demo }: { userId: string; demo?: { banner?
       const key = `m:${c.id}`;
       const at = new Date(c.last_message_at).getTime();
       next.set(key, at);
-      const before = seen.current?.get(key);
-      if (seen.current && at > (before ?? 0) && c.last_sender === c.other_id && c.last_message) {
+      if (at > (seen.current.get(key) ?? since.current) && c.last_sender === c.other_id && c.last_message) {
         fresh.push({ key, kind: "match", id: c.id, href: `/matches/${c.id}`, name: c.display_name, photo: c.photos?.[0], personId: c.other_id, text: c.last_message.replace(/^💬 /, ""), count: 1 });
       }
     }
@@ -80,12 +81,10 @@ export function MessagePops({ userId, demo }: { userId: string; demo?: { banner?
       const key = `s:${c.id}`;
       const at = new Date(c.last_at).getTime();
       next.set(key, at);
-      const before = seen.current?.get(key);
-      if (seen.current && at > (before ?? 0) && c.last_mine === false && c.last_message && !(c.pact && !c.pact_seen)) {
+      if (at > (seen.current.get(key) ?? since.current) && c.last_mine === false && c.last_message && !(c.pact && !c.pact_seen)) {
         fresh.push({ key, kind: "masked", id: c.id, href: `/masquerade/${c.id}`, name: c.alias, alias: c.alias, text: c.last_message, count: 1 });
       }
     }
-    // The first look only learns what's already there
     seen.current = next;
     const { path: now, open: reading, playing: game } = here.current;
     const shown = fresh.filter((p) => p.href !== now && p.key !== reading);
@@ -103,7 +102,6 @@ export function MessagePops({ userId, demo }: { userId: string; demo?: { banner?
 
   useEffect(() => {
     if (demo) return;
-    void check();
     let t: ReturnType<typeof setTimeout> | null = null;
     const soon = () => {
       if (t) clearTimeout(t);

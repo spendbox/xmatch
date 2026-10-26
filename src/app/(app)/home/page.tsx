@@ -16,16 +16,17 @@ export default async function HomePage() {
   if (!user) redirect("/login");
 
   // Everything loads at the same time
-  const [profile, { data: wallet }, { data: nextEvent }, { data: hour }, { data: meets }, matches] = await Promise.all([
+  const [profile, { data: wallet }, { data: nextEvent }, { data: hour }, { data: meets }, matches, pacts] = await Promise.all([
     getMyProfile(),
     supabase.rpc("my_wallet"),
     supabase.rpc("next_event"),
     supabase.rpc("my_masquerade_hour"),
     FEATURES.meets ? supabase.rpc("list_meets", { p_limit: 4 }) : Promise.resolve({ data: null }),
     getMatches(),
+    livePacts().catch(() => []),
   ]);
   // The soonest open pact, if any, sits with the events
-  const open = (await livePacts().catch(() => [])).find((p) => new Date(p.closes_at).getTime() > Date.now()) ?? null;
+  const open = pacts.find((p) => new Date(p.closes_at).getTime() > Date.now()) ?? null;
   // Already answered it: the card opens your answers to change them
   const { data: mine } = open ? await supabase.from("pact_entries").select("id").eq("pact_id", open.id).eq("user_id", user.id).maybeSingle() : { data: null };
   const pact = open ? { ...open, taken: !!mine } : null;

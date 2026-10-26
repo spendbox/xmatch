@@ -11,7 +11,7 @@ export default async function MatchesPage() {
   return (
     <>
       <div className="lg:hidden">
-        <MatchesList matches={matches} myId={user!.id} />
+        <MatchesList matches={matches} myId={user!.id} renderId={crypto.randomUUID()} />
       </div>
       {/* On computers the list is already on the left */}
       <div className="hidden h-dvh flex-col items-center justify-center px-10 text-center lg:flex">
