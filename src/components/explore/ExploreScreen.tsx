@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { thumbFallback, thumbUrl } from "@/lib/photos";
-import { Check, Search, UsersRound, X } from "lucide-react";
+import { Search, UsersRound, X } from "lucide-react";
+import { MaskIcon } from "@/components/ui/MaskIcon";
 import { createClient } from "@/lib/supabase/client";
 import type { ExploreList, ExplorePerson, ExploreProfile } from "@/lib/explore";
 import { tapFeedback, Spinner } from "@/components/ui/Button";
@@ -105,9 +106,10 @@ export function ExploreScreen({ initial, demoProfile, userId }: { initial: Explo
                     <span className="h-2 w-2 rounded-full bg-[#7dffb5]" /> Online
                   </span>
                 )}
-                {p.connected && (
-                  <span className="absolute top-2.5 right-2.5 grid h-6 w-6 place-items-center rounded-full bg-brand text-white ring-2 ring-white/80" title="You're connected">
-                    <Check size={14} strokeWidth={3} />
+                {/* Still masked to you: a small mask in the corner */}
+                {!p.connected && (
+                  <span className="absolute top-2.5 right-2.5 grid h-7 w-7 place-items-center rounded-full bg-black/30 backdrop-blur-sm" title="You haven't unmasked yet">
+                    <MaskIcon className="w-[18px] text-white/90" eyes="rgba(0,0,0,0.35)" />
                   </span>
                 )}
                 <span className="absolute inset-x-0 bottom-0 p-3 text-white">
