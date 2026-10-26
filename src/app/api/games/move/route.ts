@@ -8,14 +8,19 @@ import * as ayo from "@/lib/boardgames/ayo";
 import * as whot from "@/lib/boardgames/whot";
 import * as bomb from "@/lib/boardgames/bomb";
 import * as gems from "@/lib/boardgames/gems";
+import * as ludo from "@/lib/boardgames/ludo";
+import * as snakes from "@/lib/boardgames/snakes";
+import { randomInt } from "node:crypto";
 
 /**
- * A move in Whot, Checkers, Chess, Ayo, Bombshell or Gem Clash. The rules are checked here (the same
+ * A move in Whot, Checkers, Chess, Ayo, Bombshell, Gem Clash, Ludo or Snakes & Ladders.
+ * Dice are rolled here, never on the phone. The rules are checked here (the same
  * rules the phone uses to show legal moves), then saved with the service key.
  * Every save bumps `seq`, so a move made on an old view of the game is refused.
  */
 const IDLE_MS = 5 * 60_000;
-const KINDS = ["whot", "checkers", "chess", "ayo", "bomb", "gems"];
+const KINDS = ["whot", "checkers", "chess", "ayo", "bomb", "gems", "ludo", "snakes"];
+const dice = () => randomInt(1, 7);
 
 export async function POST(req: Request) {
   const { user } = await getAuth();
@@ -37,6 +42,8 @@ export async function POST(req: Request) {
     else if (g.kind === "chess") result = chess.applyMove(g.state, side, body.move as chess.ChessMove);
     else if (g.kind === "ayo") result = ayo.applyMove(g.state, side, Number(body.move));
     else if (g.kind === "gems") result = gems.applyMove(g.state, side, body.move as gems.GemsMove);
+    else if (g.kind === "ludo") result = ludo.applyMove(g.state, side, body.move as ludo.LudoMove, dice);
+    else if (g.kind === "snakes") result = snakes.applyMove(g.state, side, body.move as snakes.SnakesMove, dice);
     else if (g.kind === "bomb") {
       const { data: secrets } = await db.from("game_secrets").select("user_id, data").eq("game_id", g.id);
       const bombsOf = (id: string) => ((secrets ?? []).find((s) => s.user_id === id)?.data?.bombs ?? []) as number[];

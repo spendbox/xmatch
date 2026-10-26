@@ -5,10 +5,10 @@ import { createClient } from "@/lib/supabase/client";
 import { notify } from "@/lib/pushClient";
 import { haptic } from "@/lib/haptics";
 
-export type GameKind = "truths" | "tot" | "c4" | "words" | "whot" | "checkers" | "chess" | "ayo" | "bomb" | "gems";
+export type GameKind = "truths" | "tot" | "c4" | "words" | "whot" | "checkers" | "chess" | "ayo" | "bomb" | "gems" | "ludo" | "snakes";
 
 /** Games whose moves go through the app's server (rules in src/lib/boardgames) */
-export const BOARD_GAMES: GameKind[] = ["whot", "checkers", "chess", "ayo", "bomb", "gems"];
+export const BOARD_GAMES: GameKind[] = ["whot", "checkers", "chess", "ayo", "bomb", "gems", "ludo", "snakes"];
 export type GameStatus = "invited" | "active" | "done" | "declined" | "expired" | "cancelled";
 export type Side = "a" | "b";
 
@@ -140,6 +140,24 @@ export const GAMES: {
     bg: "radial-gradient(120% 60% at 50% 0%, #9a5a1e 0%, #45250c 60%, #1d0f05 100%)",
     card: "linear-gradient(160deg, #c27a32 0%, #7a4516 100%)",
     edge: "#4d2a0c",
+  },
+  {
+    kind: "ludo",
+    title: "Ludo",
+    short: "All 4 home wins",
+    rules: ["Roll a 6 to come out", "Capture to send them home", "Stars are safe"],
+    bg: "radial-gradient(120% 70% at 50% 0%, #4b2aa8 0%, #1f1052 55%, #0d0724 100%)",
+    card: "linear-gradient(160deg, #6d4ff0 0%, #2a1676 100%)",
+    edge: "#1c0f55",
+  },
+  {
+    kind: "snakes",
+    title: "Snakes & Ladders",
+    short: "First to 100",
+    rules: ["Ladders lift you, snakes drop you", "A 6 rolls again"],
+    bg: "radial-gradient(120% 70% at 50% 0%, #0f6f7a 0%, #0a3340 55%, #041a20 100%)",
+    card: "linear-gradient(160deg, #14a3a0 0%, #0a4a52 100%)",
+    edge: "#06343a",
   },
 ];
 
