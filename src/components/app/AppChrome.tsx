@@ -10,11 +10,26 @@ import { MenuBadgesContext, useMenuBadges } from "./useMenuBadges";
 import { CallProvider } from "@/components/calls/CallProvider";
 import { EventMediaProvider } from "@/components/events/media/EventMediaProvider";
 import { MediaHelp } from "./MediaHelp";
+import { MessagePops } from "./MessagePops";
 import { PlayProvider } from "@/components/play/PlayGame";
 import { chime } from "@/lib/chime";
+import { seedPrices, type GiftRow, type SettingRow } from "@/components/keys/usePrices";
 import { claimSavedPacts, takeAfterJoin } from "@/components/pacts/pactTokens";
 
-export function AppChrome({ user, children }: { user: ChromeUser; children: React.ReactNode }) {
+export function AppChrome({
+  user,
+  settings,
+  gifts,
+  children,
+}: {
+  user: ChromeUser;
+  /** Prices and gifts as set in admin (loaded with the page) */
+  settings?: SettingRow[] | null;
+  gifts?: GiftRow[] | null;
+  children: React.ReactNode;
+}) {
+  // Before anything on the page reads a price
+  seedPrices(settings ?? null, gifts ?? null);
   const path = usePathname();
   const router = useRouter();
   // Full-screen chats hide the phone tab bar
@@ -51,6 +66,8 @@ export function AppChrome({ user, children }: { user: ChromeUser; children: Reac
         </MenuBadgesContext.Provider>
         {!fullScreen && <BottomNav badges={badges} />}
         <MediaHelp />
+        {/* New messages follow you round the site */}
+        <MessagePops userId={user.id} />
       </EventMediaProvider>
     </CallProvider>
   );

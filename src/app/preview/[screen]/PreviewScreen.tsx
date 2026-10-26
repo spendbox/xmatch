@@ -59,6 +59,7 @@ import { YouBoth } from "@/components/matches/YouBoth";
 import { PactFlow } from "@/components/pacts/PactFlow";
 import { PactCard } from "@/components/pacts/PactCard";
 import { MaskedChats } from "@/components/matches/MaskedChats";
+import { MessagePops, type Pop } from "@/components/app/MessagePops";
 import { PactsAdmin } from "@/components/admin/PactsAdmin";
 import { PactEditor } from "@/components/admin/PactEditor";
 import { PactInsights } from "@/components/admin/PactInsights";
@@ -485,6 +486,32 @@ function ScreenBody({ screen }: { screen: string }) {
           <BottomNav />
         </div>
       );
+    case "message-pops":
+    case "message-pops-reply": {
+      // New messages following you round the site: a banner, bubbles, and replying in place
+      const adaPop: Pop = { key: "m:m1", kind: "match", id: "m1", href: "/matches/m1", name: "Ada", photo: ada.photos[0], personId: "ada", text: "Good morning, did you sleep at all", count: 2 };
+      const heron: Pop = { key: "s:s1", kind: "masked", id: "s1", href: "/masquerade/s1", name: "Coral Heron", alias: "Coral Heron", text: "Haha same, I'm on the Island too", count: 1 };
+      const reply = screen === "message-pops-reply";
+      return (
+        <div className="pb-24">
+          <HomeScreen demoPeople={homePeople} demoSetup={{ place: true, push: false, things: 4, claimed: false, reward: 5 }} meets={demoMeets} hour={demoHour()} profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} stats={{ online: 214, week_chats: 12, week_unmasks: 5, gifts_received: 3 }} matches={recent} />
+          <BottomNav />
+          <MessagePops
+            userId="me"
+            demo={{
+              banner: reply ? undefined : adaPop,
+              bubbles: reply ? [heron] : [adaPop, heron],
+              open: reply ? adaPop : undefined,
+              messages: [
+                { id: 1, sender_id: "me", kind: "text", body: "My mum, and years of party rice research", created_at: iso(600) },
+                { id: 2, sender_id: "ada", kind: "text", body: "Okay that's the best answer", created_at: iso(120) },
+                { id: 3, sender_id: "ada", kind: "text", body: "Good morning, did you sleep at all", created_at: iso(30) },
+              ],
+            }}
+          />
+        </div>
+      );
+    }
     case "sheet-keys":
     case "sheet-meet":
     case "sheet-intent":

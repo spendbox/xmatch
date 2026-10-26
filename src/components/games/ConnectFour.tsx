@@ -28,7 +28,8 @@ export function ConnectFour({
   const them = me === "a" ? "b" : "a";
   const color = (s: string) => (s === "a" ? GOLD : PURPLE);
   const [aim, setAim] = useState<number | null>(null);
-  const [pending, setPending] = useState<{ col: number; at: number } | null>(null);
+  /** A disc you just tapped, until the server has it (which move and round it was tapped on) */
+  const [pending, setPending] = useState<{ col: number; moves: number; round: number } | null>(null);
   const [note, setNote] = useState<string | null>(null);
 
   const pauseLeft = secondsLeft(st.pause_until, act.now);
@@ -70,10 +71,11 @@ export function ConnectFour({
     prevRound.current = r;
   }, [st.prev?.round, st.prev?.winner, me, them]);
 
-  // A disc you just tapped shows right away
+  // A disc you just tapped shows right away. Once the server's board has the move, the real disc
+  // takes its place in the same cell (never the copy one row higher, which made it drop twice)
   let shown = board;
   let pendingCell = -1;
-  if (pending && !showingPrev) {
+  if (pending && !showingPrev && pending.moves === st.moves && pending.round === st.round) {
     for (let r = 5; r >= 0; r--) {
       if (shown[r * 7 + pending.col] === ".") {
         pendingCell = r * 7 + pending.col;
@@ -92,7 +94,7 @@ export function ConnectFour({
       return;
     }
     setNote(null);
-    setPending({ col, at: Date.now() });
+    setPending({ col, moves: st.moves, round: st.round });
     buzz(12);
     const { error } = await act.call("play_c4", { p_game: game.id, p_col: col });
     if (error) {
