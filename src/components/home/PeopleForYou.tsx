@@ -2,7 +2,7 @@
 
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { useState } from "react";
-import { thumbFallback, thumbUrl } from "@/lib/photos";
+import { Photo } from "@/components/ui/Photo";
 import Link from "next/link";
 import clsx from "clsx";
 import { ChevronRight } from "lucide-react";
@@ -53,14 +53,7 @@ export function PeopleForYou({ userId, demo }: { userId: string; demo?: ExploreL
                   <span className="relative block aspect-square w-full max-w-[54px]">
                     <span className="absolute inset-0 overflow-hidden rounded-full bg-brand-soft ring-2 ring-surface shadow-[0_4px_12px_-6px_rgba(28,24,40,0.45)]">
                       {p.photo ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={thumbUrl(p.photo) ?? p.photo}
-                          onError={thumbFallback(p.photo)}
-                          alt=""
-                          loading="lazy"
-                          className="h-full w-full object-cover transition group-hover:scale-105"
-                        />
+                        <Photo src={p.photo} id={p.id} gender={p.gender} loading="lazy" className="h-full w-full object-cover transition group-hover:scale-105" />
                       ) : (
                         <span className="grid h-full w-full place-items-center text-[20px] font-semibold text-brand">{p.name.charAt(0)}</span>
                       )}

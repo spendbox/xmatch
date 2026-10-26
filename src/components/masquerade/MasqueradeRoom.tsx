@@ -12,6 +12,7 @@ import { Button, Spinner } from "@/components/ui/Button";
 import { Sheet } from "@/components/ui/Sheet";
 import { KeyCoin } from "@/components/keys/KeyIcon";
 import { GiftSheet, keysError } from "@/components/keys/GiftSheet";
+import { reportError } from "@/lib/reportError";
 import { useWallet } from "@/components/keys/useWallet";
 import { EXTEND_COST } from "@/lib/keys";
 import { notify } from "@/lib/pushClient";
@@ -260,8 +261,21 @@ export function MasqueradeRoom({
     const { error } = await supabase.rpc("vote_unmask", { p_session: state.id, p_unmask: unmask });
     if (error) {
       setVoting(false);
-      setVoteError("That didn't go through. Check your connection and try again.");
+      // Say why (and log it), instead of always blaming the connection
+      reportError(new Error(error.message), "unmask");
+      const timer = /timer ends/i.test(error.message);
+      setVoteError(
+        timer
+          ? "More time was added to this chat. You can unmask when the timer ends."
+          : /fetch|network/i.test(error.message)
+            ? "That didn't go through. Check your connection and try again."
+            : `That didn't go through: ${error.message}`,
+      );
       setState((s) => ({ ...s, me: { ...s.me, vote: null } }));
+      // Back open, so the reason shows
+      setAskUnmask(true);
+      // Get the right end time from the server
+      if (timer) void refresh();
       return;
     }
     if (unmask) setUnmasked(true);

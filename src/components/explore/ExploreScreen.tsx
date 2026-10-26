@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { thumbFallback, thumbUrl } from "@/lib/photos";
+import { Photo } from "@/components/ui/Photo";
 import { Search, UsersRound, X } from "lucide-react";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { createClient } from "@/lib/supabase/client";
@@ -89,14 +89,7 @@ export function ExploreScreen({ initial, demoProfile, userId }: { initial: Explo
                 aria-label={p.name}
               >
                 {p.photo ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={thumbUrl(p.photo) ?? p.photo}
-                    onError={thumbFallback(p.photo)}
-                    alt=""
-                    loading="lazy"
-                    className="absolute inset-0 h-full w-full object-cover"
-                  />
+                  <Photo src={p.photo} id={p.id} gender={p.gender} loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
                 ) : (
                   <span className="absolute inset-0 grid place-items-center text-[40px] font-semibold text-brand">{p.name.charAt(0)}</span>
                 )}

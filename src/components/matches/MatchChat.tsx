@@ -218,7 +218,7 @@ export function MatchChat({
         </Link>
         <button onClick={() => setShowProfile(true)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
           <span className="relative inline-flex shrink-0 rounded-full bg-gradient-to-br from-brand to-[#c2306b] p-[2px]">
-            <Avatar src={other.photos?.[0]} name={other.display_name} size={40} className="ring-2 ring-surface" />
+            <Avatar src={other.photos?.[0]} name={other.display_name} id={other.id} gender={other.gender} size={40} className="ring-2 ring-surface" />
             <span
               className={clsx("absolute -right-0.5 -bottom-0.5 h-3.5 w-3.5 rounded-full ring-2 ring-surface", theyreOnline ? "bg-mint" : "bg-[#b9b3c4]")}
               aria-hidden
@@ -291,7 +291,7 @@ export function MatchChat({
               <MaskIcon className="w-8" eyes="#1c1828" />
             </span>
             <span className="rounded-full ring-4 ring-surface">
-              <Avatar src={other.photos?.[0]} name={other.display_name} size={56} />
+              <Avatar src={other.photos?.[0]} name={other.display_name} id={other.id} gender={other.gender} size={56} />
             </span>
           </div>
           <p className="mt-3 text-[16px] font-semibold">{source === "play" ? "You met over a game" : "You unmasked each other"}</p>

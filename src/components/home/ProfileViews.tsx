@@ -6,7 +6,7 @@ import clsx from "clsx";
 import { Check, ChevronRight, Eye, MessageCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { clearNotice, notify } from "@/lib/pushClient";
-import { thumbFallback, thumbUrl } from "@/lib/photos";
+import { Photo } from "@/components/ui/Photo";
 import type { Viewer, Viewers } from "@/lib/explore";
 import { Sheet } from "@/components/ui/Sheet";
 import { Spinner, tapFeedback } from "@/components/ui/Button";
@@ -23,12 +23,11 @@ const ago = (iso: string) => {
   return d === 1 ? "yesterday" : `${d} days ago`;
 };
 
-function Face({ v, size }: { v: Pick<Viewer, "name" | "photo">; size: number }) {
+function Face({ v, size }: { v: Pick<Viewer, "id" | "name" | "photo">; size: number }) {
   return (
     <span className="block shrink-0 overflow-hidden rounded-full bg-brand-soft ring-2 ring-surface" style={{ width: size, height: size }}>
       {v.photo ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={thumbUrl(v.photo) ?? v.photo} onError={thumbFallback(v.photo)} alt="" className="h-full w-full object-cover" />
+        <Photo src={v.photo} id={v.id} className="h-full w-full object-cover" />
       ) : (
         <span className="grid h-full w-full place-items-center font-semibold text-brand" style={{ fontSize: size * 0.4 }}>
           {v.name.charAt(0)}
