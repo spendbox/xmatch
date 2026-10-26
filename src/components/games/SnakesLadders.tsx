@@ -119,7 +119,10 @@ export function SnakesLadders({ game, names, act }: { game: Game; names: Names; 
     snap(next);
 
     let p: Omit<Pop, "id"> | null = null;
-    if (l.to === 100) p = mine ? { title: "100!", sub: `You won · ${names.them} was on ${next.pos[them]}`, tone: "win" } : { title: "So close!", sub: `${names.them} reached 100 first`, tone: "bad" };
+    if (l.to === 100)
+      p = mine
+        ? { title: "100!", sub: `You won · ${names.them} was on ${next.pos[them]}`, tone: "win", gift: `Good game. Send ${names.them} a gift` }
+        : { title: "So close!", sub: `${names.them} reached 100 first`, tone: "bad", gift: "Say well played with a gift" };
     else if (l.ladder)
       p = mine
         ? { title: l.to - l.landed >= 20 ? "Huge climb!" : "Up the ladder!", sub: `${l.landed} → ${l.to}`, tone: "good", art: <LadderArt /> }

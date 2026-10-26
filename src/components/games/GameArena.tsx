@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { lockScroll } from "@/lib/scrollLock";
 import { createPortal } from "react-dom";
-import { ChevronLeft, Volume2, VolumeX, X } from "lucide-react";
+import { ChevronLeft, Gift, Volume2, VolumeX, X } from "lucide-react";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { buzz, gameInfo, sfx, useGameSound, type Game, type GameActions } from "@/lib/games";
 import { BigButton, secondsLeft, useTicker, type Names } from "./parts";
@@ -19,6 +19,9 @@ import { Ayo } from "./Ayo";
 import { Bombshell } from "./Bombshell";
 import { GemClash } from "./GemClash";
 import { Ludo } from "./Ludo";
+import { GIFT_EVENT } from "./GamePop";
+import { GiftSheet, keysError } from "@/components/keys/GiftSheet";
+import { createClient } from "@/lib/supabase/client";
 import { SnakesLadders } from "./SnakesLadders";
 import { ReactionButton, ReactionHint, ReactionLayer, ReactionTray, useReactionHint, useReactions } from "./Reactions";
 
@@ -31,6 +34,7 @@ export function GameArena({
   onClose,
   peek,
   unmask,
+  practice,
 }: {
   game: Game;
   names: Names;
@@ -41,6 +45,8 @@ export function GameArena({
   onClose: () => void;
   peek?: string | null;
   unmask?: { onUnmask: () => void; done: boolean } | null;
+  /** Against the computer while waiting for a player: nothing is sent anywhere */
+  practice?: boolean;
 }) {
   useTicker(250);
   const [mounted, setMounted] = useState(false);
@@ -49,13 +55,41 @@ export function GameArena({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const sound = useGameSound();
-  const reacting = game.status === "active" || game.status === "done" || game.status === "cancelled";
+  const reacting = !practice && (game.status === "active" || game.status === "done" || game.status === "cancelled");
   const reactions = useReactions(reacting ? game.id : null);
   const [tray, setTray] = useState(false);
   const reactHint = useReactionHint(game.status === "active");
   const info = gameInfo(game.kind);
   const over = game.status === "done" || game.status === "cancelled";
   const endedAgo = game.ended_at ? (act.now() - new Date(game.ended_at).getTime()) / 1000 : 99;
+
+  // A big moment: offer to send a gift (real games only, at most once a minute)
+  const [giftLine, setGiftLine] = useState<string | null>(null);
+  const [giftOpen, setGiftOpen] = useState(false);
+  const [balance, setBalance] = useState<number | null>(null);
+  const lastOffer = useRef(0);
+  const canGift = !practice && !!(game.session_id || game.match_id);
+  useEffect(() => {
+    if (!canGift) return;
+    const on = (e: Event) => {
+      if (Date.now() - lastOffer.current < 60_000) return;
+      lastOffer.current = Date.now();
+      setGiftLine((e as CustomEvent<string>).detail);
+    };
+    window.addEventListener(GIFT_EVENT, on);
+    return () => window.removeEventListener(GIFT_EVENT, on);
+  }, [canGift]);
+  useEffect(() => {
+    if (!giftLine) return;
+    const t = setTimeout(() => setGiftLine(null), 7000);
+    return () => clearTimeout(t);
+  }, [giftLine]);
+  async function openGifts() {
+    setGiftLine(null);
+    setGiftOpen(true);
+    const { data } = await createClient().rpc("my_wallet");
+    setBalance((data as { balance?: number } | null)?.balance ?? null);
+  }
 
   // Lock the page behind
   useEffect(() => {
@@ -72,6 +106,7 @@ export function GameArena({
   }, [game.id]);
 
   async function leave() {
+    if (practice) return onClose();
     if (game.status === "active" && !confirm(`Leave ${info.title}? ${names.them} wins this one.`)) return;
     await act.cancel();
     if (game.status !== "active") onClose();
@@ -165,7 +200,7 @@ export function GameArena({
                 </span>
               </p>
             ) : (
-              <p className="min-w-0 flex-1 truncate text-center text-[11px] font-extrabold tracking-[0.16em] text-gold uppercase">{info.title}</p>
+              <p className="min-w-0 flex-1 truncate text-center text-[11px] font-extrabold tracking-[0.16em] text-gold uppercase">{practice ? `Practice · ${info.title}` : info.title}</p>
             )}
             {reacting && (
               <ReactionButton
@@ -210,6 +245,35 @@ export function GameArena({
         )}
         {reacting && tray && <ReactionTray onSend={reactions.send} onIdle={() => setTray(false)} />}
         <ReactionLayer floats={reactions.floats} />
+        {giftLine && (
+          <div className="pointer-events-none absolute inset-x-0 top-[calc(max(12px,env(safe-area-inset-top))+52px)] z-50 flex justify-center px-4">
+            <button
+              type="button"
+              onClick={() => void openGifts()}
+              className="gm-burst pointer-events-auto flex items-center gap-2.5 rounded-full bg-white py-1.5 pr-1.5 pl-3 text-ink shadow-[0_12px_30px_-8px_rgba(0,0,0,0.6)]"
+            >
+              <Gift size={18} className="shrink-0 text-chili" />
+              <span className="text-[13.5px] font-semibold">{giftLine}</span>
+              <span className="rounded-full bg-gold px-3 py-1.5 text-[13px] font-extrabold">Send</span>
+            </button>
+          </div>
+        )}
+        {canGift && (
+          <GiftSheet
+            open={giftOpen}
+            onClose={() => setGiftOpen(false)}
+            layer="z-[70]"
+            balance={balance}
+            toName={names.them}
+            subtitle="It pops up in your chat, and they get Keys from it."
+            onSend={async (g) => {
+              const { error } = await createClient().rpc("send_gift", { p_gift: g.id, p_session: game.session_id, p_match: game.match_id });
+              if (error) return keysError(error.message);
+              setGiftOpen(false);
+              return null;
+            }}
+          />
+        )}
         {err && (
           <p className="absolute inset-x-4 bottom-24 rounded-2xl bg-white px-4 py-3 text-center text-[14px] font-semibold text-ink shadow-lift">{err}</p>
         )}

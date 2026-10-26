@@ -135,12 +135,16 @@ export function Ludo({ game, names, act }: { game: Game; names: Names; act: Game
     setSt(next);
 
     const homeCount = next.tokens[l.by].filter((p) => p === HOME).length;
-    if (won(next, l.by)) pops.show(mine ? { title: "Check!", sub: "All 4 home · you won", tone: "win" } : { title: "So close!", sub: `${names.them} got all 4 home`, tone: "bad" });
+    if (won(next, l.by)) pops.show(
+        mine
+          ? { title: "Check!", sub: "All 4 home · you won", tone: "win", gift: `Good game. Send ${names.them} a gift` }
+          : { title: "So close!", sub: `${names.them} got all 4 home`, tone: "bad", gift: "Say well played with a gift" },
+      );
     else if (l.captured?.length)
       pops.show(
         mine
-          ? { title: "Captured!", sub: `${names.them}'s token goes home · roll again`, tone: "good", art: <TokenArt color={color(them)} size={86} cross /> }
-          : { title: "Sent home!", sub: `${names.them} captured your token`, tone: "bad", art: <TokenArt color={color(me)} size={86} cross /> },
+          ? { title: "Captured!", sub: `${names.them}'s token goes home · roll again`, tone: "good", art: <TokenArt color={color(them)} size={86} cross />, gift: "Soften the blow with a gift" }
+          : { title: "Sent home!", sub: `${names.them} captured your token`, tone: "bad", art: <TokenArt color={color(me)} size={86} cross />, gift: `Respect. Send ${names.them} a 🔥` },
       );
     else if (l.home)
       pops.show(
@@ -219,7 +223,7 @@ export function Ludo({ game, names, act }: { game: Game; names: Names; act: Game
     const list: Record<string, Parameters<typeof pops.show>[0]> = {
       six: { title: "Six!", sub: "Roll again after you move", tone: "good", art: <DiceArt n={6} /> },
       capture: { title: "Captured!", sub: `${names.them}'s token goes home · roll again`, tone: "good", art: <TokenArt color={color(them)} size={86} cross /> },
-      sent: { title: "Sent home!", sub: `${names.them} captured your token`, tone: "bad", art: <TokenArt color={color(me)} size={86} cross /> },
+      sent: { title: "Sent home!", sub: `${names.them} captured your token`, tone: "bad", art: <TokenArt color={color(me)} size={86} cross />, gift: `Respect. Send ${names.them} a 🔥` },
       home: { title: "Home!", sub: "2 of 4 home · roll again", tone: "good", art: <TokenArt color={color(me)} size={86} /> },
       win: { title: "Check!", sub: "All 4 home · you won", tone: "win" },
     };

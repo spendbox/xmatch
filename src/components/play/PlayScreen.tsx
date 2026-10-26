@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
+import { Bot, ChevronLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { notify } from "@/lib/pushClient";
 import { buzz, sfx, type GameKind } from "@/lib/games";
@@ -13,6 +13,8 @@ import { INTENT_ICONS } from "@/components/ui/icons";
 import { KeyCoin } from "@/components/keys/KeyIcon";
 import { GameArt } from "@/components/games/GameLauncher";
 import { BigButton } from "@/components/games/parts";
+import { GameArena } from "@/components/games/GameArena";
+import { PRACTICE_GAMES, usePracticeGame } from "@/components/games/practice";
 
 export type PlayStatus = {
   waiting: boolean;
@@ -39,7 +41,7 @@ const ROW = 150;
  * Play a stranger: wait in line with people in your mood, get paired, and Dashpad
  * picks the game. Opens the masked chat straight into the game.
  */
-export function PlayScreen({ userId, demo }: { userId: string; demo?: { status: PlayStatus; phase?: "idle" | "waiting" | "found" } }) {
+export function PlayScreen({ userId, demo }: { userId: string; demo?: { status: PlayStatus; phase?: "idle" | "waiting" | "found"; practice?: GameKind } }) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const [st, setSt] = useState<PlayStatus | null>(demo?.status ?? null);
@@ -53,6 +55,7 @@ export function PlayScreen({ userId, demo }: { userId: string; demo?: { status: 
   const [now, setNow] = useState(0);
   useEffect(() => setNow(Date.now()), []);
   const leaving = useRef(false);
+  const [practice, setPractice] = useState<GameKind | null>(demo?.practice ?? null);
   const phaseRef = useRef(phase);
   phaseRef.current = phase;
 
@@ -69,6 +72,8 @@ export function PlayScreen({ userId, demo }: { userId: string; demo?: { status: 
     (session: string, game: GameKind) => {
       if (leaving.current) return;
       leaving.current = true;
+      // A real player: the practice game closes and the real one opens
+      setPractice(null);
       setFound({ session, game });
       setPhase("found");
       sfx("match");
@@ -284,6 +289,24 @@ export function PlayScreen({ userId, demo }: { userId: string; demo?: { status: 
                 {st?.cost ? `, and ${st.cost} ${st.cost === 1 ? "Key is" : "Keys are"} used then` : ""}.
               </p>
             </div>
+            {/* Practice against the computer: you keep your place in line */}
+            <button
+              type="button"
+              onClick={() => {
+                sfx("tap");
+                const pool = (st?.games?.length ? st.games : PRACTICE_GAMES).filter((g) => PRACTICE_GAMES.includes(g));
+                setPractice(pool[Math.floor(Math.random() * pool.length)] ?? "ludo");
+              }}
+              className="mt-4 flex w-full items-center gap-3 rounded-[22px] bg-gold/15 p-4 text-left ring-1 ring-gold/40 transition active:scale-[0.98]"
+            >
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-gold text-ink">
+                <Bot size={22} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[15px] font-bold">Practice while you wait</span>
+                <span className="block text-[12.5px] text-white/70">Play the computer. Free. You'll jump into a real game the moment someone's found.</span>
+              </span>
+            </button>
             {waitedSec > 90 && (
               <p className="mt-4 text-[13px] text-white/70">Quiet right now. Evenings are busiest. You can leave and try again later.</p>
             )}
@@ -296,6 +319,7 @@ export function PlayScreen({ userId, demo }: { userId: string; demo?: { status: 
         )}
 
         {phase === "found" && found && <Picked game={found.game} />}
+        {phase === "waiting" && practice && <Practice kind={practice} onClose={() => setPractice(null)} />}
       </main>
 
       <style>{`
@@ -360,4 +384,20 @@ function seekingLabel(s: string) {
   const list = s.split(",").map((x) => words[x] ?? x);
   const text = list.length > 1 ? `${list.slice(0, -1).join(", ")} & ${list[list.length - 1]}` : list[0];
   return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+/** A practice game against the computer, on top of the waiting screen */
+function Practice({ kind, onClose }: { kind: GameKind; onClose: () => void }) {
+  const { game, act } = usePracticeGame(kind);
+  if (!game) return null;
+  return (
+    <GameArena
+      practice
+      game={game}
+      names={{ me: "You", them: "Computer" }}
+      act={act}
+      onMinimize={onClose}
+      onClose={onClose}
+    />
+  );
 }
