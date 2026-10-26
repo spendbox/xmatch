@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Component, useEffect, useRef, useState } from "react";
+import { reportError } from "@/lib/reportError";
 import { lockScroll } from "@/lib/scrollLock";
 import { createPortal } from "react-dom";
 import { ChevronLeft, Gift, Volume2, VolumeX, X } from "lucide-react";
@@ -29,7 +30,38 @@ import { SnakesLadders } from "./SnakesLadders";
 import { ReactionButton, ReactionHint, ReactionLayer, ReactionTray, useReactionHint, useReactions } from "./Reactions";
 
 /** The full-screen game: challenge, 3-2-1, the game itself, then results */
-export function GameArena({
+export function GameArena(props: React.ComponentProps<typeof GameArenaInner>) {
+  return (
+    <GameSafe onClose={props.onClose} kind={props.game.kind} status={props.game.status}>
+      <GameArenaInner {...props} />
+    </GameSafe>
+  );
+}
+
+/** If a game breaks, show a way out instead of taking the whole app down (and report it) */
+class GameSafe extends Component<{ onClose: () => void; kind: string; status: string; children: React.ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  componentDidCatch(error: unknown) {
+    reportError(error, `game ${this.props.kind} ${this.props.status}`);
+  }
+  render() {
+    if (!this.state.failed) return this.props.children;
+    return (
+      <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-[#0b0720] px-8 text-center text-white" role="dialog">
+        <p className="font-display text-[26px] font-bold">This game hit a problem</p>
+        <p className="mt-2 text-[14px] text-white/70">We&apos;ve been told about it. Your chats are safe.</p>
+        <button type="button" onClick={this.props.onClose} className="mt-7 h-13 w-full max-w-[280px] rounded-2xl bg-white py-3.5 text-[16px] font-bold text-[#1a1240]">
+          Close
+        </button>
+      </div>
+    );
+  }
+}
+
+function GameArenaInner({
   game,
   names,
   act,

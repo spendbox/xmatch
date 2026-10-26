@@ -572,7 +572,7 @@ export function MasqueradeRoom({
           draft={hintDraft}
           noTip={hintsOn}
           onSend={send}
-          // Masked voice notes: disguised on the phone, gone after 24 hours
+          // Masked voice notes: disguised on the phone
           onVoiceTap={() => setVoiceOpen(true)}
           placeholder={state.hourly ? "Message" : undefined}
           replyTo={replyTo}

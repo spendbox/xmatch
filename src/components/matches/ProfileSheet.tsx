@@ -5,7 +5,7 @@ import { lockScroll } from "@/lib/scrollLock";
 import { thumbFallback, thumbUrl } from "@/lib/photos";
 import clsx from "clsx";
 import { createPortal } from "react-dom";
-import { ChevronLeft, ChevronRight, Lock, Quote, X } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Lock, Quote, X } from "lucide-react";
 import { ageFromBirthdate, GENDERS } from "@/lib/constants";
 import { promptOf } from "@/lib/things";
 import type { Profile } from "@/lib/types";
@@ -180,15 +180,9 @@ export function ProfileSheet({
             <section className="rounded-3xl bg-surface p-5 shadow-card">
               <h3 className="mb-3 text-[13px] font-semibold tracking-wide text-muted uppercase">Things about {profile.display_name?.split(" ")[0] ?? "them"}</h3>
               <div className="grid grid-cols-2 gap-2.5">
-                {profile.things!.map((t, i) => {
-                  const p = promptOf(t.p);
-                  return (
-                    <div key={i} className="relative overflow-hidden rounded-2xl p-3 text-white" style={{ background: p.tone }}>
-                      <p className="text-[11px] leading-tight font-semibold text-white/80">{p.text}</p>
-                      <p className="mt-1 text-[14px] leading-snug font-bold">{t.a}</p>
-                    </div>
-                  );
-                })}
+                {profile.things!.map((t, i) => (
+                  <ThingCard key={i} p={t.p} a={t.a} />
+                ))}
               </div>
             </section>
           )}
@@ -222,5 +216,28 @@ export function ProfileSheet({
       </div>
     </div>,
     document.body,
+  );
+}
+
+/** One of their things: short in the grid, tap to open it up and read it all */
+function ThingCard({ p: id, a }: { p: string; a: string }) {
+  const [open, setOpen] = useState(false);
+  const p = promptOf(id);
+  return (
+    <button
+      type="button"
+      onClick={() => setOpen((o) => !o)}
+      aria-expanded={open}
+      className={clsx(
+        "relative overflow-hidden rounded-2xl text-left text-white transition-all active:scale-[0.98]",
+        open ? "col-span-2 p-4" : "p-3",
+      )}
+      style={{ background: p.tone }}
+    >
+      {open && <span aria-hidden className="absolute -top-10 -right-10 h-28 w-28 rounded-full bg-white/10" />}
+      <span className={clsx("relative block pr-5 font-semibold text-white/80", open ? "text-[13px] leading-snug" : "line-clamp-2 text-[11px] leading-tight")}>{p.text}</span>
+      <span className={clsx("relative mt-1 block font-bold break-words", open ? "text-[19px] leading-snug" : "line-clamp-3 text-[14px] leading-snug")}>{a}</span>
+      <ChevronDown size={15} className={clsx("absolute top-2.5 right-2.5 text-white/70 transition", open && "rotate-180")} />
+    </button>
   );
 }

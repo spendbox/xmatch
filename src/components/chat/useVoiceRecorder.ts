@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { showMediaHelp } from "@/lib/mediaPermission";
 
-const MAX_SECONDS = 180;
+const MAX_SECONDS = 300;
 
 function pickMime() {
   if (typeof MediaRecorder === "undefined") return "";

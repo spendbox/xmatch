@@ -53,6 +53,9 @@ export function GameCard({
     headline = meta.by === myId ? "You left the game" : `${them} left the game`;
   } else if (meta.reason === "timeout" && !meta.winner) {
     headline = "Time ran out";
+  } else if (meta.status === "cancelled" && !meta.winner) {
+    // Ended before anyone won (or before it really started)
+    headline = "Game ended early";
   } else if (meta.winner === myId) {
     headline = "You won";
     sub = `${mine.toLocaleString()} – ${theirs.toLocaleString()}`;

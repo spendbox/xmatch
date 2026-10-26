@@ -531,9 +531,9 @@ function Bubble({
         </p>
       )}
       {m.kind === "audio" && m.media_meta?.expired ? (
-        // Masked voice notes disappear after 24 hours
+        // An old masked voice note that was removed before they were kept for good
         <p className="flex items-center gap-1.5 px-4 py-2.5 text-[14px] text-muted italic">
-          <VoiceIcon style="normal" size={16} /> Voice note · gone after 24 hours
+          <VoiceIcon style="normal" size={16} /> Voice note · no longer available
         </p>
       ) : m.kind === "audio" ? (
         <div className="px-3 py-2">
@@ -546,7 +546,7 @@ function Bubble({
           />
           {m.media_meta?.key ? (
             <p className={clsx("mt-1 flex items-center gap-1 text-[11px] font-semibold", mine ? "text-white/70" : "text-muted")}>
-              <MaskIcon className="w-3.5" eyes={mine ? "#5b3fd9" : "#ffffff"} /> Disguised voice · gone in 24h
+              <MaskIcon className="w-3.5" eyes={mine ? "#5b3fd9" : "#ffffff"} /> Disguised voice
             </p>
           ) : m.media_meta?.voice && m.media_meta.voice !== "normal" ? (
             <p className={clsx("mt-1 flex items-center gap-1 text-[11px] font-semibold", mine ? "text-white/70" : "text-muted")}>

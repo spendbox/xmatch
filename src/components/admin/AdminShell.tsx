@@ -6,7 +6,7 @@ import { FEATURES } from "@/lib/features";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import { useEffect, useState } from "react";
-import { Activity, CalendarDays, ExternalLink, Gamepad2, Inbox, LayoutDashboard, LogOut, Menu, MessageCircleQuestion, Sparkles, Tag, Users, X, Stamp } from "lucide-react";
+import { Activity, Bug, CalendarDays, ListChecks, ExternalLink, Gamepad2, Inbox, LayoutDashboard, LogOut, Menu, MessageCircleQuestion, Sparkles, Tag, Users, X, Stamp } from "lucide-react";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { adminLogout } from "@/app/admin/actions";
 
@@ -19,8 +19,10 @@ const NAV = [
   { href: "/admin/link-ups", label: "Link-Ups", icon: Stamp },
   ...(FEATURES.feed ? [{ href: "/admin/prompts", label: "Daily prompts", icon: Sparkles }] : []),
   { href: "/admin/icebreakers", label: "Icebreakers", icon: MessageCircleQuestion },
+  { href: "/admin/things", label: "Profile questions", icon: ListChecks },
   { href: "/admin/prices", label: "Prices", icon: Tag },
   { href: "/admin/feedback", label: "Feedback", icon: Inbox },
+  { href: "/admin/errors", label: "App errors", icon: Bug },
 ];
 
 export function AdminShell({ children }: { children: React.ReactNode }) {

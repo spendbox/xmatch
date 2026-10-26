@@ -85,7 +85,7 @@ async function handle(req: Request) {
       ),
     ),
   );
-  // Masked voice notes last 24 hours (or until their chat ends): delete the files from storage
+  // Masked voice notes from chats that closed without unmasking: delete the files from storage
   let voiceDeleted = 0;
   try {
     const { data: due } = await db.rpc("masked_voice_due", { p_limit: 500 });

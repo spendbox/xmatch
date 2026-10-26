@@ -45,6 +45,9 @@ export function AudioPlayer({
       if (d) setProgress(a.currentTime / d);
     };
     const onMeta = () => Number.isFinite(a.duration) && a.duration > 0 && setLength(a.duration);
+    // Paused by another voice note starting, or by the phone
+    const onPause = () => setPlaying(false);
+    const onPlay = () => setPlaying(true);
     const onEnd = () => {
       setPlaying(false);
       setProgress(0);
@@ -53,7 +56,11 @@ export function AudioPlayer({
     a.addEventListener("timeupdate", onTime);
     a.addEventListener("loadedmetadata", onMeta);
     a.addEventListener("ended", onEnd);
+    a.addEventListener("pause", onPause);
+    a.addEventListener("play", onPlay);
     return () => {
+      a.removeEventListener("pause", onPause);
+      a.removeEventListener("play", onPlay);
       a.removeEventListener("timeupdate", onTime);
       a.removeEventListener("loadedmetadata", onMeta);
       a.removeEventListener("ended", onEnd);
