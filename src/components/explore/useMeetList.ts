@@ -5,17 +5,19 @@ import { createClient } from "@/lib/supabase/client";
 import type { ExploreList } from "@/lib/explore";
 
 /**
- * Your top 50 on the Meet page, shared by Home and Meet. The phone keeps the list
- * for 10 minutes, so moving between pages doesn't ask Dashpad again.
+ * Your top 50 on the Meet page, shared by Home and Meet. The phone keeps a copy so the list
+ * shows straight away; a copy over a minute old is shown and quietly refreshed (so prices set in
+ * admin and who's on the list don't stay out of date). Over 10 minutes old, it isn't shown.
  */
 const KEEP_MS = 10 * 60_000;
+const FRESH_MS = 60_000;
 const cacheKey = (uid: string) => `dp_meet_${uid}`;
 
-function readCache(uid?: string): ExploreList | null {
+function readCache(uid?: string): { at: number; data: ExploreList } | null {
   if (!uid) return null;
   try {
     const c = JSON.parse(localStorage.getItem(cacheKey(uid)) ?? "null") as { at: number; data: ExploreList } | null;
-    return c && Date.now() - c.at < KEEP_MS ? c.data : null;
+    return c && Date.now() - c.at < KEEP_MS ? c : null;
   } catch {
     return null;
   }
@@ -46,8 +48,8 @@ export function useMeetList(userId: string | undefined, initial: ExploreList | n
   useEffect(() => {
     if (initial) return;
     const kept = readCache(userId);
-    if (kept) setList(kept);
-    else void reload();
+    if (kept) setList(kept.data);
+    if (!kept || Date.now() - kept.at > FRESH_MS) void reload();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
