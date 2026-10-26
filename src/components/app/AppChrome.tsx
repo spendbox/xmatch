@@ -10,6 +10,7 @@ import { MenuBadgesContext, useMenuBadges } from "./useMenuBadges";
 import { CallProvider } from "@/components/calls/CallProvider";
 import { EventMediaProvider } from "@/components/events/media/EventMediaProvider";
 import { MediaHelp } from "./MediaHelp";
+import { MessagePops } from "./MessagePops";
 import { PlayProvider } from "@/components/play/PlayGame";
 import { chime } from "@/lib/chime";
 import { claimSavedPacts, takeAfterJoin } from "@/components/pacts/pactTokens";
@@ -51,6 +52,8 @@ export function AppChrome({ user, children }: { user: ChromeUser; children: Reac
         </MenuBadgesContext.Provider>
         {!fullScreen && <BottomNav badges={badges} />}
         <MediaHelp />
+        {/* New messages follow you round the site */}
+        <MessagePops userId={user.id} />
       </EventMediaProvider>
     </CallProvider>
   );

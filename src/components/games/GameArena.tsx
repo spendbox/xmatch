@@ -27,10 +27,13 @@ import { GIFTS } from "@/lib/keys";
 import { GiftSheet, keysError } from "@/components/keys/GiftSheet";
 import { createClient } from "@/lib/supabase/client";
 import { SnakesLadders } from "./SnakesLadders";
+import { markPlaying } from "@/lib/playing";
 import { ReactionButton, ReactionHint, ReactionLayer, ReactionTray, useReactionHint, useReactions } from "./Reactions";
 
 /** The full-screen game: challenge, 3-2-1, the game itself, then results */
 export function GameArena(props: React.ComponentProps<typeof GameArenaInner>) {
+  // Message pop-ups only show a quiet count while a game is open
+  useEffect(() => markPlaying(), []);
   return (
     <GameSafe onClose={props.onClose} kind={props.game.kind} status={props.game.status}>
       <GameArenaInner {...props} />
