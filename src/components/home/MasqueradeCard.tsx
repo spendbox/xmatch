@@ -120,7 +120,7 @@ export function MasqueradeCard({
         : cur.messages === 0
           ? "Say hi before the hour is up."
           : cur.last_from_them && cur.last_kind === "audio"
-            ? "🎤 Sent you a voice note. Tap to listen"
+            ? "Sent you a voice note. Tap to listen"
             : cur.last_from_them && cur.last_message
             ? `“${cur.last_message}”`
             : "Keep the vibe going."

@@ -28,6 +28,12 @@ create table if not exists public.play_queue (
   game_kind text,
   matched_at timestamptz
 );
+-- If an earlier draft of this update made the table, bring it up to date
+alter table public.play_queue add column if not exists seen_at timestamptz not null default now();
+alter table public.play_queue add column if not exists game_id uuid references public.games on delete set null;
+alter table public.play_queue add column if not exists game_kind text;
+alter table public.play_queue add column if not exists matched_at timestamptz;
+alter table public.play_queue drop column if exists session_id;
 alter table public.play_queue enable row level security;
 drop policy if exists play_queue_own on public.play_queue;
 create policy play_queue_own on public.play_queue for select using (user_id = auth.uid());

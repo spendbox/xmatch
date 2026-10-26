@@ -51,6 +51,7 @@ export function PlayScreen({ userId, demo }: { userId: string; demo?: { status: 
   const playGames = usePlayGames();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [loadErr, setLoadErr] = useState<string | null>(null);
   // Set after the page loads, so the server and phone draw the same thing first
   const [now, setNow] = useState(0);
   useEffect(() => setNow(Date.now()), []);
@@ -61,9 +62,12 @@ export function PlayScreen({ userId, demo }: { userId: string; demo?: { status: 
 
   const load = useCallback(async () => {
     if (demo) return null;
-    const { data } = await supabase.rpc("play_status");
+    const { data, error } = await supabase.rpc("play_status");
     const s = data as PlayStatus | null;
-    if (s) setSt(s);
+    if (s) {
+      setSt(s);
+      setLoadErr(null);
+    } else setLoadErr(error ? "Play isn't ready yet. Try again in a moment." : "Couldn't load Play. Check your connection.");
     return s;
   }, [supabase, demo]);
 
@@ -199,6 +203,14 @@ export function PlayScreen({ userId, demo }: { userId: string; demo?: { status: 
       </header>
 
       <main className="relative mx-auto flex w-full max-w-md flex-1 flex-col px-5 pt-6 pb-[max(24px,env(safe-area-inset-bottom))]">
+        {phase === "idle" && loadErr && !st && (
+          <div className="my-auto rounded-[22px] bg-white/10 p-5 text-center ring-1 ring-white/10">
+            <p className="text-[15px] font-semibold">{loadErr}</p>
+            <button type="button" onClick={() => void load()} className="mt-4 h-11 rounded-full bg-gold px-6 text-[15px] font-extrabold text-ink">
+              Try again
+            </button>
+          </div>
+        )}
         {phase === "idle" && (
           <>
             <h1 className="text-center font-display text-[34px] leading-tight font-bold text-balance">Play someone new</h1>
@@ -254,8 +266,10 @@ export function PlayScreen({ userId, demo }: { userId: string; demo?: { status: 
                   <>
                     <KeyCoin size={16} /> {st.cost} {st.cost === 1 ? "Key" : "Keys"} per match · only when you're paired
                   </>
-                ) : (
+                ) : st ? (
                   "Free to play"
+                ) : (
+                  "Loading…"
                 )}
               </p>
               {(st?.playing ?? 0) > 0 && (

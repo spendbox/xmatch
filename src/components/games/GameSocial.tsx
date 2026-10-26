@@ -258,6 +258,12 @@ export function ChatPanel({
                     🎮 You played {m.body}
                   </p>
                 );
+              if (m.kind === "masked")
+                return (
+                  <p key={m.id} className="mx-auto w-fit rounded-full bg-brand-soft px-3 py-1 text-center text-[12px] font-semibold text-brand-ink">
+                    Your masked chat is in Chats
+                  </p>
+                );
               if (m.kind === "gift") {
                 const g = GIFTS.find((x) => x.id === m.body);
                 return (
@@ -271,7 +277,7 @@ export function ChatPanel({
               return (
                 <div key={m.id} className={clsx("flex", mine ? "justify-end" : "justify-start")}>
                   <span className={clsx("max-w-[80%] rounded-2xl px-3.5 py-2 text-[15px] break-words", mine ? "bg-brand text-white" : "bg-cream text-ink")}>
-                    {m.kind === "text" ? m.body : m.kind === "audio" ? "🎤 Voice note" : m.kind === "image" ? "📷 Photo" : m.kind === "video" ? "🎬 Video" : m.body}
+                    {m.kind === "text" ? m.body : m.kind === "audio" ? "Voice note" : m.kind === "image" ? "📷 Photo" : m.kind === "video" ? "🎬 Video" : m.body}
                   </span>
                 </div>
               );
