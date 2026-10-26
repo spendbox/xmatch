@@ -11,6 +11,7 @@ import { CallProvider } from "@/components/calls/CallProvider";
 import { EventMediaProvider } from "@/components/events/media/EventMediaProvider";
 import { MediaHelp } from "./MediaHelp";
 import { MessagePops } from "./MessagePops";
+import { SpeedWatch } from "./SpeedWatch";
 import { PlayProvider } from "@/components/play/PlayGame";
 import { chime } from "@/lib/chime";
 import { seedPrices, type GiftRow, type SettingRow } from "@/components/keys/usePrices";
@@ -66,6 +67,8 @@ export function AppChrome({
         </MenuBadgesContext.Provider>
         {!fullScreen && <BottomNav badges={badges} />}
         <MediaHelp />
+        {/* Page timings for Admin → Speed */}
+        <SpeedWatch />
         {/* New messages follow you round the site */}
         <MessagePops userId={user.id} />
       </EventMediaProvider>

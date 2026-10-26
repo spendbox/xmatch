@@ -1,10 +1,13 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { pagePath } from "@/lib/speedLog";
 
 const PROTECTED = ["/home", "/meet", "/events", "/masquerade", "/matches", "/profile", "/onboarding", "/wallet"];
 const AUTH_PAGES = ["/login", "/signup", "/forgot-password"];
 
 export async function updateSession(request: NextRequest) {
+  // The page being built, for the speed log (the server's requests are grouped by page)
+  request.headers.set("x-dp-path", pagePath(request.nextUrl.pathname));
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(

@@ -6,7 +6,7 @@ import { FEATURES } from "@/lib/features";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import { useEffect, useState } from "react";
-import { Activity, Bug, CalendarDays, ListChecks, ExternalLink, Gamepad2, Inbox, LayoutDashboard, LogOut, Menu, MessageCircleQuestion, Sparkles, Tag, Users, X, Stamp } from "lucide-react";
+import { Activity, Bug, CalendarDays, Gauge, ListChecks, ExternalLink, Gamepad2, Inbox, LayoutDashboard, LogOut, Menu, MessageCircleQuestion, Sparkles, Tag, Users, X, Stamp } from "lucide-react";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { adminLogout } from "@/app/admin/actions";
 
@@ -23,6 +23,7 @@ const NAV = [
   { href: "/admin/prices", label: "Prices", icon: Tag },
   { href: "/admin/feedback", label: "Feedback", icon: Inbox },
   { href: "/admin/errors", label: "App errors", icon: Bug },
+  { href: "/admin/speed", label: "Speed", icon: Gauge },
 ];
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
