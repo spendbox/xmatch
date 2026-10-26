@@ -41,6 +41,8 @@ export function MaskedHistoryCard({ meta, myId, theirName }: { meta: MaskedCardM
   const myAlias = meta.aliases?.[myId] ?? "You";
   const color = nameColor(theirAlias);
   const first = theirName.split(" ")[0] || theirName;
+  // From a wave or a paid message you already knew who it was, so no "Amaka was Purple Heron"
+  const title = meta.from === "wave" || meta.from === "message" ? "Masked chat history" : `${first} was ${theirAlias}`;
 
   return (
     <>
@@ -55,7 +57,7 @@ export function MaskedHistoryCard({ meta, myId, theirName }: { meta: MaskedCardM
           </span>
           <span className="min-w-0 flex-1">
             <span className="block text-[15px] leading-tight font-bold text-ink">
-              {first} was {theirAlias}
+              {title}
             </span>
             <span className="mt-0.5 block text-[12.5px] text-muted">
               From {FROM[meta.from] ?? "a masked chat"} · {meta.count} {meta.count === 1 ? "message" : "messages"}
@@ -68,7 +70,7 @@ export function MaskedHistoryCard({ meta, myId, theirName }: { meta: MaskedCardM
       <Sheet
         open={open}
         onClose={() => setOpen(false)}
-        title={`${first} was ${theirAlias}`}
+        title={title}
         subtitle={`Your masked chat from ${FROM[meta.from] ?? "Dashpad"} · you were ${myAlias}`}
         icon={
           <span className="grid h-10 w-10 place-items-center rounded-full" style={{ background: color }}>
