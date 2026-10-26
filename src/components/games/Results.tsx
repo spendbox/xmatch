@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import clsx from "clsx";
-import { Trophy, Handshake, Hourglass, DoorOpen } from "lucide-react";
+import { Trophy, Handshake, Hourglass, DoorOpen, MessageCircle, Shuffle } from "lucide-react";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { buzz, gameInfo, myScore, sfx, theirScore, type Game } from "@/lib/games";
 import { BigButton, Confetti, type Names } from "./parts";
@@ -14,6 +14,7 @@ export function Results({
   onRematch,
   rematching,
   unmask,
+  more,
 }: {
   game: Game;
   names: Names;
@@ -22,6 +23,8 @@ export function Results({
   rematching?: boolean;
   /** Masked chats: offer to unmask after a game */
   unmask?: { onUnmask: () => void; done: boolean } | null;
+  /** Play games: find someone new, or message the other player */
+  more?: { onNew: () => void; onMessage?: () => void; closeLabel?: string };
 }) {
   const info = gameInfo(game.kind);
   const myId = game.me === "a" ? game.player_a : game.player_b;
@@ -92,10 +95,10 @@ export function Results({
       {line && <p className="mt-2.5 font-display text-[22px] font-bold text-white/85">{line}</p>}
 
       {record && record.played > 0 && (
-        <div className="mt-6 grid w-full grid-cols-3 gap-2">
+        <div className={clsx("mt-6 grid w-full gap-2", game.play ? "grid-cols-2" : "grid-cols-3")}>
           <Stat value={String(record.played)} label={record.played === 1 ? "game together" : "games together"} />
           <Stat value={`${record.won}–${record.lost}`} label="your record" />
-          <Stat value={record.alike !== null && record.alike !== undefined ? `${record.alike}%` : "–"} label="alike (This or That)" />
+          {!game.play && <Stat value={record.alike !== null && record.alike !== undefined ? `${record.alike}%` : "–"} label="alike (This or That)" />}
         </div>
       )}
 
@@ -114,13 +117,35 @@ export function Results({
         </div>
       )}
 
-      <div className="mt-auto grid w-full grid-cols-2 gap-2.5 pt-6">
+      {more?.onMessage && (
+        <button
+          type="button"
+          onClick={more.onMessage}
+          className="mt-5 flex w-full items-center gap-3 rounded-[22px] bg-white p-3.5 text-left text-ink"
+        >
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-[14px] bg-brand text-white">
+            <MessageCircle size={22} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[15px] font-extrabold">Message {names.them.split(" ")[0]}</span>
+            <span className="block text-[13px] leading-snug text-muted">Keep talking. It&apos;s saved in Chats.</span>
+          </span>
+        </button>
+      )}
+
+      {more && (
+        <BigButton variant="ghost" onClick={more.onNew} className="mt-3 w-full">
+          <Shuffle size={18} /> Find someone new
+        </BigButton>
+      )}
+
+      <div className={clsx("grid w-full grid-cols-2 gap-2.5", more ? "mt-2.5" : "mt-auto pt-6")}>
         <BigButton variant="ghost" onClick={onBack}>
-          Back to chat
+          {more?.closeLabel ?? "Back to chat"}
         </BigButton>
         {game.ended_reason !== "closed" ? (
           <BigButton onClick={onRematch} disabled={rematching}>
-            Rematch
+            {more ? "Play again" : "Rematch"}
           </BigButton>
         ) : (
           <span />

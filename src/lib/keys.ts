@@ -30,6 +30,13 @@ export const GIFTS: Gift[] = [
   { id: "trophy", name: "Trophy", emoji: "🏆", price: 40 },
   { id: "crown", name: "Crown", emoji: "👑", price: 60 },
   { id: "diamond", name: "Diamond", emoji: "💎", price: 100 },
+  // Game gifts
+  { id: "gg", name: "GG", emoji: "🎮", price: 3 },
+  { id: "dice", name: "Lucky dice", emoji: "🎲", price: 5 },
+  { id: "clover", name: "Lucky charm", emoji: "🍀", price: 8 },
+  { id: "medal", name: "Gold medal", emoji: "🥇", price: 20 },
+  { id: "rocket", name: "Rocket", emoji: "🚀", price: 25 },
+  { id: "goat", name: "GOAT", emoji: "🐐", price: 50 },
   { id: "chocolate", name: "Chocolate", emoji: "🍫", price: 15, retired: true },
   { id: "teddy", name: "Teddy bear", emoji: "🧸", price: 30, retired: true },
   { id: "bouquet", name: "Bouquet", emoji: "💐", price: 40, retired: true },
@@ -70,5 +77,6 @@ export const KEY_REASONS: Record<string, string> = {
   invite: "Invited a friend",
   slow_reveal: "Saw a slow reveal early",
   play: "Played a stranger",
+  play_message: "Messaged a player",
   admin: "Admin change",
 };

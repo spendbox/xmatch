@@ -100,14 +100,22 @@ async function handle(req: Request) {
   }
   // Keys back for paid chats nobody replied to in 48 hours (before update 61 runs, this just does nothing)
   const { data: back } = await db.rpc("refund_quiet_paid_chats", { p_limit: 200 });
-  const refunds = (Array.isArray(back) ? back : []) as { user_id: string; keys: number; session_id: string; name: string | null }[];
+  // And chats paid for after a Play game (update 78)
+  const { data: playBack } = await db.rpc("refund_quiet_play_chats", { p_limit: 200 });
+  const refunds = [...(Array.isArray(back) ? back : []), ...(Array.isArray(playBack) ? playBack : [])] as {
+    user_id: string;
+    keys: number;
+    session_id?: string;
+    match_id?: string;
+    name: string | null;
+  }[];
   await Promise.all(
     refunds.map((r) =>
       pushToUsers([r.user_id], {
         title: `Your ${r.keys} ${r.keys === 1 ? "Key is" : "Keys are"} back 🔑`,
         body: `${(r.name ?? "They").split(" ")[0]} didn't reply in 48 hours, so we gave you your Keys back. The chat stays open in case they do.`,
         url: "/wallet",
-        tag: `refund-${r.session_id}`,
+        tag: `refund-${r.session_id ?? r.match_id}`,
       }),
     ),
   );

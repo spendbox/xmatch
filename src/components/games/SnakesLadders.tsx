@@ -209,17 +209,17 @@ export function SnakesLadders({ game, names, act }: { game: Game; names: Names; 
   return (
     <div className="relative flex h-full min-h-0 flex-col px-3 pt-2 pb-3 lg:flex-row lg:gap-8 lg:px-10 lg:pt-4 lg:pb-8">
       <div className="flex items-center gap-2.5 lg:hidden">
-        <Player name="You" color={color(me)} active={myTurn} sub={sub(me)} />
+        <Player name="You" photo={names.mePhoto} color={color(me)} active={myTurn} sub={sub(me)} />
         <div className="font-display text-[20px] font-bold tabular-nums">{st.pos[me]}</div>
-        <Player right name={names.them} color={color(them)} active={st.turn === them && !over} sub={sub(them)} />
+        <Player right name={names.them} photo={names.themPhoto} onClick={names.onThem} color={color(them)} active={st.turn === them && !over} sub={sub(them)} />
       </div>
 
       <aside className="hidden w-[300px] shrink-0 flex-col justify-center gap-3 lg:flex">
         <div className="flex">
-          <Player name={names.them} color={color(them)} active={st.turn === them && !over} sub={sub(them)} />
+          <Player name={names.them} photo={names.themPhoto} onClick={names.onThem} color={color(them)} active={st.turn === them && !over} sub={sub(them)} />
         </div>
         <div className="flex">
-          <Player name="You" color={color(me)} active={myTurn} sub={sub(me)} />
+          <Player name="You" photo={names.mePhoto} color={color(me)} active={myTurn} sub={sub(me)} />
         </div>
         <div className="mt-4 grid justify-items-center gap-3 rounded-[28px] bg-white/6 p-6">
           {dice}

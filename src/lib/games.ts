@@ -38,6 +38,8 @@ export type Game = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   mine: Record<string, any>;
   record: { played: number; won: number; lost: number; alike: number | null } | null;
+  /** From Play: not in any chat */
+  play?: boolean;
 };
 
 export const GAMES: {

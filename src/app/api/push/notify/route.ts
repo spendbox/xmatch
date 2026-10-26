@@ -163,16 +163,17 @@ export async function POST(req: Request) {
   }
 
   // Play paired you with someone who was waiting: tell them the game is on
-  if (b.kind === "play_match" && b.sessionId) {
-    const { data: s } = await db.from("masquerade_sessions").select("id, user_a, user_b, alias_b, source, status, started_at").eq("id", b.sessionId).maybeSingle();
-    if (!s || s.user_b !== uid || s.source !== "play" || s.status !== "active" || Date.now() - new Date(s.started_at as string).getTime() > RECENT_MS) return ok;
-    const { data: g } = await db.from("games").select("kind").eq("session_id", s.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
-    const title = ({ whot: "Whot", ayo: "Ayo", ludo: "Ludo", snakes: "Snakes & Ladders" } as Record<string, string>)[(g?.kind as string) ?? ""] ?? "a game";
-    await pushToUsers([s.user_a as string], {
+  if (b.kind === "play_match" && b.gameId) {
+    const { data: g } = await db.from("games").select("id, kind, player_a, player_b, play, created_at").eq("id", b.gameId).maybeSingle();
+    if (!g || !g.play || g.player_b !== uid || Date.now() - new Date(g.created_at as string).getTime() > RECENT_MS) return ok;
+    const { data: me } = await db.from("profiles").select("display_name, photos").eq("id", uid).single();
+    const title = ({ whot: "Whot", ayo: "Ayo", ludo: "Ludo", snakes: "Snakes & Ladders" } as Record<string, string>)[g.kind as string] ?? "a game";
+    await pushToUsers([g.player_a as string], {
       title: `Game on! 🎲 ${title}`,
-      body: `You're playing ${s.alias_b}. Masked, until you both decide.`,
-      url: `/masquerade/${s.id}`,
-      tag: `play-${s.id}`,
+      body: `You're playing ${firstName(me?.display_name as string | null)}. Your move first.`,
+      url: `/home?game=${g.id}`,
+      tag: `play-${g.id}`,
+      icon: (me?.photos as string[] | null)?.[0] ?? null,
     });
     return ok;
   }
@@ -249,7 +250,8 @@ export async function POST(req: Request) {
       .eq("id", b.gameId)
       .maybeSingle();
     if (!g || g.player_a !== uid || g.status !== "invited" || Date.now() - new Date(g.created_at as string).getTime() > 30_000) return ok;
-    const title = ({ truths: "Two Truths & a Lie", tot: "This or That", c4: "Connect 4", words: "Word Hunt" } as Record<string, string>)[g.kind as string] ?? "a game";
+    const title =
+      ({ truths: "Two Truths & a Lie", tot: "This or That", c4: "Connect 4", words: "Word Hunt", whot: "Whot", checkers: "Checkers", chess: "Chess", ayo: "Ayo", bomb: "Bombshell", gems: "Gem Clash", ludo: "Ludo", snakes: "Snakes & Ladders" } as Record<string, string>)[g.kind as string] ?? "a game";
     let who = "Someone";
     let url = "/home";
     let icon: string | null = null;
@@ -261,7 +263,8 @@ export async function POST(req: Request) {
       const { data: me } = await db.from("profiles").select("display_name, photos").eq("id", uid).single();
       who = firstName(me?.display_name);
       icon = (me?.photos as string[] | null)?.[0] ?? null;
-      url = `/matches/${g.match_id}`;
+      // A Play game isn't in a chat: the app opens it wherever you are
+      url = g.match_id ? `/matches/${g.match_id}` : `/home?game=${g.id}`;
     }
     await pushToUsers([g.player_b as string], {
       title: `${who} challenged you 🎮`,

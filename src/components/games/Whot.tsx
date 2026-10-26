@@ -155,9 +155,9 @@ export function Whot({ game, names, act }: { game: Game; names: Names; act: Game
   return (
     <div className="relative flex h-full flex-col px-3 pt-2 pb-4">
       <div className="flex items-center gap-2.5">
-        <Player name="You" color={color(me)} active={st.turn === me} sub={st.turn === me && game.status === "active" ? "Your turn" : `${hand.length} cards`} />
+        <Player name="You" photo={names.mePhoto} color={color(me)} active={st.turn === me} sub={st.turn === me && game.status === "active" ? "Your turn" : `${hand.length} cards`} />
         <div className="text-[13px] font-bold text-white/60">vs</div>
-        <Player right name={names.them} color={color(them)} active={st.turn === them} sub={st.turn === them && game.status === "active" ? "Their turn" : `${theirCount} cards`} />
+        <Player right name={names.them} photo={names.themPhoto} onClick={names.onThem} color={color(them)} active={st.turn === them} sub={st.turn === them && game.status === "active" ? "Their turn" : `${theirCount} cards`} />
       </div>
 
       {/* The table */}

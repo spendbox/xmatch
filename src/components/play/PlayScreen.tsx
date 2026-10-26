@@ -13,13 +13,14 @@ import { INTENT_ICONS } from "@/components/ui/icons";
 import { KeyCoin } from "@/components/keys/KeyIcon";
 import { GameArt } from "@/components/games/GameLauncher";
 import { BigButton } from "@/components/games/parts";
+import { usePlayGames } from "./PlayGame";
 import { GameArena } from "@/components/games/GameArena";
 import { PRACTICE_GAMES, usePracticeGame } from "@/components/games/practice";
 
 export type PlayStatus = {
   waiting: boolean;
   joined_at: string | null;
-  session_id: string | null;
+  game_id: string | null;
   game: GameKind | null;
   intent: Intent;
   seeking: string;
@@ -46,9 +47,8 @@ export function PlayScreen({ userId, demo }: { userId: string; demo?: { status: 
   const router = useRouter();
   const [st, setSt] = useState<PlayStatus | null>(demo?.status ?? null);
   const [phase, setPhase] = useState<"idle" | "waiting" | "found">(demo?.phase ?? "idle");
-  const [found, setFound] = useState<{ session: string; game: GameKind } | null>(
-    demo?.phase === "found" ? { session: "demo", game: demo.status.game ?? "ludo" } : null,
-  );
+  const [found, setFound] = useState<{ id: string; game: GameKind } | null>(demo?.phase === "found" ? { id: "demo", game: demo.status.game ?? "ludo" } : null);
+  const playGames = usePlayGames();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   // Set after the page loads, so the server and phone draw the same thing first
@@ -69,21 +69,23 @@ export function PlayScreen({ userId, demo }: { userId: string; demo?: { status: 
 
   // Paired: show the game being picked, then open the chat
   const goFound = useCallback(
-    (session: string, game: GameKind) => {
+    (id: string, game: GameKind) => {
       if (leaving.current) return;
       leaving.current = true;
       // A real player: the practice game closes and the real one opens
       setPractice(null);
-      setFound({ session, game });
+      setFound({ id, game });
       setPhase("found");
       sfx("match");
       buzz([30, 60, 30, 60, 90]);
       setTimeout(() => {
         void supabase.rpc("play_leave").then(() => {});
-        router.push(`/masquerade/${session}`);
+        // The game opens on top of everything; you can minimise it and it keeps going
+        playGames.open(id);
+        router.push("/home");
       }, 2900);
     },
-    [router, supabase],
+    [router, supabase, playGames],
   );
 
   // First look: maybe you're already waiting, or were just paired
@@ -91,7 +93,7 @@ export function PlayScreen({ userId, demo }: { userId: string; demo?: { status: 
     if (demo) return;
     void load().then((s) => {
       if (!s) return;
-      if (s.session_id && s.game) goFound(s.session_id, s.game);
+      if (s.game_id && s.game) goFound(s.game_id, s.game);
       else if (s.waiting) setPhase("waiting");
     });
   }, [load, demo, goFound]);
@@ -102,13 +104,13 @@ export function PlayScreen({ userId, demo }: { userId: string; demo?: { status: 
     const ch = supabase
       .channel(`play-${userId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "play_queue", filter: `user_id=eq.${userId}` }, (p) => {
-        const row = (p.new ?? {}) as { session_id?: string | null; game_kind?: GameKind | null };
-        if (row.session_id && row.game_kind) goFound(row.session_id, row.game_kind);
+        const row = (p.new ?? {}) as { game_id?: string | null; game_kind?: GameKind | null };
+        if (row.game_id && row.game_kind) goFound(row.game_id, row.game_kind);
       })
       .subscribe();
     const t = setInterval(async () => {
       const s = await load();
-      if (s?.session_id && s.game) goFound(s.session_id, s.game);
+      if (s?.game_id && s.game) goFound(s.game_id, s.game);
       else if (s && !s.waiting) setPhase("idle");
     }, 4000);
     const tick = setInterval(() => setNow(Date.now()), 1000);
@@ -151,18 +153,18 @@ export function PlayScreen({ userId, demo }: { userId: string; demo?: { status: 
       void load();
       return;
     }
-    const r = data as { session_id: string | null; game: GameKind | null };
-    if (r.session_id && r.game) {
+    const r = data as { game_id: string | null; game: GameKind | null };
+    if (r.game_id && r.game) {
       // You found someone waiting: tell them the game's on
-      notify({ kind: "play_match", sessionId: r.session_id });
-      goFound(r.session_id, r.game);
+      notify({ kind: "play_match", gameId: r.game_id });
+      goFound(r.game_id, r.game);
     } else {
       setPhase("waiting");
       void load();
     }
   }
   function goFoundDemo() {
-    setFound({ session: "demo", game: "ludo" });
+    setFound({ id: "demo", game: "ludo" });
     setPhase("found");
   }
 
@@ -201,7 +203,7 @@ export function PlayScreen({ userId, demo }: { userId: string; demo?: { status: 
           <>
             <h1 className="text-center font-display text-[34px] leading-tight font-bold text-balance">Play someone new</h1>
             <p className="mx-auto mt-2 max-w-[300px] text-center text-[14.5px] text-white/75">
-              Dashpad pairs you with someone online who fits your settings, and picks the game. You're both masked.
+              Dashpad pairs you with someone online who fits your settings, and picks the game. Message them or send a gift while you play.
             </p>
 
             <div className="mt-6 grid grid-cols-4 gap-2">
@@ -370,7 +372,7 @@ function Picked({ game }: { game: GameKind }) {
           ))}
         </div>
       </div>
-      <p className="mt-6 text-[13.5px] text-white/70">{done ? "Opening your game…" : "Masked, until you both decide"}</p>
+      <p className="mt-6 text-[13.5px] text-white/70">{done ? "Opening your game…" : "Get ready"}</p>
     </div>
   );
 }

@@ -4,7 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 
-export type Names = { me: string; them: string };
+export type Names = {
+  me: string;
+  them: string;
+  /** Play games aren't masked: real photos, and tapping them opens their profile */
+  mePhoto?: string | null;
+  themPhoto?: string | null;
+  onThem?: () => void;
+};
 
 /** Re-render every `ms` so countdowns move */
 export function useTicker(ms = 250) {
@@ -128,23 +135,46 @@ export function BigButton({
 export const GOLD = "#f2b33d";
 export const PURPLE = "#a78bfa";
 
-/** A player bar: their token, name and whose turn it is */
-export function Player({ name, color, active, sub, right }: { name: string; color: string; active: boolean; sub: string; right?: boolean }) {
+/** A player bar: their token (or photo), name and whose turn it is. Tap it to see who they are (Play games). */
+export function Player({
+  name,
+  color,
+  active,
+  sub,
+  right,
+  photo,
+  onClick,
+}: {
+  name: string;
+  color: string;
+  active: boolean;
+  sub: string;
+  right?: boolean;
+  photo?: string | null;
+  onClick?: () => void;
+}) {
+  const Tag = onClick ? "button" : "div";
   return (
-    <div
-      className={clsx("flex min-w-0 flex-1 items-center gap-2 rounded-[18px] p-2 transition", right && "flex-row-reverse text-right")}
+    <Tag
+      {...(onClick ? { type: "button" as const, onClick, "aria-label": `See ${name}'s profile` } : {})}
+      className={clsx("flex min-w-0 flex-1 items-center gap-2 rounded-[18px] p-2 text-left transition", right && "flex-row-reverse text-right", onClick && "active:scale-[0.97]")}
       style={{
         background: active ? `${color}29` : "rgba(255,255,255,0.06)",
         boxShadow: active ? `inset 0 0 0 2px ${color}` : undefined,
       }}
     >
-      <Token color={color} size={34} />
+      {photo ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={photo} alt="" className="h-[34px] w-[34px] shrink-0 rounded-full object-cover" style={{ boxShadow: `0 0 0 2px ${color}` }} />
+      ) : (
+        <Token color={color} size={34} />
+      )}
       <div className="min-w-0 leading-tight">
         <p className="truncate text-[13px] font-extrabold">{name}</p>
         <p className="truncate text-[11px] font-bold" style={{ color: active ? color : "rgba(255,255,255,0.6)" }}>
           {sub}
         </p>
       </div>
-    </div>
+    </Tag>
   );
 }

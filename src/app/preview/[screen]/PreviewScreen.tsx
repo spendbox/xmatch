@@ -289,7 +289,7 @@ function ScreenBody({ screen }: { screen: string }) {
       const status = {
         waiting: screen === "play-waiting" || screen.startsWith("play-practice"),
         joined_at: new Date(now - 23_000).toISOString(),
-        session_id: null,
+        game_id: null,
         game: "ludo" as const,
         intent: "dating" as const,
         seeking: "women",
