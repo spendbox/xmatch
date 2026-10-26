@@ -35,7 +35,7 @@ export function PlayCard() {
         <span className="flex items-center gap-1.5 text-[17px] font-bold">
           Play a stranger <span className="rounded-full bg-white/18 px-1.5 py-px text-[9.5px] font-extrabold tracking-[0.08em]">NEW</span>
         </span>
-        <span className="block truncate text-[12.5px] text-white/80">Masked · Dashpad picks the game</span>
+        <span className="block truncate text-[12.5px] text-white/80">Dashpad picks the game · chat &amp; gift</span>
       </span>
       <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-gold px-3.5 py-2 text-[14px] font-extrabold text-ink">
         Play{cost > 0 && <span className="ml-0.5 inline-flex items-center gap-0.5 text-[12px] font-bold"><KeyCoin size={14} />{cost}</span>}

@@ -68,15 +68,22 @@ export function Outcome({ state, eventId }: { state: MasqueradeState; eventId?: 
 function Reveal({ state, eventId }: { state: MasqueradeState; eventId?: string | null }) {
   const p = state.them.profile!;
   const photo = p.photos?.[0];
+  // This masked chat joined the chat you already have with them (update 79)
+  const merged = state.ended_reason === "merged";
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col px-5 pt-8 pb-8 lg:justify-center">
-      <p className="text-center text-sm font-semibold tracking-wide text-brand uppercase">You clicked</p>
+      <p className="text-center text-sm font-semibold tracking-wide text-brand uppercase">{merged ? "It was them all along" : "You clicked"}</p>
       <h1 className="mt-1 text-center font-display text-[32px] leading-tight font-semibold">
         Meet {p.display_name}
       </h1>
       <p className="mt-1 text-center text-[15px] text-muted">
         a.k.a. {state.them.alias}
       </p>
+      {merged && (
+        <p className="mx-auto mt-2 max-w-xs text-center text-[14px] text-ink-soft">
+          You unmasked with them in another chat, so this chat moved there. Your messages came with it.
+        </p>
+      )}
 
       <div className="relative mt-6 overflow-hidden rounded-[28px] bg-line shadow-lift animate-fade-up">
         {photo ? (

@@ -25,6 +25,8 @@ import { useKeyboardSafe } from "@/lib/useKeyboardSafe";
 import { isOnline, lastSeenText, usePresence } from "@/lib/usePresence";
 import { refreshMenuBadges } from "@/components/app/useMenuBadges";
 import { useGameHost } from "@/components/games/GameHost";
+import { MaskedVoiceSheet } from "@/components/chat/MaskedVoiceSheet";
+import type { VoiceStyle } from "@/lib/voiceDisguise";
 
 export function MatchChat({
   matchId,
@@ -60,6 +62,7 @@ export function MatchChat({
   const [showProfile, setShowProfile] = useState(false);
   const [reporting, setReporting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [voiceOpen, setVoiceOpen] = useState(false);
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
   const { startCall, call } = useCall();
   const [giftOpen, setGiftOpen] = useState(false);
@@ -160,11 +163,13 @@ export function MatchChat({
     refreshWallet();
   }
 
-  async function sendVoice(blob: Blob, seconds: number) {
+  async function sendVoice(blob: Blob, seconds: number, style: VoiceStyle = "normal") {
     const localUrl = URL.createObjectURL(blob);
-    await deliver(draft("audio", "", { local_url: localUrl, media_meta: { duration: seconds } }), async () => {
+    // A disguised voice is labelled so they know it's on purpose
+    const voice = style !== "normal" ? { voice: style } : {};
+    await deliver(draft("audio", "", { local_url: localUrl, media_meta: { duration: seconds, ...voice } }), async () => {
       const up = await uploadChatMedia(supabase, matchId, blob, "audio");
-      return { kind: "audio", media_path: up.path, media_meta: { ...up.meta, duration: seconds } };
+      return { kind: "audio", media_path: up.path, media_meta: { ...up.meta, duration: seconds, ...voice } };
     });
   }
 
@@ -289,7 +294,7 @@ export function MatchChat({
         ]}
         onSend={send}
         onSendMedia={sendMedia}
-        onSendVoice={sendVoice}
+        onVoiceTap={() => setVoiceOpen(true)}
         replyTo={replyTo}
         replyName={replyTo ? (replyTo.kind === "game" ? "the game" : nameOf(replyTo.sender_id)) : undefined}
         onCancelReply={() => setReplyTo(null)}
@@ -298,6 +303,17 @@ export function MatchChat({
           setGiftOpen(true);
         }}
         placeholder={`Message ${other.display_name}`}
+      />
+
+      <MaskedVoiceSheet
+        open={voiceOpen}
+        onClose={() => setVoiceOpen(false)}
+        sessionId=""
+        allowNormal
+        onSendBlob={async (blob, seconds, style) => {
+          await sendVoice(blob, seconds, style);
+          return null;
+        }}
       />
 
       {toast && (

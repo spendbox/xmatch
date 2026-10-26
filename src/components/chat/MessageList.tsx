@@ -11,7 +11,8 @@ import { giftById } from "@/lib/keys";
 import { GiftArt } from "@/components/keys/GiftArt";
 import { Sheet } from "@/components/ui/Sheet";
 import { Spinner, tapFeedback } from "@/components/ui/Button";
-import { voiceUrl } from "@/lib/voiceDisguise";
+import { voiceUrl, type VoiceStyle } from "@/lib/voiceDisguise";
+import { VoiceIcon } from "./VoiceIcon";
 import { AudioPlayer } from "./AudioPlayer";
 import { MediaViewer, type ViewerItem } from "./MediaViewer";
 import { GameCard } from "@/components/games/GameCard";
@@ -48,7 +49,7 @@ export function snippet(m: ChatMessage | undefined) {
     case "video":
       return (m.slow ? "⏳ Slow reveal video" : "🎬 Video") + (m.body ? ` · ${m.body}` : "");
     case "audio":
-      return `🎤 Voice note · ${formatDuration(m.media_meta?.duration)}`;
+      return `Voice note · ${formatDuration(m.media_meta?.duration)}`;
     case "call":
       return "📞 Call";
     case "gift":
@@ -518,7 +519,9 @@ function Bubble({
       )}
       {m.kind === "audio" && m.media_meta?.expired ? (
         // Masked voice notes disappear after 24 hours
-        <p className="px-4 py-2.5 text-[14px] text-muted italic">🎤 Voice note · gone after 24 hours</p>
+        <p className="flex items-center gap-1.5 px-4 py-2.5 text-[14px] text-muted italic">
+          <VoiceIcon style="normal" size={16} /> Voice note · gone after 24 hours
+        </p>
       ) : m.kind === "audio" ? (
         <div className="px-3 py-2">
           <AudioPlayer
@@ -528,9 +531,15 @@ function Bubble({
             mine={mine}
             seed={Math.abs(m.id)}
           />
-          {m.media_meta?.key && (
-            <p className={clsx("mt-1 text-[11px] font-semibold", mine ? "text-white/70" : "text-muted")}>🎭 Disguised voice · gone in 24h</p>
-          )}
+          {m.media_meta?.key ? (
+            <p className={clsx("mt-1 flex items-center gap-1 text-[11px] font-semibold", mine ? "text-white/70" : "text-muted")}>
+              <MaskIcon className="w-3.5" eyes={mine ? "#5b3fd9" : "#ffffff"} /> Disguised voice · gone in 24h
+            </p>
+          ) : m.media_meta?.voice && m.media_meta.voice !== "normal" ? (
+            <p className={clsx("mt-1 flex items-center gap-1 text-[11px] font-semibold", mine ? "text-white/70" : "text-muted")}>
+              <VoiceIcon style={m.media_meta.voice as VoiceStyle} size={13} /> {String(m.media_meta.voice).replace(/^./, (c) => c.toUpperCase())} voice
+            </p>
+          ) : null}
         </div>
       ) : null}
       {(m.kind === "text" || !m.kind || (media && m.body)) && m.body ? (

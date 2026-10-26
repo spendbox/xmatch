@@ -271,7 +271,7 @@ export function ChatPanel({
               return (
                 <div key={m.id} className={clsx("flex", mine ? "justify-end" : "justify-start")}>
                   <span className={clsx("max-w-[80%] rounded-2xl px-3.5 py-2 text-[15px] break-words", mine ? "bg-brand text-white" : "bg-cream text-ink")}>
-                    {m.kind === "text" ? m.body : m.kind === "audio" ? "🎤 Voice note" : m.kind === "image" ? "📷 Photo" : m.kind === "video" ? "🎬 Video" : m.body}
+                    {m.kind === "text" ? m.body : m.kind === "audio" ? "Voice note" : m.kind === "image" ? "📷 Photo" : m.kind === "video" ? "🎬 Video" : m.body}
                   </span>
                 </div>
               );

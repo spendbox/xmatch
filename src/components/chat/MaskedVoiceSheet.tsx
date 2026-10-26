@@ -6,7 +6,8 @@ import { Mic, Pause, Play, RotateCcw, Send, Square } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { notify } from "@/lib/pushClient";
 import { formatDuration } from "@/lib/chatMedia";
-import { decodeRecording, disguise, VOICE_STYLES, type VoiceStyle } from "@/lib/voiceDisguise";
+import { decodeRecording, disguise, MASKED_STYLES, VOICE_STYLES, type VoiceStyle } from "@/lib/voiceDisguise";
+import { VoiceIcon } from "./VoiceIcon";
 import type { ChatMessage } from "@/lib/types";
 import { Sheet } from "@/components/ui/Sheet";
 import { Button, Spinner, tapFeedback } from "@/components/ui/Button";
@@ -26,6 +27,8 @@ export function MaskedVoiceSheet({
   sessionId,
   onSent,
   demo,
+  onSendBlob,
+  allowNormal,
 }: {
   open: boolean;
   onClose: () => void;
@@ -34,15 +37,21 @@ export function MaskedVoiceSheet({
   onSent?: (m: ChatMessage) => void;
   /** Design previews: start on the "listen" step */
   demo?: boolean;
+  /** Chats where you've unmasked: send it your own way (your normal voice is an option there) */
+  onSendBlob?: (blob: Blob, seconds: number, style: VoiceStyle) => Promise<string | null>;
+  allowNormal?: boolean;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const voice = useVoiceRecorder();
   const [raw, setRaw] = useState<AudioBuffer | null>(null);
+  const styles = allowNormal ? VOICE_STYLES : MASKED_STYLES;
   const [style, setStyle] = useState<VoiceStyle>(() => {
     try {
-      return (localStorage.getItem(VOICE_KEY) as VoiceStyle) || "deep";
+      const saved = localStorage.getItem(VOICE_KEY) as VoiceStyle | null;
+      // Echo was removed, and your normal voice is never used in a masked chat
+      return saved && styles.some((v) => v.id === saved) ? saved : allowNormal ? "normal" : "deep";
     } catch {
-      return "deep";
+      return allowNormal ? "normal" : "deep";
     }
   });
   const [out, setOut] = useState<{ blob: Blob; seconds: number; url: string } | null>(null);
@@ -124,6 +133,13 @@ export function MaskedVoiceSheet({
     if (!out || busy) return;
     setBusy("send");
     setError(null);
+    if (onSendBlob) {
+      const e = await onSendBlob(out.blob, out.seconds, style);
+      setBusy(null);
+      if (e) return setError(e);
+      onClose();
+      return;
+    }
     try {
       const res = await fetch("/api/media/voice", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sessionId }) });
       const link = (await res.json().catch(() => null)) as { key?: string; upload?: string; error?: string } | null;
@@ -149,7 +165,17 @@ export function MaskedVoiceSheet({
   }
 
   return (
-    <Sheet open={open} onClose={close} title="Masked voice note" subtitle="Your voice is disguised on your phone. Only the disguised sound is sent, and it disappears after 24 hours." icon={<MaskIcon className="w-6" />}>
+    <Sheet
+      open={open}
+      onClose={close}
+      title={allowNormal ? "Voice note" : "Masked voice note"}
+      subtitle={
+        allowNormal
+          ? "Send your own voice, or disguise it for fun. Disguises happen on your phone."
+          : "Your voice is disguised on your phone. Only the disguised sound is sent, and it disappears after 24 hours."
+      }
+      icon={allowNormal ? <VoiceIcon style="normal" size={24} className="text-brand" /> : <MaskIcon className="w-6" />}
+    >
       <div className="space-y-5 pb-1">
         {/* Record */}
         {step !== "ready" && (
@@ -197,8 +223,8 @@ export function MaskedVoiceSheet({
 
             <div>
               <p className="mb-2 text-[13px] font-semibold text-muted">Pick a voice</p>
-              <div className="grid grid-cols-4 gap-2">
-                {VOICE_STYLES.map((v) => (
+              <div className={allowNormal ? "grid grid-cols-4 gap-2" : "grid grid-cols-3 gap-2"}>
+                {styles.map((v) => (
                   <button
                     key={v.id}
                     type="button"
@@ -214,9 +240,7 @@ export function MaskedVoiceSheet({
                       style === v.id ? "border-brand bg-brand-soft text-brand-ink" : "border-line bg-surface text-ink-soft",
                     )}
                   >
-                    <span className="text-[22px] leading-none" aria-hidden>
-                      {v.emoji}
-                    </span>
+                    <VoiceIcon style={v.id} size={26} />
                     {v.label}
                   </button>
                 ))}

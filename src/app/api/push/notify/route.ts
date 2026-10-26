@@ -35,7 +35,7 @@ async function senderLabel(
 function preview(kind: string, body: string | null, slow = false) {
   if (kind === "image") return slow ? "⏳ Sent you a slow reveal photo" : "📷 Photo";
   if (kind === "video") return slow ? "⏳ Sent you a slow reveal video" : "🎬 Video";
-  if (kind === "audio") return "🎤 Voice note";
+  if (kind === "audio") return "Voice note";
   if (kind === "gift") {
     const g = GIFTS.find((x) => x.id === body);
     return `🎁 Sent you ${g ? `a ${g.name.toLowerCase()}` : "a gift"}`;

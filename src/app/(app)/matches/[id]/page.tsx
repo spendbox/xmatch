@@ -16,7 +16,7 @@ export default async function MatchChatPage({ params }: { params: Promise<{ id: 
 
   const [{ data: other }, { data: messages }, { data: me }, { data: cost }] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", otherId).single(),
-    supabase.from("messages").select("id, sender_id, kind, body, created_at, media_path, media_meta, reply_to, deleted_at, slow, slow_paid_at").eq("match_id", id).order("id").limit(500),
+    supabase.from("messages").select("id, sender_id, kind, body, created_at, media_path, media_meta, reply_to, deleted_at, slow, slow_paid_at").eq("match_id", id).order("created_at").order("id").limit(500),
     supabase.from("profiles").select("interests").eq("id", user.id).single(),
     supabase.from("app_settings").select("value").eq("key", "slow_reveal_cost").maybeSingle(),
   ]);

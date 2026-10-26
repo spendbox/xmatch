@@ -142,7 +142,7 @@ const recent = [
   { id: "m3", created_at: iso(3000), last_message_at: iso(200), intent: "spicy" as const, other_id: "z", display_name: "Zara", photos: [photo("#5b3fd9", "#e5484d", "Z")], age: 29, last_message: null, last_sender: null },
 ];
 
-const APP_SCREENS = ["events-empty", "event-spotlight", "event-spotlight-live", "events", "event-upcoming", "event-live", "event-waiting", "event-ended", "home", "matches", "wallet", "profile", "rich-chat", "extend", "chat", "desktop-matches", "gifts", "home-next", "home-wait", "voice-chat", "voice-sheet", "voice-record", "home-off", "home-clicked", "people", "feed", "feed-locked", "feed-chat", "feed-gifts", "meet", "meet-events", "meet-post", "explore"];
+const APP_SCREENS = ["events-empty", "event-spotlight", "event-spotlight-live", "events", "event-upcoming", "event-live", "event-waiting", "event-ended", "home", "matches", "wallet", "profile", "rich-chat", "extend", "chat", "desktop-matches", "gifts", "home-next", "home-wait", "voice-chat", "voice-sheet", "voice-sheet-normal", "voice-record", "home-off", "home-clicked", "people", "feed", "feed-locked", "feed-chat", "feed-gifts", "meet", "meet-events", "meet-post", "explore"];
 
 function ev(over: Partial<DashpadEvent> = {}): DashpadEvent {
   return {
@@ -483,11 +483,19 @@ function ScreenBody({ screen }: { screen: string }) {
         />
       );
     case "voice-sheet":
+    case "voice-sheet-normal":
     case "voice-record":
       return (
         <div className="pb-24">
           <HomeScreen demoPeople={homePeople} demoViews={homeViews} demoMasked={homeMasked} demoSetup={{ place: true, push: false, things: 4, claimed: false, reward: 5 }} hour={demoHour("live")} profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} matches={recent} />
-          <MaskedVoiceSheet open onClose={() => {}} sessionId="s1" demo={screen === "voice-sheet"} />
+          <MaskedVoiceSheet
+            open
+            onClose={() => {}}
+            sessionId="s1"
+            demo={screen !== "voice-record"}
+            allowNormal={screen === "voice-sheet-normal"}
+            onSendBlob={screen === "voice-sheet-normal" ? async () => null : undefined}
+          />
         </div>
       );
     case "decide":
