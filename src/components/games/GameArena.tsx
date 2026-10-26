@@ -205,16 +205,27 @@ function GameArenaInner({
   let resultsView = false;
   const intro = game.status === "active" && secondsLeft(game.started_at, act.now) > 0;
 
+  // A challenge called off before it began ("Play again", then cancelled): nothing on the board to show
+  const neverStarted = game.status === "cancelled" && !game.ended_reason && Object.keys(game.state ?? {}).length === 0;
+
   if (game.status === "invited") {
     body = <Challenge game={game} names={names} act={act} onClose={onClose} />;
-  } else if (game.status === "declined" || game.status === "expired") {
+  } else if (game.status === "declined" || game.status === "expired" || neverStarted) {
     body = (
       <div className="flex h-full flex-col items-center justify-center px-8 text-center">
         <span className="grid h-20 w-20 place-items-center rounded-full bg-white/10 text-white">
           <MaskIcon className="w-11" eyes="#1a1240" />
         </span>
         <p className="mt-5 font-display text-[28px] font-bold">
-          {game.status === "declined" ? (game.me === "a" ? `${names.them} said not now` : "Maybe next time") : "Challenge ran out"}
+          {neverStarted
+            ? game.me === "a"
+              ? "Challenge cancelled"
+              : `${names.them} called it off`
+            : game.status === "declined"
+              ? game.me === "a"
+                ? `${names.them} said not now`
+                : "Maybe next time"
+              : "Challenge ran out"}
         </p>
         <p className="mt-1.5 text-[14px] text-white/70">Keep chatting, then try another game.</p>
         <BigButton onClick={onClose} className="mt-8 w-full">
@@ -228,6 +239,8 @@ function GameArenaInner({
     const holdEnd =
       over &&
       !showResults &&
+      // Only replay the final board if there is one
+      Object.keys(game.state ?? {}).length > 0 &&
       ((game.kind === "truths" && game.state.phase === "reveal") || (game.kind === "c4" && endedAgo < 10) ||
         (["tot", "whot", "checkers", "chess", "ayo", "gems", "ludo", "snakes"].includes(game.kind) && endedAgo < 3) || (game.kind === "bomb" && endedAgo < 4));
     if (over && !holdEnd) {
