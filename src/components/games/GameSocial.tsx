@@ -105,6 +105,7 @@ export function ChatFab({ unread, onOpen, locked }: { unread: number; onOpen: ()
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
   const drag = useRef<{ dx: number; dy: number; moved: boolean; id: number } | null>(null);
   const el = useRef<HTMLButtonElement>(null);
+  const dragged = useRef(false);
 
   // Start bottom right, above the dice and cards (or where you last left it)
   useEffect(() => {
@@ -155,6 +156,17 @@ export function ChatFab({ unread, onOpen, locked }: { unread: number; onOpen: ()
           try {
             localStorage.setItem(FAB_KEY, JSON.stringify({ x: pos.x / r.width, y: pos.y / r.height }));
           } catch {}
+          dragged.current = true;
+        }
+      }}
+      onPointerCancel={() => {
+        drag.current = null;
+      }}
+      // Open on the tap itself: opening on finger-up let the phone's tap land on the chat's
+      // backdrop a moment later and close it again
+      onClick={() => {
+        if (dragged.current) {
+          dragged.current = false;
           return;
         }
         onOpen();

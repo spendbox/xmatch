@@ -43,6 +43,8 @@ import { PromptAnswers } from "@/components/admin/PromptAnswers";
 import { PlayScreen } from "@/components/play/PlayScreen";
 import { GameDemo } from "./GameDemos";
 import { GamesManager } from "@/components/admin/GamesManager";
+import { ThingsManager } from "@/components/admin/ThingsManager";
+import { PROMPTS, TONES } from "@/lib/things";
 import type { Feed, FeedAnswer, FeedGift } from "@/lib/feed";
 import type { MasqueradeHour } from "@/lib/hourly";
 import type { ChatMessage, MasqueradeState, Profile } from "@/lib/types";
@@ -318,6 +320,23 @@ function ScreenBody({ screen }: { screen: string }) {
           ]}
           demo={{ remaining: 41 * 60 + 12 }}
         />
+      );
+    case "admin-things":
+      return (
+        <AdminShell>
+          <ThingsManager
+            rows={PROMPTS.map((p, i) => ({
+              id: p.id,
+              text: p.text,
+              ideas: p.ideas,
+              tone: (Object.keys(TONES) as (keyof typeof TONES)[]).find((k) => TONES[k] === p.tone) ?? "violet",
+              sort: (i + 1) * 10,
+              repeatable: p.id === "else" || p.id === "fact",
+              active: p.id !== "team",
+            }))}
+            counts={{ food: 412, weekend: 380, music: 377 }}
+          />
+        </AdminShell>
       );
     case "admin-games":
       return (
@@ -753,6 +772,21 @@ function ScreenBody({ screen }: { screen: string }) {
       return <CallScreen call={{ id: "c", matchId: "m1", kind: "video", role: "callee", peer: { name: "Ada", photo: ada.photos[0] }, status: "incoming" }} localStream={null} remoteStream={null} muted={false} cameraOff={false} mirrored onAccept={() => {}} onDecline={() => {}} onHangUp={() => {}} onToggleMute={() => {}} onToggleCamera={() => {}} onFlip={() => {}} />;
     case "call-audio":
       return <CallScreen call={{ id: "c", matchId: "m1", kind: "audio", role: "caller", peer: { name: "Ada", photo: ada.photos[0] }, status: "connected", connectedAt: now - 83_000 }} localStream={null} remoteStream={null} muted cameraOff={false} mirrored onAccept={() => {}} onDecline={() => {}} onHangUp={() => {}} onToggleMute={() => {}} onToggleCamera={() => {}} onFlip={() => {}} />;
+    case "match-chat-play":
+      return (
+        <MatchChat
+          matchId="m1"
+          myId="me"
+          other={ada}
+          shared={[]}
+          matchedAt={iso(3)}
+          intent="friends"
+          source="play"
+          initialMessages={[
+            { id: 901, sender_id: null, kind: "game", body: "Snakes & Ladders", created_at: iso(2), media_meta: { game: "g1", kind: "snakes", a: "me", b: "ada", sa: null, sb: null, winner: null, status: "cancelled", reason: null, by: null } as never },
+          ]}
+        />
+      );
     case "match-chat-merged":
       return (
         <MatchChat

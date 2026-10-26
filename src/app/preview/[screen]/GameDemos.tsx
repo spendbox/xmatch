@@ -364,9 +364,17 @@ function PlayDemo({ screen }: { screen: string }) {
     if (!g) return null;
     const base = { ...g, play: true, session_id: null, match_id: null, started_at: new Date(Date.now() - 60_000).toISOString() };
     // The end of a game: you won
-    return screen === "game-play-results"
-      ? { ...base, status: "done" as const, winner: base.player_a, score_a: 4, score_b: 2, ended_at: new Date(Date.now() - 10_000).toISOString() }
-      : base;
+    if (screen === "game-play-results")
+      return { ...base, status: "done" as const, winner: base.player_a, score_a: 4, score_b: 2, ended_at: new Date(Date.now() - 10_000).toISOString() };
+    // A game nobody moved in: it timed out before it really started
+    if (screen === "game-play-timeout")
+      return { ...base, status: "cancelled" as const, ended_reason: "timeout", ended_at: new Date(Date.now() - 10_000).toISOString() };
+    // A "Play again" invite that ran out, or that they turned down
+    if (screen === "game-play-expired" || screen === "game-play-declined")
+      return { ...base, status: (screen === "game-play-expired" ? "expired" : "declined") as never, started_at: null, state: {}, ended_at: new Date(Date.now() - 10_000).toISOString() };
+    if (screen === "game-play-expired-b")
+      return { ...base, me: "b" as const, status: "expired" as never, started_at: null, state: {}, ended_at: new Date(Date.now() - 10_000).toISOString() };
+    return base;
   }, [screen]);
   const live = useLocalGame(initial);
   const [personOpen, setPersonOpen] = useState(screen === "game-play-profile");
