@@ -45,3 +45,29 @@ export function naira(n: number) {
 }
 
 export type Wallet = { balance: number; passes: number; free_left: number; next_free_at: string | null };
+
+/** What each line in a Keys history means (the Keys page and Admin) */
+export const KEY_REASONS: Record<string, string> = {
+  purchase: "Bought Keys",
+  gift: "Sent a gift",
+  feed_gift: "Sent a gift on the Feed",
+  gift_received: "Received a gift",
+  extend: "Added 2 minutes",
+  extra_masquerade: "Extra masquerade",
+  reopen: "Reopened a past pair",
+  reveal: "Revealed a photo",
+  feed_chat: "Started a chat",
+  refund: "Refund",
+  event: "Masquerade Night entry",
+  meet: "Posted a meet",
+  photos: "Unlocked someone's photos",
+  explore_message: "Messaged someone from Meet",
+  explore_refund: "Keys back: no reply in 48 hours",
+  ghost: "Ghost mode (30 days)",
+  wave: "Waved at someone",
+  setup: "Getting set up",
+  signup: "Welcome gift for joining",
+  invite: "Invited a friend",
+  slow_reveal: "Saw a slow reveal early",
+  admin: "Admin change",
+};

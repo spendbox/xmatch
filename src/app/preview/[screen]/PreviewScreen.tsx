@@ -620,7 +620,7 @@ function ScreenBody({ screen }: { screen: string }) {
     case "admin-night-spotlight":
       return <AdminShell><NightEditor night={{ ...adminNights[0], kind: "spotlight", settings: { free_reveals: 10, reveal_cost: 1, max_chats: 5 } }} /></AdminShell>;
     case "admin":
-      return <AdminShell><AdminOverview promptsAhead={1} overview={{ users: 2841, new_users_7d: 312, online_now: 214, masquerades_today: 1290, unmasks_today: 388, matches_total: 6120, revenue_30d_kobo: 184500000, keys_sold_30d: 112400, gifts_7d: 2290, reports_7d: 4, icebreakers: 112 }} nights={adminNights} /></AdminShell>;
+      return <AdminShell><AdminOverview promptsAhead={1} overview={{ users: 2841, new_users_7d: 312, online_now: 214, masquerades_today: 1290, unmasks_today: 388, matches_total: 6120, revenue_30d_kobo: 184500000, keys_sold_30d: 112400, gifts_7d: 2290, gift_keys_7d: 31400, gifts_free_7d: 640, reports_7d: 4, icebreakers: 112 }} nights={adminNights} /></AdminShell>;
     case "feed":
     case "feed-gifts":
       return (

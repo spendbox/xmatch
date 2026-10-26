@@ -17,6 +17,9 @@ export type Overview = {
   revenue_30d_kobo: number;
   keys_sold_30d: number;
   gifts_7d: number;
+  gift_keys_7d?: number;
+  gifts_free_7d?: number;
+  gifts_total?: number;
   reports_7d: number;
   icebreakers: number;
 };
@@ -29,7 +32,7 @@ export function AdminOverview({ overview: o, nights, promptsAhead = 0 }: { overv
     { label: "Masquerades today", value: o.masquerades_today.toLocaleString(), sub: `${plural(o.unmasks_today, "mutual unmask")}`, icon: MaskLineIcon, tone: "bg-[#fde8f1] text-[#c2306b]" },
     { label: "Matches", value: o.matches_total.toLocaleString(), sub: "all time", icon: Handshake, tone: "bg-brand-soft text-brand" },
     { label: "Revenue (30 days)", value: naira(Math.round(o.revenue_30d_kobo / 100)), sub: `${plural(o.keys_sold_30d, "Key")} sold`, icon: Wallet, tone: "bg-gold-soft text-[#a26b00]" },
-    { label: "Gifts sent", value: o.gifts_7d.toLocaleString(), sub: "this week", icon: Gift, tone: "bg-chili-soft text-chili" },
+    { label: "Gifts sent", value: o.gifts_7d.toLocaleString(), sub: `this week · ${plural(o.gift_keys_7d ?? 0, "Key")}${o.gifts_free_7d ? ` · ${o.gifts_free_7d} with free Keys` : ""}`, icon: Gift, tone: "bg-chili-soft text-chili" },
     { label: "Reports", value: o.reports_7d.toLocaleString(), sub: "this week", icon: Flag, tone: o.reports_7d ? "bg-chili text-white" : "bg-cream text-ink-soft" },
     { label: "Icebreakers", value: o.icebreakers.toLocaleString(), sub: "active questions", icon: MessageCircleQuestion, tone: "bg-brand-soft text-brand" },
   ];
