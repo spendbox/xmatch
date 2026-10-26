@@ -10,6 +10,8 @@ import { ageFromBirthdate, GENDERS } from "@/lib/constants";
 import { promptOf } from "@/lib/things";
 import type { Profile } from "@/lib/types";
 import { InterestIcon } from "@/components/ui/icons";
+import { MaskIcon } from "@/components/ui/MaskIcon";
+import { nameColor } from "@/lib/eventSpace";
 import { YouBoth } from "./YouBoth";
 
 export function ProfileSheet({
@@ -39,7 +41,7 @@ export function ProfileSheet({
   age?: number | null;
 }) {
   const [i, setI] = useState(0);
-  // Photos that didn't load: shown as their initial instead of a broken image
+  // Photos that didn't load: shown as a mask instead of a broken image
   const [broken, setBroken] = useState<string[]>([]);
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
@@ -94,8 +96,8 @@ export function ProfileSheet({
               className="aspect-[4/5] w-full animate-fade-in object-cover lg:aspect-auto lg:h-full"
             />
           ) : photos[i] ? (
-            <div className="grid aspect-[4/5] w-full place-items-center bg-brand-soft lg:aspect-auto lg:h-full">
-              <span className="font-display text-[120px] font-bold text-brand/50">{(profile.display_name ?? "?").trim().charAt(0).toUpperCase() || "?"}</span>
+            <div className="grid aspect-[4/5] w-full place-items-center lg:aspect-auto lg:h-full" style={{ background: nameColor(profile.id) }}>
+              <MaskIcon className="w-1/2 text-white/90" eyes={nameColor(profile.id)} />
             </div>
           ) : (
             <div className="aspect-[4/5] w-full bg-line lg:aspect-auto lg:h-full" />
