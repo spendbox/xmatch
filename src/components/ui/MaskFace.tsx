@@ -1,4 +1,5 @@
 import { nameColor } from "@/lib/eventSpace";
+import type { Gender } from "@/lib/types";
 
 /** Mask shapes for someone whose photo won't show. `c` is the colour behind the mask, used for the eye holes and details. */
 const MASKS: ((c: string) => React.ReactNode)[] = [
@@ -86,13 +87,20 @@ function pick(id: string, n: number) {
   return Math.abs(h) % n;
 }
 
-/** A mask on a colour, both picked from their id: stands in for a photo that won't load */
-export function MaskFace({ id, className }: { id: string; className?: string }) {
+/** Which masks each gender gets (by place in MASKS); anyone else can get any of them */
+const BY_GENDER: Partial<Record<Gender, number[]>> = {
+  man: [0, 4, 5, 7], // classic, domino, jester, crowned
+  woman: [1, 2, 3, 6], // cat, butterfly, feathered, star eyes
+};
+
+/** A mask that suits their gender, on a colour, both picked from their id: stands in for a photo that won't load */
+export function MaskFace({ id, gender, className }: { id: string; gender?: Gender | null; className?: string }) {
   const color = nameColor(id);
+  const choices = (gender && BY_GENDER[gender]) || MASKS.map((_, i) => i);
   return (
     <div className={className} style={{ background: color }}>
       <svg viewBox="0 0 64 48" className="w-1/2 text-white/90" aria-hidden="true">
-        {MASKS[pick(id, MASKS.length)](color)}
+        {MASKS[choices[pick(id, choices.length)]](color)}
       </svg>
     </div>
   );

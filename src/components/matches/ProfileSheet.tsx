@@ -95,7 +95,7 @@ export function ProfileSheet({
               className="aspect-[4/5] w-full animate-fade-in object-cover lg:aspect-auto lg:h-full"
             />
           ) : photos[i] ? (
-            <MaskFace id={profile.id} className="grid aspect-[4/5] w-full place-items-center lg:aspect-auto lg:h-full" />
+            <MaskFace id={profile.id} gender={profile.gender} className="grid aspect-[4/5] w-full place-items-center lg:aspect-auto lg:h-full" />
           ) : (
             <div className="aspect-[4/5] w-full bg-line lg:aspect-auto lg:h-full" />
           )}
