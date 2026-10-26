@@ -39,6 +39,8 @@ export function ProfileSheet({
   age?: number | null;
 }) {
   const [i, setI] = useState(0);
+  // Photos that didn't load: shown as their initial instead of a broken image
+  const [broken, setBroken] = useState<string[]>([]);
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
@@ -82,14 +84,19 @@ export function ProfileSheet({
                 <img src={thumbUrl(photos[0]) ?? photos[0]} onError={thumbFallback(photos[0])} alt="" className="absolute inset-0 h-full w-full object-cover" style={{ filter: "blur(28px)", transform: "scale(1.3)" }} />
               )}
             </div>
-          ) : photos[i] ? (
+          ) : photos[i] && !broken.includes(photos[i]) ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               key={photos[i]}
               src={photos[i]}
               alt={profile.display_name ?? ""}
+              onError={() => setBroken((b) => [...b, photos[i]])}
               className="aspect-[4/5] w-full animate-fade-in object-cover lg:aspect-auto lg:h-full"
             />
+          ) : photos[i] ? (
+            <div className="grid aspect-[4/5] w-full place-items-center bg-brand-soft lg:aspect-auto lg:h-full">
+              <span className="font-display text-[120px] font-bold text-brand/50">{(profile.display_name ?? "?").trim().charAt(0).toUpperCase() || "?"}</span>
+            </div>
           ) : (
             <div className="aspect-[4/5] w-full bg-line lg:aspect-auto lg:h-full" />
           )}
