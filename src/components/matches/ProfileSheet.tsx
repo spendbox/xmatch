@@ -10,8 +10,7 @@ import { ageFromBirthdate, GENDERS } from "@/lib/constants";
 import { promptOf } from "@/lib/things";
 import type { Profile } from "@/lib/types";
 import { InterestIcon } from "@/components/ui/icons";
-import { MaskIcon } from "@/components/ui/MaskIcon";
-import { nameColor } from "@/lib/eventSpace";
+import { MaskFace } from "@/components/ui/MaskFace";
 import { YouBoth } from "./YouBoth";
 
 export function ProfileSheet({
@@ -96,9 +95,7 @@ export function ProfileSheet({
               className="aspect-[4/5] w-full animate-fade-in object-cover lg:aspect-auto lg:h-full"
             />
           ) : photos[i] ? (
-            <div className="grid aspect-[4/5] w-full place-items-center lg:aspect-auto lg:h-full" style={{ background: nameColor(profile.id) }}>
-              <MaskIcon className="w-1/2 text-white/90" eyes={nameColor(profile.id)} />
-            </div>
+            <MaskFace id={profile.id} className="grid aspect-[4/5] w-full place-items-center lg:aspect-auto lg:h-full" />
           ) : (
             <div className="aspect-[4/5] w-full bg-line lg:aspect-auto lg:h-full" />
           )}
