@@ -2,53 +2,104 @@
 
 import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
-import { ArrowLeft, SendHorizontal } from "lucide-react";
+import { ArrowLeft, Clock3, Lock, SendHorizontal } from "lucide-react";
 import { Sheet } from "@/components/ui/Sheet";
 import { Button, tapFeedback } from "@/components/ui/Button";
-import { STICKERS, STICKER_COLORS, STICKER_MAX, isPose, isStickerColor, type Sticker, type StickerPose } from "@/lib/stickers";
+import { KeyCoin } from "@/components/keys/KeyIcon";
+import { STICKER_COLORS, STICKER_MAX, STICKER_PACKS, isPose, isStickerColor, packOf, type Sticker, type StickerPack, type StickerPose } from "@/lib/stickers";
 import { Masky } from "./Masky";
 
 export type StickerPick = { pose: StickerPose; caption: string; color: string };
 
 const RECENT_KEY = "dp_recent_stickers";
+const TAB_KEY = "dp_sticker_tab";
 
 function loadRecent(): StickerPick[] {
   try {
     const list = JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]") as StickerPick[];
-    return list.filter((s) => isPose(s.pose) && isStickerColor(s.color) && typeof s.caption === "string").slice(0, 6);
+    return list.filter((s) => isPose(s.pose) && isStickerColor(s.color) && typeof s.caption === "string").slice(0, 9);
   } catch {
     return [];
   }
 }
 function saveRecent(s: StickerPick) {
   try {
-    const list = [s, ...loadRecent().filter((x) => !(x.pose === s.pose && x.caption === s.caption && x.color === s.color))].slice(0, 6);
+    const list = [s, ...loadRecent().filter((x) => !(x.pose === s.pose && x.caption === s.caption && x.color === s.color))].slice(0, 9);
     localStorage.setItem(RECENT_KEY, JSON.stringify(list));
   } catch {
     /* private mode */
   }
 }
 
-/** Masky stickers: pick one, change its words (and colour) if you like, then send. */
-export function StickerSheet({ open, onClose, onSend }: { open: boolean; onClose: () => void; onSend: (s: StickerPick) => void }) {
+/** Masky stickers: pick one, change its words (and colour) if you like, then send. Packs are bought once with Keys. */
+export function StickerSheet({
+  open,
+  onClose,
+  onSend,
+  owned = [],
+  price = 40,
+  onBuy,
+  startTab,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSend: (s: StickerPick) => void;
+  /** Packs you've bought */
+  owned?: string[];
+  /** Keys for one pack */
+  price?: number;
+  /** Buy a pack: returns an error to show, or null */
+  onBuy?: (pack: StickerPack) => Promise<string | null>;
+  startTab?: string;
+}) {
   const [picked, setPicked] = useState<{ base: Sticker; caption: string; color: string } | null>(null);
   const [recent, setRecent] = useState<StickerPick[]>([]);
+  const [tab, setTab] = useState<string>("masky");
+  const [buying, setBuying] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const input = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open) return;
     setPicked(null);
-    setRecent(loadRecent());
-  }, [open]);
+    setError(null);
+    const r = loadRecent();
+    setRecent(r);
+    let t = startTab;
+    try {
+      t ??= localStorage.getItem(TAB_KEY) ?? undefined;
+    } catch {
+      /* private mode */
+    }
+    setTab(t && (t === "recent" ? r.length > 0 : STICKER_PACKS.some((p) => p.id === t)) ? t : r.length ? "recent" : "masky");
+  }, [open, startTab]);
+
+  const has = (p: StickerPack | undefined) => !!p && (p.free || owned.includes(p.id));
+  const pack = STICKER_PACKS.find((p) => p.id === tab);
+  const pickedPack = picked ? packOf(picked.base.pose) : undefined;
+  const locked = !!picked && !has(pickedPack);
+
+  function pickTab(id: string) {
+    tapFeedback();
+    setTab(id);
+    setError(null);
+    try {
+      localStorage.setItem(TAB_KEY, id);
+    } catch {
+      /* private mode */
+    }
+  }
 
   function choose(s: StickerPick) {
     tapFeedback();
-    const base = STICKERS.find((x) => x.pose === s.pose) ?? STICKERS[0];
+    const base = packOf(s.pose)?.stickers.find((x) => x.pose === s.pose);
+    if (!base) return;
+    setError(null);
     setPicked({ base, caption: s.caption, color: s.color });
   }
 
   function send() {
-    if (!picked) return;
+    if (!picked || locked) return;
     const s = { pose: picked.base.pose, caption: picked.caption.trim() || picked.base.caption, color: picked.color };
     tapFeedback();
     saveRecent(s);
@@ -56,25 +107,47 @@ export function StickerSheet({ open, onClose, onSend }: { open: boolean; onClose
     onSend(s);
   }
 
+  async function buy(p: StickerPack) {
+    if (!onBuy) return;
+    setBuying(true);
+    setError(null);
+    const err = await onBuy(p);
+    setBuying(false);
+    if (err) setError(err);
+  }
+
+  const buyButton = (p: StickerPack, full?: boolean) => (
+    <Button onClick={() => void buy(p)} loading={buying} className={clsx("h-12 rounded-full", full ? "w-full" : "flex-1")}>
+      Get {p.name} · <KeyCoin size={18} /> {price}
+    </Button>
+  );
+
   return (
     <Sheet
       open={open}
       onClose={onClose}
-      title={picked ? "Make it yours" : "Stickers"}
-      subtitle={picked ? "Change the words, then send" : "Tap one to change its words. Free for now."}
+      title={picked ? (locked ? `${pickedPack?.name} pack ${pickedPack?.emoji}` : "Make it yours") : "Stickers"}
+      subtitle={picked ? (locked ? "Get the pack to send this one, with your own words" : "Change the words, then send") : undefined}
       footer={
         picked ? (
-          <div className="flex gap-2.5">
-            <button
-              type="button"
-              onClick={() => setPicked(null)}
-              className="inline-flex h-12 shrink-0 items-center gap-1.5 rounded-full border border-line px-4 text-[15px] font-semibold text-ink-soft transition active:scale-95"
-            >
-              <ArrowLeft size={18} /> All
-            </button>
-            <Button onClick={send} className="h-12 flex-1 rounded-full">
-              <SendHorizontal size={18} /> Send
-            </Button>
+          <div className="space-y-2">
+            {error && <p className="text-center text-[13px] font-medium text-chili">{error}</p>}
+            <div className="flex gap-2.5">
+              <button
+                type="button"
+                onClick={() => setPicked(null)}
+                className="inline-flex h-12 shrink-0 items-center gap-1.5 rounded-full border border-line px-4 text-[15px] font-semibold text-ink-soft transition active:scale-95"
+              >
+                <ArrowLeft size={18} /> All
+              </button>
+              {locked && pickedPack ? (
+                buyButton(pickedPack)
+              ) : (
+                <Button onClick={send} className="h-12 flex-1 rounded-full">
+                  <SendHorizontal size={18} /> Send
+                </Button>
+              )}
+            </div>
           </div>
         ) : undefined
       }
@@ -103,11 +176,7 @@ export function StickerSheet({ open, onClose, onSend }: { open: boolean; onClose
             />
           </label>
           {picked.caption !== picked.base.caption && (
-            <button
-              type="button"
-              onClick={() => setPicked((p) => p && { ...p, caption: p.base.caption })}
-              className="-mt-2 text-[13px] font-semibold text-brand"
-            >
+            <button type="button" onClick={() => setPicked((p) => p && { ...p, caption: p.base.caption })} className="-mt-2 text-[13px] font-semibold text-brand">
               Back to &ldquo;{picked.base.caption}&rdquo;
             </button>
           )}
@@ -127,36 +196,91 @@ export function StickerSheet({ open, onClose, onSend }: { open: boolean; onClose
           </div>
         </div>
       ) : (
-        <div className="max-h-[56dvh] overflow-y-auto pb-2">
-          {recent.length > 0 && (
-            <>
-              <p className="mb-1 text-[12px] font-bold tracking-wide text-muted uppercase">Recent</p>
-              <div className="no-scrollbar -mx-1 mb-3 flex gap-1 overflow-x-auto px-1">
+        <div className="-mt-2">
+          {/* Packs */}
+          <div role="tablist" aria-label="Sticker packs" className="no-scrollbar -mx-5 flex gap-1.5 overflow-x-auto px-5 pb-3">
+            {recent.length > 0 && (
+              <TabChip on={tab === "recent"} onClick={() => pickTab("recent")} label="Recent">
+                <Clock3 size={15} />
+              </TabChip>
+            )}
+            {STICKER_PACKS.map((p) => (
+              <TabChip key={p.id} on={tab === p.id} onClick={() => pickTab(p.id)} label={p.name} locked={!has(p)}>
+                <span className="text-[15px] leading-none">{p.emoji}</span>
+              </TabChip>
+            ))}
+          </div>
+
+          <div className="max-h-[52dvh] overflow-y-auto pb-2">
+            {tab === "recent" ? (
+              <div className="grid grid-cols-3 gap-1">
                 {recent.map((s, i) => (
-                  <button key={i} type="button" onClick={() => choose(s)} className="shrink-0 rounded-2xl p-1 transition active:scale-95" aria-label={`${s.caption} sticker`}>
-                    <Masky pose={s.pose} caption={s.caption} color={s.color} size={76} still />
-                  </button>
+                  <StickerTile key={i} s={s} onClick={() => choose(s)} />
                 ))}
               </div>
-            </>
-          )}
-          <p className="mb-1 text-[12px] font-bold tracking-wide text-muted uppercase">Masky</p>
-          <div className="grid grid-cols-3 gap-1">
-            {STICKERS.map((s) => (
-              <button
-                key={s.pose}
-                type="button"
-                onClick={() => choose(s)}
-                className="grid place-items-center rounded-2xl py-1.5 transition hover:bg-cream active:scale-95"
-                aria-label={`${s.caption}: ${s.move}`}
-              >
-                <Masky pose={s.pose} caption={s.caption} color={s.color} size={96} />
-              </button>
-            ))}
+            ) : pack ? (
+              <>
+                {!has(pack) && (
+                  <div className="mb-3 overflow-hidden rounded-3xl bg-gradient-to-br from-[#2a1f4d] to-[#5b3fd9] p-4 text-white">
+                    <p className="text-[12px] font-bold tracking-wide text-white/70 uppercase">Premium pack</p>
+                    <p className="mt-0.5 text-[19px] font-semibold">
+                      {pack.name} {pack.emoji}
+                    </p>
+                    <p className="text-[13.5px] text-white/80">
+                      {pack.tagline} · {pack.stickers.length} moving stickers, your own words on every one. Yours to keep.
+                    </p>
+                    <div className="mt-3">{onBuy ? buyButton(pack, true) : null}</div>
+                    {error && <p className="mt-2 text-center text-[13px] font-medium text-[#ffb4b4]">{error}</p>}
+                  </div>
+                )}
+                <div className="grid grid-cols-3 gap-1">
+                  {pack.stickers.map((s) => (
+                    <StickerTile key={s.pose} s={s} locked={!has(pack)} onClick={() => choose(s)} />
+                  ))}
+                </div>
+              </>
+            ) : null}
           </div>
         </div>
       )}
     </Sheet>
+  );
+}
+
+function TabChip({ on, onClick, label, locked, children }: { on: boolean; onClick: () => void; label: string; locked?: boolean; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={on}
+      onClick={onClick}
+      className={clsx(
+        "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[13.5px] font-semibold transition active:scale-95",
+        on ? "bg-ink text-white" : "border border-line bg-surface text-ink-soft",
+      )}
+    >
+      {children}
+      {label}
+      {locked && <Lock size={12} className={on ? "text-white/70" : "text-muted"} />}
+    </button>
+  );
+}
+
+function StickerTile({ s, locked, onClick }: { s: StickerPick & { move?: string }; locked?: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="relative grid place-items-center rounded-2xl py-1.5 transition hover:bg-cream active:scale-95"
+      aria-label={`${s.caption}${s.move ? `: ${s.move}` : ""}${locked ? " (in a pack)" : ""}`}
+    >
+      <Masky pose={s.pose} caption={s.caption} color={s.color} size={96} />
+      {locked && (
+        <span className="absolute top-1.5 right-2 grid h-6 w-6 place-items-center rounded-full bg-ink/80 text-white">
+          <Lock size={12} />
+        </span>
+      )}
+    </button>
   );
 }
 

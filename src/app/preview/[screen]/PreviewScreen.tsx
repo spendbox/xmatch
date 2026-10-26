@@ -18,6 +18,9 @@ import { NightEditor } from "@/components/admin/NightEditor";
 import { IcebreakerManager } from "@/components/admin/IcebreakerManager";
 import type { DashpadEvent } from "@/lib/events";
 import { MasqueradeRoom } from "@/components/masquerade/MasqueradeRoom";
+import { StickerSheet } from "@/components/stickers/StickerSheet";
+import { Masky } from "@/components/stickers/Masky";
+import { STICKER_PACKS } from "@/lib/stickers";
 import { MaskedVoiceSheet } from "@/components/chat/MaskedVoiceSheet";
 import { Outcome } from "@/components/masquerade/Outcome";
 import { MatchesList } from "@/components/matches/MatchesList";
@@ -532,6 +535,28 @@ function ScreenBody({ screen }: { screen: string }) {
       return <HomeScreen demoPeople={homePeople} demoSetup={{ place: true, push: false, things: 4, claimed: false, reward: 5 }} profile={me} wallet={null} stats={null} matches={[]} hour={demoHour("next")} />;
     case "chat":
       return <MasqueradeRoom initial={session()} initialMessages={msgs} demo={{ remaining: 121 }} />;
+    case "sticker-packs":
+      return (
+        <div className="min-h-dvh bg-cream p-6">
+          {STICKER_PACKS.map((p) => (
+            <section key={p.id} className="mb-6" data-pack={p.id}>
+              <h2 className="mb-1 text-[20px] font-semibold">
+                {p.name} {p.emoji} <span className="text-[14px] font-medium text-muted">· {p.free ? "Free" : "Premium"} · {p.tagline}</span>
+              </h2>
+              <div className="grid grid-cols-6 gap-2">
+                {p.stickers.map((st) => (
+                  <div key={st.pose} className="flex flex-col items-center rounded-3xl bg-surface p-2 shadow-card">
+                    <Masky pose={st.pose} caption={st.caption} color={st.color} size={150} />
+                    <span className="mt-1 text-center text-[11.5px] font-medium text-muted">{st.move}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      );
+    case "sticker-store":
+      return <StickerSheet open onClose={() => {}} onSend={() => {}} owned={[]} price={40} onBuy={async () => null} startTab="savage" />;
     case "chat-stickers":
       return (
         <MasqueradeRoom
@@ -541,7 +566,7 @@ function ScreenBody({ screen }: { screen: string }) {
             { id: 5, sender_id: "me", body: "Same, but I'm judging the jollof at every stop", created_at: iso(120), reactions: { ada: "😂", me: "😈" } },
             { id: 8, sender_id: "ada", kind: "sticker", body: "Jollof?", media_meta: { pose: "jollof", color: "#ffb02e" }, created_at: iso(3), reactions: { me: "❤️" } },
             { id: 9, sender_id: "me", body: "Party jollof, no argument", created_at: new Date(Date.now() - 60_000).toISOString(), edited_at: iso(1) },
-            { id: 10, sender_id: "me", kind: "sticker", body: "Gbam, Ada!", media_meta: { pose: "stamp", color: "#e5484d" }, created_at: iso(1) },
+            { id: 10, sender_id: "me", kind: "sticker", body: "Goodnight Su", media_meta: { pose: "sleep", color: "#e5484d" }, created_at: iso(1) },
           ]}
           demo={{ remaining: 1800 }}
         />

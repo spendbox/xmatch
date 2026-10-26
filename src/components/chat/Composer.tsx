@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
-import { Camera, Check, Gift, Hourglass, Images, Mic, Pencil, Plus, SendHorizontal, Sticker, Trash2, X } from "lucide-react";
+import { Camera, Check, Gift, Hourglass, Images, Mic, Pencil, Plus, SendHorizontal, Trash2, X } from "lucide-react";
 import type { ChatMessage } from "@/lib/types";
 import { MAX_MEDIA_BYTES, formatDuration } from "@/lib/chatMedia";
 import { Sheet } from "@/components/ui/Sheet";
@@ -12,6 +12,7 @@ import { snippet } from "./MessageList";
 import { loadDraft, saveDraft, sweepDrafts } from "@/lib/chatDraft";
 import { useVoiceRecorder } from "./useVoiceRecorder";
 import { StickerSheet, type StickerPick } from "@/components/stickers/StickerSheet";
+import { StickerIcon } from "@/components/stickers/StickerIcon";
 
 export type MediaKind = "image" | "video";
 
@@ -336,9 +337,9 @@ export function Composer({
               }}
               disabled={disabled}
               aria-label="Stickers"
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-ink-soft transition hover:bg-ink/5 active:scale-95 disabled:opacity-50"
+              className="group grid h-10 w-10 shrink-0 place-items-center rounded-full transition hover:bg-ink/5 active:scale-90 disabled:opacity-50"
             >
-              <Sticker size={21} />
+              <StickerIcon size={28} className="transition-transform duration-200 group-hover:-rotate-12 group-active:scale-110" />
             </button>
           )}
           {hasText || editing || (!onSendVoice && !onVoiceTap) ? (
