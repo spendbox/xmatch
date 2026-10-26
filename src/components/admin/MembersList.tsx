@@ -38,7 +38,7 @@ export const sexOf = (g: string | null) => (g === "woman" ? "Female" : g === "ma
 
 export function ago(iso: string) {
   const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
-  if (s < 300) return "online";
+  if (s < 150) return "online";
   if (s < 3600) return `${Math.floor(s / 60)}m ago`;
   if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
   if (s < 86400 * 30) return `${Math.floor(s / 86400)}d ago`;

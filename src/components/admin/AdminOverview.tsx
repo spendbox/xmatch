@@ -28,7 +28,7 @@ export function AdminOverview({ overview: o, nights, promptsAhead = 0 }: { overv
   const upcoming = nights.filter((n) => n.status !== "cancelled" && new Date(n.ends_at).getTime() > Date.now()).reverse().slice(0, 3);
   const stats = [
     { label: "Members", value: o.users.toLocaleString(), sub: `+${o.new_users_7d} this week`, icon: Users, tone: "bg-brand-soft text-brand" },
-    { label: "Online now", value: o.online_now.toLocaleString(), sub: "active in the last 5 min", icon: Wifi, tone: "bg-mint-soft text-mint" },
+    { label: "Online now", value: o.online_now.toLocaleString(), sub: "active in the last 2½ min", icon: Wifi, tone: "bg-mint-soft text-mint" },
     { label: "Masquerades today", value: o.masquerades_today.toLocaleString(), sub: `${plural(o.unmasks_today, "mutual unmask")}`, icon: MaskLineIcon, tone: "bg-[#fde8f1] text-[#c2306b]" },
     { label: "Matches", value: o.matches_total.toLocaleString(), sub: "all time", icon: Handshake, tone: "bg-brand-soft text-brand" },
     { label: "Revenue (30 days)", value: naira(Math.round(o.revenue_30d_kobo / 100)), sub: `${plural(o.keys_sold_30d, "Key")} sold`, icon: Wallet, tone: "bg-gold-soft text-[#a26b00]" },
