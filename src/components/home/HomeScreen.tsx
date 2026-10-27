@@ -22,6 +22,7 @@ import { EventCard } from "@/components/events/EventCard";
 import { PactCard, type PactListItem } from "@/components/pacts/PactCard";
 import type { DashpadEvent } from "@/lib/events";
 import { PlayCard } from "./PlayCard";
+import { DailyCard, StreakChip } from "./DailyCard";
 import { MasqueradeCard, useMasqueradeHour } from "./MasqueradeCard";
 import { PastPairs } from "./PastPairs";
 import { intentLabel } from "@/lib/constants";
@@ -59,6 +60,7 @@ export function HomeScreen({
   matches = [],
   demoSetup,
   demoTour,
+  demoDaily,
 }: {
   profile: Profile;
   wallet: Wallet | null;
@@ -80,6 +82,8 @@ export function HomeScreen({
   demoSetup?: { place: boolean; push: boolean; things: number; claimed: boolean; reward: number };
   /** Design previews: open the welcome tour */
   demoTour?: boolean;
+  /** Design preview of the Daily Word Hunt card */
+  demoDaily?: "todo" | "done";
 }) {
   const supabase = useMemo(() => createClient(), []);
   const { wallet, refresh: refreshWallet } = useWallet(profile.id, initialWallet);
@@ -158,7 +162,7 @@ export function HomeScreen({
           <p className="text-[13px] text-muted">{greeting}</p>
           <p className="truncate text-[19px] leading-tight font-semibold lg:font-display lg:text-[34px]">{profile.display_name}</p>
         </div>
-        <FeedbackButton />
+        {demoDaily ? <StreakChip n={demoDaily === "done" ? 13 : 12} /> : <FeedbackButton />}
         <Link
           href="/wallet"
           className="inline-flex h-11 items-center gap-2 rounded-full border border-gold/40 bg-gold-soft pr-4 pl-1.5 text-[15px] font-bold text-[#8a5a00] transition active:scale-95"
@@ -176,6 +180,7 @@ export function HomeScreen({
       <div className="mt-5 lg:col-span-7 lg:mt-0">
         <MasqueradeCard userId={profile.id} ctl={ctl} prefs={prefs} onSettings={() => setMeetOpen(true)} />
         <PlayCard />
+        {demoDaily && <DailyCard done={demoDaily === "done"} />}
 
         {pact && (
           <section className="mt-6">

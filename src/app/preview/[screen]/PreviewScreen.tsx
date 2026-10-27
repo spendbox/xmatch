@@ -524,9 +524,11 @@ function ScreenBody({ screen }: { screen: string }) {
       );
     case "home":
     case "home-pact":
+    case "home-daily":
+    case "home-daily-done":
       return (
         <div className="pb-24">
-          <HomeScreen demoPeople={homePeople} demoSetup={{ place: true, push: false, things: 4, claimed: false, reward: 5 }} meets={demoMeets} hour={demoHour()} profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} stats={{ online: 214, week_chats: 12, week_unmasks: 5, gifts_received: 3 }} matches={recent} pact={screen === "home-pact" ? { ...demoPact, count: 1 } : null} />
+          <HomeScreen demoDaily={screen === "home-daily" ? "todo" : screen === "home-daily-done" ? "done" : undefined} demoPeople={homePeople} demoSetup={{ place: true, push: false, things: 4, claimed: false, reward: 5 }} meets={demoMeets} hour={demoHour()} profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} stats={{ online: 214, week_chats: 12, week_unmasks: 5, gifts_received: 3 }} matches={recent} pact={screen === "home-pact" ? { ...demoPact, count: 1 } : null} />
           <BottomNav />
         </div>
       );
