@@ -119,7 +119,7 @@ export async function POST(req: Request) {
     const title = ({ whot: "Whot", ayo: "Ayo", ludo: "Ludo", snakes: "Snakes & Ladders", xo: "X & O", lastcard: "Last Card" } as Record<string, string>)[g.kind as string] ?? "your game";
     await pushToUsers(
       [them],
-      { title: `Your turn in ${title} 🎲`, body: `${((me?.display_name as string) ?? "They").split(" ")[0]} made their move.`, url: `/home?game=${g.id}`, tag: `turn-${g.id}`, icon: (me?.photos as string[] | null)?.[0] ?? null },
+      { title: `Your turn in ${title}`, body: `${((me?.display_name as string) ?? "They").split(" ")[0]} made their move.`, url: `/home?game=${g.id}`, tag: `turn-${g.id}`, icon: (me?.photos as string[] | null)?.[0] ?? null },
       { skipIfActive: true },
     ).catch(() => {});
   }

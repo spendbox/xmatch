@@ -56,8 +56,8 @@ async function handle(req: Request) {
           const until = new Date(p.ends_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: "Africa/Lagos" });
           const tell = (to: string, them: string) =>
             pushToUsers([to], {
-              title: "Your new pair is here 🎭",
-              body: `You're paired with ${them} (${intentLabel(p.intent)}) until ${until}. Say hi while you're both masked.`,
+              title: `You're paired with ${them}`,
+              body: `Masked chat (${intentLabel(p.intent)}) open until ${until}.`,
               url: `/masquerade/${p.id}`,
               tag: `pair-${p.id}`,
             });
@@ -76,8 +76,8 @@ async function handle(req: Request) {
       pushToUsers(
         [n.user_id],
         {
-          title: `${n.other_alias} is waiting for you 👀`,
-          body: `Your masked chat ends at ${new Date(n.ends_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: "Africa/Lagos" })}. Say something before the hour is up.`,
+          title: `Your chat with ${n.other_alias} is still open`,
+          body: `It ends at ${new Date(n.ends_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: "Africa/Lagos" })}.`,
           url: `/masquerade/${n.session_id}`,
           tag: `pair-${n.session_id}`,
         },
@@ -112,8 +112,8 @@ async function handle(req: Request) {
   await Promise.all(
     refunds.map((r) =>
       pushToUsers([r.user_id], {
-        title: `Your ${r.keys} ${r.keys === 1 ? "Key is" : "Keys are"} back 🔑`,
-        body: `${(r.name ?? "They").split(" ")[0]} didn't reply in 48 hours, so we gave you your Keys back. The chat stays open in case they do.`,
+        title: `${r.keys} ${r.keys === 1 ? "Key" : "Keys"} returned to your wallet`,
+        body: `${(r.name ?? "They").split(" ")[0]} didn't reply within 48 hours. The chat stays open.`,
         url: "/wallet",
         tag: `refund-${r.session_id ?? r.match_id}`,
       }),
