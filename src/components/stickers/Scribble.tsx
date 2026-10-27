@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import { Eraser, Maximize2, Minimize2, Undo2 } from "lucide-react";
 import { tapFeedback } from "@/components/ui/Button";
-import { BRUSHES, INKS, SCRIBBLE_MAX_POINTS, SCRIBBLE_SIZE, WIDTHS, drawScribble, pointCount, timeline, type Brush, type Drawing, type Stroke } from "@/lib/scribble";
+import { BRUSHES, INKS, SCRIBBLE_MAX_POINTS, SCRIBBLE_SIZE, WIDTHS, drawScribble, isLiving, pointCount, timeline, type Brush, type Drawing, type Stroke } from "@/lib/scribble";
 
 function useCanvas(size: number) {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -18,6 +18,9 @@ function useCanvas(size: number) {
   }, [size]);
   return ref;
 }
+
+/** How long living brushes keep moving after a scribble has drawn itself (tap to see it again) */
+const LIVE_FOR = 6000;
 
 /** A scribble in a chat: draws itself the first time you see it (tap to watch it again) */
 export function ScribbleView({ drawing, size = 170, className, still }: { drawing: Drawing; size?: number; className?: string; /** Just the finished drawing (thumbnails) */ still?: boolean }) {
@@ -36,14 +39,28 @@ export function ScribbleView({ drawing, size = 170, className, still }: { drawin
       return () => {};
     }
     const length = Math.min(3200, Math.max(1400, total));
+    const living = isLiving(drawing);
     const t0 = performance.now();
     let raf = 0;
+    let last = 0;
     const frame = (now: number) => {
       const p = Math.min(1, (now - t0) / length);
-      // Mostly steady, like a hand drawing, easing off at the end
-      // The soft shadow only on the last frame: it's the slow part on phones
-      drawScribble(ctx, drawing, p >= 1 ? Infinity : total * (0.6 * p + 0.4 * (1 - Math.pow(1 - p, 2))), times, { shadow: p >= 1 });
-      if (p < 1) raf = requestAnimationFrame(frame);
+      const after = now - t0 - length;
+      if (p < 1) {
+        // Mostly steady, like a hand drawing, easing off at the end
+        drawScribble(ctx, drawing, total * (0.6 * p + 0.4 * (1 - Math.pow(1 - p, 2))), times, { shadow: false, t: living ? now : undefined });
+        raf = requestAnimationFrame(frame);
+      } else if (living && after < LIVE_FOR) {
+        // Living brushes keep moving for a few seconds (at 25 frames a second, to spare the battery)
+        if (now - last >= 40) {
+          last = now;
+          drawScribble(ctx, drawing, Infinity, times, { shadow: false, t: now });
+        }
+        raf = requestAnimationFrame(frame);
+      } else {
+        // At rest: the finished picture, with its soft shadow (the slow part on phones, so only once)
+        drawScribble(ctx, drawing, Infinity, times);
+      }
     };
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
@@ -275,7 +292,7 @@ export function ScribblePad({
             }}
             aria-pressed={brush === b.id}
             className={clsx(
-              "flex h-14 flex-col items-center justify-center gap-0.5 rounded-2xl text-[12px] font-semibold transition active:scale-95",
+              "flex h-12 flex-col items-center justify-center gap-0.5 rounded-2xl text-[11.5px] font-semibold transition active:scale-95",
               brush === b.id ? "bg-ink text-white" : "bg-cream text-ink-soft",
             )}
           >
@@ -334,9 +351,30 @@ function BrushSwatch({ brush, ink, dark }: { brush: Brush; ink: string; dark: bo
         <path d={d} stroke="url(#rb)" strokeWidth="4" fill="none" strokeLinecap="round" />
       </svg>
     );
+  const shown = ink === "#ffffff" && !dark ? "#d8d3e4" : ink;
+  if (brush === "fire")
+    return (
+      <svg width="26" height="18" viewBox="0 0 24 18" aria-hidden>
+        <path d={d} stroke="#ff4d1a" strokeWidth="5" fill="none" strokeLinecap="round" />
+        <path d={d} stroke="#ffb02e" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+        <path d="M8 7 q-1.5 -3 0 -6 q1.5 3 0 6z M16 10 q-1.5 -3 0 -6 q1.5 3 0 6z" fill="#ff6a1a" />
+      </svg>
+    );
+  if (brush === "hearts" || brush === "stars")
+    return (
+      <svg width="26" height="18" viewBox="0 0 24 18" aria-hidden>
+        {[3.5, 12, 20.5].map((x, n) =>
+          brush === "hearts" ? (
+            <path key={x} d={`M${x} ${n === 1 ? 7.5 : 11.5} l-3.4 -3.4 a2.1 2.1 0 0 1 3.4 -2.4 a2.1 2.1 0 0 1 3.4 2.4 z`} fill={shown} />
+          ) : (
+            <path key={x} d={`M${x} ${n === 1 ? 3 : 7} l1.2 2.6 2.8 .3 -2.1 1.9 .6 2.8 -2.5 -1.4 -2.5 1.4 .6 -2.8 -2.1 -1.9 2.8 -.3z`} fill={shown} />
+          ),
+        )}
+      </svg>
+    );
   return (
     <svg width="26" height="18" viewBox="0 0 24 18" aria-hidden style={brush === "neon" ? { filter: `drop-shadow(0 0 3px ${ink})` } : undefined}>
-      <path d={d} stroke={ink === "#ffffff" && !dark ? "#d8d3e4" : ink} strokeWidth="4" fill="none" strokeLinecap="round" />
+      <path d={brush === "wobble" ? "M3 12 l3 -5 l3 6 l3 -7 l3 7 l3 -6 l3 4" : d} stroke={shown} strokeWidth="4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
       {brush === "neon" && <path d={d} stroke="#ffffff" strokeWidth="1.5" fill="none" strokeLinecap="round" />}
       {brush === "glitter" && (
         <>

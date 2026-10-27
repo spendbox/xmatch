@@ -22,6 +22,7 @@ import { StickerSheet } from "@/components/stickers/StickerSheet";
 import { Masky } from "@/components/stickers/Masky";
 import { STICKER_PACKS } from "@/lib/stickers";
 import type { Drawing } from "@/lib/scribble";
+import { LivingBrushesMock, TogetherMock } from "./ScribbleMocks";
 
 // A sample scribble: a neon heart, a rainbow swoosh and glitter stars
 const sampleScribble: Drawing = (() => {
@@ -585,6 +586,12 @@ function ScreenBody({ screen }: { screen: string }) {
           ))}
         </div>
       );
+    case "scribble-living":
+      return <LivingBrushesMock />;
+    case "together-1":
+    case "together-2":
+    case "together-3":
+      return <TogetherMock step={Number(screen.slice(-1)) as 1 | 2 | 3} />;
     case "scribble-pad":
       return <StickerSheet open onClose={() => {}} onSend={() => {}} owned={[]} price={40} scribbleCost={1} onSendScribble={async () => null} startMode="scribble" />;
     case "sticker-store":
