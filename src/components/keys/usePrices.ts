@@ -31,8 +31,10 @@ export type Prices = {
   /** Stickers: one premium pack, and one scribble */
   sticker_pack_cost: number;
   scribble_cost: number;
+  /** Starting a drawing together (back if it isn't sent) */
+  draw_together_cost: number;
 };
-const DEFAULTS: Prices = { reopen_cost: REOPEN_COST, reveal_cost: 1, free_reveals: 10, game_truths: 1, game_tot: 1, game_c4: 1, game_words: 1, game_whot: 1, game_checkers: 1, game_chess: 1, game_ayo: 1, game_bomb: 1, game_gems: 1, game_ludo: 1, game_snakes: 1, play_cost: 1, ghost_cost: 100, pair_gap_minutes: 60, pair_minutes: 60, sticker_pack_cost: 40, scribble_cost: 1 };
+const DEFAULTS: Prices = { reopen_cost: REOPEN_COST, reveal_cost: 1, free_reveals: 10, game_truths: 1, game_tot: 1, game_c4: 1, game_words: 1, game_whot: 1, game_checkers: 1, game_chess: 1, game_ayo: 1, game_bomb: 1, game_gems: 1, game_ludo: 1, game_snakes: 1, play_cost: 1, ghost_cost: 100, pair_gap_minutes: 60, pair_minutes: 60, sticker_pack_cost: 40, scribble_cost: 1, draw_together_cost: 2 };
 
 // Prices are set by the admin in the database. They come with the page (seedPrices), so the real
 // price shows from the first moment instead of a built-in one that then changes.

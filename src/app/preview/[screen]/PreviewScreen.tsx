@@ -22,6 +22,8 @@ import { StickerSheet } from "@/components/stickers/StickerSheet";
 import { Masky } from "@/components/stickers/Masky";
 import { STICKER_PACKS } from "@/lib/stickers";
 import type { Drawing } from "@/lib/scribble";
+import { PaintSampleMock, TogetherMock, paintSample } from "./ScribbleMocks";
+import { TogetherBoard } from "@/components/stickers/TogetherBoard";
 
 // A sample scribble: a neon heart, a rainbow swoosh and glitter stars
 const sampleScribble: Drawing = (() => {
@@ -425,7 +427,7 @@ function ScreenBody({ screen }: { screen: string }) {
     case "people":
       return <div className="pb-24"><YourPeople matches={recent} myId="me" /><BottomNav /></div>;
     case "admin-prices":
-      return <AdminShell><PricesManager settings={{ reopen_cost: 10, reveal_cost: 1, free_reveals: 10, invite_reward: 10, meet_cost: 10, meet_free_posts: 1, meet_hours: 3, explore_message_cost: 15, explore_photos_cost: 5, explore_photos_paid: 1, ghost_cost: 100, wave_cost: 0, pair_gap_minutes: 60, pair_minutes: 60, setup_reward: 5, signup_keys: 5, slow_reveal_cost: 10, gift_share_percent: 50, play_cost: 1, sticker_pack_cost: 40, scribble_cost: 1 }} invites={{ joined: 64, joined_7d: 12, buyers: 19, keys_paid: 410, top: [{ name: "Tolu", joined: 9, earned: 90 }, { name: "Kemi", joined: 6, earned: 40 }] }}
+      return <AdminShell><PricesManager settings={{ reopen_cost: 10, reveal_cost: 1, free_reveals: 10, invite_reward: 10, meet_cost: 10, meet_free_posts: 1, meet_hours: 3, explore_message_cost: 15, explore_photos_cost: 5, explore_photos_paid: 1, ghost_cost: 100, wave_cost: 0, pair_gap_minutes: 60, pair_minutes: 60, setup_reward: 5, signup_keys: 5, slow_reveal_cost: 10, gift_share_percent: 50, play_cost: 1, sticker_pack_cost: 40, scribble_cost: 1, draw_together_cost: 2 }} invites={{ joined: 64, joined_7d: 12, buyers: 19, keys_paid: 410, top: [{ name: "Tolu", joined: 9, earned: 90 }, { name: "Kemi", joined: 6, earned: 40 }] }}
         gifts={[{ id: "fire", name: "Fire", emoji: "🔥", price: 5, sort: 1, retired: false }, { id: "rose", name: "Rose", emoji: "🌹", price: 5, sort: 2, retired: false }, { id: "jollof", name: "Jollof", emoji: "🍛", price: 15, sort: 5, retired: false }, { id: "teddy", name: "Teddy bear", emoji: "🧸", price: 30, sort: 91, retired: true }]}
         packs={[{ id: "p50", keys: 50, naira: 750, tag: null, sort: 1, active: true }, { id: "p150", keys: 150, naira: 2000, tag: "Popular", sort: 2, active: true }, { id: "p500", keys: 500, naira: 4500, tag: "Best value", sort: 3, active: true }]} /></AdminShell>;
     case "admin-masquerade": {
@@ -585,8 +587,15 @@ function ScreenBody({ screen }: { screen: string }) {
           ))}
         </div>
       );
+    case "scribble-paint":
+      return <PaintSampleMock />;
+    case "together-live":
+      return <TogetherBoard id="d1" me="me" them={{ name: "Ada" }} onClose={() => {}} onSent={() => {}} />;
+    case "together-2":
+    case "together-3":
+      return <TogetherMock step={Number(screen.slice(-1)) as 2 | 3} />;
     case "scribble-pad":
-      return <StickerSheet open onClose={() => {}} onSend={() => {}} owned={[]} price={40} scribbleCost={1} onSendScribble={async () => null} startMode="scribble" />;
+      return <StickerSheet open onClose={() => {}} onSend={() => {}} owned={[]} price={40} scribbleCost={1} onSendScribble={async () => null} startMode="scribble" together={{ name: "Ada", cost: 2, onStart: () => {} }} />;
     case "sticker-store":
       return <StickerSheet open onClose={() => {}} onSend={() => {}} owned={[]} price={40} onBuy={async () => null} startTab="savage" />;
     case "chat-stickers":
@@ -600,6 +609,8 @@ function ScreenBody({ screen }: { screen: string }) {
             { id: 9, sender_id: "me", body: "Party jollof, no argument", created_at: new Date(Date.now() - 60_000).toISOString(), edited_at: iso(1) },
             { id: 10, sender_id: "me", kind: "sticker", body: "Goodnight Su", media_meta: { pose: "sleep", color: "#e5484d" }, created_at: iso(1) },
             { id: 11, sender_id: "ada", kind: "scribble", body: "Scribble", media_meta: sampleScribble as unknown as ChatMessage["media_meta"], created_at: iso(1), reactions: { me: "😍" } },
+            { id: 12, sender_id: "ada", kind: "draw", body: "Drawing together", media_meta: { draw: "d1", status: "open" } as unknown as ChatMessage["media_meta"], created_at: iso(1) },
+            { id: 13, sender_id: "me", kind: "scribble", body: "Drawing", media_meta: { ...paintSample(400, 300), by: ["me", "ada"] } as unknown as ChatMessage["media_meta"], created_at: iso(1), reactions: { ada: "😍" } },
           ]}
           demo={{ remaining: 1800 }}
         />

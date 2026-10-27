@@ -80,5 +80,7 @@ export const KEY_REASONS: Record<string, string> = {
   play_message: "Messaged a player",
   sticker_pack: "Bought a sticker pack",
   scribble: "Sent a scribble",
+  draw_together: "Started a drawing together",
+  draw_refund: "Keys back: drawing not sent",
   admin: "Admin change",
 };

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
-import { ArrowLeft, Clock3, Lock, SendHorizontal } from "lucide-react";
+import { ArrowLeft, Clock3, Eye, Lock, SendHorizontal, Users } from "lucide-react";
 import { Sheet } from "@/components/ui/Sheet";
 import { Button, tapFeedback } from "@/components/ui/Button";
 import { KeyCoin } from "@/components/keys/KeyIcon";
@@ -10,13 +10,16 @@ import { STICKER_COLORS, STICKER_MAX, STICKER_PACKS, isPose, isStickerColor, pac
 import { Masky } from "./Masky";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
-import { ScribblePad, ScribbleView, emptyDrawing } from "./Scribble";
+import { ScribblePad, emptyDrawing } from "./Scribble";
+import { ScribbleView } from "./ScribbleView";
 import { useSavedScribbles } from "./useSavedScribbles";
 import { useStickerPacks } from "./useStickerPacks";
 import { usePrices } from "@/components/keys/usePrices";
 import type { Drawing } from "@/lib/scribble";
+import type { ScribbleShare } from "./useScribbleLive";
 
-export type StickerPick = { pose: StickerPose; caption: string; color: string };
+export type { StickerPick } from "@/lib/stickers";
+import type { StickerPick } from "@/lib/stickers";
 export type ScribbleSend = { drawing?: Drawing; saved?: string; keep: boolean };
 
 
@@ -52,6 +55,8 @@ export function StickerSheet({
   onSendScribble,
   scribbleCost: scribbleProp,
   startMode = "stickers",
+  together,
+  share,
 }: {
   open: boolean;
   onClose: () => void;
@@ -67,8 +72,12 @@ export function StickerSheet({
   onSendScribble?: (s: ScribbleSend) => Promise<string | null>;
   scribbleCost?: number;
   startMode?: "stickers" | "scribble";
+  /** Drawing with the other person: their name, its Keys, and starting it (opens the big shared board) */
+  together?: { name: string; cost: number; onStart: () => void };
+  /** "Let them see": your scribble goes to them as you draw */
+  share?: ScribbleShare;
 }) {
-  const packs = useStickerPacks();
+  const packs = useStickerPacks(open);
   const prices = usePrices();
   const owned = ownedProp ?? packs.owned;
   const price = priceProp ?? prices.sticker_pack_cost;
@@ -77,11 +86,22 @@ export function StickerSheet({
   const [mode, setMode] = useState<"stickers" | "scribble">(startMode);
   const [drawing, setDrawing] = useState<Drawing>(emptyDrawing);
   const [sending, setSending] = useState(false);
-  const { saved, remove: removeSaved } = useSavedScribbles();
+  const { saved, remove: removeSaved } = useSavedScribbles(open && mode === "scribble");
   const [savedPick, setSavedPick] = useState<string | null>(null);
   // Every scribble you send is saved, to send again for free
   const keep = true;
   const [expanded, setExpanded] = useState(false);
+  const [letSee, setLetSee] = useState(false);
+  // Showing them: what's drawn so far whenever it changes; stops when switched off or closed
+  const showing = open && letSee && mode === "scribble" && !!share;
+  useEffect(() => {
+    if (showing) share?.publish(drawing);
+  }, [showing, drawing, share]);
+  const wasShowing = useRef(false);
+  useEffect(() => {
+    if (wasShowing.current && !showing) share?.end();
+    wasShowing.current = showing;
+  }, [showing, share]);
   const [bigSize, setBigSize] = useState(360);
   // The big drawing space fills the screen, leaving room for the tools
   useEffect(() => {
@@ -203,7 +223,25 @@ export function StickerSheet({
       footer={
         scribbling ? (
           <div className="space-y-2.5">
-            {!pickedSaved && <p className="text-center text-[12.5px] text-muted">Saved when you send it, free to send again</p>}
+            {!pickedSaved && together && (
+              <div className="grid grid-cols-2 gap-2">
+                <ChipToggle on={letSee} onClick={() => setLetSee((v) => !v)} icon={<Eye size={17} />}>
+                  Let {together.name} see
+                </ChipToggle>
+                <ChipToggle
+                  on={false}
+                  onClick={() => {
+                    // Drawing together shows them everything anyway
+                    onClose();
+                    together.onStart();
+                  }}
+                  icon={<Users size={17} />}
+                  badge={together.cost > 0 ? <><KeyCoin size={13} /> {together.cost}</> : undefined}
+                >
+                  Draw together
+                </ChipToggle>
+              </div>
+            )}
             {error && <p className="text-center text-[13px] font-medium text-chili">{error}</p>}
             <Button onClick={() => void sendScribble()} loading={sending} disabled={!canSendScribble} className="h-12 w-full rounded-full">
               {sendLabel}
@@ -268,7 +306,7 @@ export function StickerSheet({
           ) : expanded ? (
             <div className="grid h-40 place-items-center rounded-[28px] bg-[#f6f2fd] text-[14px] font-medium text-brand/60">Drawing in the big space…</div>
           ) : (
-            <ScribblePad drawing={drawing} onChange={setDrawing} maxSize={260} onExpand={() => setExpanded(true)} />
+            <ScribblePad drawing={drawing} onChange={setDrawing} maxSize={380} onExpand={() => setExpanded(true)} onLive={showing ? share?.publishLive : undefined} />
           )}
           {saved.length > 0 && (
             <div>
@@ -318,7 +356,7 @@ export function StickerSheet({
                 </div>
                 {error && <p className="px-4 pb-1 text-center text-[13px] font-medium text-chili">{error}</p>}
                 <div className="flex min-h-0 flex-1 flex-col justify-center overflow-y-auto px-3 pb-3">
-                  <ScribblePad drawing={drawing} onChange={setDrawing} maxSize={bigSize} expanded onExpand={() => setExpanded(false)} />
+                  <ScribblePad drawing={drawing} onChange={setDrawing} maxSize={bigSize} expanded onExpand={() => setExpanded(false)} onLive={showing ? share?.publishLive : undefined} />
                 </div>
               </div>,
               document.body,
@@ -419,6 +457,32 @@ export function StickerSheet({
   );
 }
 
+function ChipToggle({ on, onClick, icon, badge, children }: { on: boolean; onClick: () => void; icon: React.ReactNode; badge?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      onClick={() => {
+        tapFeedback();
+        onClick();
+      }}
+      className={clsx(
+        "relative flex h-12 min-w-0 items-center justify-center gap-2 rounded-2xl px-3 text-[13.5px] font-semibold transition active:scale-[0.97]",
+        on ? "bg-brand text-white" : "bg-cream text-ink-soft",
+      )}
+    >
+      {icon}
+      <span className="truncate">{children}</span>
+      {badge && (
+        <span className="absolute -top-1.5 -right-1 inline-flex items-center gap-0.5 rounded-full bg-surface px-1.5 py-0.5 text-[11px] font-bold text-ink-soft shadow-card ring-1 ring-line">
+          {badge}
+        </span>
+      )}
+    </button>
+  );
+}
+
 function TabChip({ on, onClick, label, locked, children }: { on: boolean; onClick: () => void; label: string; locked?: boolean; children: React.ReactNode }) {
   return (
     <button
@@ -456,7 +520,3 @@ function StickerTile({ s, locked, onClick }: { s: StickerPick & { move?: string 
   );
 }
 
-/** A sticker sent in a chat (falls back to a waving Masky if something's missing) */
-export function stickerOf(meta: { pose?: unknown; color?: unknown } | null | undefined, caption: string): StickerPick {
-  return { pose: isPose(meta?.pose) ? meta.pose : "wave", color: isStickerColor(meta?.color) ? meta.color : "#7a5cf0", caption };
-}

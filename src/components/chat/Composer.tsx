@@ -11,8 +11,13 @@ import { Toggle } from "@/components/ui/Toggle";
 import { snippet } from "./MessageList";
 import { loadDraft, saveDraft, sweepDrafts } from "@/lib/chatDraft";
 import { useVoiceRecorder } from "./useVoiceRecorder";
-import { StickerSheet, type ScribbleSend, type StickerPick } from "@/components/stickers/StickerSheet";
+import dynamic from "next/dynamic";
+import type { ScribbleSend, StickerPick } from "@/components/stickers/StickerSheet";
+
+// The sticker and scribble tools load the first time they're opened, not with every chat
+const StickerSheet = dynamic(() => import("@/components/stickers/StickerSheet").then((m) => m.StickerSheet), { ssr: false });
 import { StickerIcon } from "@/components/stickers/StickerIcon";
+import type { ScribbleShare } from "@/components/stickers/useScribbleLive";
 
 export type MediaKind = "image" | "video";
 
@@ -50,6 +55,9 @@ type Props = {
   onSendSticker?: (s: StickerPick) => Promise<void> | void;
   /** Turn on scribbles (in the sticker pop-up): returns an error to show, or null */
   onSendScribble?: (s: ScribbleSend) => Promise<string | null>;
+  /** Scribble extras: let them watch you draw, and drawing together */
+  scribbleShare?: ScribbleShare;
+  together?: { name: string; cost: number; onStart: () => void };
   /** Your own message being edited: its words go in the box, and sending saves the change */
   editing?: ChatMessage | null;
   onEdit?: (m: ChatMessage, text: string) => Promise<void> | void;
@@ -74,12 +82,18 @@ export function Composer({
   noTip,
   onSendSticker,
   onSendScribble,
+  scribbleShare,
+  together,
   editing,
   onEdit,
   onCancelEdit,
 }: Props) {
   const [text, setText] = useState("");
   const [stickersOpen, setStickersOpen] = useState(false);
+  const [stickersUsed, setStickersUsed] = useState(false);
+  useEffect(() => {
+    if (stickersOpen) setStickersUsed(true);
+  }, [stickersOpen]);
   // What you typed last time you were in this chat
   const restored = useRef(false);
   useEffect(() => {
@@ -334,6 +348,8 @@ export function Composer({
           {onSendSticker && !hasText && !editing && (
             <button
               type="button"
+              // Start loading the sticker tools as soon as a finger touches the button
+              onPointerDown={() => void import("@/components/stickers/StickerSheet")}
               onClick={() => {
                 tapFeedback();
                 setStickersOpen(true);
@@ -379,7 +395,7 @@ export function Composer({
       <input ref={gallery} type="file" accept="image/*,video/*" className="hidden" onChange={(e) => { choose(e.target.files); e.target.value = ""; }} />
       <input ref={camera} type="file" accept="image/*,video/*" capture="environment" className="hidden" onChange={(e) => { choose(e.target.files); e.target.value = ""; }} />
 
-      {onSendSticker && <StickerSheet open={stickersOpen} onClose={() => setStickersOpen(false)} onSend={(s) => void onSendSticker(s)} onSendScribble={onSendScribble} />}
+      {onSendSticker && stickersUsed && <StickerSheet open={stickersOpen} onClose={() => setStickersOpen(false)} onSend={(s) => void onSendSticker(s)} onSendScribble={onSendScribble} share={scribbleShare} together={together} />}
 
       <Sheet open={attachOpen} onClose={() => setAttachOpen(false)} title="More">
         <div className="grid grid-cols-3 gap-2.5 pb-2">

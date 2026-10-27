@@ -12,8 +12,8 @@ import { GiftArt } from "@/components/keys/GiftArt";
 import { AudioPlayer } from "./AudioPlayer";
 import { VoiceIcon } from "./VoiceIcon";
 import { Masky } from "@/components/stickers/Masky";
-import { stickerOf } from "@/components/stickers/StickerSheet";
-import { ScribbleView } from "@/components/stickers/Scribble";
+import { stickerOf } from "@/lib/stickers";
+import { ScribbleView } from "@/components/stickers/ScribbleView";
 import { isDrawing } from "@/lib/scribble";
 
 type Line = { s: string | null; k: string; b: string; m: { key?: string; duration?: number; title?: string; pose?: string; color?: string } | null; t: string };

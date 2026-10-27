@@ -25,6 +25,13 @@ import type { ChatMessage, MasqueradeState } from "@/lib/types";
 import type { StickerPick } from "@/components/stickers/StickerSheet";
 import type { ScribbleSend } from "@/components/stickers/StickerSheet";
 import { useSavedScribbles } from "@/components/stickers/useSavedScribbles";
+import { useScribbleLive } from "@/components/stickers/useScribbleLive";
+import dynamic from "next/dynamic";
+
+// The shared drawing board loads only when it's opened
+const TogetherBoard = dynamic(() => import("@/components/stickers/TogetherBoard").then((m) => m.TogetherBoard), { ssr: false });
+import { LiveScribblePreview } from "@/components/stickers/ScribbleView";
+import { ContinueDrawing, openDrawing } from "@/components/stickers/ContinueDrawing";
 import { MessageList } from "@/components/chat/MessageList";
 import { Composer } from "@/components/chat/Composer";
 import { refreshMenuBadges } from "@/components/app/useMenuBadges";
@@ -135,6 +142,9 @@ export function MasqueradeRoom({
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
   const [editing, setEditing] = useState<ChatMessage | null>(null);
   const savedScribbles = useSavedScribbles();
+  // Watching them scribble (when they let you), and drawing together
+  const scribbleLive = useScribbleLive(demo ? null : initial.id, initial.me.id);
+  const [drawId, setDrawId] = useState<string | null>(null);
   const [chatNote, setChatNote] = useState<string | null>(null);
   useEffect(() => {
     if (!chatNote) return;
@@ -311,6 +321,16 @@ export function MasqueradeRoom({
     refreshWallet();
     if (x.keep) savedScribbles.refresh();
     return null;
+  }
+
+  // Drawing together: takes the Keys (back if it isn't sent) and opens the shared board
+  async function startTogether() {
+    if (demo) return;
+    const { data, error } = await supabase.rpc("start_draw_together", { p_session: state.id });
+    if (error) return setChatNote(error.message.includes("start_draw_together") ? "Drawing together is coming soon." : keysError(error.message));
+    setDrawId((data as { id: string }).id);
+    refreshWallet();
+    notify({ kind: "masked_message", sessionId: state.id });
   }
 
   // React (or take yours back): shows straight away, undone if it doesn't save
@@ -502,7 +522,7 @@ export function MasqueradeRoom({
             </p>
             {pact && <p className="truncate text-[12px] font-semibold text-[#a26b00]">{pact} match</p>}
             <p className="truncate text-[13px] text-muted">
-              <span className={them.online ? "font-semibold text-mint" : undefined}>{presenceText(them.online, them.seen_minutes)}</span>
+              <span className={them.online || scribbleLive.theirs ? "font-semibold text-mint" : undefined}>{scribbleLive.theirs ? "scribbling…" : presenceText(them.online, them.seen_minutes)}</span>
               {[them.age ? String(them.age) : null, gender, (them.same_place ? "Near you" : them.place) ?? distanceLabel(them.distance_km) ?? intentLabel(state.intent)]
                 .filter(Boolean)
                 .map((t) => ` · ${t}`)
@@ -630,6 +650,8 @@ export function MasqueradeRoom({
           genderOf={(id) => (id === state.me.id ? null : state.them.gender)}
           onReply={setReplyTo}
           onReact={react}
+          onOpenDraw={setDrawId}
+          footer={scribbleLive.theirs ? <LiveScribblePreview drawing={scribbleLive.theirs.drawing} live={scribbleLive.theirs.live} /> : undefined}
           onSaveScribble={demo ? undefined : async (m) => setChatNote((await savedScribbles.save(m.id, true)) ?? "Saved. Send it again free from Scribble.")}
           onEdit={
             chatting
@@ -710,6 +732,7 @@ export function MasqueradeRoom({
 
       {meet && chatting && !(games.game && (games.game.status === "invited" || games.game.status === "active")) && <MeetLine meet={meet} them={theirName} />}
       {chatting && games.banner}
+      {chatting && !drawId && openDrawing(messages) && <ContinueDrawing name={theirName.split(" ")[0]} onOpen={() => setDrawId(openDrawing(messages))} />}
       {chatting ? (
         <Composer
           saveKey={`s-${state.id}`}
@@ -717,6 +740,8 @@ export function MasqueradeRoom({
           onSend={send}
           onSendSticker={sendSticker}
           onSendScribble={sendScribble}
+          scribbleShare={scribbleLive.share}
+          together={{ name: theirName.split(" ")[0], cost: prices.draw_together_cost, onStart: () => void startTogether() }}
           editing={editing}
           onEdit={saveEdit}
           onCancelEdit={() => setEditing(null)}
@@ -779,6 +804,18 @@ export function MasqueradeRoom({
       {timeUp && !state.hourly && <DecisionSheet state={state} voting={voting} onVote={vote} />}
       {reporting && <ReportSheet onClose={() => setReporting(false)} onReport={report} />}
       {games.overlay}
+      {drawId && (
+        <TogetherBoard
+          id={drawId}
+          me={state.me.id}
+          them={{ name: theirName.split(" ")[0] }}
+          onClose={(note) => {
+            setDrawId(null);
+            if (note) setChatNote(note);
+          }}
+          onSent={(m) => setMessages((l) => (l.some((x) => x.id === m.id) ? l : [...l, m]))}
+        />
+      )}
       {profileOpen && known?.id && <ExploreProfileSheet personId={known.id} onClose={() => setProfileOpen(false)} inChat />}
       <ChatBgSheet
         open={bgOpen}

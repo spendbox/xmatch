@@ -7,7 +7,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 const int = (n: unknown, min: number, max: number) => Math.max(min, Math.min(max, Math.round(Number(n) || 0)));
 
 export async function saveSetting(
-  key: "reopen_cost" | "reveal_cost" | "free_reveals" | "invite_reward" | "meet_cost" | "meet_free_posts" | "meet_hours" | "explore_message_cost" | "explore_photos_cost" | "explore_photos_paid" | "ghost_cost" | "wave_cost" | "pair_gap_minutes" | "pair_minutes" | "setup_reward" | "signup_keys" | "slow_reveal_cost" | "gift_share_percent" | "play_cost" | "sticker_pack_cost" | "scribble_cost",
+  key: "reopen_cost" | "reveal_cost" | "free_reveals" | "invite_reward" | "meet_cost" | "meet_free_posts" | "meet_hours" | "explore_message_cost" | "explore_photos_cost" | "explore_photos_paid" | "ghost_cost" | "wave_cost" | "pair_gap_minutes" | "pair_minutes" | "setup_reward" | "signup_keys" | "slow_reveal_cost" | "gift_share_percent" | "play_cost" | "sticker_pack_cost" | "scribble_cost" | "draw_together_cost",
   value: number,
 ) {
   await requireAdmin();
