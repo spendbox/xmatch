@@ -121,7 +121,7 @@ export function GameLauncher({
   );
 }
 
-const NEW: GameKind[] = ["ludo", "snakes"];
+const NEW: GameKind[] = ["xo", "lastcard"];
 
 /** The little picture of each game, as on its card */
 export function GameArt({ kind }: { kind: GameKind }) {
@@ -209,6 +209,30 @@ export function GameArt({ kind }: { kind: GameKind }) {
             style={{ background: i === 4 ? "#a3200a" : i === 2 || i === 6 ? "#178a50" : "linear-gradient(180deg,#ffe0bd,#f6a56a)", boxShadow: "inset 0 -2px 0 rgba(0,0,0,0.25)" }}
           >
             {i === 4 && <BombIcon className="h-[82%] w-[82%]" />}
+          </span>
+        ))}
+      </div>
+    );
+  if (kind === "xo")
+    return (
+      <div className="mx-auto grid h-full w-[82px] grid-cols-3 content-center gap-1">
+        {["x", "", "o", "", "x", "o", "o", "", "x"].map((m, i) => (
+          <span key={i} className="grid aspect-square place-items-center rounded-[7px] bg-white/15 text-[17px] leading-none font-black" style={{ color: m === "x" ? "#ffd36b" : "#c4b5fd", opacity: i === 0 ? 0.45 : 1 }}>
+            {m === "x" ? "✕" : m === "o" ? "◯" : ""}
+          </span>
+        ))}
+      </div>
+    );
+  if (kind === "lastcard")
+    return (
+      <div className="relative h-full">
+        {[["#ffb02e", "7", -14, "18%"], ["#3b6cf0", "+2", -2, "36%"], ["wild", "+4", 10, "54%"]].map(([c, v, r, left]) => (
+          <span
+            key={v as string}
+            className="absolute top-1.5 grid h-[62px] w-[42px] place-items-center rounded-[8px] ring-2 ring-white shadow-[0_6px_14px_rgba(0,0,0,0.3)]"
+            style={{ left: left as string, transform: `rotate(${r}deg)`, background: c === "wild" ? "conic-gradient(#e5484d 0 25%, #ffb02e 0 50%, #1f9d6b 0 75%, #3b6cf0 0)" : (c as string) }}
+          >
+            <span className="grid h-[30px] w-[30px] place-items-center rounded-full bg-white/90 text-[12px] font-black text-ink">{v}</span>
           </span>
         ))}
       </div>

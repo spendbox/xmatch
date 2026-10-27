@@ -170,7 +170,7 @@ export async function POST(req: Request) {
     const { data: g } = await db.from("games").select("id, kind, player_a, player_b, play, created_at").eq("id", b.gameId).maybeSingle();
     if (!g || !g.play || g.player_b !== uid || Date.now() - new Date(g.created_at as string).getTime() > RECENT_MS) return ok;
     const { data: me } = await db.from("profiles").select("display_name, photos").eq("id", uid).single();
-    const title = ({ whot: "Whot", ayo: "Ayo", ludo: "Ludo", snakes: "Snakes & Ladders" } as Record<string, string>)[g.kind as string] ?? "a game";
+    const title = ({ whot: "Whot", ayo: "Ayo", ludo: "Ludo", snakes: "Snakes & Ladders", xo: "X & O", lastcard: "Last Card" } as Record<string, string>)[g.kind as string] ?? "a game";
     await pushToUsers([g.player_a as string], {
       title: `Game on! 🎲 ${title}`,
       body: `You're playing ${firstName(me?.display_name as string | null)}. Your move first.`,
@@ -254,7 +254,7 @@ export async function POST(req: Request) {
       .maybeSingle();
     if (!g || g.player_a !== uid || g.status !== "invited" || Date.now() - new Date(g.created_at as string).getTime() > 30_000) return ok;
     const title =
-      ({ truths: "Two Truths & a Lie", tot: "This or That", c4: "Connect 4", words: "Word Hunt", whot: "Whot", checkers: "Checkers", chess: "Chess", ayo: "Ayo", bomb: "Bombshell", gems: "Gem Clash", ludo: "Ludo", snakes: "Snakes & Ladders" } as Record<string, string>)[g.kind as string] ?? "a game";
+      ({ truths: "Two Truths & a Lie", tot: "This or That", c4: "Connect 4", words: "Word Hunt", whot: "Whot", checkers: "Checkers", chess: "Chess", ayo: "Ayo", bomb: "Bombshell", gems: "Gem Clash", ludo: "Ludo", snakes: "Snakes & Ladders", xo: "X & O", lastcard: "Last Card" } as Record<string, string>)[g.kind as string] ?? "a game";
     let who = "Someone";
     let url = "/home";
     let icon: string | null = null;

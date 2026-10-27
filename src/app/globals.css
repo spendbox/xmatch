@@ -333,3 +333,14 @@ input[type="number"]::-webkit-outer-spin-button {
 /* On a chat background, the little time / "Seen" line under messages sits on a soft pill so it stays readable */
 [data-bg] .chat-meta { width: fit-content; border-radius: 999px; padding: 1px 8px; background: rgba(255, 255, 255, 0.85); color: #5f5873; }
 [data-bg-dark] .chat-meta { background: rgba(12, 10, 30, 0.5); color: rgba(255, 255, 255, 0.88); }
+
+/* X & O: a mark landing, the one about to vanish, a vanished one fading, and the winning line */
+@keyframes xo-in { 0% { transform: scale(0.2) rotate(-25deg); opacity: 0; } 60% { transform: scale(1.15) rotate(4deg); opacity: 1; } 100% { transform: scale(1) rotate(0); } }
+.gm-stamp-in { animation: xo-in 0.32s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+@keyframes xo-fade { 0%, 100% { opacity: 0.38; transform: scale(0.94); } 50% { opacity: 0.6; transform: scale(1); } }
+.xo-fade { animation: xo-fade 1.4s ease-in-out infinite; }
+@keyframes xo-vanish { 0% { opacity: 0.6; transform: scale(1); filter: blur(0); } 100% { opacity: 0; transform: scale(1.35) rotate(12deg); filter: blur(4px); } }
+.xo-vanish { animation: xo-vanish 0.6s ease-out both; }
+@keyframes xo-line { 0% { stroke-dasharray: 0 200; } 100% { stroke-dasharray: 200 0; } }
+.xo-line { animation: xo-line 0.45s ease-out 0.1s both; }
+@media (prefers-reduced-motion: reduce) { .gm-stamp-in, .xo-fade, .xo-vanish, .xo-line { animation: none; } }

@@ -333,7 +333,9 @@ function ScreenBody({ screen }: { screen: string }) {
     case "play-practice-whot":
     case "play-practice-ayo":
     case "play-practice-ludo":
-    case "play-practice-snakes": {
+    case "play-practice-snakes":
+    case "play-practice-xo":
+    case "play-practice-lastcard": {
       const status = {
         waiting: screen === "play-waiting" || screen.startsWith("play-practice"),
         joined_at: new Date(now - 23_000).toISOString(),
@@ -350,7 +352,7 @@ function ScreenBody({ screen }: { screen: string }) {
         playing: 7,
         server_now: new Date(now).toISOString(),
       };
-      const practice = screen.startsWith("play-practice-") ? (screen.slice(14) as "whot" | "ayo" | "ludo" | "snakes") : undefined;
+      const practice = screen.startsWith("play-practice-") ? (screen.slice(14) as "whot" | "ayo" | "ludo" | "snakes" | "xo" | "lastcard") : undefined;
       return <PlayScreen userId="me" demo={{ status, practice, phase: screen === "play-waiting" || practice ? "waiting" : screen === "play-found" ? "found" : "idle" }} />;
     }
     case "room-games":

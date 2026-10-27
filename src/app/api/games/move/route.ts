@@ -10,17 +10,19 @@ import * as bomb from "@/lib/boardgames/bomb";
 import * as gems from "@/lib/boardgames/gems";
 import * as ludo from "@/lib/boardgames/ludo";
 import * as snakes from "@/lib/boardgames/snakes";
+import * as xo from "@/lib/boardgames/xo";
+import * as lastcard from "@/lib/boardgames/lastcard";
 import { randomInt } from "node:crypto";
 import { pushToUsers } from "@/lib/push";
 
 /**
- * A move in Whot, Checkers, Chess, Ayo, Bombshell, Gem Clash, Ludo or Snakes & Ladders.
+ * A move in Whot, Checkers, Chess, Ayo, Bombshell, Gem Clash, Ludo, Snakes & Ladders, X & O or Last Card.
  * Dice are rolled here, never on the phone. The rules are checked here (the same
  * rules the phone uses to show legal moves), then saved with the service key.
  * Every save bumps `seq`, so a move made on an old view of the game is refused.
  */
 const IDLE_MS = 5 * 60_000;
-const KINDS = ["whot", "checkers", "chess", "ayo", "bomb", "gems", "ludo", "snakes"];
+const KINDS = ["whot", "checkers", "chess", "ayo", "bomb", "gems", "ludo", "snakes", "xo", "lastcard"];
 const dice = () => randomInt(1, 7);
 
 export async function POST(req: Request) {
@@ -45,6 +47,22 @@ export async function POST(req: Request) {
     else if (g.kind === "gems") result = gems.applyMove(g.state, side, body.move as gems.GemsMove);
     else if (g.kind === "ludo") result = ludo.applyMove(g.state, side, body.move as ludo.LudoMove, dice);
     else if (g.kind === "snakes") result = snakes.applyMove(g.state, side, body.move as snakes.SnakesMove, dice);
+    else if (g.kind === "xo") result = xo.applyMove(g.state, side, body.move as xo.XOMove);
+    else if (g.kind === "lastcard") {
+      const [{ data: secrets }, { data: priv }] = await Promise.all([
+        db.from("game_secrets").select("user_id, data").eq("game_id", g.id),
+        db.from("game_private").select("data").eq("game_id", g.id).maybeSingle(),
+      ]);
+      const handOf = (id: string) => ((secrets ?? []).find((s) => s.user_id === id)?.data?.hand ?? []) as string[];
+      result = lastcard.applyMove(
+        g.state,
+        side,
+        body.move as lastcard.LastCardMove,
+        { a: handOf(g.player_a), b: handOf(g.player_b) },
+        { deck: (priv?.data?.deck ?? []) as string[], discard: (priv?.data?.discard ?? []) as string[] },
+        () => randomInt(0, 1_000_000) / 1_000_000,
+      );
+    }
     else if (g.kind === "bomb") {
       const { data: secrets } = await db.from("game_secrets").select("user_id, data").eq("game_id", g.id);
       const bombsOf = (id: string) => ((secrets ?? []).find((s) => s.user_id === id)?.data?.bombs ?? []) as number[];
@@ -98,7 +116,7 @@ export async function POST(req: Request) {
   if (g.play && !result.over && nextTurn && nextTurn !== side) {
     const them = nextTurn === "a" ? g.player_a : g.player_b;
     const { data: me } = await db.from("profiles").select("display_name, photos").eq("id", user.id).single();
-    const title = ({ whot: "Whot", ayo: "Ayo", ludo: "Ludo", snakes: "Snakes & Ladders" } as Record<string, string>)[g.kind as string] ?? "your game";
+    const title = ({ whot: "Whot", ayo: "Ayo", ludo: "Ludo", snakes: "Snakes & Ladders", xo: "X & O", lastcard: "Last Card" } as Record<string, string>)[g.kind as string] ?? "your game";
     await pushToUsers(
       [them],
       { title: `Your turn in ${title} 🎲`, body: `${((me?.display_name as string) ?? "They").split(" ")[0]} made their move.`, url: `/home?game=${g.id}`, tag: `turn-${g.id}`, icon: (me?.photos as string[] | null)?.[0] ?? null },

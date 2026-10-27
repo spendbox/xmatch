@@ -27,6 +27,8 @@ import { GIFTS } from "@/lib/keys";
 import { GiftSheet, keysError } from "@/components/keys/GiftSheet";
 import { createClient } from "@/lib/supabase/client";
 import { SnakesLadders } from "./SnakesLadders";
+import { XO } from "./XO";
+import { LastCard } from "./LastCard";
 import { markPlaying } from "@/lib/playing";
 import { ReactionButton, ReactionHint, ReactionLayer, ReactionTray, useReactionHint, useReactions } from "./Reactions";
 
@@ -245,7 +247,7 @@ function GameArenaInner({
       // Only replay the final board if there is one
       Object.keys(game.state ?? {}).length > 0 &&
       ((game.kind === "truths" && game.state.phase === "reveal") || (game.kind === "c4" && endedAgo < 10) ||
-        (["tot", "whot", "checkers", "chess", "ayo", "gems", "ludo", "snakes"].includes(game.kind) && endedAgo < 3) || (game.kind === "bomb" && endedAgo < 4));
+        (["tot", "whot", "checkers", "chess", "ayo", "gems", "ludo", "snakes", "lastcard"].includes(game.kind) && endedAgo < 3) || (game.kind === "xo" && endedAgo < 4) || (game.kind === "bomb" && endedAgo < 4));
     if (over && !holdEnd) {
       resultsView = true;
       body = (
@@ -270,6 +272,8 @@ function GameArenaInner({
     else if (game.kind === "gems") body = <GemClash game={game} names={names} act={act} />;
     else if (game.kind === "ludo") body = <Ludo game={game} names={names} act={act} />;
     else if (game.kind === "snakes") body = <SnakesLadders game={game} names={names} act={act} />;
+    else if (game.kind === "xo") body = <XO game={game} names={names} act={act} />;
+    else if (game.kind === "lastcard") body = <LastCard game={game} names={names} act={act} />;
     else body = <WordHunt game={game} names={names} act={act} />;
   }
 
@@ -327,7 +331,7 @@ function GameArenaInner({
           </div>
         )}
         <div className="relative min-h-0 flex-1 pb-[env(safe-area-inset-bottom)]">{body}</div>
-        <TurnStamp on={myTurn} />
+        <TurnStamp on={myTurn && !resultsView} wait={game.kind === "xo" && game.state?.last?.roundWon ? 1900 : 0} />
         {reacting && resultsView && (
           <div className="absolute top-[max(12px,env(safe-area-inset-top))] right-3 z-40">
             <ReactionButton open={tray} onToggle={() => setTray((t) => !t)} />
@@ -549,22 +553,28 @@ function VsIntro({ game, names, act }: { game: Game; names: Names; act: GameActi
   );
 }
 
-const TURN_GAMES = ["c4", "whot", "checkers", "chess", "ayo", "gems", "bomb", "ludo", "snakes"];
+const TURN_GAMES = ["c4", "whot", "checkers", "chess", "ayo", "gems", "bomb", "ludo", "snakes", "xo", "lastcard"];
 /** Board games that use the whole screen on computers */
 const WIDE_GAMES = ["ludo", "snakes"];
 
 /** A big "Your turn!" for a moment whenever it becomes your move */
-function TurnStamp({ on }: { on: boolean }) {
+function TurnStamp({ on, wait = 0 }: { on: boolean; wait?: number }) {
   const [show, setShow] = useState(0);
   const was = useRef(on);
   useEffect(() => {
     if (on && !was.current) {
-      setShow(Date.now());
-      buzz([15, 40, 15]);
-      sfx("tick");
-      const t = setTimeout(() => setShow(0), 1100);
       was.current = on;
-      return () => clearTimeout(t);
+      // Wait first if the last move is still being shown (a won X & O round)
+      const a = setTimeout(() => {
+        setShow(Date.now());
+        buzz([15, 40, 15]);
+        sfx("tick");
+      }, wait);
+      const t = setTimeout(() => setShow(0), wait + 1100);
+      return () => {
+        clearTimeout(a);
+        clearTimeout(t);
+      };
     }
     was.current = on;
   }, [on]);
