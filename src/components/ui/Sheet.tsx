@@ -57,7 +57,8 @@ export function Sheet({
           </button>
         </div>
         <div className="mt-5">{children}</div>
-        {footer && <div className="mt-5 pb-2">{footer}</div>}
+        {/* The main button stays in view, however long the content is */}
+        {footer && <div className="sticky bottom-0 z-10 -mx-5 mt-3 bg-surface px-5 pt-3 pb-2 shadow-[0_-12px_16px_-12px_rgb(28_24_40/0.12)] sm:-mx-7 sm:px-7">{footer}</div>}
       </div>
     </div>,
     document.body,

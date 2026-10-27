@@ -23,6 +23,7 @@ import { Masky } from "@/components/stickers/Masky";
 import { STICKER_PACKS } from "@/lib/stickers";
 import type { Drawing } from "@/lib/scribble";
 import { PaintSampleMock, TogetherMock, paintSample } from "./ScribbleMocks";
+import { CardsMock, PoolMock, WordsMock, XOMock } from "./GameMocks";
 import { TogetherBoard } from "@/components/stickers/TogetherBoard";
 
 // A sample scribble: a neon heart, a rainbow swoosh and glitter stars
@@ -316,6 +317,10 @@ export function PreviewScreen({ screen }: { screen: string }) {
 }
 
 function ScreenBody({ screen }: { screen: string }) {
+  if (screen.startsWith("new-xo-")) return <XOMock step={Number(screen.slice(-1)) as 1 | 2 | 3} />;
+  if (screen.startsWith("new-words-")) return <WordsMock step={Number(screen.slice(-1)) as 1 | 2} />;
+  if (screen.startsWith("new-cards-")) return <CardsMock step={Number(screen.slice(-1)) as 1 | 2} />;
+  if (screen.startsWith("new-pool-")) return <PoolMock step={Number(screen.slice(-1)) as 1 | 2} />;
   if (screen.startsWith("game-")) return <GameDemo screen={screen} />;
   if (screen === "chat-bgs") return <ChatBgGallery />;
   if (screen === "chat-bgs-moving") return <ChatBgGallery only={["beach", "sunset", "stars", "aurora", "rain", "snow", "hearts", "fireflies", "ocean", "clouds", "lagos", "bokeh"]} />;
