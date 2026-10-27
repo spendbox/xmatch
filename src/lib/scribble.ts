@@ -10,7 +10,8 @@ export type Brush =
   | "pencil" | "pen" | "brush" | "water" | "marker" | "spray" | "fill" | "eraser"
   // Magic
   | "neon" | "rainbow" | "glitter" | "wobble" | "fire" | "hearts" | "stars";
-export type Stroke = { b: Brush; c: string; s: number; p: number[] };
+/** u: who drew it and id: which line (drawing together, so each person undoes their own) */
+export type Stroke = { b: Brush; c: string; s: number; p: number[]; u?: string; id?: string };
 export type Drawing = { v: 1; strokes: Stroke[]; w?: number; h?: number };
 
 export const SCRIBBLE_SIZE = 300;
@@ -435,21 +436,22 @@ function fillImage(d: Drawing, i: number): HTMLCanvasElement | null {
   const octx = out.getContext("2d");
   if (!octx) return null;
   const img = octx.createImageData(w, h);
-  // Soft blotches: a coarse random grid, smoothly blended
-  const G2 = 24;
-  const gx = Math.ceil(w / G2) + 2;
-  const noise = (x: number, y: number) => {
-    const fx = x / G2;
-    const fy = y / G2;
+  // Soft blotches: two sizes of random grid, blended with smooth curves (no visible squares)
+  const layer = (x: number, y: number, size: number, seed: number) => {
+    const gx = Math.ceil(w / size) + 2;
+    const fx = x / size;
+    const fy = y / size;
     const ix = Math.floor(fx);
     const iy = Math.floor(fy);
-    const tx = fx - ix;
-    const ty = fy - iy;
-    const v = (a: number, b: number) => rand(i * 131 + (b * gx + a) * 1.7);
+    const sm = (t: number) => t * t * (3 - 2 * t);
+    const tx = sm(fx - ix);
+    const ty = sm(fy - iy);
+    const v = (a: number, b: number) => rand(seed + (b * gx + a) * 1.7);
     const top = v(ix, iy) * (1 - tx) + v(ix + 1, iy) * tx;
     const bot = v(ix, iy + 1) * (1 - tx) + v(ix + 1, iy + 1) * tx;
     return top * (1 - ty) + bot * ty;
   };
+  const noise = (x: number, y: number) => layer(x, y, 90, i * 131) * 0.65 + layer(x, y, 34, i * 977 + 5) * 0.35;
   let any = false;
   for (let n = 0; n < w * h; n++) {
     if (!grown[n]) continue;
@@ -459,7 +461,7 @@ function fillImage(d: Drawing, i: number): HTMLCanvasElement | null {
     // Near the edge of the area the pigment pools and goes darker
     let edge = grown[n] === 2;
     if (!edge) for (const dd of [-3, 3, -3 * w, 3 * w]) if (n + dd >= 0 && n + dd < w * h && !grown[n + dd]) edge = true;
-    const a = edge ? 0.78 : 0.42 + noise(x, y) * 0.3;
+    const a = edge ? 0.74 : 0.46 + noise(x, y) * 0.22;
     img.data[n * 4] = edge ? R * 0.88 : R;
     img.data[n * 4 + 1] = edge ? G * 0.88 : G;
     img.data[n * 4 + 2] = edge ? B * 0.88 : B;

@@ -144,6 +144,9 @@ export function ScribblePad({
   maxSize = 360,
   expanded,
   onExpand,
+  author,
+  remote = [],
+  onLive,
 }: {
   drawing: Drawing;
   onChange: (d: Drawing) => void;
@@ -152,6 +155,12 @@ export function ScribblePad({
   expanded?: boolean;
   /** Switch between the small and the big board */
   onExpand?: () => void;
+  /** Drawing together: who you are (your lines are tagged, and undo only takes back yours) */
+  author?: string;
+  /** Lines the other person is drawing right now, with their name where their finger is */
+  remote?: { stroke: Stroke; name: string; color: string }[];
+  /** The line you're drawing, as it grows (null when your finger lifts) */
+  onLive?: (s: Stroke | null) => void;
 }) {
   const { w: unitsW, h: unitsH } = sizeOf(drawing);
   const [box, setBox] = useState(300);
@@ -169,7 +178,10 @@ export function ScribblePad({
   const live = useRef<{ stroke: Stroke; last: number; id: number } | null>(null);
   const draft = useRef(drawing);
   draft.current = drawing;
+  const others = useRef(remote);
+  others.current = remote;
   const raf = useRef(0);
+  const mine = (st: Stroke) => !author || st.u === author;
 
   useEffect(() => {
     const el = wrap.current;
@@ -195,6 +207,11 @@ export function ScribblePad({
       if (!c || !ctx || !done.current) return;
       ctx.clearRect(0, 0, c.width, c.height);
       ctx.drawImage(done.current, 0, 0);
+      // The other person's lines in progress
+      for (const o of others.current) {
+        const od: Drawing = { ...draft.current, strokes: [o.stroke] };
+        drawScribble(ctx, od, Infinity, timeline(od).times, { clear: false, shadow: false });
+      }
       const l = live.current;
       if (!l) return;
       const one: Drawing = { ...draft.current, strokes: [l.stroke] };
@@ -215,6 +232,7 @@ export function ScribblePad({
     if (ctx) drawScribble(ctx, drawing, Infinity, timeline(drawing).times);
     paint();
   }, [drawing, box, boxH, paint, canvas]);
+  useEffect(paint, [remote, paint]);
 
   function at(e: { clientX: number; clientY: number }) {
     const r = canvas.current!.getBoundingClientRect();
@@ -224,7 +242,8 @@ export function ScribblePad({
 
   function commit(s: Stroke) {
     redo.current = [];
-    onChange({ ...draft.current, strokes: [...draft.current.strokes, s] });
+    const st = author ? { ...s, u: author, id: Math.random().toString(36).slice(2, 10) } : s;
+    onChange({ ...draft.current, strokes: [...draft.current.strokes, st] });
   }
 
   function down(e: React.PointerEvent<HTMLCanvasElement>) {
@@ -236,7 +255,8 @@ export function ScribblePad({
     // Fill: one tap paints the area in watercolour
     if (tool === "fill") return commit({ b: "fill", c: ink, s: 0, p: [x, y, 0] });
     e.currentTarget.setPointerCapture(e.pointerId);
-    live.current = { stroke: { b: tool, c: ink, s: width, p: [x, y, 0] }, last: performance.now(), id: e.pointerId };
+    live.current = { stroke: { b: tool, c: ink, s: width, p: [x, y, 0], u: author }, last: performance.now(), id: e.pointerId };
+    onLive?.(live.current.stroke);
     paint();
   }
   function move(e: React.PointerEvent<HTMLCanvasElement>) {
@@ -255,12 +275,14 @@ export function ScribblePad({
       p.push(x, y, Math.min(255, Math.round(now - l.last)));
       l.last = now;
     }
+    onLive?.(l.stroke);
     paint();
   }
   function up(e: React.PointerEvent<HTMLCanvasElement>) {
     const l = live.current;
     if (!l || e.pointerId !== l.id) return;
     live.current = null;
+    onLive?.(null);
     commit(l.stroke);
   }
 
@@ -279,6 +301,10 @@ export function ScribblePad({
   }
 
   const empty = drawing.strokes.length === 0;
+  const lastMine = (() => {
+    for (let n = drawing.strokes.length - 1; n >= 0; n--) if (mine(drawing.strokes[n])) return n;
+    return -1;
+  })();
   const BrushNow = ICONS[lastBrush];
   const usesInk = tool !== "eraser" && tool !== "rainbow";
   return (
@@ -299,10 +325,10 @@ export function ScribblePad({
           <p className="pointer-events-none absolute inset-0 grid place-items-center px-12 text-center text-[15px] font-medium text-muted/70">Draw or paint anything</p>
         )}
         <div className="absolute top-2.5 right-2.5 flex gap-1.5">
-          <RoundBtn label="Undo" disabled={empty} onClick={() => {
+          <RoundBtn label="Undo" disabled={lastMine < 0} onClick={() => {
             setFull(false);
-            redo.current.push(drawing.strokes[drawing.strokes.length - 1]);
-            onChange({ ...drawing, strokes: drawing.strokes.slice(0, -1) });
+            redo.current.push(drawing.strokes[lastMine]);
+            onChange({ ...drawing, strokes: drawing.strokes.filter((_, n) => n !== lastMine) });
           }}>
             <Undo2 size={17} />
           </RoundBtn>
@@ -312,10 +338,10 @@ export function ScribblePad({
           }}>
             <Redo2 size={17} />
           </RoundBtn>
-          <RoundBtn label="Start again" disabled={empty} onClick={() => {
+          <RoundBtn label={author ? "Clear my lines" : "Start again"} disabled={lastMine < 0} onClick={() => {
             setFull(false);
             redo.current = [];
-            onChange({ ...drawing, strokes: [] });
+            onChange({ ...drawing, strokes: drawing.strokes.filter((st) => !mine(st)) });
           }}>
             <Trash2 size={16} />
           </RoundBtn>
@@ -327,6 +353,20 @@ export function ScribblePad({
             </RoundBtn>
           </div>
         )}
+        {remote.map((o) => {
+          const p = o.stroke.p;
+          if (p.length < 3) return null;
+          const x = (p[p.length - 3] / unitsW) * box;
+          const y = (p[p.length - 2] / unitsH) * boxH;
+          return (
+            <span key={o.name} className="pointer-events-none absolute flex items-center gap-1 transition-[left,top] duration-75" style={{ left: `calc(50% - ${box / 2}px + ${x}px)`, top: y }}>
+              <span className="h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full ring-4 ring-white" style={{ background: o.color }} />
+              <span className="rounded-full px-2 py-0.5 text-[11.5px] font-bold text-white shadow-card" style={{ background: o.color }}>
+                {o.name}
+              </span>
+            </span>
+          );
+        })}
         {full && <p className="absolute inset-x-0 bottom-3 text-center text-[12.5px] font-semibold text-chili">That&apos;s plenty of paint! Send it or undo a line.</p>}
       </div>
 
@@ -474,3 +514,27 @@ function ToolBtn({ on, label, onClick, children }: { on: boolean; label: string;
 }
 
 export const emptyDrawing = (w?: number, h?: number): Drawing => (w && h ? { v: 1, strokes: [], w, h } : { v: 1, strokes: [] });
+
+/** Their scribble as they draw it, where the message will land (no buttons: it just appears) */
+export function LiveScribblePreview({ drawing, live, size = 170 }: { drawing: Drawing; live: Stroke | null; size?: number }) {
+  const { w, h } = sizeOf(drawing);
+  const height = Math.round((size * h) / w);
+  const canvas = useCanvas(size, height);
+  useEffect(() => {
+    const c = canvas.current;
+    const ctx = c?.getContext("2d");
+    if (!c || !ctx) return;
+    const raf = requestAnimationFrame(() => {
+      const d: Drawing = live ? { ...drawing, strokes: [...drawing.strokes, live] } : drawing;
+      drawScribble(ctx, d, Infinity, timeline(d).times, { shadow: false });
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [canvas, drawing, live, size, height]);
+  const tip = live && live.p.length >= 3 ? { x: (live.p[live.p.length - 3] / w) * size, y: (live.p[live.p.length - 2] / h) * height } : null;
+  return (
+    <div className="relative my-1 self-start animate-fade-up" aria-label="They're scribbling">
+      <canvas ref={canvas} style={{ width: size, height }} className="block rounded-[22px] bg-white/70 ring-1 ring-line" />
+      {tip && <span className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 animate-pulse rounded-full bg-brand ring-4 ring-white/80" style={{ left: tip.x, top: tip.y }} />}
+    </div>
+  );
+}

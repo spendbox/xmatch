@@ -37,7 +37,8 @@ function preview(kind: string, body: string | null, slow = false) {
   if (kind === "video") return slow ? "⏳ Sent you a slow reveal video" : "🎬 Video";
   if (kind === "audio") return "Voice note";
   if (kind === "sticker") return `Sent a sticker: ${body ?? ""}`;
-  if (kind === "scribble") return "✍️ Sent you a scribble";
+  if (kind === "scribble") return body === "Drawing" ? "🎨 Sent your drawing" : "✍️ Sent you a scribble";
+  if (kind === "draw") return "🎨 Started a drawing for you both. Come draw!";
   if (kind === "gift") {
     const g = GIFTS.find((x) => x.id === body);
     return `🎁 Sent you ${g ? `a ${g.name.toLowerCase()}` : "a gift"}`;
@@ -208,7 +209,7 @@ export async function POST(req: Request) {
     if (!msg || Date.now() - new Date(msg.created_at as string).getTime() > RECENT_MS) return ok;
     await pushToUsers(
       [(s.user_a === uid ? s.user_b : s.user_a) as string],
-      { title: `${await senderLabel(db, s, uid, (s.user_a === uid ? s.alias_a : s.alias_b) as string)} 🎭`, body: preview(msg.kind === "sticker" || msg.kind === "scribble" ? (msg.kind as string) : "text", msg.body as string), url: `/masquerade/${s.id}`, tag: `masked-${s.id}` },
+      { title: `${await senderLabel(db, s, uid, (s.user_a === uid ? s.alias_a : s.alias_b) as string)} 🎭`, body: preview(msg.kind === "sticker" || msg.kind === "scribble" || msg.kind === "draw" ? (msg.kind as string) : "text", msg.body as string), url: `/masquerade/${s.id}`, tag: `masked-${s.id}` },
       { skipIfActive: true },
     );
     return ok;

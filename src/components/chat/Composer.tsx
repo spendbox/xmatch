@@ -13,6 +13,7 @@ import { loadDraft, saveDraft, sweepDrafts } from "@/lib/chatDraft";
 import { useVoiceRecorder } from "./useVoiceRecorder";
 import { StickerSheet, type ScribbleSend, type StickerPick } from "@/components/stickers/StickerSheet";
 import { StickerIcon } from "@/components/stickers/StickerIcon";
+import type { ScribbleShare } from "@/components/stickers/useScribbleLive";
 
 export type MediaKind = "image" | "video";
 
@@ -50,6 +51,9 @@ type Props = {
   onSendSticker?: (s: StickerPick) => Promise<void> | void;
   /** Turn on scribbles (in the sticker pop-up): returns an error to show, or null */
   onSendScribble?: (s: ScribbleSend) => Promise<string | null>;
+  /** Scribble extras: let them watch you draw, and drawing together */
+  scribbleShare?: ScribbleShare;
+  together?: { name: string; cost: number; onStart: () => void };
   /** Your own message being edited: its words go in the box, and sending saves the change */
   editing?: ChatMessage | null;
   onEdit?: (m: ChatMessage, text: string) => Promise<void> | void;
@@ -74,6 +78,8 @@ export function Composer({
   noTip,
   onSendSticker,
   onSendScribble,
+  scribbleShare,
+  together,
   editing,
   onEdit,
   onCancelEdit,
@@ -379,7 +385,7 @@ export function Composer({
       <input ref={gallery} type="file" accept="image/*,video/*" className="hidden" onChange={(e) => { choose(e.target.files); e.target.value = ""; }} />
       <input ref={camera} type="file" accept="image/*,video/*" capture="environment" className="hidden" onChange={(e) => { choose(e.target.files); e.target.value = ""; }} />
 
-      {onSendSticker && <StickerSheet open={stickersOpen} onClose={() => setStickersOpen(false)} onSend={(s) => void onSendSticker(s)} onSendScribble={onSendScribble} />}
+      {onSendSticker && <StickerSheet open={stickersOpen} onClose={() => setStickersOpen(false)} onSend={(s) => void onSendSticker(s)} onSendScribble={onSendScribble} share={scribbleShare} together={together} />}
 
       <Sheet open={attachOpen} onClose={() => setAttachOpen(false)} title="More">
         <div className="grid grid-cols-3 gap-2.5 pb-2">

@@ -21,7 +21,9 @@ export function chatPreview(kind: string | null | undefined, body: string | null
     case "sticker":
       return `✨ Sticker${text ? `: ${text}` : ""}`;
     case "scribble":
-      return "✍️ Scribble";
+      return text === "Drawing" ? "🎨 Drawing" : "✍️ Scribble";
+    case "draw":
+      return "🎨 Started a drawing for you both";
     case "masked":
       return "🎭 Your masked chat";
     default:

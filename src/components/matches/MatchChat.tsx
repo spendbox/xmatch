@@ -33,6 +33,10 @@ import type { VoiceStyle } from "@/lib/voiceDisguise";
 import type { StickerPick } from "@/components/stickers/StickerSheet";
 import type { ScribbleSend } from "@/components/stickers/StickerSheet";
 import { useSavedScribbles } from "@/components/stickers/useSavedScribbles";
+import { useScribbleLive } from "@/components/stickers/useScribbleLive";
+import { TogetherBoard } from "@/components/stickers/TogetherBoard";
+import { LiveScribblePreview } from "@/components/stickers/Scribble";
+import { usePrices } from "@/components/keys/usePrices";
 
 export function MatchChat({
   matchId,
@@ -82,6 +86,11 @@ export function MatchChat({
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
   const [editing, setEditing] = useState<ChatMessage | null>(null);
   const savedScribbles = useSavedScribbles();
+  // Watching them scribble (when they let you), and drawing together
+  const scribbleLive = useScribbleLive(matchId, myId);
+  const prices = usePrices();
+  const [drawId, setDrawId] = useState<string | null>(null);
+  const firstName = (other.display_name ?? "them").split(" ")[0];
   const { startCall, call } = useCall();
   const [giftOpen, setGiftOpen] = useState(false);
   const { wallet, refresh: refreshWallet } = useWallet(myId);
@@ -197,6 +206,15 @@ export function MatchChat({
     return null;
   }
 
+  // Drawing together: takes the Keys (back if it isn't sent) and opens the shared board
+  async function startTogether() {
+    const { data, error } = await supabase.rpc("start_draw_together", { p_match: matchId });
+    if (error) return setToast(error.message.includes("start_draw_together") ? "Drawing together is coming soon." : keysError(error.message));
+    setDrawId((data as { id: string }).id);
+    refreshWallet();
+    if (!activeNow()) notify({ kind: "message", matchId });
+  }
+
   // React (or take yours back): shows straight away, undone if it doesn't save
   async function react(m: ChatMessage, emoji: string) {
     const before = m.reactions ?? {};
@@ -283,7 +301,7 @@ export function MatchChat({
             <p className="truncate text-[16px] font-semibold">
               {other.display_name}
             </p>
-            <p className={clsx("truncate text-[12px] font-medium", theyreOnline ? "text-mint" : "text-muted")}>{lastSeenText(seen[other.id], now)}</p>
+            <p className={clsx("truncate text-[12px] font-medium", theyreOnline ? "text-mint" : "text-muted")}>{scribbleLive.theirs ? "scribbling…" : lastSeenText(seen[other.id], now)}</p>
           </div>
         </button>
         <button
@@ -365,7 +383,7 @@ export function MatchChat({
           )}
           {messages.length === 0 && <p className="mt-3 text-[14px] text-muted">Say hi to {other.display_name} 👋</p>}
         </div>
-        <MessageList messages={messages} myId={myId} nameOf={nameOf} genderOf={(id) => (id === other.id ? other.gender : null)} onReply={setReplyTo} onDelete={remove} onReact={react} onSaveScribble={async (m) => setToast((await savedScribbles.save(m.id, false)) ?? "Saved. Send it again free from Scribble.")} onEdit={(m) => { setReplyTo(null); setEditing(m); }} showDates onGameAgain={games.rematch} slow={{ cost: slowCost, onReveal: revealSlow }} />
+        <MessageList messages={messages} myId={myId} nameOf={nameOf} genderOf={(id) => (id === other.id ? other.gender : null)} onReply={setReplyTo} onDelete={remove} onReact={react} onSaveScribble={async (m) => setToast((await savedScribbles.save(m.id, false)) ?? "Saved. Send it again free from Scribble.")} onOpenDraw={setDrawId} footer={scribbleLive.theirs ? <LiveScribblePreview drawing={scribbleLive.theirs.drawing} live={scribbleLive.theirs.live} /> : undefined} onEdit={(m) => { setReplyTo(null); setEditing(m); }} showDates onGameAgain={games.rematch} slow={{ cost: slowCost, onReveal: revealSlow }} />
       </div>
       </div>
 
@@ -384,6 +402,8 @@ export function MatchChat({
         onSend={send}
         onSendSticker={sendSticker}
         onSendScribble={sendScribble}
+        scribbleShare={scribbleLive.share}
+        together={{ name: firstName, cost: prices.draw_together_cost, onStart: () => void startTogether() }}
         editing={editing}
         onEdit={saveEdit}
         onCancelEdit={() => setEditing(null)}
@@ -447,6 +467,18 @@ export function MatchChat({
       {showProfile && <ProfileSheet profile={other} shared={shared} commonWith={other.id} onClose={() => setShowProfile(false)} />}
       {reporting && <ReportSheet onClose={() => setReporting(false)} onReport={report} />}
       {games.overlay}
+      {drawId && (
+        <TogetherBoard
+          id={drawId}
+          me={myId}
+          them={{ name: firstName }}
+          onClose={(note) => {
+            setDrawId(null);
+            if (note) setToast(note);
+          }}
+          onSent={(m) => setMessages((l) => (l.some((x) => x.id === m.id) ? l : [...l, m]))}
+        />
+      )}
     </div>
   );
 }

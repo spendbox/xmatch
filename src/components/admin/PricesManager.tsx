@@ -27,6 +27,7 @@ type Settings = {
   play_cost: number;
   sticker_pack_cost: number;
   scribble_cost: number;
+  draw_together_cost: number;
   explore_photos_cost: number;
   /** 1: people can pay to see someone's other photos. 0: only once they're connected */
   explore_photos_paid: number;
@@ -94,6 +95,7 @@ export function PricesManager({ settings, gifts, packs, invites = null }: { sett
           <SettingField k="slow_reveal_cost" label="See a slow reveal now" hint="Keys to clear a slow reveal photo or video straight away" value={settings.slow_reveal_cost} />
           <SettingField k="sticker_pack_cost" label="Sticker pack" hint="Keys for one premium Masky pack (Savage, Naija, Love, Owambe), kept for good. 0 makes them free." value={settings.sticker_pack_cost} />
           <SettingField k="scribble_cost" label="Scribble" hint="Keys for each scribble sent as a sticker. 0 makes them free." value={settings.scribble_cost} />
+          <SettingField k="draw_together_cost" label="Draw together" hint="Keys to start drawing together in a chat. Back automatically if the drawing isn't sent. 0 makes it free." value={settings.draw_together_cost} />
         </div>
       </section>
 

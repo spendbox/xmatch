@@ -15,6 +15,7 @@ import { useSavedScribbles } from "./useSavedScribbles";
 import { useStickerPacks } from "./useStickerPacks";
 import { usePrices } from "@/components/keys/usePrices";
 import type { Drawing } from "@/lib/scribble";
+import type { ScribbleShare } from "./useScribbleLive";
 
 export type StickerPick = { pose: StickerPose; caption: string; color: string };
 export type ScribbleSend = { drawing?: Drawing; saved?: string; keep: boolean };
@@ -53,6 +54,7 @@ export function StickerSheet({
   scribbleCost: scribbleProp,
   startMode = "stickers",
   together,
+  share,
 }: {
   open: boolean;
   onClose: () => void;
@@ -70,6 +72,8 @@ export function StickerSheet({
   startMode?: "stickers" | "scribble";
   /** Drawing with the other person: their name, its Keys, and starting it (opens the big shared board) */
   together?: { name: string; cost: number; onStart: () => void };
+  /** "Let them see": your scribble goes to them as you draw */
+  share?: ScribbleShare;
 }) {
   const packs = useStickerPacks();
   const prices = usePrices();
@@ -86,6 +90,16 @@ export function StickerSheet({
   const keep = true;
   const [expanded, setExpanded] = useState(false);
   const [letSee, setLetSee] = useState(false);
+  // Showing them: what's drawn so far whenever it changes; stops when switched off or closed
+  const showing = open && letSee && mode === "scribble" && !!share;
+  useEffect(() => {
+    if (showing) share?.publish(drawing);
+  }, [showing, drawing, share]);
+  const wasShowing = useRef(false);
+  useEffect(() => {
+    if (wasShowing.current && !showing) share?.end();
+    wasShowing.current = showing;
+  }, [showing, share]);
   const [bigSize, setBigSize] = useState(360);
   // The big drawing space fills the screen, leaving room for the tools
   useEffect(() => {
@@ -214,7 +228,11 @@ export function StickerSheet({
                 </ChipToggle>
                 <ChipToggle
                   on={false}
-                  onClick={together.onStart}
+                  onClick={() => {
+                    // Drawing together shows them everything anyway
+                    onClose();
+                    together.onStart();
+                  }}
                   icon={<Users size={17} />}
                   badge={together.cost > 0 ? <><KeyCoin size={13} /> {together.cost}</> : undefined}
                 >
@@ -286,7 +304,7 @@ export function StickerSheet({
           ) : expanded ? (
             <div className="grid h-40 place-items-center rounded-[28px] bg-[#f6f2fd] text-[14px] font-medium text-brand/60">Drawing in the big space…</div>
           ) : (
-            <ScribblePad drawing={drawing} onChange={setDrawing} maxSize={380} onExpand={() => setExpanded(true)} />
+            <ScribblePad drawing={drawing} onChange={setDrawing} maxSize={380} onExpand={() => setExpanded(true)} onLive={showing ? share?.publishLive : undefined} />
           )}
           {saved.length > 0 && (
             <div>
@@ -336,7 +354,7 @@ export function StickerSheet({
                 </div>
                 {error && <p className="px-4 pb-1 text-center text-[13px] font-medium text-chili">{error}</p>}
                 <div className="flex min-h-0 flex-1 flex-col justify-center overflow-y-auto px-3 pb-3">
-                  <ScribblePad drawing={drawing} onChange={setDrawing} maxSize={bigSize} expanded onExpand={() => setExpanded(false)} />
+                  <ScribblePad drawing={drawing} onChange={setDrawing} maxSize={bigSize} expanded onExpand={() => setExpanded(false)} onLive={showing ? share?.publishLive : undefined} />
                 </div>
               </div>,
               document.body,

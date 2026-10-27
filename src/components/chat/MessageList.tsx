@@ -55,6 +55,8 @@ type Props = {
   onEdit?: (m: ChatMessage) => void;
   /** Turn on keeping scribbles (yours or theirs) to send again for free */
   onSaveScribble?: (m: ChatMessage) => void;
+  /** Open a drawing you're doing together (from its card) */
+  onOpenDraw?: (id: string) => void;
 };
 
 /** A slow reveal clears fully after 5 messages from each of you */
@@ -80,13 +82,15 @@ export function snippet(m: ChatMessage | undefined) {
     case "sticker":
       return `Sticker · ${m.body}`;
     case "scribble":
-      return "✍️ Scribble";
+      return m.body === "Drawing" ? "🎨 Drawing" : "✍️ Scribble";
+    case "draw":
+      return "🎨 Drawing together";
     default:
       return m.body.replace(/^💬 /, "");
   }
 }
 
-export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDates, footer, onGameAgain, slow, genderOf, onReact, onEdit, onSaveScribble }: Props) {
+export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDates, footer, onGameAgain, slow, genderOf, onReact, onEdit, onSaveScribble, onOpenDraw }: Props) {
   // How far each slow reveal has cleared: messages after it from each person, up to 5 each (0 to 10)
   const slowProgress = useMemo(() => {
     const out = new Map<number, number>();
@@ -112,6 +116,16 @@ export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDat
   const [viewer, setViewer] = useState<ViewerItem | null>(null);
   const [flash, setFlash] = useState<number | null>(null);
   const [moreReactions, setMoreReactions] = useState(false);
+  // Drawings done together fill the chat's width (up to a point)
+  const [wideSize, setWideSize] = useState(340);
+  useEffect(() => {
+    const el = root.current;
+    if (!el) return;
+    const fit = () => setWideSize(Math.max(220, Math.min(460, el.clientWidth - 40)));
+    fit();
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, []);
   // Who reacted to a message (tap the reactions under it)
   const [who, setWho] = useState<ChatMessage | null>(null);
   const canReact = (m: ChatMessage) => !!onReact && m.id > 0 && !m.deleted_at && !m.pending;
@@ -245,6 +259,66 @@ export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDat
             <div key={m.id}>
               {dateLine}
               <GameCard m={m} myId={myId} nameOf={nameOf} onAgain={onGameAgain} onReply={onReply} />
+            </div>
+          );
+        }
+
+        // "Ada started a drawing for you both": tap to open the shared board
+        if (m.kind === "draw") {
+          const status = (m.media_meta as { status?: string } | null)?.status ?? "open";
+          const id = (m.media_meta as { draw?: string } | null)?.draw;
+          const mine = m.sender_id === myId;
+          return (
+            <div key={m.id}>
+              {dateLine}
+              <div className="my-2 flex justify-center animate-fade-up" data-msg={m.id}>
+                <button
+                  type="button"
+                  disabled={status !== "open" || !id || !onOpenDraw}
+                  onClick={() => id && onOpenDraw?.(id)}
+                  className="flex max-w-[88%] items-center gap-3 rounded-2xl border border-brand/20 bg-brand-soft px-4 py-3 text-left transition enabled:active:scale-[0.98]"
+                >
+                  <span className="text-[22px] leading-none">🎨</span>
+                  <span className="min-w-0">
+                    <span className="block text-[14.5px] leading-snug font-semibold text-ink">
+                      {mine ? "You started a drawing for you both" : `${nameOf(m.sender_id)} started a drawing for you both`}
+                    </span>
+                    <span className="block text-[12.5px] font-semibold text-brand">
+                      {status === "open" ? (mine ? "Tap to open" : "Tap to join") : status === "sent" ? "Sent ✓" : "Closed"}
+                    </span>
+                  </span>
+                </button>
+              </div>
+            </div>
+          );
+        }
+
+        // A drawing done together: wide, in the middle, for you both
+        if (m.kind === "scribble" && !m.deleted_at && isDrawing(m.media_meta) && (m.media_meta.w ?? 300) > (m.media_meta.h ?? 300)) {
+          const by = (m.media_meta as { by?: string[] }).by ?? [];
+          const other = by.find((x) => x !== myId) ?? (m.sender_id !== myId ? m.sender_id : null);
+          return (
+            <div key={m.id}>
+              {dateLine}
+              <SwipeRow
+                mine={false}
+                center
+                disabled={!onReply || m.pending}
+                onReply={() => onReply?.(m)}
+                onLongPress={() => !m.pending && setMenu(m)}
+                onDoubleTap={canReact(m) ? () => react(m, m.reactions?.[myId] === "❤️" ? "" : "❤️") : undefined}
+              >
+                <div className="my-2 flex flex-col items-center" data-msg={m.id}>
+                  <div className={clsx("overflow-hidden rounded-[24px] bg-white p-1.5 shadow-card ring-1 ring-line transition-shadow duration-500", flash === m.id && "ring-4 ring-gold/70")}>
+                    <ScribbleView drawing={m.media_meta} size={wideSize} />
+                  </div>
+                  {!m.deleted_at && <ReactionPill reactions={m.reactions} myId={myId} mine={false} onOpen={() => setWho(m)} />}
+                  <span className="mt-1.5 text-[12px] font-semibold text-muted">
+                    🎨 You &amp; {other ? nameOf(other).split(" ")[0] : "them"}
+                    {mounted && <> · {time(m.created_at)}</>}
+                  </span>
+                </div>
+              </SwipeRow>
             </div>
           );
         }
@@ -565,8 +639,11 @@ function SwipeRow({
   onReply,
   onLongPress,
   onDoubleTap,
+  center,
 }: {
   children: React.ReactNode;
+  /** In the middle (no room kept for the reply arrow on one side) */
+  center?: boolean;
   mine: boolean;
   disabled?: boolean;
   onReply: () => void;
@@ -654,7 +731,7 @@ function SwipeRow({
       </span>
       <div
         style={{ transform: `translateX(${dx}px)` }}
-        className={clsx(dx === 0 && "transition-transform duration-200", mine ? "pl-10" : "pr-10")}
+        className={clsx(dx === 0 && "transition-transform duration-200", center ? "" : mine ? "pl-10" : "pr-10")}
       >
         {children}
       </div>
