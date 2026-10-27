@@ -211,7 +211,7 @@ export function ScribblePad({
           onPointerCancel={up}
           onContextMenu={(e) => e.preventDefault()}
           style={{ width: box, height: box, WebkitTouchCallout: "none", WebkitUserSelect: "none", userSelect: "none" }}
-          className="mx-auto block touch-none rounded-[28px] bg-[radial-gradient(circle,rgb(28_24_40/0.09)_1.2px,transparent_1.4px)] bg-[length:18px_18px] bg-[#f6f2fd] ring-1 ring-brand/15"
+          className="mx-auto block touch-none rounded-[28px] bg-[#f6f2fd] ring-1 ring-brand/15"
           aria-label="Drawing space"
         />
         {empty && (
