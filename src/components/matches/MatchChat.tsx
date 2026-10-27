@@ -34,8 +34,11 @@ import type { StickerPick } from "@/components/stickers/StickerSheet";
 import type { ScribbleSend } from "@/components/stickers/StickerSheet";
 import { useSavedScribbles } from "@/components/stickers/useSavedScribbles";
 import { useScribbleLive } from "@/components/stickers/useScribbleLive";
-import { TogetherBoard } from "@/components/stickers/TogetherBoard";
-import { LiveScribblePreview } from "@/components/stickers/Scribble";
+import dynamic from "next/dynamic";
+
+// The shared drawing board loads only when it's opened
+const TogetherBoard = dynamic(() => import("@/components/stickers/TogetherBoard").then((m) => m.TogetherBoard), { ssr: false });
+import { LiveScribblePreview } from "@/components/stickers/ScribbleView";
 import { usePrices } from "@/components/keys/usePrices";
 
 export function MatchChat({

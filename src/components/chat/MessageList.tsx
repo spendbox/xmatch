@@ -24,8 +24,8 @@ import { Photo } from "@/components/ui/Photo";
 import { useSignedUrl } from "./useSignedUrl";
 import { KeyCoin } from "@/components/keys/KeyIcon";
 import { Masky } from "@/components/stickers/Masky";
-import { stickerOf } from "@/components/stickers/StickerSheet";
-import { ScribbleView } from "@/components/stickers/Scribble";
+import { stickerOf } from "@/lib/stickers";
+import { ScribbleView } from "@/components/stickers/ScribbleView";
 import { isDrawing } from "@/lib/scribble";
 
 /** Quick reactions when you hold a message (😈 because Dashpad) */

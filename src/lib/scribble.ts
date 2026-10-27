@@ -401,21 +401,27 @@ function fillImage(d: Drawing, i: number): HTMLCanvasElement | null {
 
   const x0 = Math.max(0, Math.min(w - 1, Math.round(s.p[0] * Q)));
   const y0 = Math.max(0, Math.min(h - 1, Math.round(s.p[1] * Q)));
+  // Flood fill with a plain number stack (fast on phones: no lists made per cell)
   const solid = (n: number) => wall[n * 4 + 3] > 40;
   const inside = new Uint8Array(w * h);
-  if (!solid(y0 * w + x0)) {
-    const stack = [y0 * w + x0];
-    inside[y0 * w + x0] = 1;
-    while (stack.length) {
-      const n = stack.pop()!;
+  const start = y0 * w + x0;
+  if (!solid(start)) {
+    const stack = new Int32Array(w * h);
+    let top = 0;
+    stack[top++] = start;
+    inside[start] = 1;
+    const visit = (m: number) => {
+      if (inside[m] || solid(m)) return;
+      inside[m] = 1;
+      stack[top++] = m;
+    };
+    while (top) {
+      const n = stack[--top];
       const x = n % w;
-      const y = (n - x) / w;
-      const next = [x > 0 ? n - 1 : -1, x < w - 1 ? n + 1 : -1, y > 0 ? n - w : -1, y < h - 1 ? n + w : -1];
-      for (const m of next) {
-        if (m < 0 || inside[m] || solid(m)) continue;
-        inside[m] = 1;
-        stack.push(m);
-      }
+      if (x > 0) visit(n - 1);
+      if (x < w - 1) visit(n + 1);
+      if (n >= w) visit(n - w);
+      if (n < w * (h - 1)) visit(n + w);
     }
   }
 

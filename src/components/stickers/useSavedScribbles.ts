@@ -22,23 +22,27 @@ function load(force = false) {
   return loading;
 }
 
-/** Scribbles you've kept (your own or ones you were sent), free to send again */
-export function useSavedScribbles() {
+/** Scribbles you've kept (your own or ones you were sent), free to send again. They're only
+    fetched once `load` is true (the scribble tab is open): drawings can be big. */
+export function useSavedScribbles(fetchNow = false) {
   const [saved, setSaved] = useState<SavedScribble[]>(() => savedNow ?? []);
   useEffect(() => {
     listeners.add(setSaved);
-    void load().then(setSaved);
     return () => {
       listeners.delete(setSaved);
     };
   }, []);
+  useEffect(() => {
+    if (fetchNow) void load().then(setSaved);
+  }, [fetchNow]);
 
   /** Keep a scribble from a chat. Returns an error to show, or null. */
   const save = useCallback(async (messageId: number, masked: boolean): Promise<string | null> => {
     const { error } = await createClient().rpc("save_scribble", { p_message: messageId, p_masked: masked });
     if (error) return error.message.includes("save_scribble") ? "Saving scribbles is coming soon." : error.message.includes("60 saved") ? error.message : "Couldn't save it. Check your connection.";
-    await load(true);
-    tell();
+    // Fetched again next time the scribble tab opens (not now: nothing's showing them)
+    loading = null;
+    savedNow = null;
     return null;
   }, []);
 
@@ -48,7 +52,10 @@ export function useSavedScribbles() {
     await createClient().rpc("delete_saved_scribble", { p_id: id });
   }, []);
 
-  const refresh = useCallback(() => void load(true).then(tell), []);
+  const refresh = useCallback(() => {
+    loading = null;
+    savedNow = null;
+  }, []);
 
   return { saved, save, remove, refresh };
 }

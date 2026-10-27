@@ -102,3 +102,10 @@ export const STICKER_PACKS: StickerPack[] = [
 ];
 
 export const packOf = (pose: string) => STICKER_PACKS.find((p) => p.stickers.some((s) => s.pose === pose));
+
+export type StickerPick = { pose: StickerPose; caption: string; color: string };
+
+/** A sticker sent in a chat (falls back to a waving Masky if something's missing) */
+export function stickerOf(meta: { pose?: unknown; color?: unknown } | null | undefined, caption: string): StickerPick {
+  return { pose: isPose(meta?.pose) ? meta.pose : "wave", color: isStickerColor(meta?.color) ? meta.color : "#7a5cf0", caption };
+}

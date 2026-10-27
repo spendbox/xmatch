@@ -3,7 +3,8 @@
 // Design previews for painting and drawing together (sample data, not wired up)
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, SendHorizontal } from "lucide-react";
-import { ScribblePad, ScribbleView } from "@/components/stickers/Scribble";
+import { ScribblePad } from "@/components/stickers/Scribble";
+import { ScribbleView } from "@/components/stickers/ScribbleView";
 import { TOGETHER_H, TOGETHER_W, drawScribble, timeline, type Drawing, type Stroke } from "@/lib/scribble";
 
 const line = (pts: [number, number][], b: Stroke["b"], c: string, s: number): Stroke => {

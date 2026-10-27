@@ -10,14 +10,16 @@ import { STICKER_COLORS, STICKER_MAX, STICKER_PACKS, isPose, isStickerColor, pac
 import { Masky } from "./Masky";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
-import { ScribblePad, ScribbleView, emptyDrawing } from "./Scribble";
+import { ScribblePad, emptyDrawing } from "./Scribble";
+import { ScribbleView } from "./ScribbleView";
 import { useSavedScribbles } from "./useSavedScribbles";
 import { useStickerPacks } from "./useStickerPacks";
 import { usePrices } from "@/components/keys/usePrices";
 import type { Drawing } from "@/lib/scribble";
 import type { ScribbleShare } from "./useScribbleLive";
 
-export type StickerPick = { pose: StickerPose; caption: string; color: string };
+export type { StickerPick } from "@/lib/stickers";
+import type { StickerPick } from "@/lib/stickers";
 export type ScribbleSend = { drawing?: Drawing; saved?: string; keep: boolean };
 
 
@@ -75,7 +77,7 @@ export function StickerSheet({
   /** "Let them see": your scribble goes to them as you draw */
   share?: ScribbleShare;
 }) {
-  const packs = useStickerPacks();
+  const packs = useStickerPacks(open);
   const prices = usePrices();
   const owned = ownedProp ?? packs.owned;
   const price = priceProp ?? prices.sticker_pack_cost;
@@ -84,7 +86,7 @@ export function StickerSheet({
   const [mode, setMode] = useState<"stickers" | "scribble">(startMode);
   const [drawing, setDrawing] = useState<Drawing>(emptyDrawing);
   const [sending, setSending] = useState(false);
-  const { saved, remove: removeSaved } = useSavedScribbles();
+  const { saved, remove: removeSaved } = useSavedScribbles(open && mode === "scribble");
   const [savedPick, setSavedPick] = useState<string | null>(null);
   // Every scribble you send is saved, to send again for free
   const keep = true;
@@ -518,7 +520,3 @@ function StickerTile({ s, locked, onClick }: { s: StickerPick & { move?: string 
   );
 }
 
-/** A sticker sent in a chat (falls back to a waving Masky if something's missing) */
-export function stickerOf(meta: { pose?: unknown; color?: unknown } | null | undefined, caption: string): StickerPick {
-  return { pose: isPose(meta?.pose) ? meta.pose : "wave", color: isStickerColor(meta?.color) ? meta.color : "#7a5cf0", caption };
-}

@@ -25,32 +25,37 @@ export function useScribbleLive(chatKey: string | null, me: string) {
 
   useEffect(() => {
     if (!chatKey) return;
+    // Joins a moment after the chat opens, so it never slows the chat itself down
+    let ch: RealtimeChannel | null = null;
     const stillThere = () => {
       if (quiet.current) clearTimeout(quiet.current);
       quiet.current = setTimeout(() => setTheirs(null), QUIET_MS);
     };
-    const ch = supabase
-      .channel(`scribble:${chatKey}`, { config: { broadcast: { self: false } } })
-      .on("broadcast", { event: "snap" }, ({ payload }) => {
-        if (payload?.u === me) return;
-        stillThere();
-        setTheirs((t) => ({ drawing: payload.d as Drawing, live: t?.live ?? null }));
-      })
-      .on("broadcast", { event: "live" }, ({ payload }) => {
-        if (payload?.u === me) return;
-        stillThere();
-        setTheirs((t) => ({ drawing: t?.drawing ?? { v: 1, strokes: [] }, live: (payload.s as Stroke | null) ?? null }));
-      })
-      .on("broadcast", { event: "end" }, ({ payload }) => {
-        if (payload?.u === me) return;
-        setTheirs(null);
-      })
-      .subscribe();
-    channel.current = ch;
+    const join = setTimeout(() => {
+      ch = supabase
+        .channel(`scribble:${chatKey}`, { config: { broadcast: { self: false } } })
+        .on("broadcast", { event: "snap" }, ({ payload }) => {
+          if (payload?.u === me) return;
+          stillThere();
+          setTheirs((t) => ({ drawing: payload.d as Drawing, live: t?.live ?? null }));
+        })
+        .on("broadcast", { event: "live" }, ({ payload }) => {
+          if (payload?.u === me) return;
+          stillThere();
+          setTheirs((t) => ({ drawing: t?.drawing ?? { v: 1, strokes: [] }, live: (payload.s as Stroke | null) ?? null }));
+        })
+        .on("broadcast", { event: "end" }, ({ payload }) => {
+          if (payload?.u === me) return;
+          setTheirs(null);
+        })
+        .subscribe();
+      channel.current = ch;
+    }, 1500);
     return () => {
+      clearTimeout(join);
       if (quiet.current) clearTimeout(quiet.current);
       if (pendingLive.current) clearTimeout(pendingLive.current);
-      void supabase.removeChannel(ch);
+      if (ch) void supabase.removeChannel(ch);
       channel.current = null;
       setTheirs(null);
     };
