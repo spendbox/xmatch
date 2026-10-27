@@ -1,7 +1,7 @@
 "use client";
 
 import { DailyMock } from "./DailyMocks";
-import { CoreMock } from "./CoreMocks";
+import { BigMomentPop, CoreMock } from "./CoreMocks";
 import { HomeScreen } from "@/components/home/HomeScreen";
 import { WalletScreen } from "@/components/keys/WalletScreen";
 import { GiftSheet } from "@/components/keys/GiftSheet";
@@ -528,8 +528,11 @@ function ScreenBody({ screen }: { screen: string }) {
     case "home-pact":
     case "home-daily":
     case "home-daily-done":
+    case "home-pop-pair":
+    case "home-pop-match":
       return (
         <div className="pb-24">
+          {screen.startsWith("home-pop-") && <BigMomentPop kind={screen === "home-pop-pair" ? "pair" : "match"} />}
           <HomeScreen demoDaily={screen === "home-daily" ? "todo" : screen === "home-daily-done" ? "done" : undefined} demoPeople={homePeople} demoSetup={{ place: true, push: false, things: 4, claimed: false, reward: 5 }} meets={demoMeets} hour={demoHour()} profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} stats={{ online: 214, week_chats: 12, week_unmasks: 5, gifts_received: 3 }} matches={recent} pact={screen === "home-pact" ? { ...demoPact, count: 1 } : null} />
           <BottomNav />
         </div>

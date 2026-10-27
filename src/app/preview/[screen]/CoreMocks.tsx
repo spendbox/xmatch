@@ -709,3 +709,124 @@ export function CoreMock({ step }: { step: number }) {
   const S = screens[step - 1] ?? HomeWaiting;
   return <S />;
 }
+
+/**
+ * The pop-up over Home when something big happens: your masked pair arrives, or you both unmask.
+ * Almost full screen (Home shows faintly round the edges), closes with ✕ or a swipe down.
+ */
+export function BigMomentPop({ kind }: { kind: "pair" | "match" }) {
+  const pair = kind === "pair";
+  return (
+    <div className="fixed inset-0 z-50 bg-[#120b2e]/70 backdrop-blur-[3px]">
+      <div
+        className="gm-burst absolute inset-x-3 top-[max(44px,env(safe-area-inset-top))] bottom-3 flex flex-col overflow-hidden rounded-[34px] text-center text-white shadow-[0_0_0_2px_rgba(242,179,61,0.55),0_40px_80px_-20px_rgba(0,0,0,0.8)]"
+        style={{ background: NIGHT }}
+      >
+        {/* Sparkles / confetti, behind everything */}
+        {Array.from({ length: pair ? 18 : 30 }, (_, i) =>
+          pair ? (
+            <span key={i} className="absolute h-1.5 w-1.5 rounded-full bg-gold" style={{ left: `${(i * 37) % 100}%`, top: `${4 + ((i * 53) % 30)}%`, opacity: 0.15 + ((i * 7) % 10) / 25 }} />
+          ) : (
+            <span
+              key={i}
+              className="absolute h-2.5 w-1.5 rounded-[2px]"
+              style={{ left: `${(i * 41) % 100}%`, top: `${7 + ((i * 23) % 22)}%`, background: ["#f2b33d", "#ff8a8a", "#7ad3a3", "#b49cff"][i % 4], transform: `rotate(${i * 37}deg)` }}
+            />
+          ),
+        )}
+
+        <div className="relative z-10 flex items-center justify-between px-4 pt-4">
+          <span className="mx-auto h-1.5 w-10 rounded-full bg-white/25" />
+          <span className="absolute top-3 right-3 grid h-10 w-10 place-items-center rounded-full bg-white/12">
+            <X size={20} />
+          </span>
+        </div>
+
+        <div className="no-scrollbar relative z-10 flex flex-1 flex-col items-center overflow-y-auto px-6 pt-3 pb-6">
+          {pair ? (
+            <>
+              <p className="text-[12px] font-extrabold tracking-[0.2em] text-gold uppercase">Your pair is here</p>
+              <div className="relative mt-5 grid h-[140px] w-[140px] place-items-center">
+                <span className="absolute -inset-4 rounded-full" style={{ background: "radial-gradient(circle, rgba(242,179,61,0.5), transparent 70%)" }} />
+                <span className="absolute inset-0 animate-ping rounded-full bg-gold/20 [animation-duration:2.2s]" />
+                <Mask color={OWL.color} size={116} ring />
+              </div>
+              <p className="mt-5 font-display text-[38px] leading-none font-black">{OWL.alias}</p>
+              <p className="mt-2 text-[15px] text-white/75">
+                {OWL.age} · {OWL.who} · {OWL.place}
+              </p>
+              <p className="mt-5 text-[12.5px] font-semibold text-white/60">You both</p>
+              <div className="mt-2 flex flex-wrap justify-center gap-1.5">
+                {OWL.common.map((c) => (
+                  <Chip key={c} tone="gold">
+                    ✓ {c}
+                  </Chip>
+                ))}
+              </div>
+              <div className="mt-4 flex w-full items-center gap-2.5 rounded-[18px] bg-white/10 px-3.5 py-3 text-left">
+                <Headphones size={18} className="shrink-0 text-gold" />
+                <span className="text-[13.5px]">
+                  On repeat: <b>{OWL.song.title}</b> · {OWL.song.artist}
+                </span>
+              </div>
+              <p className="mt-5 self-start text-[12px] font-bold text-white/60">Tap one to send it</p>
+              <div className="mt-2 w-full space-y-2 text-left">
+                {["Rate my jollof standards out of 10 first 😤", "Tems on repeat? Which song is the one", "Best place on the Island for live music. Go."].map((t) => (
+                  <span key={t} className="block rounded-[16px] bg-white/12 px-3.5 py-2.5 text-[14px]">
+                    {t}
+                  </span>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-[12px] font-extrabold tracking-[0.2em] text-gold uppercase">It&apos;s a match</p>
+              <div className="relative mt-6 flex items-center justify-center">
+                <span className="relative z-10 -mr-5 block h-[150px] w-[118px] rotate-[-8deg] rounded-[26px] shadow-[0_0_0_3px_#fff,0_20px_40px_-12px_rgba(0,0,0,0.6)]" style={{ background: "linear-gradient(160deg,#ffb38a 0%,#c2410c 100%)" }}>
+                  <span className="grid h-full place-items-center font-display text-[56px] font-black text-white/85">T</span>
+                </span>
+                <span className="relative z-20 block h-[150px] w-[118px] rotate-[8deg] rounded-[26px] shadow-[0_0_0_3px_#f2b33d,0_20px_40px_-12px_rgba(0,0,0,0.6)]" style={{ background: "linear-gradient(160deg,#ffb38a 0%,#e5484d 55%,#7a1f3d 100%)" }}>
+                  <span className="grid h-full place-items-center font-display text-[56px] font-black text-white/85">A</span>
+                </span>
+                <span className="absolute -bottom-4 z-30 grid h-12 w-12 place-items-center rounded-full bg-white shadow-lg">
+                  <Heart size={24} className="text-chili" fill="#e5484d" />
+                </span>
+              </div>
+              <p className="mt-8 text-[15px] text-white/70">{OWL.alias} is</p>
+              <p className="font-display text-[44px] leading-none font-black">Ada, 26</p>
+              <p className="mt-2 text-[14px] text-white/70">Lagos Island · you both unmasked</p>
+              <div className="mt-5 w-full rounded-[18px] bg-white/10 p-3.5 text-left">
+                <p className="text-[12px] font-bold text-white/60">What you two have</p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {OWL.common.map((c) => (
+                    <Chip key={c} tone="dark">
+                      {c}
+                    </Chip>
+                  ))}
+                </div>
+                <p className="mt-3 text-[13px] text-white/75">23 messages · 41 minutes masked</p>
+              </div>
+              <p className="mt-4 rounded-full bg-white/12 px-4 py-2 text-[13px] font-semibold">Your chat stays. Ada is now in Your people.</p>
+            </>
+          )}
+        </div>
+
+        <div className="relative z-10 grid gap-2 px-5 pb-5">
+          {pair ? (
+            <>
+              <span className="rounded-full bg-gold py-4 text-[17px] font-extrabold text-ink shadow-[0_6px_0_#b9831e]">
+                Say hi <span className="text-[13px] font-bold text-ink/60">· 60 min to chat</span>
+              </span>
+              <span className="py-1.5 text-[13.5px] font-semibold text-white/60">Later</span>
+            </>
+          ) : (
+            <div className="grid grid-cols-2 gap-2.5">
+              <span className="rounded-full bg-white/15 py-3.5 text-[15px] font-bold">See her photos</span>
+              <span className="rounded-full bg-gold py-3.5 text-[15px] font-extrabold text-ink shadow-[0_6px_0_#b9831e]">Keep chatting</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
