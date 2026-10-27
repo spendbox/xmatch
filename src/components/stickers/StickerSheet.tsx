@@ -92,6 +92,14 @@ export function StickerSheet({
   const keep = true;
   const [expanded, setExpanded] = useState(false);
   const [letSee, setLetSee] = useState(false);
+  // The board is as big as fits with everything else on screen (so Send never needs a scroll)
+  const [smallSize, setSmallSize] = useState(320);
+  useEffect(() => {
+    const fit = () => setSmallSize(Math.round(Math.max(220, Math.min(380, window.innerHeight * 0.88 - (saved.length ? 480 : 380)))));
+    fit();
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, [saved.length]);
   // Showing them: what's drawn so far whenever it changes; stops when switched off or closed
   const showing = open && letSee && mode === "scribble" && !!share;
   useEffect(() => {
@@ -306,7 +314,7 @@ export function StickerSheet({
           ) : expanded ? (
             <div className="grid h-40 place-items-center rounded-[28px] bg-[#f6f2fd] text-[14px] font-medium text-brand/60">Drawing in the big space…</div>
           ) : (
-            <ScribblePad drawing={drawing} onChange={setDrawing} maxSize={380} onExpand={() => setExpanded(true)} onLive={showing ? share?.publishLive : undefined} />
+            <ScribblePad drawing={drawing} onChange={setDrawing} maxSize={smallSize} onExpand={() => setExpanded(true)} onLive={showing ? share?.publishLive : undefined} />
           )}
           {saved.length > 0 && (
             <div>
