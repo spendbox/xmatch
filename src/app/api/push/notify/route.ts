@@ -33,15 +33,15 @@ async function senderLabel(
 }
 
 function preview(kind: string, body: string | null, slow = false) {
-  if (kind === "image") return slow ? "⏳ Sent you a slow reveal photo" : "📷 Photo";
-  if (kind === "video") return slow ? "⏳ Sent you a slow reveal video" : "🎬 Video";
+  if (kind === "image") return slow ? "Sent a photo" : "Photo";
+  if (kind === "video") return slow ? "Sent a video" : "Video";
   if (kind === "audio") return "Voice note";
-  if (kind === "sticker") return `Sent a sticker: ${body ?? ""}`;
-  if (kind === "scribble") return body === "Drawing" ? "🎨 Sent your drawing" : "✍️ Sent you a scribble";
-  if (kind === "draw") return "🎨 Started a drawing for you both. Come draw!";
+  if (kind === "sticker") return "Sent a sticker";
+  if (kind === "scribble") return body === "Drawing" ? "Sent your drawing" : "Sent a scribble";
+  if (kind === "draw") return "Started a drawing for you both";
   if (kind === "gift") {
     const g = GIFTS.find((x) => x.id === body);
-    return `🎁 Sent you ${g ? `a ${g.name.toLowerCase()}` : "a gift"}`;
+    return `Sent ${g ? `a ${g.name.toLowerCase()}` : "a gift"}`;
   }
   const t = (body ?? "").replace(/^💬 /, "");
   return t.length > 140 ? t.slice(0, 137) + "…" : t;
@@ -93,8 +93,8 @@ export async function POST(req: Request) {
     await Promise.all(
       r.targets.map((t) =>
         pushToUsers([t.user_id], {
-          title: "Someone's masking up for you 🎭",
-          body: `A ${r.from_age ? `${r.from_age}-year-old ` : ""}${sex}${t.distance_km !== null ? `, ${t.distance_km <= 1 ? "under 1 km" : `${t.distance_km} km`} away,` : ""} wants a masked chat (${intentLabel(r.intent)}). Tap to mask up.`,
+          title: "New masked chat request on Dashpad",
+          body: `A ${r.from_age ? `${r.from_age}-year-old ` : ""}${sex}${t.distance_km !== null ? ` ${t.distance_km <= 1 ? "under 1 km" : `${t.distance_km} km`} away` : ""} is looking for a masked chat (${intentLabel(r.intent)}). Open Dashpad to join.`,
           url: "/home?mask=1",
           tag: "masquerade-alert",
         }),
@@ -110,8 +110,8 @@ export async function POST(req: Request) {
     const other = s.user_a === uid ? s.user_b : s.user_a;
     const { data: me } = await db.from("profiles").select("display_name, photos").eq("id", uid).single();
     await pushToUsers([other as string], {
-      title: "You clicked! 🎭",
-      body: `You and ${firstName(me?.display_name)} both unmasked. Say hello.`,
+      title: `You matched with ${firstName(me?.display_name)}`,
+      body: "You both unmasked. Your chat is open.",
       url: `/matches/${s.match_id}`,
       tag: `match-${s.match_id}`,
       icon: (me?.photos as string[] | null)?.[0] ?? null,
@@ -131,8 +131,8 @@ export async function POST(req: Request) {
     if ((iAmA ? s.unmask_a : s.unmask_b) !== true || (iAmA ? s.unmask_b : s.unmask_a) === true) return ok;
     const who = await senderLabel(db, s, uid, (iAmA ? s.alias_a : s.alias_b) as string);
     await pushToUsers([(iAmA ? s.user_b : s.user_a) as string], {
-      title: `${who} unmasked 🎭`,
-      body: "They want to see who you are. Unmask too and you're connected.",
+      title: `${who} unmasked in your chat`,
+      body: "If you unmask too, you'll match and see each other's profiles.",
       url: `/masquerade/${s.id}`,
       tag: `unmask-${s.id}`,
     });
@@ -147,16 +147,16 @@ export async function POST(req: Request) {
     const icon = (me?.photos as string[] | null)?.[0] ?? null;
     if (w.session_id) {
       await pushToUsers([b.personId], {
-        title: "You both waved 👋",
-        body: `${firstName(me?.display_name)} waved back. Your chat is open, free. Say hi!`,
+        title: `${firstName(me?.display_name)} waved back`,
+        body: "You both waved, so your chat is now open.",
         url: `/masquerade/${w.session_id}`,
         tag: `masked-${w.session_id}`,
         icon,
       });
     } else {
       await pushToUsers([b.personId], {
-        title: `${firstName(me?.display_name)} waved at you 👋`,
-        body: "Wave back and a chat opens, free.",
+        title: `${firstName(me?.display_name)} waved at you`,
+        body: "Wave back to open a free chat.",
         url: "/home?views=1",
         tag: `wave-${uid}`,
         icon,
@@ -170,10 +170,10 @@ export async function POST(req: Request) {
     const { data: g } = await db.from("games").select("id, kind, player_a, player_b, play, created_at").eq("id", b.gameId).maybeSingle();
     if (!g || !g.play || g.player_b !== uid || Date.now() - new Date(g.created_at as string).getTime() > RECENT_MS) return ok;
     const { data: me } = await db.from("profiles").select("display_name, photos").eq("id", uid).single();
-    const title = ({ whot: "Whot", ayo: "Ayo", ludo: "Ludo", snakes: "Snakes & Ladders" } as Record<string, string>)[g.kind as string] ?? "a game";
+    const title = ({ whot: "Whot", ayo: "Ayo", ludo: "Ludo", snakes: "Snakes & Ladders", xo: "X & O", lastcard: "Last Card" } as Record<string, string>)[g.kind as string] ?? "a game";
     await pushToUsers([g.player_a as string], {
-      title: `Game on! 🎲 ${title}`,
-      body: `You're playing ${firstName(me?.display_name as string | null)}. Your move first.`,
+      title: `${title} with ${firstName(me?.display_name as string | null)} has started`,
+      body: "It's your move.",
       url: `/home?game=${g.id}`,
       tag: `play-${g.id}`,
       icon: (me?.photos as string[] | null)?.[0] ?? null,
@@ -186,8 +186,8 @@ export async function POST(req: Request) {
     const { data: s } = await db.from("masquerade_sessions").select("id, user_a, user_b, alias_a, source, status, started_at").eq("id", b.sessionId).maybeSingle();
     if (!s || s.user_a !== uid || s.source !== "explore" || s.status !== "active" || Date.now() - new Date(s.started_at as string).getTime() > RECENT_MS) return ok;
     await pushToUsers([s.user_b as string], {
-      title: `${s.alias_a} wants to chat 🎭`,
-      body: "They found you on Meet and can see who you are. You can’t see them until you both unmask.",
+      title: `New masked chat from ${s.alias_a}`,
+      body: "They found you on Meet. You'll see who they are if you both unmask.",
       url: `/masquerade/${s.id}`,
       tag: `masked-${s.id}`,
     });
@@ -209,7 +209,7 @@ export async function POST(req: Request) {
     if (!msg || Date.now() - new Date(msg.created_at as string).getTime() > RECENT_MS) return ok;
     await pushToUsers(
       [(s.user_a === uid ? s.user_b : s.user_a) as string],
-      { title: `${await senderLabel(db, s, uid, (s.user_a === uid ? s.alias_a : s.alias_b) as string)} 🎭`, body: preview(msg.kind === "sticker" || msg.kind === "scribble" || msg.kind === "draw" ? (msg.kind as string) : "text", msg.body as string), url: `/masquerade/${s.id}`, tag: `masked-${s.id}` },
+      { title: await senderLabel(db, s, uid, (s.user_a === uid ? s.alias_a : s.alias_b) as string), body: preview(msg.kind === "sticker" || msg.kind === "scribble" || msg.kind === "draw" ? (msg.kind as string) : "text", msg.body as string), url: `/masquerade/${s.id}`, tag: `masked-${s.id}` },
       { skipIfActive: true },
     );
     return ok;
@@ -222,8 +222,8 @@ export async function POST(req: Request) {
     const other = s.user_a === uid ? s.user_b : s.user_a;
     const alias = s.user_a === uid ? s.alias_a : s.alias_b;
     await pushToUsers([other as string], {
-      title: `${alias} reopened your chat 🎭`,
-      body: "They want to pick up where you left off. Still masked, until you both decide.",
+      title: `${alias} reopened your masked chat`,
+      body: "You can carry on where you left off. You both stay masked.",
       url: `/masquerade/${s.id}`,
       tag: `pair-${s.id}`,
     });
@@ -237,8 +237,8 @@ export async function POST(req: Request) {
     const { data: m } = await db.from("meet_posts").select("kind, game").eq("id", s.meet_id).single();
     const title = ({ truths: "Two Truths & a Lie", tot: "This or That", c4: "Connect 4", words: "Word Hunt" } as Record<string, string>)[(m?.game as string) ?? ""];
     await pushToUsers([s.user_a as string], {
-      title: `${s.alias_b} wants to meet you 🎭`,
-      body: m?.kind === "game" && title ? `They're in line to play ${title}. Still masked, until you both decide.` : "They opened a masked chat from your post. Say hi.",
+      title: `${s.alias_b} replied to your Meet post`,
+      body: m?.kind === "game" && title ? `They want to play ${title}. You both stay masked.` : "They started a masked chat from your post.",
       url: `/masquerade/${s.id}`,
       tag: `meet-${s.id}`,
     });
@@ -254,7 +254,7 @@ export async function POST(req: Request) {
       .maybeSingle();
     if (!g || g.player_a !== uid || g.status !== "invited" || Date.now() - new Date(g.created_at as string).getTime() > 30_000) return ok;
     const title =
-      ({ truths: "Two Truths & a Lie", tot: "This or That", c4: "Connect 4", words: "Word Hunt", whot: "Whot", checkers: "Checkers", chess: "Chess", ayo: "Ayo", bomb: "Bombshell", gems: "Gem Clash", ludo: "Ludo", snakes: "Snakes & Ladders" } as Record<string, string>)[g.kind as string] ?? "a game";
+      ({ truths: "Two Truths & a Lie", tot: "This or That", c4: "Connect 4", words: "Word Hunt", whot: "Whot", checkers: "Checkers", chess: "Chess", ayo: "Ayo", bomb: "Bombshell", gems: "Gem Clash", ludo: "Ludo", snakes: "Snakes & Ladders", xo: "X & O", lastcard: "Last Card" } as Record<string, string>)[g.kind as string] ?? "a game";
     let who = "Someone";
     let url = "/home";
     let icon: string | null = null;
@@ -270,8 +270,8 @@ export async function POST(req: Request) {
       url = g.match_id ? `/matches/${g.match_id}` : `/home?game=${g.id}`;
     }
     await pushToUsers([g.player_b as string], {
-      title: `${who} challenged you 🎮`,
-      body: `${title}. You have 30 seconds to accept.`,
+      title: `${who} invited you to play ${title}`,
+      body: "The invite lasts 30 seconds.",
       url,
       tag: `game-${g.id}`,
       icon,
@@ -339,8 +339,8 @@ export async function POST(req: Request) {
       db.from("masquerade_events").select("title").eq("id", c.event_id).single(),
     ]);
     await pushToUsers([other as string], {
-      title: "You clicked!",
-      body: `You and ${firstName(me?.display_name)} both kept your chat from ${e?.title ?? "the event"}. Say hello.`,
+      title: `You matched with ${firstName(me?.display_name)}`,
+      body: `You both kept your chat from ${e?.title ?? "the event"}.`,
       url: `/matches/${c.match_id}`,
       tag: `match-${c.match_id}`,
       icon: (me?.photos as string[] | null)?.[0] ?? null,
@@ -391,8 +391,8 @@ export async function POST(req: Request) {
     const other = c.user_a === uid ? c.user_b : c.user_a;
     const { data: me } = await db.from("profiles").select("display_name, photos").eq("id", uid).single();
     await pushToUsers([other as string], {
-      title: "You clicked!",
-      body: `You and ${firstName(me?.display_name)} both kept your chat from the Feed. Masks off, say hello.`,
+      title: `You matched with ${firstName(me?.display_name)}`,
+      body: "You both kept your chat from the Feed.",
       url: `/matches/${c.match_id}`,
       tag: `match-${c.match_id}`,
       icon: (me?.photos as string[] | null)?.[0] ?? null,
@@ -414,8 +414,8 @@ export async function POST(req: Request) {
     const { data: me } = await db.from("profiles").select("display_name, photos").eq("id", uid).single();
     const gift = GIFTS.find((x) => x.id === g.gift_id);
     await pushToUsers([g.to_user as string], {
-      title: `${firstName(me?.display_name)} sent you ${gift ? `a ${gift.name.toLowerCase()} ${gift.emoji}` : "a gift"}`,
-      body: "They loved your answer on the Feed. Chat back for free.",
+      title: `${firstName(me?.display_name)} sent you ${gift ? `a ${gift.name.toLowerCase()}` : "a gift"}`,
+      body: "For your answer on the Feed. You can reply for free.",
       url: "/feed",
       tag: `feed-gift-${g.id}`,
       icon: (me?.photos as string[] | null)?.[0] ?? null,

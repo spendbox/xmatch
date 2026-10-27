@@ -34,8 +34,8 @@ export type PlayStatus = {
   server_now: string;
 };
 
-const TITLES: Record<string, string> = { whot: "Whot", ayo: "Ayo", ludo: "Ludo", snakes: "Snakes & Ladders" };
-const REEL: GameKind[] = ["whot", "ludo", "ayo", "snakes"];
+const TITLES: Record<string, string> = { whot: "Whot", ayo: "Ayo", ludo: "Ludo", snakes: "Snakes & Ladders", xo: "X & O", lastcard: "Last Card" };
+const REEL: GameKind[] = ["whot", "lastcard", "ludo", "xo", "ayo", "snakes"];
 const ROW = 150;
 
 /**

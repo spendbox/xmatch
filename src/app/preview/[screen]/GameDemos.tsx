@@ -24,9 +24,19 @@ const act: GameActions = {
 
 const QS = [
   { id: 1, q: "Pick one forever", a: "Jollof rice", b: "Fried rice" },
-  { id: 2, q: "Morning person or night owl?", a: "Up with the sun", b: "Up till 3am" },
+  {
+    id: 2,
+    q: "Morning person or night owl?",
+    a: "Up with the sun",
+    b: "Up till 3am",
+  },
   { id: 3, q: "Texting style", a: "Long paragraphs", b: "Voice notes" },
-  { id: 4, q: "Perfect Saturday night?", a: "Owambe till 4am", b: "Netflix and suya" },
+  {
+    id: 4,
+    q: "Perfect Saturday night?",
+    a: "Owambe till 4am",
+    b: "Netflix and suya",
+  },
   { id: 5, q: "Pets", a: "Dogs", b: "Cats" },
   { id: 6, q: "Afrobeats or Amapiano?", a: "Afrobeats", b: "Amapiano" },
   { id: 7, q: "Pick a drink", a: "Chapman", b: "Zobo" },
@@ -72,43 +82,159 @@ function demo(screen: string): Game | null {
   if (mkt !== undefined)
     return base({
       kind: "whot",
-      state: { top: "circle:7", called: null, turn: "a", count_a: 6, count_b: 4, market: Number(mkt), last: { by: "b", card: "circle:7", note: "" }, moves: 9 },
-      mine: { hand: ["circle:2", "star:7", "whot:20", "square:11", "triangle:4", "cross:13"] },
+      state: {
+        top: "circle:7",
+        called: null,
+        turn: "a",
+        count_a: 6,
+        count_b: 4,
+        market: Number(mkt),
+        last: { by: "b", card: "circle:7", note: "" },
+        moves: 9,
+      },
+      mine: {
+        hand: [
+          "circle:2",
+          "star:7",
+          "whot:20",
+          "square:11",
+          "triangle:4",
+          "cross:13",
+        ],
+      },
     });
   // A "Play again" challenge that was cancelled before it started (nothing on the board yet)
-  const cancelled = screen.match(/^game-(snakes|ludo|ayo|whot)-unstarted$/)?.[1];
-  if (cancelled) return base({ kind: cancelled as never, status: "cancelled", state: {}, started_at: null, ended_at: at(-1) });
-  const [, kind, popName] = screen.match(/^game-(ludo|snakes|whot)(?:-(\w+))?$/) ?? [];
+  const cancelled = screen.match(
+    /^game-(snakes|ludo|ayo|whot)-unstarted$/,
+  )?.[1];
+  if (cancelled)
+    return base({
+      kind: cancelled as never,
+      status: "cancelled",
+      state: {},
+      started_at: null,
+      ended_at: at(-1),
+    });
+  const [, kind, popName] =
+    screen.match(/^game-(ludo|snakes|whot)(?:-(\w+))?$/) ?? [];
   // "-live": played through the same rules the server uses, as in a real game
-  if (kind === "ludo" && popName === "live") return base({ kind: "ludo", started_at: at(-60), state: ludo.newLudo() as never });
-  if (kind === "snakes" && popName === "live") return base({ kind: "snakes", started_at: at(-60), state: snakes.newSnakes() as never });
+  if (kind === "ludo" && popName === "live")
+    return base({
+      kind: "ludo",
+      started_at: at(-60),
+      state: ludo.newLudo() as never,
+    });
+  if (kind === "snakes" && popName === "live")
+    return base({
+      kind: "snakes",
+      started_at: at(-60),
+      state: snakes.newSnakes() as never,
+    });
   if (kind === "ludo")
     return base({
       kind: "ludo",
-      state: { demo: true, demo_pop: popName, tokens: { a: [-1, 7, 20, 56], b: [-1, -1, 31, 12] }, turn: "a", roll: null, moves: 6, last: null },
+      state: {
+        demo: true,
+        demo_pop: popName,
+        tokens: { a: [-1, 7, 20, 56], b: [-1, -1, 31, 12] },
+        turn: "a",
+        roll: null,
+        moves: 6,
+        last: null,
+      },
     });
-  if (kind === "snakes") return base({ kind: "snakes", state: { demo: true, demo_pop: popName, pos: { a: 58, b: 47 }, turn: "a", moves: 8, last: null } });
+  if (kind === "snakes")
+    return base({
+      kind: "snakes",
+      state: {
+        demo: true,
+        demo_pop: popName,
+        pos: { a: 58, b: 47 },
+        turn: "a",
+        moves: 8,
+        last: null,
+      },
+    });
   if (kind === "whot" && popName)
     return base({
       kind: "whot",
-      state: { demo_pop: popName, top: "circle:7", called: null, turn: "a", count_a: 6, count_b: 4, market: 33, last: { by: "b", card: "circle:7", note: "" }, moves: 9 },
-      mine: { hand: ["circle:2", "star:7", "whot:20", "square:11", "triangle:4", "cross:13"] },
+      state: {
+        demo_pop: popName,
+        top: "circle:7",
+        called: null,
+        turn: "a",
+        count_a: 6,
+        count_b: 4,
+        market: 33,
+        last: { by: "b", card: "circle:7", note: "" },
+        moves: 9,
+      },
+      mine: {
+        hand: [
+          "circle:2",
+          "star:7",
+          "whot:20",
+          "square:11",
+          "triangle:4",
+          "cross:13",
+        ],
+      },
     });
   switch (screen) {
     case "game-challenge":
-      return base({ status: "invited", me: "b", deadline_at: at(24), started_at: null, record: { played: 1, won: 1, lost: 0, alike: null } });
-    case "game-vs":
-      return base({ started_at: at(2.4), deadline_at: at(22), state: { board: ".".repeat(42), turn: "a", round: 1, wins: { a: 0, b: 0 }, moves: 0 } });
-    case "game-c4": {
-      const rows = [".......", ".......", "...b...", "..aa...", "..bab..", ".babaa."];
       return base({
-        state: { board: rows.join(""), turn: "a", round: 3, wins: { a: 1, b: 1 }, starter: "a", last: 2 * 7 + 3, moves: 11, auto_a: 0, auto_b: 0 },
+        status: "invited",
+        me: "b",
+        deadline_at: at(24),
+        started_at: null,
+        record: { played: 1, won: 1, lost: 0, alike: null },
+      });
+    case "game-vs":
+      return base({
+        started_at: at(2.4),
+        deadline_at: at(22),
+        state: {
+          board: ".".repeat(42),
+          turn: "a",
+          round: 1,
+          wins: { a: 0, b: 0 },
+          moves: 0,
+        },
+      });
+    case "game-c4": {
+      const rows = [
+        ".......",
+        ".......",
+        "...b...",
+        "..aa...",
+        "..bab..",
+        ".babaa.",
+      ];
+      return base({
+        state: {
+          board: rows.join(""),
+          turn: "a",
+          round: 3,
+          wins: { a: 1, b: 1 },
+          starter: "a",
+          last: 2 * 7 + 3,
+          moves: 11,
+          auto_a: 0,
+          auto_b: 0,
+        },
         score_a: 1,
         score_b: 1,
       });
     }
     case "game-c4-win": {
-      const rows = [".......", ".......", "...a...", "..ab...", "..bab..", ".baaab."];
+      const rows = [
+        ".......",
+        ".......",
+        "...a...",
+        "..ab...",
+        "..bab..",
+        ".baaab.",
+      ];
       const line = [2 * 7 + 3, 3 * 7 + 2, 4 * 7 + 1, 5 * 7 + 0];
       const board = rows.join("").split("");
       board[5 * 7 + 0] = "a";
@@ -130,14 +256,34 @@ function demo(screen: string): Game | null {
       return base({
         kind: "tot",
         deadline_at: at(5),
-        state: { qs: QS, i: 3, picks: [["a", "a"], ["b", "a"], ["a", "a"]], alike: 2 },
+        state: {
+          qs: QS,
+          i: 3,
+          picks: [
+            ["a", "a"],
+            ["b", "a"],
+            ["a", "a"],
+          ],
+          alike: 2,
+        },
         mine: {},
       });
     case "game-tot-same":
       return base({
         kind: "tot",
         deadline_at: at(10),
-        state: { qs: QS, i: 4, picks: [["a", "a"], ["b", "b"], ["a", "a"], ["a", "a"]], alike: 4, reveal_until: at(30) },
+        state: {
+          qs: QS,
+          i: 4,
+          picks: [
+            ["a", "a"],
+            ["b", "b"],
+            ["a", "a"],
+            ["a", "a"],
+          ],
+          alike: 4,
+          reveal_until: at(30),
+        },
       });
     case "game-truths-write":
       return base({
@@ -146,7 +292,11 @@ function demo(screen: string): Game | null {
         state: { phase: "write", ready_b: false },
         mine: {
           draft: {
-            lines: ["I've been on stage with Burna Boy", "I can't swim, at all", ""],
+            lines: [
+              "I've been on stage with Burna Boy",
+              "I can't swim, at all",
+              "",
+            ],
             lie: 1,
             saved: [
               { id: 1, body: "I've been on stage with Burna Boy", uses: 3 },
@@ -154,7 +304,12 @@ function demo(screen: string): Game | null {
               { id: 3, body: "I've never eaten amala", uses: 1 },
               { id: 4, body: "I won a dance competition in JSS2", uses: 1 },
             ],
-            things: ["My comfort food is jollof rice", "On repeat right now: Asake", "My football team: Arsenal", "I'm secretly good at cooking"],
+            things: [
+              "My comfort food is jollof rice",
+              "On repeat right now: Asake",
+              "My football team: Arsenal",
+              "I'm secretly good at cooking",
+            ],
           },
         },
       });
@@ -164,7 +319,11 @@ function demo(screen: string): Game | null {
         deadline_at: at(31),
         state: {
           phase: "guess",
-          lines_b: ["I once ate 3 plates of jollof at a wedding", "I have a twin brother", "I learnt to code from YouTube"],
+          lines_b: [
+            "I once ate 3 plates of jollof at a wedding",
+            "I have a twin brother",
+            "I learnt to code from YouTube",
+          ],
           guessed_b: false,
         },
         mine: { guess: 1 },
@@ -180,7 +339,11 @@ function demo(screen: string): Game | null {
         state: {
           phase: "reveal",
           lines_a: ["I speak French", "I hate rice", "I met Davido"],
-          lines_b: ["I once ate 3 plates of jollof at a wedding", "I have a twin brother", "I learnt to code from YouTube"],
+          lines_b: [
+            "I once ate 3 plates of jollof at a wedding",
+            "I have a twin brother",
+            "I learnt to code from YouTube",
+          ],
           lie_a: 2,
           lie_b: 1,
           guess_a: 1,
@@ -190,20 +353,144 @@ function demo(screen: string): Game | null {
     case "game-bighand":
       return base({
         kind: "whot",
-        state: { top: "circle:7", called: null, turn: "a", count_a: 16, count_b: 4, market: 20, last: { by: "b", card: "circle:7", note: "" }, moves: 19 },
-        mine: { hand: ["circle:2", "star:7", "whot:20", "square:11", "triangle:4", "cross:13", "circle:1", "star:3", "square:5", "triangle:8", "cross:2", "circle:12", "star:14", "square:1", "triangle:10", "circle:4"] },
+        state: {
+          top: "circle:7",
+          called: null,
+          turn: "a",
+          count_a: 16,
+          count_b: 4,
+          market: 20,
+          last: { by: "b", card: "circle:7", note: "" },
+          moves: 19,
+        },
+        mine: {
+          hand: [
+            "circle:2",
+            "star:7",
+            "whot:20",
+            "square:11",
+            "triangle:4",
+            "cross:13",
+            "circle:1",
+            "star:3",
+            "square:5",
+            "triangle:8",
+            "cross:2",
+            "circle:12",
+            "star:14",
+            "square:1",
+            "triangle:10",
+            "circle:4",
+          ],
+        },
       });
+    case "game-xo":
+      return base({
+        kind: "xo",
+        state: {
+          board: "ab.b.a...",
+          order: { a: [5, 0], b: [3, 1] },
+          turn: "a",
+          round: 3,
+          wins: { a: 1, b: 1 },
+          starter: "a",
+          rounds: ["a", "b"],
+          last: { by: "b", cell: 1 },
+          moves: 4,
+        },
+      });
+    case "game-xo-full":
+      return base({
+        kind: "xo",
+        state: {
+          board: "ab.ba..b.",
+          order: { a: [0, 4], b: [3, 1, 7] },
+          turn: "a",
+          round: 2,
+          wins: { a: 1, b: 0 },
+          starter: "b",
+          rounds: ["a"],
+          last: { by: "b", cell: 7 },
+          moves: 5,
+        },
+      });
+    case "game-lastcard":
+    case "game-lastcard-plus4":
+    case "game-lastcard-catch":
+    case "game-lastcard-two": {
+      const v = screen.replace("game-lastcard", "");
+      const pend = v === "-plus4";
+      return base({
+        kind: "lastcard",
+        state: {
+          top: pend ? "w:+4" : "g:7",
+          colour: pend ? "y" : "g",
+          pending: pend ? 4 : 0,
+          stack: pend ? "+4" : null,
+          turn: "a",
+          count_a: v === "-two" ? 2 : 7,
+          count_b: v === "-catch" ? 1 : 5,
+          deck: 71,
+          drew: false,
+          exposed: v === "-catch" ? "b" : null,
+          last: { by: "b", card: pend ? "w:+4" : "g:7", note: "" },
+          moves: 9,
+          ...(pend ? { demo_pop: "plus4" } : {}),
+        },
+        mine: {
+          hand:
+            v === "-two"
+              ? ["g:skip", "r:4"]
+              : ["g:2", "r:7", "w:wild", "b:+2", "y:skip", "w:+4", "g:rev"],
+        },
+      });
+    }
     case "game-whot":
       return base({
         kind: "whot",
-        state: { top: "circle:7", called: null, turn: "a", count_a: 6, count_b: 4, market: 33, last: { by: "b", card: "circle:7", note: "" }, moves: 9 },
-        mine: { hand: ["circle:2", "star:7", "whot:20", "square:11", "triangle:4", "cross:13"] },
+        state: {
+          top: "circle:7",
+          called: null,
+          turn: "a",
+          count_a: 6,
+          count_b: 4,
+          market: 33,
+          last: { by: "b", card: "circle:7", note: "" },
+          moves: 9,
+        },
+        mine: {
+          hand: [
+            "circle:2",
+            "star:7",
+            "whot:20",
+            "square:11",
+            "triangle:4",
+            "cross:13",
+          ],
+        },
       });
     case "game-checkers": {
-      const rows = [".b.b.b.b", "b.b...b.", ".....b.b", "..b.....", ".a...a..", "a...a...", ".a.a.a.a", "a.A.a.a."];
+      const rows = [
+        ".b.b.b.b",
+        "b.b...b.",
+        ".....b.b",
+        "..b.....",
+        ".a...a..",
+        "a...a...",
+        ".a.a.a.a",
+        "a.A.a.a.",
+      ];
       return base({
         kind: "checkers",
-        state: { board: rows.join(""), turn: "a", chain: null, quiet: 3, captured: { a: 2, b: 1 }, last: { from: 19, to: 26, took: [] }, moves: 14 },
+        state: {
+          board: rows.join(""),
+          turn: "a",
+          chain: null,
+          quiet: 3,
+          captured: { a: 2, b: 1 },
+          last: { from: 19, to: 26, took: [] },
+          moves: 14,
+        },
       });
     }
     case "game-chess":
@@ -222,7 +509,13 @@ function demo(screen: string): Game | null {
     case "game-ayo":
       return base({
         kind: "ayo",
-        state: { pits: [5, 0, 7, 3, 1, 6, 2, 4, 0, 5, 1, 3], store: { a: 6, b: 5 }, turn: "a", last: { pit: 9, end: 2, captured: [] }, moves: 12 },
+        state: {
+          pits: [5, 0, 7, 3, 1, 6, 2, 4, 0, 5, 1, 3],
+          store: { a: 6, b: 5 },
+          turn: "a",
+          last: { pit: 9, end: 2, captured: [] },
+          moves: 12,
+        },
       });
     case "game-words":
       return base({
@@ -231,12 +524,32 @@ function demo(screen: string): Game | null {
         score_a: 2400,
         score_b: 1800,
         state: { board: "SRTAVIBEAREBNEST", count_a: 6, count_b: 7 },
-        mine: { words: ["BEAR", "RATE", "BRAVEST", "TEAR", "STAR", "NEST"], demo_path: [4, 5, 6, 7] },
+        mine: {
+          words: ["BEAR", "RATE", "BRAVEST", "TEAR", "STAR", "NEST"],
+          demo_path: [4, 5, 6, 7],
+        },
       });
     case "game-results":
-      return base({ status: "done", ended_at: at(-30), deadline_at: null, winner: "me", score_a: 2, score_b: 1, record: { played: 3, won: 2, lost: 1, alike: 80 } });
+      return base({
+        status: "done",
+        ended_at: at(-30),
+        deadline_at: null,
+        winner: "me",
+        score_a: 2,
+        score_b: 1,
+        record: { played: 3, won: 2, lost: 1, alike: 80 },
+      });
     case "game-results-tot":
-      return base({ kind: "tot", status: "done", ended_at: at(-30), deadline_at: null, score_a: 8, score_b: 8, state: { qs: QS, alike: 8, picks: [] }, record: { played: 1, won: 0, lost: 0, alike: 80 } });
+      return base({
+        kind: "tot",
+        status: "done",
+        ended_at: at(-30),
+        deadline_at: null,
+        score_a: 8,
+        score_b: 8,
+        state: { qs: QS, alike: 8, picks: [] },
+        record: { played: 1, won: 0, lost: 0, alike: 80 },
+      });
     case "game-bomb-hide":
       return base({ kind: "bomb", state: bombStart() });
     case "game-bomb":
@@ -266,7 +579,13 @@ function demo(screen: string): Game | null {
           wins: { a: 1, b: 0 },
           starter: "b",
           ready_b: true,
-          result: { round: 1, winner: "a", why: "clear", bombs: { a: [0, 4, 8], b: [1, 3, 7] }, open: { a: "x.s.x..s.", b: "sx.xs.s.s" } },
+          result: {
+            round: 1,
+            winner: "a",
+            why: "clear",
+            bombs: { a: [0, 4, 8], b: [1, 3, 7] },
+            open: { a: "x.s.x..s.", b: "sx.xs.s.s" },
+          },
           moves: 12,
         },
       });
@@ -276,7 +595,18 @@ function demo(screen: string): Game | null {
       board[18] = "rv";
       board[31] = "*";
       board[38] = "gx";
-      return base({ kind: "gems", state: { board, turn: "a", left: 2, done: { a: 2, b: 2 }, points: { a: 1240, b: 980 }, last: null, moves: 8 } });
+      return base({
+        kind: "gems",
+        state: {
+          board,
+          turn: "a",
+          left: 2,
+          done: { a: 2, b: 2 },
+          points: { a: 1240, b: 980 },
+          last: null,
+          moves: 8,
+        },
+      });
     }
     default:
       return null;
@@ -307,7 +637,10 @@ function useLocalGame(initial: Game | null) {
   const [game, setGame] = useState(initial);
   const ref = useRef(game);
   ref.current = game;
-  const secrets = useRef<Record<"a" | "b", number[]>>({ a: (initial?.mine?.bombs as number[]) ?? [], b: [1, 3, 7] });
+  const secrets = useRef<Record<"a" | "b", number[]>>({
+    a: (initial?.mine?.bombs as number[]) ?? [],
+    b: [1, 3, 7],
+  });
 
   function apply(side: "a" | "b", mv: unknown): string | null {
     const g = ref.current;
@@ -316,15 +649,48 @@ function useLocalGame(initial: Game | null) {
       const dice = () => 1 + Math.floor(Math.random() * 6);
       const r =
         g.kind === "ludo"
-          ? ludo.applyMove(g.state as unknown as ludo.LudoState, side, mv as ludo.LudoMove, dice)
+          ? ludo.applyMove(
+              g.state as unknown as ludo.LudoState,
+              side,
+              mv as ludo.LudoMove,
+              dice,
+            )
           : g.kind === "snakes"
-            ? snakes.applyMove(g.state as unknown as snakes.SnakesState, side, mv as snakes.SnakesMove, dice)
+            ? snakes.applyMove(
+                g.state as unknown as snakes.SnakesState,
+                side,
+                mv as snakes.SnakesMove,
+                dice,
+              )
             : g.kind === "gems"
-          ? gems.applyMove(g.state as gems.GemsState, side, mv as gems.GemsMove)
-          : bomb.applyMove(g.state as bomb.BombState, side, mv as bomb.BombMove, secrets.current);
-      if (r.secrets) for (const s of ["a", "b"] as const) if (r.secrets[s]) secrets.current[s] = (r.secrets[s] as bomb.BombSecret).bombs;
-      const next: Game = { ...g, state: r.state as never, mine: { bombs: secrets.current.a } };
-      if (r.over) Object.assign(next, { status: "done", ended_at: new Date().toISOString(), score_a: r.over.score_a, score_b: r.over.score_b, winner: r.over.winner === "a" ? "me" : r.over.winner ? "ada" : null });
+              ? gems.applyMove(
+                  g.state as gems.GemsState,
+                  side,
+                  mv as gems.GemsMove,
+                )
+              : bomb.applyMove(
+                  g.state as bomb.BombState,
+                  side,
+                  mv as bomb.BombMove,
+                  secrets.current,
+                );
+      if (r.secrets)
+        for (const s of ["a", "b"] as const)
+          if (r.secrets[s])
+            secrets.current[s] = (r.secrets[s] as bomb.BombSecret).bombs;
+      const next: Game = {
+        ...g,
+        state: r.state as never,
+        mine: { bombs: secrets.current.a },
+      };
+      if (r.over)
+        Object.assign(next, {
+          status: "done",
+          ended_at: new Date().toISOString(),
+          score_a: r.over.score_a,
+          score_b: r.over.score_b,
+          winner: r.over.winner === "a" ? "me" : r.over.winner ? "ada" : null,
+        });
       ref.current = next;
       setGame(next);
       return null;
@@ -338,30 +704,61 @@ function useLocalGame(initial: Game | null) {
   const st = game?.state;
   useEffect(() => {
     const g = ref.current;
-    if (!g || g.status !== "active" || !["gems", "bomb", "ludo", "snakes"].includes(g.kind)) return;
-    const t = setTimeout(() => {
-      const s = ref.current!.state;
-      if (g.kind === "ludo" || g.kind === "snakes") {
-        const st = s as unknown as ludo.LudoState;
-        if (st.turn !== "b") return;
-        if (g.kind === "snakes" || st.roll == null) apply("b", { type: "roll" });
-        else apply("b", { type: "move", token: ludo.pick(st, "b") });
-      } else if (g.kind === "bomb") {
-        const b = s as bomb.BombState;
-        if (b.phase === "hide" && !b.ready_b) apply("b", { type: "hide", cells: [0, 1, 2, 3, 4, 5, 6, 7, 8].sort(() => Math.random() - 0.5).slice(0, 3) });
-        else if (b.phase === "play" && b.turn === "b") {
-          const free = [...b.open_a].flatMap((c, i) => (c === "." ? [i] : []));
-          apply("b", { type: "pick", cell: free[Math.floor(Math.random() * free.length)] });
+    if (
+      !g ||
+      g.status !== "active" ||
+      !["gems", "bomb", "ludo", "snakes"].includes(g.kind)
+    )
+      return;
+    const t = setTimeout(
+      () => {
+        const s = ref.current!.state;
+        if (g.kind === "ludo" || g.kind === "snakes") {
+          const st = s as unknown as ludo.LudoState;
+          if (st.turn !== "b") return;
+          if (g.kind === "snakes" || st.roll == null)
+            apply("b", { type: "roll" });
+          else apply("b", { type: "move", token: ludo.pick(st, "b") });
+        } else if (g.kind === "bomb") {
+          const b = s as bomb.BombState;
+          if (b.phase === "hide" && !b.ready_b)
+            apply("b", {
+              type: "hide",
+              cells: [0, 1, 2, 3, 4, 5, 6, 7, 8]
+                .sort(() => Math.random() - 0.5)
+                .slice(0, 3),
+            });
+          else if (b.phase === "play" && b.turn === "b") {
+            const free = [...b.open_a].flatMap((c, i) =>
+              c === "." ? [i] : [],
+            );
+            apply("b", {
+              type: "pick",
+              cell: free[Math.floor(Math.random() * free.length)],
+            });
+          }
+        } else {
+          const gs = s as gems.GemsState;
+          if (gs.turn !== "b") return;
+          const opts: [number, number][] = [];
+          for (let i = 0; i < gems.N; i++)
+            for (const j of [i + 1, i + gems.SIZE])
+              if (
+                j < gems.N &&
+                (j !== i + 1 || i % gems.SIZE < gems.SIZE - 1) &&
+                gems.swapWorks(gs.board, i, j)
+              )
+                opts.push([i, j]);
+          const [a, b] = opts[Math.floor(Math.random() * opts.length)];
+          apply("b", { type: "swap", a, b });
         }
-      } else {
-        const gs = s as gems.GemsState;
-        if (gs.turn !== "b") return;
-        const opts: [number, number][] = [];
-        for (let i = 0; i < gems.N; i++) for (const j of [i + 1, i + gems.SIZE]) if (j < gems.N && (j !== i + 1 || i % gems.SIZE < gems.SIZE - 1) && gems.swapWorks(gs.board, i, j)) opts.push([i, j]);
-        const [a, b] = opts[Math.floor(Math.random() * opts.length)];
-        apply("b", { type: "swap", a, b });
-      }
-    }, game?.kind === "gems" ? 2600 : game?.kind === "ludo" || game?.kind === "snakes" ? 2200 : 1400);
+      },
+      game?.kind === "gems"
+        ? 2600
+        : game?.kind === "ludo" || game?.kind === "snakes"
+          ? 2200
+          : 1400,
+    );
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [st]);
@@ -379,33 +776,91 @@ function PlayDemo({ screen }: { screen: string }) {
   const initial = useMemo(() => {
     const g = demo("game-ludo-live");
     if (!g) return null;
-    const base = { ...g, play: true, session_id: null, match_id: null, started_at: new Date(Date.now() - 60_000).toISOString() };
+    const base = {
+      ...g,
+      play: true,
+      session_id: null,
+      match_id: null,
+      started_at: new Date(Date.now() - 60_000).toISOString(),
+    };
     // The end of a game: you won
     if (screen === "game-play-results")
-      return { ...base, status: "done" as const, winner: base.player_a, score_a: 4, score_b: 2, ended_at: new Date(Date.now() - 10_000).toISOString() };
+      return {
+        ...base,
+        status: "done" as const,
+        winner: base.player_a,
+        score_a: 4,
+        score_b: 2,
+        ended_at: new Date(Date.now() - 10_000).toISOString(),
+      };
     // A game nobody moved in: it timed out before it really started
     if (screen === "game-play-timeout")
-      return { ...base, status: "cancelled" as const, ended_reason: "timeout", ended_at: new Date(Date.now() - 10_000).toISOString() };
+      return {
+        ...base,
+        status: "cancelled" as const,
+        ended_reason: "timeout",
+        ended_at: new Date(Date.now() - 10_000).toISOString(),
+      };
     // A "Play again" invite that ran out, or that they turned down
     if (screen === "game-play-expired" || screen === "game-play-declined")
-      return { ...base, status: (screen === "game-play-expired" ? "expired" : "declined") as never, started_at: null, state: {}, ended_at: new Date(Date.now() - 10_000).toISOString() };
+      return {
+        ...base,
+        status: (screen === "game-play-expired"
+          ? "expired"
+          : "declined") as never,
+        started_at: null,
+        state: {},
+        ended_at: new Date(Date.now() - 10_000).toISOString(),
+      };
     if (screen === "game-play-expired-b")
-      return { ...base, me: "b" as const, status: "expired" as never, started_at: null, state: {}, ended_at: new Date(Date.now() - 10_000).toISOString() };
+      return {
+        ...base,
+        me: "b" as const,
+        status: "expired" as never,
+        started_at: null,
+        state: {},
+        ended_at: new Date(Date.now() - 10_000).toISOString(),
+      };
     return base;
   }, [screen]);
   const live = useLocalGame(initial);
   const [personOpen, setPersonOpen] = useState(screen === "game-play-profile");
   const [matchId, setMatchId] = useState<string | null>(null);
   if (!live.game) return null;
-  const amaka = { id: "ada", name: "Amaka", age: 26, gender: "woman", photos: [face("#e5484d", "#f2b33d", "A"), face("#5b3fd9", "#1f9d6b", "A")], bio: "Ludo champion of my street since 2009. Looking for someone who can actually beat me.", interests: ["Afrobeats", "Food", "Travel"], place: "Yaba, Lagos", online: true, me_photo: face("#7b5cf0", "#f2b33d", "T"), match_id: matchId, cost: 15, balance: 120 };
+  const amaka = {
+    id: "ada",
+    name: "Amaka",
+    age: 26,
+    gender: "woman",
+    photos: [face("#e5484d", "#f2b33d", "A"), face("#5b3fd9", "#1f9d6b", "A")],
+    bio: "Ludo champion of my street since 2009. Looking for someone who can actually beat me.",
+    interests: ["Afrobeats", "Food", "Travel"],
+    place: "Yaba, Lagos",
+    online: true,
+    me_photo: face("#7b5cf0", "#f2b33d", "T"),
+    match_id: matchId,
+    cost: 15,
+    balance: 120,
+  };
   return (
     <GameArena
       game={live.game}
-      names={{ me: "You", them: "Amaka", mePhoto: amaka.me_photo, themPhoto: amaka.photos[0], onThem: () => setPersonOpen(true) }}
+      names={{
+        me: "You",
+        them: "Amaka",
+        mePhoto: amaka.me_photo,
+        themPhoto: amaka.photos[0],
+        onThem: () => setPersonOpen(true),
+      }}
       act={live.act}
       onMinimize={() => {}}
       onClose={() => {}}
-      chat={{ matchId, cost: 15, balance: 120, onStart: async () => (setMatchId("demo-match"), null) }}
+      chat={{
+        matchId,
+        cost: 15,
+        balance: 120,
+        onStart: async () => (setMatchId("demo-match"), null),
+      }}
       person={{ open: personOpen, setOpen: setPersonOpen, info: amaka }}
       results={{ onNew: () => {}, closeLabel: "Close" }}
       onGiftSend={async () => null}
@@ -425,7 +880,14 @@ function GameDemoInner({ screen }: { screen: string }) {
   if (screen === "game-launcher") {
     return (
       <div className="min-h-dvh bg-cream">
-        <GameLauncher open onClose={() => {}} them="Golden Owl" masked record={{ played: 1, won: 1, lost: 0 }} onPick={async () => null} />
+        <GameLauncher
+          open
+          onClose={() => {}}
+          them="Golden Owl"
+          masked
+          record={{ played: 1, won: 1, lost: 0 }}
+          onPick={async () => null}
+        />
       </div>
     );
   }
@@ -434,7 +896,9 @@ function GameDemoInner({ screen }: { screen: string }) {
     <GameArena
       game={game}
       names={names}
-      act={["bomb", "gems", "ludo", "snakes"].includes(game.kind) ? live.act : act}
+      act={
+        ["bomb", "gems", "ludo", "snakes"].includes(game.kind) ? live.act : act
+      }
       onMinimize={() => {}}
       onClose={() => {}}
       peek={screen === "game-c4" ? "you're not winning this one 😤" : null}

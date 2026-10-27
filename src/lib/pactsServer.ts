@@ -451,8 +451,8 @@ async function tellPage(pact: Pact, page: { user_id: string | null; email: strin
   const withMatch = page.filter((e) => e.user_id && e.matched).map((e) => e.user_id!);
   const without = page.filter((e) => e.user_id && !e.matched).map((e) => e.user_id!);
   const [a, b] = await Promise.all([
-    pushToUsers(withMatch, { title: `${pact.name}: you have a match ⭐`, body: "Out of everyone who answered, you two fit best. Tap to reveal who it is.", url: `/link/${pact.slug}`, tag: `pact-${pact.id}` }),
-    pushToUsers(without, { title: `${pact.name} has been revealed`, body: "No match for you this time. Meet new people on Dashpad every hour.", url: `/link/${pact.slug}`, tag: `pact-${pact.id}` }),
+    pushToUsers(withMatch, { title: `${pact.name}: results are in`, body: "You have a match. Open Dashpad to see who it is.", url: `/link/${pact.slug}`, tag: `pact-${pact.id}` }),
+    pushToUsers(without, { title: `${pact.name}: results are in`, body: "No match this time.", url: `/link/${pact.slug}`, tag: `pact-${pact.id}` }),
   ]);
   // People with an account but no phone notifications switched on get an email instead
   const accounts = page.filter((e) => e.user_id).map((e) => e.user_id!);
@@ -575,7 +575,7 @@ async function rematchPact(pact: Pact) {
     if (!got || got.done < 300) break;
     after = got.last;
   }
-  await pushToUsers(users, { title: `${pact.name}: you have a new match ⭐`, body: "Your first match didn't join, so we found you someone new. Tap to reveal them.", url: `/link/${pact.slug}`, tag: `pact-${pact.id}` });
+  await pushToUsers(users, { title: `${pact.name}: new match`, body: "Your first match didn't join, so you've been matched with someone else. Open Dashpad to see who.", url: `/link/${pact.slug}`, tag: `pact-${pact.id}` });
   return pairs.length;
 }
 

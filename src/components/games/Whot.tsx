@@ -101,7 +101,7 @@ export function Whot({ game, names, act }: { game: Game; names: Names; act: Game
   useEffect(() => {
     if (!ended || !game.winner) return;
     pops.show(
-      game.winner === me
+      game.winner === (me === "a" ? game.player_a : game.player_b)
         ? { title: "Check up!", sub: "You finished first", tone: "win", gift: `Good game. Send ${names.them} a gift` }
         : { title: "Check up!", sub: `${names.them} finished first`, tone: "bad", gift: "Say well played with a gift" },
     );

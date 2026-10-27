@@ -5,10 +5,10 @@ import { createClient } from "@/lib/supabase/client";
 import { notify } from "@/lib/pushClient";
 import { haptic } from "@/lib/haptics";
 
-export type GameKind = "truths" | "tot" | "c4" | "words" | "whot" | "checkers" | "chess" | "ayo" | "bomb" | "gems" | "ludo" | "snakes";
+export type GameKind = "truths" | "tot" | "c4" | "words" | "whot" | "checkers" | "chess" | "ayo" | "bomb" | "gems" | "ludo" | "snakes" | "xo" | "lastcard";
 
 /** Games whose moves go through the app's server (rules in src/lib/boardgames) */
-export const BOARD_GAMES: GameKind[] = ["whot", "checkers", "chess", "ayo", "bomb", "gems", "ludo", "snakes"];
+export const BOARD_GAMES: GameKind[] = ["whot", "checkers", "chess", "ayo", "bomb", "gems", "ludo", "snakes", "xo", "lastcard"];
 export type GameStatus = "invited" | "active" | "done" | "declined" | "expired" | "cancelled";
 export type Side = "a" | "b";
 
@@ -53,6 +53,24 @@ export const GAMES: {
   card: string;
   edge: string;
 }[] = [
+  {
+    kind: "lastcard",
+    title: "Last Card",
+    short: "Empty your hand first",
+    rules: ["Match the colour or number", "+2 and +4 stack", "Call “Last card!” or get caught"],
+    bg: "radial-gradient(120% 60% at 50% 0%, #b8263f 0%, #4f0d1c 60%, #1f050b 100%)",
+    card: "linear-gradient(160deg, #e5484d 0%, #8a1528 100%)",
+    edge: "#5a0d1a",
+  },
+  {
+    kind: "xo",
+    title: "X & O",
+    short: "Only 3 marks each",
+    rules: ["3 in a row wins the round", "Your 4th mark makes your oldest vanish", "First to 3 rounds"],
+    bg: "radial-gradient(120% 60% at 50% 0%, #1d6b8a 0%, #0c2f45 60%, #061624 100%)",
+    card: "linear-gradient(160deg, #2389b0 0%, #0f4560 100%)",
+    edge: "#0a3043",
+  },
   {
     kind: "bomb",
     title: "Bombshell",

@@ -7,14 +7,18 @@ import * as whot from "@/lib/boardgames/whot";
 import * as ayo from "@/lib/boardgames/ayo";
 import * as ludo from "@/lib/boardgames/ludo";
 import * as snakes from "@/lib/boardgames/snakes";
+import * as xo from "@/lib/boardgames/xo";
+import * as lastcard from "@/lib/boardgames/lastcard";
 
 /** Games you can practise against the computer */
-export const PRACTICE_GAMES: GameKind[] = ["whot", "ayo", "ludo", "snakes"];
+export const PRACTICE_GAMES: GameKind[] = ["whot", "ayo", "ludo", "snakes", "xo", "lastcard"];
 export const BOT = "computer";
 const ME = "me";
 const SPECIAL = [2, 5, 14, 8, 1];
 
-type Hidden = { hands: Record<Side, string[]>; deck: string[] };
+type Hidden = { hands: Record<Side, string[]>; deck: string[]; discard?: string[] };
+/** Games where each player has a hidden hand */
+const HANDS: GameKind[] = ["whot", "lastcard"];
 
 const shuffle = <T,>(a: T[]) => {
   const b = [...a];
@@ -40,7 +44,14 @@ function fresh(kind: GameKind): { game: Game; hidden: Hidden } {
     state = { top: deck[k], called: null, turn: "a", count_a: 5, count_b: 5, market: hidden.deck.length, last: null, moves: 0 };
   } else if (kind === "ayo") state = { pits: ayo.startPits(), store: { a: 0, b: 0 }, turn: "a", last: null, moves: 0 };
   else if (kind === "ludo") state = ludo.newLudo();
-  else state = snakes.newSnakes();
+  else if (kind === "xo") state = xo.newXO("a");
+  else if (kind === "lastcard") {
+    const d = lastcard.deal();
+    hidden.hands = d.hands;
+    hidden.deck = d.priv.deck;
+    hidden.discard = d.priv.discard;
+    state = d.state;
+  } else state = snakes.newSnakes();
   return {
     hidden,
     game: {
@@ -63,7 +74,7 @@ function fresh(kind: GameKind): { game: Game; hidden: Hidden } {
       ended_at: null,
       created_at: new Date(t).toISOString(),
       server_now: new Date(t).toISOString(),
-      mine: kind === "whot" ? { hand: hidden.hands.a } : {},
+      mine: HANDS.includes(kind) ? { hand: hidden.hands.a } : {},
       record: null,
     } as Game,
   };
@@ -97,6 +108,13 @@ function botMove(kind: GameKind, st: Record<string, unknown>, hidden: Hidden): u
     const s = st as unknown as ludo.LudoState;
     return s.roll == null ? { type: "roll" } : { type: "move", token: ludo.pick(s, "b") };
   }
+  if (kind === "xo") return xo.botMove(st as unknown as xo.XOState, "b");
+  if (kind === "lastcard") {
+    const s = st as unknown as lastcard.LastCardState;
+    // You forgot to call "Last card!": the computer usually notices
+    if (s.exposed === "a" && Math.random() < 0.7) return { type: "catch" };
+    return lastcard.botMove(s, "b", hidden.hands.b);
+  }
   return { type: "roll" };
 }
 
@@ -110,6 +128,17 @@ function apply(kind: GameKind, st: Record<string, unknown>, side: Side, mv: unkn
   }
   if (kind === "ayo") return ayo.applyMove(st as unknown as ayo.AyoState, side, Number(mv));
   if (kind === "ludo") return ludo.applyMove(st as unknown as ludo.LudoState, side, mv as ludo.LudoMove, dice);
+  if (kind === "xo") return xo.applyMove(st as unknown as xo.XOState, side, mv as xo.XOMove);
+  if (kind === "lastcard") {
+    const r = lastcard.applyMove(st as unknown as lastcard.LastCardState, side, mv as lastcard.LastCardMove, hidden.hands, { deck: hidden.deck, discard: hidden.discard ?? [] });
+    if (r.secrets?.a) hidden.hands.a = r.secrets.a.hand;
+    if (r.secrets?.b) hidden.hands.b = r.secrets.b.hand;
+    if (r.priv) {
+      hidden.deck = r.priv.deck;
+      hidden.discard = r.priv.discard;
+    }
+    return r;
+  }
   return snakes.applyMove(st as unknown as snakes.SnakesState, side, mv as snakes.SnakesMove, dice);
 }
 
@@ -139,7 +168,7 @@ export function usePracticeGame(kind: GameKind | null) {
     if (!g || g.status !== "active") return null;
     try {
       const r = apply(g.kind, g.state, side, mv, hidden.current);
-      const next: Game = { ...g, state: r.state as Game["state"], mine: g.kind === "whot" ? { hand: hidden.current.hands.a } : {} };
+      const next: Game = { ...g, state: r.state as Game["state"], mine: HANDS.includes(g.kind) ? { hand: hidden.current.hands.a } : {} };
       if (r.over) {
         Object.assign(next, {
           status: "done",
@@ -163,7 +192,7 @@ export function usePracticeGame(kind: GameKind | null) {
   useEffect(() => {
     const g = ref.current;
     if (!g || g.status !== "active" || st?.turn !== "b") return;
-    const wait = g.kind === "ludo" || g.kind === "snakes" ? 1500 : 1300;
+    const wait = g.kind === "ludo" || g.kind === "snakes" ? 1500 : g.kind === "xo" ? 900 : 1300;
     const t = setTimeout(() => {
       const cur = ref.current;
       if (!cur || cur.status !== "active" || (cur.state as { turn?: Side }).turn !== "b") return;
