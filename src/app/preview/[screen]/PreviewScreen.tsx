@@ -2,6 +2,7 @@
 
 import { DailyMock } from "./DailyMocks";
 import { BigMomentPop, CoreMock } from "./CoreMocks";
+import { AuraMock } from "./AuraMocks";
 import { HomeScreen } from "@/components/home/HomeScreen";
 import { WalletScreen } from "@/components/keys/WalletScreen";
 import { GiftSheet } from "@/components/keys/GiftSheet";
@@ -322,6 +323,7 @@ function ScreenBody({ screen }: { screen: string }) {
   if (screen.startsWith("new-xo-")) return <XOMock step={Number(screen.slice(-1)) as 1 | 2 | 3} />;
   if (screen.startsWith("new-words-")) return <WordsMock step={Number(screen.slice(-1)) as 1 | 2} />;
   if (screen.startsWith("new-cards-")) return <CardsMock step={Number(screen.slice(-1)) as 1 | 2} />;
+  if (screen.startsWith("new-aura-")) return <AuraMock step={Number(screen.slice(9))} />;
   if (screen.startsWith("new-core-")) return <CoreMock step={Number(screen.slice(9))} />;
   if (screen.startsWith("new-daily-")) return <DailyMock step={Number(screen.slice(-1)) as 1 | 2 | 3 | 4} />;
   if (screen.startsWith("new-pool-")) return <PoolMock step={Number(screen.slice(-1)) as 1 | 2} />;
