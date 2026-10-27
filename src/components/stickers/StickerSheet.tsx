@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
-import { ArrowLeft, Clock3, Lock, SendHorizontal } from "lucide-react";
+import { ArrowLeft, Clock3, Eye, Lock, SendHorizontal, Users } from "lucide-react";
 import { Sheet } from "@/components/ui/Sheet";
 import { Button, tapFeedback } from "@/components/ui/Button";
 import { KeyCoin } from "@/components/keys/KeyIcon";
@@ -52,6 +52,7 @@ export function StickerSheet({
   onSendScribble,
   scribbleCost: scribbleProp,
   startMode = "stickers",
+  together,
 }: {
   open: boolean;
   onClose: () => void;
@@ -67,6 +68,8 @@ export function StickerSheet({
   onSendScribble?: (s: ScribbleSend) => Promise<string | null>;
   scribbleCost?: number;
   startMode?: "stickers" | "scribble";
+  /** Drawing with the other person: their name, its Keys, and starting it (opens the big shared board) */
+  together?: { name: string; cost: number; onStart: () => void };
 }) {
   const packs = useStickerPacks();
   const prices = usePrices();
@@ -82,6 +85,7 @@ export function StickerSheet({
   // Every scribble you send is saved, to send again for free
   const keep = true;
   const [expanded, setExpanded] = useState(false);
+  const [letSee, setLetSee] = useState(false);
   const [bigSize, setBigSize] = useState(360);
   // The big drawing space fills the screen, leaving room for the tools
   useEffect(() => {
@@ -203,7 +207,21 @@ export function StickerSheet({
       footer={
         scribbling ? (
           <div className="space-y-2.5">
-            {!pickedSaved && <p className="text-center text-[12.5px] text-muted">Saved when you send it, free to send again</p>}
+            {!pickedSaved && together && (
+              <div className="grid grid-cols-2 gap-2">
+                <ChipToggle on={letSee} onClick={() => setLetSee((v) => !v)} icon={<Eye size={17} />}>
+                  Let {together.name} see
+                </ChipToggle>
+                <ChipToggle
+                  on={false}
+                  onClick={together.onStart}
+                  icon={<Users size={17} />}
+                  badge={together.cost > 0 ? <><KeyCoin size={13} /> {together.cost}</> : undefined}
+                >
+                  Draw together
+                </ChipToggle>
+              </div>
+            )}
             {error && <p className="text-center text-[13px] font-medium text-chili">{error}</p>}
             <Button onClick={() => void sendScribble()} loading={sending} disabled={!canSendScribble} className="h-12 w-full rounded-full">
               {sendLabel}
@@ -268,7 +286,7 @@ export function StickerSheet({
           ) : expanded ? (
             <div className="grid h-40 place-items-center rounded-[28px] bg-[#f6f2fd] text-[14px] font-medium text-brand/60">Drawing in the big space…</div>
           ) : (
-            <ScribblePad drawing={drawing} onChange={setDrawing} maxSize={260} onExpand={() => setExpanded(true)} />
+            <ScribblePad drawing={drawing} onChange={setDrawing} maxSize={380} onExpand={() => setExpanded(true)} />
           )}
           {saved.length > 0 && (
             <div>
@@ -416,6 +434,32 @@ export function StickerSheet({
         </div>
       )}
     </Sheet>
+  );
+}
+
+function ChipToggle({ on, onClick, icon, badge, children }: { on: boolean; onClick: () => void; icon: React.ReactNode; badge?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      onClick={() => {
+        tapFeedback();
+        onClick();
+      }}
+      className={clsx(
+        "relative flex h-12 min-w-0 items-center justify-center gap-2 rounded-2xl px-3 text-[13.5px] font-semibold transition active:scale-[0.97]",
+        on ? "bg-brand text-white" : "bg-cream text-ink-soft",
+      )}
+    >
+      {icon}
+      <span className="truncate">{children}</span>
+      {badge && (
+        <span className="absolute -top-1.5 -right-1 inline-flex items-center gap-0.5 rounded-full bg-surface px-1.5 py-0.5 text-[11px] font-bold text-ink-soft shadow-card ring-1 ring-line">
+          {badge}
+        </span>
+      )}
+    </button>
   );
 }
 

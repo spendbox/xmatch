@@ -2,29 +2,55 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import clsx from "clsx";
-import { Eraser, Maximize2, Minimize2, Undo2 } from "lucide-react";
+import {
+  Brush as BrushIcon, Droplets, Eraser, Flame, Heart, Highlighter, Maximize2, Minimize2, PaintBucket, Pencil, PenLine, Plus, Rainbow, Redo2, Sparkles,
+  SprayCan, Star, Trash2, Undo2, Waves, Zap,
+} from "lucide-react";
 import { tapFeedback } from "@/components/ui/Button";
-import { BRUSHES, INKS, SCRIBBLE_MAX_POINTS, SCRIBBLE_SIZE, WIDTHS, drawScribble, isLiving, pointCount, timeline, type Brush, type Drawing, type Stroke } from "@/lib/scribble";
+import {
+  MAGIC, MAX_SIZE, MIN_SIZE, PAINT, PALETTE, SCRIBBLE_MAX_POINTS, START_COLOURS, brushName, drawScribble, isLiving, pointCount, sizeOf, timeline,
+  type Brush, type Drawing, type Stroke,
+} from "@/lib/scribble";
 
-function useCanvas(size: number) {
+const ICONS: Record<Brush, React.ComponentType<{ size?: number; className?: string }>> = {
+  pencil: Pencil,
+  pen: PenLine,
+  brush: BrushIcon,
+  water: Droplets,
+  marker: Highlighter,
+  spray: SprayCan,
+  fill: PaintBucket,
+  eraser: Eraser,
+  neon: Zap,
+  rainbow: Rainbow,
+  glitter: Sparkles,
+  wobble: Waves,
+  fire: Flame,
+  hearts: Heart,
+  stars: Star,
+};
+
+/** A canvas w px wide (h tall), sharp on high-res screens but not 3× (costly), and under iPhone's size limit */
+function useCanvas(w: number, h: number) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const c = ref.current;
     if (!c) return;
-    // Sharp enough on high-res screens, without the cost of 3× (and under the size iPhones allow)
-    const dpr = Math.min(2, window.devicePixelRatio || 1, 2048 / size);
-    c.width = Math.round(size * dpr);
-    c.height = Math.round(size * dpr);
-  }, [size]);
+    const dpr = Math.min(2, window.devicePixelRatio || 1, 2048 / Math.max(w, h));
+    c.width = Math.round(w * dpr);
+    c.height = Math.round(h * dpr);
+  }, [w, h]);
   return ref;
 }
 
 /** How long living brushes keep moving after a scribble has drawn itself (tap to see it again) */
 const LIVE_FOR = 6000;
 
-/** A scribble in a chat: draws itself the first time you see it (tap to watch it again) */
+/** A scribble in a chat: draws itself the first time you see it (tap to watch it again). `size` is its width. */
 export function ScribbleView({ drawing, size = 170, className, still }: { drawing: Drawing; size?: number; className?: string; /** Just the finished drawing (thumbnails) */ still?: boolean }) {
-  const canvas = useCanvas(size);
+  const { w, h } = sizeOf(drawing);
+  const height = Math.round((size * h) / w);
+  const canvas = useCanvas(size, height);
   const [run, setRun] = useState(0);
   const played = useRef(false);
 
@@ -38,7 +64,7 @@ export function ScribbleView({ drawing, size = 170, className, still }: { drawin
       drawScribble(ctx, drawing, Infinity, times);
       return () => {};
     }
-    const length = Math.min(3200, Math.max(1400, total));
+    const length = Math.min(3600, Math.max(1400, total));
     const living = isLiving(drawing);
     const t0 = performance.now();
     let raf = 0;
@@ -93,7 +119,7 @@ export function ScribbleView({ drawing, size = 170, className, still }: { drawin
     };
   }, [canvas, play, run]);
 
-  if (still) return <canvas ref={canvas} style={{ width: size, height: size }} className={clsx("block", className)} aria-label="Scribble" />;
+  if (still) return <canvas ref={canvas} style={{ width: size, height }} className={clsx("block", className)} aria-label="Scribble" />;
   return (
     <button
       type="button"
@@ -104,12 +130,14 @@ export function ScribbleView({ drawing, size = 170, className, still }: { drawin
       className={clsx("block", className)}
       aria-label="Scribble. Tap to watch it being drawn again"
     >
-      <canvas ref={canvas} style={{ width: size, height: size }} className="block" />
+      <canvas ref={canvas} style={{ width: size, height }} className="block" />
     </button>
   );
 }
 
-/** Draw a scribble. Every line is saved with its timing, so it draws itself again when they see it. */
+type Drawer = "brushes" | "colours" | "size" | null;
+
+/** Draw and paint. Every line is saved with its timing, so it draws itself again when they see it. */
 export function ScribblePad({
   drawing,
   onChange,
@@ -119,19 +147,25 @@ export function ScribblePad({
 }: {
   drawing: Drawing;
   onChange: (d: Drawing) => void;
-  /** Largest the drawing space gets (bigger when expanded) */
+  /** Widest the board gets (bigger when expanded) */
   maxSize?: number;
   expanded?: boolean;
-  /** Switch between the small and the big drawing space */
+  /** Switch between the small and the big board */
   onExpand?: () => void;
 }) {
+  const { w: unitsW, h: unitsH } = sizeOf(drawing);
   const [box, setBox] = useState(300);
+  const boxH = Math.round((box * unitsH) / unitsW);
   const wrap = useRef<HTMLDivElement>(null);
-  const canvas = useCanvas(box);
-  const [brush, setBrush] = useState<Brush>("neon");
-  const [ink, setInk] = useState("#ff7aa8");
-  const [width, setWidth] = useState(WIDTHS[1]);
+  const canvas = useCanvas(box, boxH);
+  const [tool, setTool] = useState<Brush>("brush");
+  const [lastBrush, setLastBrush] = useState<Brush>("brush");
+  const [ink, setInk] = useState(START_COLOURS[1]);
+  const [recent, setRecent] = useState<string[]>(START_COLOURS);
+  const [width, setWidth] = useState(9);
+  const [drawer, setDrawer] = useState<Drawer>(null);
   const [full, setFull] = useState(false);
+  const redo = useRef<Stroke[]>([]);
   const live = useRef<{ stroke: Stroke; last: number; id: number } | null>(null);
   const draft = useRef(drawing);
   draft.current = drawing;
@@ -151,7 +185,7 @@ export function ScribblePad({
     return () => ro.disconnect();
   }, [maxSize]);
 
-  // The lines already drawn are kept as a picture, so each finger move only draws the line in progress
+  // What's already drawn is kept as a picture, so each finger move only draws the line in progress
   const done = useRef<HTMLCanvasElement | null>(null);
   const paint = useCallback(() => {
     cancelAnimationFrame(raf.current);
@@ -162,7 +196,13 @@ export function ScribblePad({
       ctx.clearRect(0, 0, c.width, c.height);
       ctx.drawImage(done.current, 0, 0);
       const l = live.current;
-      if (l) drawScribble(ctx, { v: 1, strokes: [l.stroke] }, Infinity, timeline({ v: 1, strokes: [l.stroke] }).times, { clear: false, shadow: false });
+      if (!l) return;
+      const one: Drawing = { ...draft.current, strokes: [l.stroke] };
+      // The eraser rubs out what's already there, so it's drawn over a copy of everything
+      if (l.stroke.b === "eraser") {
+        const all: Drawing = { ...draft.current, strokes: [...draft.current.strokes, l.stroke] };
+        drawScribble(ctx, all, Infinity, timeline(all).times, { shadow: false });
+      } else drawScribble(ctx, one, Infinity, timeline(one).times, { clear: false, shadow: false });
     });
   }, [canvas]);
   useEffect(() => {
@@ -174,21 +214,29 @@ export function ScribblePad({
     const ctx = d.getContext("2d");
     if (ctx) drawScribble(ctx, drawing, Infinity, timeline(drawing).times);
     paint();
-  }, [drawing, box, paint, canvas]);
+  }, [drawing, box, boxH, paint, canvas]);
 
   function at(e: { clientX: number; clientY: number }) {
     const r = canvas.current!.getBoundingClientRect();
-    const k = SCRIBBLE_SIZE / r.width;
-    return [Math.max(0, Math.min(SCRIBBLE_SIZE, Math.round((e.clientX - r.left) * k))), Math.max(0, Math.min(SCRIBBLE_SIZE, Math.round((e.clientY - r.top) * k)))];
+    const k = unitsW / r.width;
+    return [Math.max(0, Math.min(unitsW, Math.round((e.clientX - r.left) * k))), Math.max(0, Math.min(unitsH, Math.round((e.clientY - r.top) * k)))];
+  }
+
+  function commit(s: Stroke) {
+    redo.current = [];
+    onChange({ ...draft.current, strokes: [...draft.current.strokes, s] });
   }
 
   function down(e: React.PointerEvent<HTMLCanvasElement>) {
     if (live.current || (e.pointerType === "mouse" && e.button !== 0)) return;
+    setDrawer(null);
     if (pointCount(drawing) >= SCRIBBLE_MAX_POINTS) return setFull(true);
-    e.currentTarget.setPointerCapture(e.pointerId);
     tapFeedback();
     const [x, y] = at(e);
-    live.current = { stroke: { b: brush, c: ink, s: width, p: [x, y, 0] }, last: performance.now(), id: e.pointerId };
+    // Fill: one tap paints the area in watercolour
+    if (tool === "fill") return commit({ b: "fill", c: ink, s: 0, p: [x, y, 0] });
+    e.currentTarget.setPointerCapture(e.pointerId);
+    live.current = { stroke: { b: tool, c: ink, s: width, p: [x, y, 0] }, last: performance.now(), id: e.pointerId };
     paint();
   }
   function move(e: React.PointerEvent<HTMLCanvasElement>) {
@@ -213,10 +261,26 @@ export function ScribblePad({
     const l = live.current;
     if (!l || e.pointerId !== l.id) return;
     live.current = null;
-    onChange({ ...draft.current, strokes: [...draft.current.strokes, l.stroke] });
+    commit(l.stroke);
+  }
+
+  function pickBrush(b: Brush) {
+    tapFeedback();
+    setTool(b);
+    setLastBrush(b);
+    setDrawer(null);
+  }
+  function pickColour(c: string) {
+    tapFeedback();
+    setInk(c);
+    setRecent((r) => [c, ...r.filter((x) => x !== c)].slice(0, 3));
+    if (tool === "eraser") setTool(lastBrush);
+    setDrawer(null);
   }
 
   const empty = drawing.strokes.length === 0;
+  const BrushNow = ICONS[lastBrush];
+  const usesInk = tool !== "eraser" && tool !== "rainbow";
   return (
     <div className="space-y-3">
       <div ref={wrap} className="relative mx-auto w-full" style={{ maxWidth: maxSize }}>
@@ -227,164 +291,186 @@ export function ScribblePad({
           onPointerUp={up}
           onPointerCancel={up}
           onContextMenu={(e) => e.preventDefault()}
-          style={{ width: box, height: box, WebkitTouchCallout: "none", WebkitUserSelect: "none", userSelect: "none" }}
-          className="mx-auto block touch-none rounded-[28px] bg-[#f6f2fd] ring-1 ring-brand/15"
-          aria-label="Drawing space"
+          style={{ width: box, height: boxH, WebkitTouchCallout: "none", WebkitUserSelect: "none", userSelect: "none" }}
+          className={clsx("mx-auto block touch-none rounded-[28px] bg-white shadow-[0_1px_2px_rgb(28_24_40/0.06),0_8px_28px_-12px_rgb(28_24_40/0.25)] ring-1 ring-line", tool === "fill" && "cursor-cell")}
+          aria-label="Drawing board"
         />
         {empty && (
-          <p className="pointer-events-none absolute inset-0 grid place-items-center px-10 text-center text-[15px] font-medium text-brand/60">
-            Draw anything. It&apos;ll draw itself again when they see it ✨
-          </p>
-        )}
-        {onExpand && (
-          <button
-            type="button"
-            onClick={() => {
-              tapFeedback();
-              onExpand();
-            }}
-            className="absolute top-2.5 left-2.5 grid h-9 w-9 place-items-center rounded-full bg-surface text-ink-soft shadow-card transition active:scale-90"
-            aria-label={expanded ? "Make the drawing space smaller" : "Make the drawing space bigger"}
-          >
-            {expanded ? <Minimize2 size={17} /> : <Maximize2 size={17} />}
-          </button>
+          <p className="pointer-events-none absolute inset-0 grid place-items-center px-12 text-center text-[15px] font-medium text-muted/70">Draw or paint anything</p>
         )}
         <div className="absolute top-2.5 right-2.5 flex gap-1.5">
-          <button
-            type="button"
-            disabled={empty}
-            onClick={() => {
-              tapFeedback();
-              setFull(false);
-              onChange({ ...drawing, strokes: drawing.strokes.slice(0, -1) });
-            }}
-            className="grid h-9 w-9 place-items-center rounded-full bg-surface text-ink-soft shadow-card transition active:scale-90 disabled:opacity-40"
-            aria-label="Undo"
-          >
+          <RoundBtn label="Undo" disabled={empty} onClick={() => {
+            setFull(false);
+            redo.current.push(drawing.strokes[drawing.strokes.length - 1]);
+            onChange({ ...drawing, strokes: drawing.strokes.slice(0, -1) });
+          }}>
             <Undo2 size={17} />
-          </button>
-          <button
-            type="button"
-            disabled={empty}
-            onClick={() => {
-              tapFeedback();
-              setFull(false);
-              onChange({ ...drawing, strokes: [] });
-            }}
-            className="grid h-9 w-9 place-items-center rounded-full bg-surface text-ink-soft shadow-card transition active:scale-90 disabled:opacity-40"
-            aria-label="Clear"
-          >
-            <Eraser size={17} />
-          </button>
+          </RoundBtn>
+          <RoundBtn label="Redo" disabled={!redo.current.length} onClick={() => {
+            const s = redo.current.pop();
+            if (s) onChange({ ...drawing, strokes: [...drawing.strokes, s] });
+          }}>
+            <Redo2 size={17} />
+          </RoundBtn>
+          <RoundBtn label="Start again" disabled={empty} onClick={() => {
+            setFull(false);
+            redo.current = [];
+            onChange({ ...drawing, strokes: [] });
+          }}>
+            <Trash2 size={16} />
+          </RoundBtn>
         </div>
-        {full && <p className="absolute inset-x-0 bottom-2 text-center text-[12.5px] font-semibold text-chili">That&apos;s plenty of ink! Send it or undo a line.</p>}
+        {onExpand && (
+          <div className="absolute top-2.5 left-2.5">
+            <RoundBtn label={expanded ? "Smaller board" : "Bigger board"} onClick={onExpand}>
+              {expanded ? <Minimize2 size={17} /> : <Maximize2 size={17} />}
+            </RoundBtn>
+          </div>
+        )}
+        {full && <p className="absolute inset-x-0 bottom-3 text-center text-[12.5px] font-semibold text-chili">That&apos;s plenty of paint! Send it or undo a line.</p>}
       </div>
 
-      {/* Brushes */}
-      <div className="grid grid-cols-4 gap-1.5">
-        {BRUSHES.map((b) => (
-          <button
-            key={b.id}
-            type="button"
-            onClick={() => {
-              tapFeedback();
-              setBrush(b.id);
-            }}
-            aria-pressed={brush === b.id}
-            className={clsx(
-              "flex h-12 flex-col items-center justify-center gap-0.5 rounded-2xl text-[11.5px] font-semibold transition active:scale-95",
-              brush === b.id ? "bg-ink text-white" : "bg-cream text-ink-soft",
-            )}
-          >
-            <BrushSwatch brush={b.id} ink={ink} dark={brush === b.id} />
-            {b.name}
-          </button>
-        ))}
-      </div>
-
-      {/* Ink and thickness */}
-      <div className="flex items-center gap-2">
-        <div className={clsx("flex flex-1 items-center justify-between", brush === "rainbow" && "pointer-events-none opacity-30")}>
-          {INKS.map((c) => (
+      {/* One toolbar: brush, fill, eraser · colours · size */}
+      <div className="mx-auto flex items-center gap-1 rounded-[22px] bg-cream p-1.5" style={{ maxWidth: maxSize }}>
+        <ToolBtn
+          on={tool === lastBrush}
+          label={`${brushName(lastBrush)} (tap again for more brushes)`}
+          onClick={() => (tool === lastBrush ? setDrawer(drawer === "brushes" ? null : "brushes") : pickBrush(lastBrush))}
+        >
+          <BrushNow size={20} />
+        </ToolBtn>
+        <ToolBtn on={tool === "fill"} label="Fill" onClick={() => { tapFeedback(); setTool("fill"); setDrawer(null); }}>
+          <PaintBucket size={20} />
+        </ToolBtn>
+        <ToolBtn on={tool === "eraser"} label="Eraser" onClick={() => { tapFeedback(); setTool("eraser"); setDrawer(null); }}>
+          <Eraser size={20} />
+        </ToolBtn>
+        <span className="mx-1 h-7 w-px bg-line-strong" />
+        <div className={clsx("flex items-center gap-1.5", !usesInk && "opacity-40")}>
+          {recent.map((c) => (
             <button
               key={c}
               type="button"
-              onClick={() => setInk(c)}
-              aria-label={`Ink ${c}`}
+              onClick={() => pickColour(c)}
+              aria-label={`Colour ${c}`}
               aria-pressed={ink === c}
-              className={clsx("h-7 w-7 rounded-full ring-offset-2 transition active:scale-90", ink === c ? "ring-2 ring-ink" : "ring-1 ring-line-strong")}
+              className={clsx("h-8 w-8 rounded-full transition active:scale-90", ink === c ? "ring-2 ring-ink ring-offset-2 ring-offset-cream" : "ring-1 ring-ink/15")}
+              style={{ background: c }}
+            />
+          ))}
+          <button
+            type="button"
+            onClick={() => { tapFeedback(); setDrawer(drawer === "colours" ? null : "colours"); }}
+            aria-label="More colours"
+            aria-expanded={drawer === "colours"}
+            className={clsx("grid h-8 w-8 place-items-center rounded-full transition active:scale-90", drawer === "colours" ? "bg-ink text-white" : "bg-surface text-ink-soft ring-1 ring-ink/10")}
+          >
+            <Plus size={17} />
+          </button>
+        </div>
+        <span className="flex-1" />
+        <button
+          type="button"
+          onClick={() => { tapFeedback(); setDrawer(drawer === "size" ? null : "size"); }}
+          aria-label="Brush size"
+          aria-expanded={drawer === "size"}
+          className={clsx("grid h-10 w-10 place-items-center rounded-full transition active:scale-90", drawer === "size" ? "bg-ink" : "bg-surface ring-1 ring-ink/10")}
+        >
+          <span className="rounded-full" style={{ width: 4 + (width / MAX_SIZE) * 20, height: 4 + (width / MAX_SIZE) * 20, background: drawer === "size" ? "#ffffff" : tool === "eraser" ? "#a8a3b5" : ink === "#ffffff" ? "#d8d3e4" : ink }} />
+        </button>
+      </div>
+
+      {drawer === "brushes" && (
+        <div className="mx-auto animate-fade-up space-y-2.5 rounded-[22px] bg-cream p-3" style={{ maxWidth: maxSize }}>
+          {[["Paint", PAINT], ["Magic", MAGIC]].map(([title, list]) => (
+            <div key={title as string}>
+              <p className="mb-1.5 px-1 text-[11.5px] font-bold tracking-wide text-muted uppercase">{title as string}</p>
+              <div className="flex flex-wrap gap-1.5">
+                {(list as typeof PAINT).map((b) => {
+                  const I = ICONS[b.id];
+                  return (
+                    <button
+                      key={b.id}
+                      type="button"
+                      onClick={() => pickBrush(b.id)}
+                      aria-pressed={lastBrush === b.id}
+                      className={clsx(
+                        "inline-flex h-10 items-center gap-1.5 rounded-full px-3.5 text-[13.5px] font-semibold transition active:scale-95",
+                        lastBrush === b.id ? "bg-ink text-white" : "bg-surface text-ink-soft",
+                      )}
+                    >
+                      <I size={16} /> {b.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {drawer === "colours" && (
+        <div className="mx-auto grid animate-fade-up grid-cols-8 gap-2 rounded-[22px] bg-cream p-3" style={{ maxWidth: maxSize }}>
+          {PALETTE.map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => pickColour(c)}
+              aria-label={`Colour ${c}`}
+              aria-pressed={ink === c}
+              className={clsx("aspect-square rounded-full transition active:scale-90", ink === c ? "ring-2 ring-ink ring-offset-2 ring-offset-cream" : "ring-1 ring-ink/10")}
               style={{ background: c }}
             />
           ))}
         </div>
-        <span className="h-7 w-px bg-line" />
-        {WIDTHS.map((w) => (
-          <button
-            key={w}
-            type="button"
-            onClick={() => setWidth(w)}
-            aria-label={`Line ${w === WIDTHS[0] ? "thin" : w === WIDTHS[1] ? "medium" : "thick"}`}
-            aria-pressed={width === w}
-            className={clsx("grid h-8 w-8 place-items-center rounded-full transition active:scale-90", width === w ? "bg-ink" : "bg-cream")}
-          >
-            <span className="rounded-full" style={{ width: w * 0.9, height: w * 0.9, background: width === w ? "#ffffff" : "#1c1828" }} />
-          </button>
-        ))}
-      </div>
+      )}
+      {drawer === "size" && (
+        <div className="mx-auto flex animate-fade-up items-center gap-3 rounded-[22px] bg-cream px-4 py-3" style={{ maxWidth: maxSize }}>
+          <span className="h-1.5 w-1.5 rounded-full bg-ink-soft" />
+          <input
+            type="range"
+            min={MIN_SIZE}
+            max={MAX_SIZE}
+            value={width}
+            onChange={(e) => setWidth(Number(e.target.value))}
+            className="h-2 flex-1 accent-brand"
+            aria-label="Brush size"
+          />
+          <span className="h-5 w-5 rounded-full bg-ink-soft" />
+        </div>
+      )}
     </div>
   );
 }
 
-function BrushSwatch({ brush, ink, dark }: { brush: Brush; ink: string; dark: boolean }) {
-  const d = "M3 13 C 9 3, 15 17, 21 7";
-  if (brush === "rainbow")
-    return (
-      <svg width="26" height="18" viewBox="0 0 24 18" aria-hidden>
-        <defs>
-          <linearGradient id="rb" x1="0" x2="1">
-            <stop offset="0" stopColor="#ff4d6d" />
-            <stop offset="0.35" stopColor="#ffd166" />
-            <stop offset="0.65" stopColor="#2fb3a0" />
-            <stop offset="1" stopColor="#7a5cf0" />
-          </linearGradient>
-        </defs>
-        <path d={d} stroke="url(#rb)" strokeWidth="4" fill="none" strokeLinecap="round" />
-      </svg>
-    );
-  const shown = ink === "#ffffff" && !dark ? "#d8d3e4" : ink;
-  if (brush === "fire")
-    return (
-      <svg width="26" height="18" viewBox="0 0 24 18" aria-hidden>
-        <path d={d} stroke="#ff4d1a" strokeWidth="5" fill="none" strokeLinecap="round" />
-        <path d={d} stroke="#ffb02e" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-        <path d="M8 7 q-1.5 -3 0 -6 q1.5 3 0 6z M16 10 q-1.5 -3 0 -6 q1.5 3 0 6z" fill="#ff6a1a" />
-      </svg>
-    );
-  if (brush === "hearts" || brush === "stars")
-    return (
-      <svg width="26" height="18" viewBox="0 0 24 18" aria-hidden>
-        {[3.5, 12, 20.5].map((x, n) =>
-          brush === "hearts" ? (
-            <path key={x} d={`M${x} ${n === 1 ? 7.5 : 11.5} l-3.4 -3.4 a2.1 2.1 0 0 1 3.4 -2.4 a2.1 2.1 0 0 1 3.4 2.4 z`} fill={shown} />
-          ) : (
-            <path key={x} d={`M${x} ${n === 1 ? 3 : 7} l1.2 2.6 2.8 .3 -2.1 1.9 .6 2.8 -2.5 -1.4 -2.5 1.4 .6 -2.8 -2.1 -1.9 2.8 -.3z`} fill={shown} />
-          ),
-        )}
-      </svg>
-    );
+function RoundBtn({ label, onClick, disabled, children }: { label: string; onClick: () => void; disabled?: boolean; children: React.ReactNode }) {
   return (
-    <svg width="26" height="18" viewBox="0 0 24 18" aria-hidden style={brush === "neon" ? { filter: `drop-shadow(0 0 3px ${ink})` } : undefined}>
-      <path d={brush === "wobble" ? "M3 12 l3 -5 l3 6 l3 -7 l3 7 l3 -6 l3 4" : d} stroke={shown} strokeWidth="4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-      {brush === "neon" && <path d={d} stroke="#ffffff" strokeWidth="1.5" fill="none" strokeLinecap="round" />}
-      {brush === "glitter" && (
-        <>
-          <circle cx="7" cy="5" r="1.4" fill="#ffe08a" />
-          <circle cx="14" cy="14" r="1.2" fill="#ffe08a" />
-          <circle cx="19" cy="3.5" r="1.1" fill={dark ? "#ffffff" : "#ffb02e"} />
-        </>
-      )}
-    </svg>
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={() => {
+        tapFeedback();
+        onClick();
+      }}
+      className="grid h-9 w-9 place-items-center rounded-full bg-white/90 text-ink-soft shadow-card ring-1 ring-ink/5 backdrop-blur transition active:scale-90 disabled:opacity-35"
+      aria-label={label}
+    >
+      {children}
+    </button>
   );
 }
 
-export const emptyDrawing = (): Drawing => ({ v: 1, strokes: [] });
+function ToolBtn({ on, label, onClick, children }: { on: boolean; label: string; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      aria-pressed={on}
+      className={clsx("grid h-10 w-10 place-items-center rounded-full transition active:scale-90", on ? "bg-ink text-white" : "text-ink-soft hover:bg-surface")}
+    >
+      {children}
+    </button>
+  );
+}
+
+export const emptyDrawing = (w?: number, h?: number): Drawing => (w && h ? { v: 1, strokes: [], w, h } : { v: 1, strokes: [] });
