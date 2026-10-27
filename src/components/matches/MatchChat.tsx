@@ -39,6 +39,7 @@ import dynamic from "next/dynamic";
 // The shared drawing board loads only when it's opened
 const TogetherBoard = dynamic(() => import("@/components/stickers/TogetherBoard").then((m) => m.TogetherBoard), { ssr: false });
 import { LiveScribblePreview } from "@/components/stickers/ScribbleView";
+import { ContinueDrawing, openDrawing } from "@/components/stickers/ContinueDrawing";
 import { usePrices } from "@/components/keys/usePrices";
 
 export function MatchChat({
@@ -391,6 +392,7 @@ export function MatchChat({
       </div>
 
       {games.banner}
+      {!drawId && openDrawing(messages) && <ContinueDrawing name={firstName} onOpen={() => setDrawId(openDrawing(messages))} />}
       {/* Ideas to say are for masked chats; once you've both unmasked you know each other */}
       <Composer
         saveKey={`m-${matchId}`}

@@ -31,6 +31,7 @@ import dynamic from "next/dynamic";
 // The shared drawing board loads only when it's opened
 const TogetherBoard = dynamic(() => import("@/components/stickers/TogetherBoard").then((m) => m.TogetherBoard), { ssr: false });
 import { LiveScribblePreview } from "@/components/stickers/ScribbleView";
+import { ContinueDrawing, openDrawing } from "@/components/stickers/ContinueDrawing";
 import { MessageList } from "@/components/chat/MessageList";
 import { Composer } from "@/components/chat/Composer";
 import { refreshMenuBadges } from "@/components/app/useMenuBadges";
@@ -731,6 +732,7 @@ export function MasqueradeRoom({
 
       {meet && chatting && !(games.game && (games.game.status === "invited" || games.game.status === "active")) && <MeetLine meet={meet} them={theirName} />}
       {chatting && games.banner}
+      {chatting && !drawId && openDrawing(messages) && <ContinueDrawing name={theirName.split(" ")[0]} onOpen={() => setDrawId(openDrawing(messages))} />}
       {chatting ? (
         <Composer
           saveKey={`s-${state.id}`}

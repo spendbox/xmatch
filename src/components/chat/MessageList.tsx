@@ -284,7 +284,7 @@ export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDat
                       {mine ? "You started a drawing for you both" : `${nameOf(m.sender_id)} started a drawing for you both`}
                     </span>
                     <span className="block text-[12.5px] font-semibold text-brand">
-                      {status === "open" ? (mine ? "Tap to open" : "Tap to join") : status === "sent" ? "Sent ✓" : "Closed"}
+                      {status === "open" ? (mine ? "Tap to continue" : "Tap to join") : status === "sent" ? "Sent ✓" : "Closed"}
                     </span>
                   </span>
                 </button>

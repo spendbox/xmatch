@@ -44,6 +44,9 @@ export function TogetherBoard({
   latest.current = drawing;
   const lastLive = useRef(0);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Your lines not yet saved: added, and taken back (saved line by line, so you never overwrite theirs)
+  const pendAdd = useRef(new Map<string, Stroke>());
+  const pendRemove = useRef(new Set<string>());
 
   useEffect(() => setMounted(true), []);
   useEffect(() => lockScroll(), []);
@@ -61,18 +64,63 @@ export function TogetherBoard({
     });
   }, []);
 
+  /** Save your new and taken-back lines (a moment after you draw, and when you leave) */
+  const flush = useCallback(async () => {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = null;
+    if (!pendAdd.current.size && !pendRemove.current.size) return;
+    const add = [...pendAdd.current.values()];
+    const remove = [...pendRemove.current];
+    pendAdd.current = new Map();
+    pendRemove.current = new Set();
+    const { error } = await supabase.rpc("draw_lines", { p_id: id, p_add: add, p_remove: remove });
+    if (!error) return;
+    if (error.message.includes("draw_lines")) {
+      // Before update 97: save the whole board instead
+      await supabase.rpc("save_draw", { p_id: id, p_drawing: latest.current });
+      return;
+    }
+    if (error.message.includes("full")) return setError(error.message);
+    // Couldn't save (no signal): keep them for the next try
+    add.forEach((st) => st.id && !pendAdd.current.has(st.id) && pendAdd.current.set(st.id, st));
+    remove.forEach((x) => pendRemove.current.add(x));
+  }, [supabase, id]);
+  const flushSoon = useCallback(() => {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => void flush(), 700);
+  }, [flush]);
+
+  /** The board as saved (with their lines from while you were away), plus yours not saved yet */
+  const load = useCallback(async () => {
+    const { data } = await supabase.from("draw_sessions").select("drawing, status").eq("id", id).maybeSingle();
+    const row = data as { drawing: unknown; status: string } | null;
+    if (row && row.status !== "open") return onClose(row.status === "sent" ? "That drawing was sent" : "That drawing was closed");
+    if (!row || !isDrawing(row.drawing)) return;
+    const saved = row.drawing.strokes.filter((st) => !st.id || !pendRemove.current.has(st.id));
+    const ids = new Set(saved.map((st) => st.id));
+    const mine = [...pendAdd.current.values()].filter((st) => !ids.has(st.id));
+    setDrawing((d) => ({ ...d, strokes: [...saved, ...mine] }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supabase, id]);
+
+  // Leaving the app or the page: save now. Coming back: catch up on what they drew meanwhile
+  useEffect(() => {
+    const onVis = () => {
+      if (document.visibilityState === "hidden") void flush();
+      else void flush().then(load);
+    };
+    const onHide = () => void flush();
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("pagehide", onHide);
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("pagehide", onHide);
+    };
+  }, [flush, load]);
+
   useEffect(() => {
     // What's on the board so far, then live from here on
-    void supabase
-      .from("draw_sessions")
-      .select("drawing, status")
-      .eq("id", id)
-      .maybeSingle()
-      .then(({ data }) => {
-        const row = data as { drawing: unknown; status: string } | null;
-        if (row && row.status !== "open") return onClose(row.status === "sent" ? "That drawing was sent" : "That drawing was closed");
-        if (row && isDrawing(row.drawing)) merge(row.drawing.strokes);
-      });
+    void load();
     const ch = supabase
       .channel(`draw:${id}`, { config: { broadcast: { self: false }, presence: { key: me } } })
       .on("broadcast", { event: "add" }, ({ payload }) => {
@@ -99,16 +147,10 @@ export function TogetherBoard({
     return () => {
       void supabase.removeChannel(ch);
       channel.current = null;
-      if (saveTimer.current) clearTimeout(saveTimer.current);
+      void flush();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase, id, me]);
-
-  // Keep the board on the server a moment after each change
-  useEffect(() => {
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => void supabase.rpc("save_draw", { p_id: id, p_drawing: latest.current }), 1500);
-  }, [drawing, supabase, id]);
 
   function change(next: Drawing) {
     const before = new Set(drawing.strokes.map((s) => s.id));
@@ -116,8 +158,15 @@ export function TogetherBoard({
     const added = next.strokes.filter((s) => s.id && !before.has(s.id));
     const removed = drawing.strokes.filter((s) => s.id && !after.has(s.id)).map((s) => s.id!);
     setDrawing(next);
-    added.forEach((s) => send("add", { s }));
-    if (removed.length) send("remove", { ids: removed });
+    added.forEach((st) => {
+      send("add", { s: st });
+      pendAdd.current.set(st.id!, st);
+    });
+    if (removed.length) {
+      send("remove", { ids: removed });
+      removed.forEach((x) => (pendAdd.current.has(x) ? pendAdd.current.delete(x) : pendRemove.current.add(x)));
+    }
+    flushSoon();
   }
 
   function live(s: Stroke | null) {
@@ -128,8 +177,7 @@ export function TogetherBoard({
   }
 
   async function close() {
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    await supabase.rpc("save_draw", { p_id: id, p_drawing: latest.current });
+    await flush();
     // An empty board gets its Keys back straight away
     if (!latest.current.strokes.length) await supabase.rpc("close_draw", { p_id: id });
     onClose();
@@ -138,6 +186,7 @@ export function TogetherBoard({
   async function sendIt() {
     setSending(true);
     setError(null);
+    await flush();
     const { data, error: err } = await supabase.rpc("send_draw", { p_id: id, p_drawing: latest.current });
     setSending(false);
     if (err) return setError(err.message.includes("Draw something") || err.message.includes("too big") || err.message.includes("already") ? err.message : "Couldn't send it. Check your connection.");
@@ -162,7 +211,7 @@ export function TogetherBoard({
         </div>
         <div className="min-w-0 flex-1 pl-1">
           <p className="truncate text-[16px] leading-tight font-semibold">Drawing with {them.name}</p>
-          <p className={here ? "text-[12px] font-semibold text-mint" : "text-[12px] text-muted"}>{here ? `${them.name} is here` : `Waiting for ${them.name}…`}</p>
+          <p className={here ? "text-[12px] font-semibold text-mint" : "text-[12px] text-muted"}>{here ? `${them.name} is here` : `${them.name} can add to it any time`}</p>
         </div>
         <Button onClick={() => void sendIt()} loading={sending} disabled={!drawing.strokes.length} className="h-10 rounded-full px-4">
           <SendHorizontal size={16} /> Send
