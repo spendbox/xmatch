@@ -18,7 +18,7 @@ export const MASK_COLOURS = ["#e8b143", "#1d1a26", "#f7f0e6", "#d92f3a", "#ff3fa
  * Changing a photo's mask: the design, its colour and its trim. The mask stays where the face
  * is (it was placed over the face for you and can't be moved off it).
  */
-export function MaskEditor({ open, src, mask, onClose, onSave, saving }: { open: boolean; src: string; mask: Masked; onClose: () => void; onSave: (m: Masked) => void; saving?: boolean }) {
+export function MaskEditor({ open, src, mask, onClose, onSave, saving, layer }: { open: boolean; src: string; mask: Masked; onClose: () => void; onSave: (m: Masked) => void; saving?: boolean; layer?: string }) {
   const [draft, setDraft] = useState<Masked>(mask);
   const [cat, setCat] = useState("all");
   const [opened, setOpened] = useState(mask);
@@ -40,13 +40,14 @@ export function MaskEditor({ open, src, mask, onClose, onSave, saving }: { open:
       title="Change mask"
       subtitle="Free · it stays over your face"
       icon={<MaskIcon className="w-6" />}
+      layer={layer}
       footer={
         <Button size="lg" onClick={() => onSave(draft)} loading={saving} loadingText="Saving…">
           Save mask
         </Button>
       }
     >
-      <MaskedPreview src={src} mask={draft} className="mx-auto w-[64%] rounded-[24px] bg-line shadow-card" />
+      <MaskedPreview src={src} mask={draft} natural className="mx-auto w-[64%] rounded-[24px] bg-line shadow-card" />
 
       <div className="no-scrollbar mt-4 -mx-1 flex gap-1.5 overflow-x-auto px-1">
         {CATS.map(([id, label]) => (

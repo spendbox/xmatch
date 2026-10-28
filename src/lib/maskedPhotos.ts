@@ -168,9 +168,12 @@ export async function maskFor(canvas: HTMLCanvasElement, maskId: string): Promis
 
 /** An original photo you already have, as a canvas (fetched through Dashpad so it can be drawn on) */
 export async function loadOriginal(url: string) {
-  const res = await fetch(`/api/media/original?url=${encodeURIComponent(url)}`);
-  if (!res.ok) throw new Error("Couldn't open that photo. Please try again.");
-  return toCanvas(await res.blob());
+  const via = await fetch(`/api/media/original?url=${encodeURIComponent(url)}`).catch(() => null);
+  if (via?.ok) return toCanvas(await via.blob());
+  // Straight from storage (works where the photo's host allows it)
+  const direct = await fetch(url, { mode: "cors", cache: "no-store" }).catch(() => null);
+  if (direct?.ok) return toCanvas(await direct.blob());
+  throw new Error("Couldn't open that photo. Please try again.");
 }
 
 /** The next starter mask for a photo, so each photo gets a different one */

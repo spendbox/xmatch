@@ -12,7 +12,8 @@ export async function GET(req: Request) {
   const { data: me } = await supabase.from("profiles").select("photos, real_photos").eq("id", user.id).single();
   const mine = [...((me?.real_photos as string[] | null) ?? []), ...((me?.photos as string[] | null) ?? [])];
   if (!url || !mine.includes(url) || !/^https:\/\//.test(url)) return NextResponse.json({ error: "Not your photo" }, { status: 404 });
-  const res = await fetch(url, { cache: "no-store" }).catch(() => null);
+  const res = await fetch(url, { cache: "no-store", headers: { "User-Agent": "Mozilla/5.0 (Dashpad photo masking)", Accept: "image/*" } }).catch(() => null);
+  if (!res?.ok) console.error("original photo fetch failed", res?.status, url.slice(0, 80));
   if (!res?.ok) return NextResponse.json({ error: "That photo won't load" }, { status: 502 });
   return new NextResponse(res.body, { headers: { "Content-Type": res.headers.get("Content-Type") ?? "image/jpeg", "Cache-Control": "private, max-age=600" } });
 }
