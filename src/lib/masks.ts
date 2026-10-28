@@ -1,8 +1,9 @@
 // @ts-nocheck -- generated SVG drawing code: shapes and paths built from numbers and strings
 /**
  * Masquerade masks for photos. Each mask is drawn as an SVG from one chosen colour and a metal
- * trim. Every outline contains the face oval (centre 100,112; radii 48 × 54 in a -26,-44 252×252
- * drawing), so any mask placed over a face fully hides it.
+ * trim. Every full mask's outline contains the face oval (centre 100,112; radii 48 × 54 in a
+ * -26,-44 252×252 drawing), so it fully hides a face. Party masks (half: true) only cover the eyes,
+ * brows and nose: their eye holes are at (78,102) and (122,102), and lib/maskPlace fits them.
  */
 // The mask library. Each mask has its own outline, eyes and details, all derived from one
 // chosen colour and a metal trim. Every outline contains the face oval (centre 100,112;
@@ -98,6 +99,10 @@ const OUT = {
   robot: "M64 48 L136 48 C152 48 160 56 160 72 L160 150 C160 166 152 176 136 176 L64 176 C48 176 40 166 40 150 L40 72 C40 56 48 48 64 48Z",
   pumpkin: "M100 58 C108 50 128 48 140 56 C160 56 172 80 168 110 C166 142 150 172 128 174 C118 178 108 176 100 172 C92 176 82 178 72 174 C50 172 34 142 32 110 C28 80 40 56 60 56 C72 48 92 50 100 58Z",
   ghost: "M100 40 C140 40 160 70 160 108 L160 172 C152 182 146 170 140 172 C134 184 126 172 120 176 C114 186 106 174 100 178 C94 186 86 174 80 176 C74 184 66 172 60 172 C54 182 46 170 40 172 L40 108 C40 70 60 40 100 40Z",
+  // Party masks: eyes, brows and nose only (the mouth and chin stay uncovered)
+  party: "M100 72 C114 62 134 58 152 60 C166 61 174 54 178 44 C184 60 178 80 168 92 C164 106 160 118 148 126 C136 134 122 130 116 126 C118 136 116 148 100 150 C84 148 82 136 84 126 C78 130 64 134 52 126 C40 118 36 106 32 92 C22 80 16 60 22 44 C26 54 34 61 48 60 C66 58 86 62 100 72Z",
+  catEye: "M100 72 C114 62 132 58 150 58 C164 56 176 44 188 28 C190 52 182 76 168 92 C164 106 160 118 148 126 C136 134 122 130 116 126 C118 136 116 148 100 150 C84 148 82 136 84 126 C78 130 64 134 52 126 C40 118 36 106 32 92 C18 76 10 52 12 28 C24 44 36 56 50 58 C68 58 86 62 100 72Z",
+  wings: "M100 76 C108 58 126 40 150 38 C172 36 184 52 178 72 C174 86 166 94 168 104 C172 118 162 132 146 132 C134 132 124 128 116 124 C118 136 116 148 100 150 C84 148 82 136 84 124 C76 128 66 132 54 132 C38 132 28 118 32 104 C34 94 26 86 22 72 C16 52 28 36 50 38 C74 40 92 58 100 76Z",
   heron: "M100 52 C132 52 152 74 152 102 C152 140 128 166 100 172 C72 166 48 140 48 102 C48 74 68 52 100 52Z",
 };
 
@@ -337,6 +342,45 @@ const MASKS = [
     front: () => `<path d="M92 112 C96 110 104 110 108 112 L100 176Z" fill="url(#metal)" filter="url(#emb)"/>`,
   },
 
+  // ============ PARTY (eyes and nose only) ============
+  {
+    id: "party-glitter", name: "Glitter", cat: "party", half: true, color: "#e8b143", shape: OUT.party, rim: "metal",
+    pattern: (p) => Array.from({ length: 70 }, (_, i) => { const x = 20 + ((i * 37) % 162), y = 42 + ((i * 53) % 110); return `<circle cx="${x}" cy="${y}" r="${0.8 + (i % 3) * 0.6}" fill="${[p.pale, "#fff", p.light, p.dark][i % 4]}" opacity="0.85"/>`; }).join("") + trimLine("M100 84 L100 142", 1.4),
+    eyes: () => holes(ALMOND, "metal"),
+    top: () => star(66, 76, 5, "#fff", 'opacity="0.9"') + star(150, 114, 4, "#fff", 'opacity="0.9"') + star(138, 70, 2.6, "#fff"),
+  },
+  {
+    id: "party-feather", name: "Feathers", cat: "party", half: true, color: "#5b3fd9", shape: OUT.party, rim: "metal",
+    back: (p) => [[-104, 92, 10, "alt"], [-88, 100, 11, "base"], [-72, 96, 11, "alt2"], [-56, 88, 10, "alt"], [-40, 74, 9, "base"]].map(([a, l, w, c], i) => feather(148, 64, a, l, w, p[c], p.deep, `pf${i}`)).join(""),
+    pattern: () => [both("M58 88 C66 76 84 74 94 84"), both("M60 120 C70 128 82 126 88 120")].map((d) => trimLine(d, 1.5)).join(""),
+    eyes: () => holes(ALMOND, "metal"),
+    front: () => gem(148, 64, 5.4) + gem(100, 86, 3.4),
+  },
+  {
+    id: "party-lace", name: "Lace", cat: "party", half: true, color: "#1d1a26", shape: OUT.party, rim: "metal",
+    pattern: () => { let s = ""; for (let y = 40; y < 152; y += 9) for (let x = 14 + ((y / 9) % 2) * 4.5; x < 188; x += 9) s += `<circle cx="${x}" cy="${y}" r="3.3" fill="none" stroke="url(#metal)" stroke-opacity="0.5" stroke-width="0.7"/>`; return s + trimLine("M56 92 C66 72 90 70 100 86 C110 70 134 72 144 92", 1.8); },
+    eyes: () => holes(ALMOND, "metal"),
+    front: () => gem(100, 84, 3.2),
+  },
+  {
+    id: "party-cat", name: "Cat eye", cat: "party", half: true, color: "#ff3fa4", shape: OUT.catEye, rim: "metal",
+    pattern: (p) => scallops(p.light, 0.5, 40, 7, 10, 192),
+    eyes: () => holes(both("M60 106 C66 92 86 90 96 101 C88 112 72 114 60 106 L52 98Z"), "metal"),
+    front: () => gem(100, 84, 3) + gem(30, 52, 2.4) + gem(170, 52, 2.4),
+  },
+  {
+    id: "party-butterfly", name: "Party wings", cat: "party", half: true, color: "#0f8a8a", shape: OUT.wings, rim: "metal", face: () => "url(#wing)",
+    pattern: (p) => [both("M96 86 C80 60 56 46 40 56"), both("M92 116 C80 124 62 128 48 122")].map((d) => trimLine(d, 1.3)).join("") + [[48, 60, 6], [152, 60, 6], [44, 118, 4], [156, 118, 4], [70, 50, 3], [130, 50, 3]].map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${p.pale}" opacity="0.9"/>`).join(""),
+    eyes: () => holes(ALMOND, "metal"),
+    front: () => `<ellipse cx="100" cy="112" rx="3.4" ry="30" fill="url(#metal)" filter="url(#emb)"/>`,
+  },
+  {
+    id: "party-jewel", name: "Jewelled", cat: "party", half: true, color: "#d92f3a", shape: OUT.party, rim: "metal",
+    pattern: (p) => scallops(p.dark, 0.35, 40, 8, 10, 192),
+    eyes: () => holes(ALMOND, "metal"),
+    front: () => [[100, 82, 4.4], [80, 70, 2.8], [120, 70, 2.8], [60, 66, 2.6], [140, 66, 2.6], [40, 60, 2.4], [160, 60, 2.4], [26, 52, 2.2], [174, 52, 2.2], [56, 122, 2.2], [144, 122, 2.2], [100, 140, 2.6]].map(([x, y, r]) => gem(x, y, r)).join(""),
+  },
+
   // ============ CLASSIC MASQUERADE ============
   {
     id: "venetian", name: "Venetian", cat: "classic", color: "#e8b143", shape: OUT.venetian, rim: "metal",
@@ -522,7 +566,7 @@ function pair2(d, fill, innerFill, inner, p) {
   return one((x) => x) + one(mirror);
 }
 
-const CATS = [["all", "All"], ["fun", "Fun"], ["animals", "Animals"], ["classic", "Classic"], ["world", "World"], ["edgy", "Edgy"]];
+const CATS = [["all", "All"], ["party", "Party"], ["fun", "Fun"], ["animals", "Animals"], ["classic", "Classic"], ["world", "World"], ["edgy", "Edgy"]];
 
 function maskSvg(m, colorHex, trimId) {
   const p = palette(colorHex || m.color);
@@ -574,6 +618,11 @@ function maskSvg(m, colorHex, trimId) {
 }
 
 export type MaskDesign = (typeof MASKS)[number];
+
+/** Party masks cover only the eyes, brows and nose (placed from those points, not the whole face) */
+export const isHalfMask = (id: string) => !!MASKS.find((x) => x.id === id)?.half;
+/** A mask's outline, in the drawing's own units */
+export const maskShape = (id: string): string => (MASKS.find((x) => x.id === id)?.shape ?? OUT.egg) as string;
 export type TrimId = keyof typeof TRIMS;
 export { MASKS, CATS, TRIMS, maskSvg, palette };
 

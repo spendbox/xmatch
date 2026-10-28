@@ -6,6 +6,7 @@
 import type { MaskSpot, PhotoMask } from "./types";
 import { maskUrl, MASKS } from "./masks";
 import { compress } from "./photos";
+import { placeMask } from "./maskPlace";
 
 // The mask drawing: a -26,-44 252×252 square; the face oval inside it is centred at (100,112), radii 48 × 54
 const VB = { x: -26, y: -44, w: 252, h: 252 };
@@ -167,7 +168,9 @@ export async function drawMasked(photo: HTMLCanvasElement, mask: Exclude<PhotoMa
   const ctx = out.getContext("2d")!;
   ctx.drawImage(photo, 0, 0);
   const img = await loadImg(maskUrl(mask.mask, mask.color, mask.trim));
-  for (const f of mask.faces) {
+  for (const face of mask.faces) {
+    // Party masks sit on the eyes and nose; full masks on the whole face
+    const f = placeMask(mask.mask, face, out.width / out.height);
     ctx.save();
     ctx.translate(f.cx * out.width, f.cy * out.height);
     ctx.rotate((f.rot * Math.PI) / 180);
