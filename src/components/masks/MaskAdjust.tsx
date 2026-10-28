@@ -48,7 +48,7 @@ export function MaskAdjust({ src, mask, onChange, onDone }: { src: string; mask:
     const m = latest.current;
     const face = m.faces[k];
     if (!face) return;
-    const base = placeMask(m.mask, face, ratio);
+    const base = placeMask(m.mask, face);
     const next = clampAdj(m.mask, base, a, ratio);
     onChange({ ...m, faces: m.faces.map((f, j) => (j === k ? { ...f, adj: next } : f)) });
   }

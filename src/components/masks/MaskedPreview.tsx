@@ -54,7 +54,7 @@ export function MaskedPreview({ src, mask, className = "", natural }: { src: str
           mask &&
           !("none" in mask) &&
           mask.faces.map((face, k) => {
-            // Placed on the face (party masks on the eyes and nose), then the person's own changes
+            // Placed on the face, then the person's own changes
             const f = finalSpot(mask.mask, face, ratio);
             return (
             // eslint-disable-next-line @next/next/no-img-element
