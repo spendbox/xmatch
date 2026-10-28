@@ -6,12 +6,13 @@ import { FEATURES } from "@/lib/features";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import { useEffect, useState } from "react";
-import { Activity, Bug, ScanFace, CalendarDays, Gauge, ListChecks, ExternalLink, Gamepad2, Inbox, LayoutDashboard, LogOut, Menu, MessageCircleQuestion, Sparkles, Tag, Users, X, Stamp } from "lucide-react";
+import { Activity, HeartPulse, Bug, ScanFace, CalendarDays, Gauge, ListChecks, ExternalLink, Gamepad2, Inbox, LayoutDashboard, LogOut, Menu, MessageCircleQuestion, Sparkles, Tag, Users, X, Stamp } from "lucide-react";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { adminLogout } from "@/app/admin/actions";
 
 const NAV = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
+  { href: "/admin/health", label: "Health", icon: HeartPulse },
   { href: "/admin/members", label: "Members", icon: Users },
   { href: "/admin/masks", label: "Mask photos", icon: ScanFace },
   { href: "/admin/masquerade", label: "Masquerade", icon: Activity },
