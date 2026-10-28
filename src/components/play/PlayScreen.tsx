@@ -35,7 +35,9 @@ export type PlayStatus = {
 };
 
 const TITLES: Record<string, string> = { whot: "Whot", ayo: "Ayo", ludo: "Ludo", snakes: "Snakes & Ladders", xo: "X & O", lastcard: "Last Card" };
-const REEL: GameKind[] = ["whot", "lastcard", "ludo", "xo", "ayo", "snakes"];
+const REEL: GameKind[] = ["whot", "ludo", "xo", "ayo", "snakes"];
+/** Games that aren't part of Play a stranger (they can still be played in chats) */
+const NOT_IN_PLAY: GameKind[] = ["lastcard"];
 const ROW = 150;
 
 /**
@@ -184,7 +186,7 @@ export function PlayScreen({ userId, demo }: { userId: string; demo?: { status: 
   const skew = st ? new Date(st.server_now).getTime() - Date.now() : 0;
   const waitedSec = now && st?.joined_at ? Math.max(0, Math.floor((now + skew - new Date(st.joined_at).getTime()) / 1000)) : 0;
   const short = st ? st.cost > st.balance : false;
-  const games = st?.games?.length ? st.games : REEL;
+  const games = (st?.games?.length ? st.games : REEL).filter((g) => !NOT_IN_PLAY.includes(g));
 
   return (
     <div
@@ -372,8 +374,10 @@ function MysteryGame({ games }: { games: GameKind[] }) {
 
 /** Player found: a reel spins through the games and stops on the one Dashpad picked */
 function Picked({ game }: { game: GameKind }) {
-  const list = useMemo(() => Array.from({ length: 5 }, () => REEL).flat(), []);
-  const target = 4 * REEL.length + REEL.indexOf(game);
+  // Always include the picked game, even one that isn't in the usual list
+  const reel = useMemo(() => (REEL.includes(game) ? REEL : [...REEL, game]), [game]);
+  const list = useMemo(() => Array.from({ length: 5 }, () => reel).flat(), [reel]);
+  const target = 4 * reel.length + reel.indexOf(game);
   const [y, setY] = useState(0);
   const [done, setDone] = useState(false);
   useEffect(() => {

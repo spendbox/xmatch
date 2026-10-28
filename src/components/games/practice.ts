@@ -11,7 +11,7 @@ import * as xo from "@/lib/boardgames/xo";
 import * as lastcard from "@/lib/boardgames/lastcard";
 
 /** Games you can practise against the computer */
-export const PRACTICE_GAMES: GameKind[] = ["whot", "ayo", "ludo", "snakes", "xo", "lastcard"];
+export const PRACTICE_GAMES: GameKind[] = ["whot", "ayo", "ludo", "snakes", "xo"];
 export const BOT = "computer";
 const ME = "me";
 const SPECIAL = [2, 5, 14, 8, 1];
