@@ -2,7 +2,7 @@
 
 import { Photo } from "@/components/ui/Photo";
 import { MaskFace } from "@/components/ui/MaskFace";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { showMediaHelp } from "@/lib/mediaPermission";
 import { GhostMode } from "./GhostMode";
 import { ThingsAboutMe } from "./ThingsAboutMe";
@@ -102,6 +102,14 @@ export function ProfileEditor({
   const age = ageFromBirthdate(profile.birthdate);
   const gender = GENDERS.find((g) => g.value === profile.gender)?.label;
   const { score, tip } = strength({ name, bio, interests, photos });
+
+  // Sent here to change masks (?photos=1): open Photos straight away
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("photos")) {
+      setPanel("photos");
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+  }, []);
 
   function openPanel(p: Panel) {
     tapFeedback();
