@@ -7,6 +7,7 @@ import { MaskPhotoMock } from "./MaskPhotoMocks";
 import { MaskFlowMock } from "./MaskFlowMocks";
 import { MaskEngineTest } from "./MaskEngineTest";
 import { MaskGallery } from "./MaskGallery";
+import { HealthPage } from "@/components/admin/HealthPage";
 import { MaskBounds } from "./MaskBounds";
 import { MaskAllPhotos } from "@/components/admin/MaskAllPhotos";
 import { MaskedNotice } from "@/components/masks/MaskedNotice";
@@ -412,6 +413,33 @@ function ScreenBody({ screen }: { screen: string }) {
               active: p.id !== "team",
             }))}
             counts={{ food: 412, weekend: 380, music: 377 }}
+          />
+        </AdminShell>
+      );
+    case "admin-health":
+      return (
+        <AdminShell>
+          <HealthPage
+            missing={false}
+            health={{
+              people: { total: 1240, joined: 186, joined_prev: 142, active_day: 312, active_week: 804 },
+              retention_week: { cohort: 150, back: 41 },
+              retention_month: { cohort: 220, back: 19 },
+              modes: [
+                { mode: "friends", active: 210, women: 98, men: 104, other: 8 },
+                { mode: "dating", active: 466, women: 140, men: 320, other: 6 },
+                { mode: "spicy", active: 128, women: 22, men: 104, other: 2 },
+              ],
+              masquerade: { pairs: 940, pairs_prev: 810, both_unmasked: 203, both_unmasked_prev: 150, reported: 12 },
+              play: { games: 1320, games_prev: 1104, waits: 1400, wait_median: 38, wait_p90: 145, waiting_now: 6 },
+              safety: {
+                reports: 21, reports_prev: 15, reported_people: 14, hidden: 63, hidden_prev: 48, auto_limit: 3,
+                to_review: [{ id: "1", name: "Femi", photo: null, at: iso(3600), reports: 4, reasons: ["Asked me for money", "Rude", "Fake photos"] }],
+                most_reported: [{ id: "2", name: "Seyi", photo: null, n: 2 }, { id: "3", name: "Uche", photo: null, n: 1 }],
+              },
+              money: { buyers: 31, buyers_prev: 24, revenue_kobo: 8_450_000, revenue_prev_kobo: 6_100_000 },
+              invites: { joined: 54, joined_prev: 30, inviters: 37 },
+            }}
           />
         </AdminShell>
       );
