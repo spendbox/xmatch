@@ -7,11 +7,11 @@ import { Button } from "@/components/ui/Button";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { uploadPhoto, deletePhoto } from "@/lib/photos";
 import { drawMasked, loadOriginal, maskName, prepare, starterMask } from "@/lib/maskedPhotos";
-import type { PhotoMask, Profile } from "@/lib/types";
+import type { PhotoMask } from "@/lib/types";
+import { photosOf, photosPatch, type MyPhoto } from "@/lib/photoSet";
 import { MaskEditor } from "./MaskEditor";
 
-/** One of your photos: the masked copy everyone sees, the original, and the mask it wears */
-export type MyPhoto = { masked: string; real: string; mask: PhotoMask | null };
+export type { MyPhoto };
 type Masked = Exclude<PhotoMask, { none: true }>;
 
 /** A problem to show as it is (not "please try again") */
@@ -19,16 +19,7 @@ export class PhotoProblem extends Error {
   name = "PhotoProblem";
 }
 
-export function photosOf(p: Pick<Profile, "photos" | "real_photos" | "photo_masks">): MyPhoto[] {
-  const masked = p.photos ?? [];
-  const real = p.real_photos ?? masked;
-  const masks = p.photo_masks ?? [];
-  return masked.map((m, i) => ({ masked: m, real: real[i] ?? m, mask: masks[i] ?? null }));
-}
-
-export function photosPatch(items: MyPhoto[]) {
-  return { photos: items.map((i) => i.masked), real_photos: items.map((i) => i.real), photo_masks: items.map((i) => i.mask ?? { none: true as const }) };
-}
+export { photosOf, photosPatch };
 
 const isMasked = (m: PhotoMask | null): m is Masked => !!m && !("none" in m);
 

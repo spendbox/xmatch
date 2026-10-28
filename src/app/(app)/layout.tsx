@@ -3,8 +3,7 @@ import { getAuth, getMyProfile } from "@/lib/auth";
 import { AppChrome } from "@/components/app/AppChrome";
 import { ThingPromptsSync } from "@/components/app/ThingPromptsSync";
 import { MaskUpdate } from "@/components/masks/MaskUpdate";
-import { photosOf } from "@/components/masks/useMaskedPhotos";
-import { PLACEHOLDER } from "@/lib/maskedPhotos";
+import { PLACEHOLDER, photosOf } from "@/lib/photoSet";
 import type { ThingPromptRow } from "@/lib/things";
 import type { GiftRow, SettingRow } from "@/components/keys/usePrices";
 

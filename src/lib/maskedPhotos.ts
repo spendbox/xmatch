@@ -13,7 +13,7 @@ const OVAL = { cx: 100, cy: 112, rx: 48, ry: 54 };
 
 /** Masks picked for you, a different one for each photo */
 export const STARTER_MASKS = ["venetian", "fox", "hearteyes", "flowers", "cat", "shades", "butterfly", "kitsune", "unicorn", "owl", "moon", "party"];
-export const PLACEHOLDER = "/masked-photo.svg";
+export { PLACEHOLDER } from "./photoSet";
 
 type FaceApi = typeof import("@vladmandic/face-api");
 let finder: Promise<FaceApi> | null = null;

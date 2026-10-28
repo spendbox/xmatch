@@ -291,3 +291,25 @@ begin
       ) t), '[]'::json)
   );
 end $function$;
+
+-- Events keep a copy of the photo you show there (and a small blurred preview of it). Point them
+-- at your masked photos: now, and whenever your photos change (a new mask, a removed photo).
+create or replace function public.event_photos_follow() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.photos is distinct from old.photos then
+    update event_attendees a
+    set featured_photo = new.photos[1], featured_blur = null
+    where a.user_id = new.id and a.featured_photo is not null and not (a.featured_photo = any(coalesce(new.photos, '{}')));
+  end if;
+  return new;
+end $$;
+revoke execute on function public.event_photos_follow() from public, anon, authenticated;
+drop trigger if exists event_photos_follow on public.profiles;
+create trigger event_photos_follow after update of photos on public.profiles
+  for each row execute function public.event_photos_follow();
+
+update public.event_attendees a
+set featured_photo = p.photos[1], featured_blur = null
+from public.profiles p
+where a.user_id = p.id and a.featured_photo is not null and not (a.featured_photo = any(coalesce(p.photos, '{}')));
