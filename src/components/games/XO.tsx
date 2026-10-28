@@ -162,7 +162,7 @@ export function XO({
             : "");
 
   return (
-    <div className="relative flex h-full flex-col px-3 pt-2 pb-4">
+    <div className="relative flex h-full min-h-0 flex-col overflow-hidden px-3 pt-2 pb-3">
       <div className="flex items-center gap-2.5">
         <Player
           name="You"
@@ -185,7 +185,7 @@ export function XO({
 
       {/* Rounds: first to 3 */}
       <div
-        className="mt-4 flex items-center justify-center gap-1.5"
+        className="mt-3 flex shrink-0 items-center justify-center gap-1.5"
         aria-label={`Round ${st.round}. You ${st.wins[me]}, ${names.them} ${st.wins[them]}`}
       >
         {Array.from({ length: WIN_ROUNDS * 2 - 1 }, (_, i) => {
@@ -220,8 +220,9 @@ export function XO({
       </div>
 
       {/* The board */}
-      <div className="flex min-h-0 flex-1 items-center justify-center">
-        <div className="relative aspect-square w-full max-w-[min(360px,82vw,48dvh)]">
+      {/* As big as the space allows: the full width, or the full height on short screens */}
+      <div className="my-2 grid min-h-0 flex-1 place-items-center" style={{ containerType: "size" }}>
+        <div className="relative aspect-square" style={{ width: "min(100cqw, 100cqh, 560px)" }}>
           <div
             className={clsx(
               "grid h-full w-full grid-cols-3 gap-2.5 rounded-[30px] p-2.5 transition",
@@ -302,7 +303,7 @@ export function XO({
 
       <p
         className={clsx(
-          "min-h-[40px] text-center text-[14px] leading-snug font-semibold",
+          "min-h-[40px] shrink-0 text-center text-[14px] leading-snug font-semibold",
           note ? "text-[#ffd0d0]" : "text-white/80",
         )}
       >

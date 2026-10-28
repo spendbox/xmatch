@@ -30,6 +30,7 @@ import { SnakesLadders } from "./SnakesLadders";
 import { XO } from "./XO";
 import { LastCard } from "./LastCard";
 import { markPlaying } from "@/lib/playing";
+import { RulesButton, RulesSheet } from "./RulesSheet";
 import { ReactionButton, ReactionHint, ReactionLayer, ReactionTray, useReactionHint, useReactions } from "./Reactions";
 
 /** The full-screen game: challenge, 3-2-1, the game itself, then results */
@@ -110,6 +111,7 @@ function GameArenaInner({
   const reacting = !practice && (game.status === "active" || game.status === "done" || game.status === "cancelled");
   const reactions = useReactions(reacting ? game.id : null);
   const [tray, setTray] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
   const reactHint = useReactionHint(game.status === "active");
   const info = gameInfo(game.kind);
   const over = game.status === "done" || game.status === "cancelled";
@@ -314,6 +316,7 @@ function GameArenaInner({
                 }}
               />
             )}
+            <RulesButton onOpen={() => setRulesOpen(true)} />
             <button
               type="button"
               onClick={sound.toggle}
@@ -386,6 +389,7 @@ function GameArenaInner({
           />
         )}
         <GamePop pop={pops.pop} big={WIDE_GAMES.includes(game.kind)} />
+        <RulesSheet kind={game.kind} open={rulesOpen} onClose={() => setRulesOpen(false)} />
         {giftLine && (
           <div className="pointer-events-none absolute inset-x-0 top-[calc(max(12px,env(safe-area-inset-top))+52px)] z-50 flex justify-center px-4">
             <button
@@ -428,6 +432,7 @@ function Challenge({ game, names, act, onClose }: { game: Game; names: Names; ac
   const incoming = game.me === "b";
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [rules, setRules] = useState(false);
   const rings = useRef(false);
   useEffect(() => {
     if (!incoming || rings.current) return;
@@ -477,6 +482,11 @@ function Challenge({ game, names, act, onClose }: { game: Game; names: Names; ac
           </span>
         )}
       </div>
+
+      <div className="mt-4">
+        <RulesButton label onOpen={() => setRules(true)} />
+      </div>
+      <RulesSheet kind={game.kind} open={rules} onClose={() => setRules(false)} />
 
       {err && <p className="mt-4 text-[13px] font-semibold text-[#ffb4b4]">{err}</p>}
 
