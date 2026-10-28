@@ -370,13 +370,13 @@ export function CallProvider({ userId, children }: { userId: string; children: R
         const row = p.new as { id: string; match_id: string; caller_id: string; kind: CallKind; status: string; created_at: string };
         if (row.status !== "ringing" || callRef.current) return;
         if (Date.now() - new Date(row.created_at).getTime() > RING_SECONDS * 1000) return;
-        const { data: who } = await supabase.from("profiles").select("display_name, photos").eq("id", row.caller_id).maybeSingle();
+        const { data: who } = await supabase.from("profiles").select("display_name, photos, real_photos").eq("id", row.caller_id).maybeSingle();
         const c: ActiveCall = {
           id: row.id,
           matchId: row.match_id,
           kind: row.kind,
           role: "callee",
-          peer: { name: who?.display_name ?? "Your connection", photo: who?.photos?.[0] },
+          peer: { name: who?.display_name ?? "Your connection", photo: (who?.real_photos as string[] | null)?.[0] ?? who?.photos?.[0] },
           status: "incoming",
         };
         callRef.current = c;

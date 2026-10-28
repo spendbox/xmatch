@@ -1,5 +1,11 @@
 "use client";
 
+import { DailyMock } from "./DailyMocks";
+import { BigMomentPop, CoreMock } from "./CoreMocks";
+import { AuraMock } from "./AuraMocks";
+import { MaskPhotoMock } from "./MaskPhotoMocks";
+import { MaskFlowMock } from "./MaskFlowMocks";
+import { MaskEngineTest } from "./MaskEngineTest";
 import { HomeScreen } from "@/components/home/HomeScreen";
 import { WalletScreen } from "@/components/keys/WalletScreen";
 import { GiftSheet } from "@/components/keys/GiftSheet";
@@ -320,6 +326,12 @@ function ScreenBody({ screen }: { screen: string }) {
   if (screen.startsWith("new-xo-")) return <XOMock step={Number(screen.slice(-1)) as 1 | 2 | 3} />;
   if (screen.startsWith("new-words-")) return <WordsMock step={Number(screen.slice(-1)) as 1 | 2} />;
   if (screen.startsWith("new-cards-")) return <CardsMock step={Number(screen.slice(-1)) as 1 | 2} />;
+  if (screen === "mask-engine") return <MaskEngineTest />;
+  if (screen.startsWith("new-mm-")) return <MaskFlowMock step={Number(screen.slice(7))} />;
+  if (screen.startsWith("new-mask-")) return <MaskPhotoMock step={Number(screen.slice(9))} />;
+  if (screen.startsWith("new-aura-")) return <AuraMock step={Number(screen.slice(9))} />;
+  if (screen.startsWith("new-core-")) return <CoreMock step={Number(screen.slice(9))} />;
+  if (screen.startsWith("new-daily-")) return <DailyMock step={Number(screen.slice(-1)) as 1 | 2 | 3 | 4} />;
   if (screen.startsWith("new-pool-")) return <PoolMock step={Number(screen.slice(-1)) as 1 | 2} />;
   if (screen.startsWith("game-")) return <GameDemo screen={screen} />;
   if (screen === "chat-bgs") return <ChatBgGallery />;
@@ -522,9 +534,14 @@ function ScreenBody({ screen }: { screen: string }) {
       );
     case "home":
     case "home-pact":
+    case "home-daily":
+    case "home-daily-done":
+    case "home-pop-pair":
+    case "home-pop-match":
       return (
         <div className="pb-24">
-          <HomeScreen demoPeople={homePeople} demoSetup={{ place: true, push: false, things: 4, claimed: false, reward: 5 }} meets={demoMeets} hour={demoHour()} profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} stats={{ online: 214, week_chats: 12, week_unmasks: 5, gifts_received: 3 }} matches={recent} pact={screen === "home-pact" ? { ...demoPact, count: 1 } : null} />
+          {screen.startsWith("home-pop-") && <BigMomentPop kind={screen === "home-pop-pair" ? "pair" : "match"} />}
+          <HomeScreen demoDaily={screen === "home-daily" ? "todo" : screen === "home-daily-done" ? "done" : undefined} demoPeople={homePeople} demoSetup={{ place: true, push: false, things: 4, claimed: false, reward: 5 }} meets={demoMeets} hour={demoHour()} profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} stats={{ online: 214, week_chats: 12, week_unmasks: 5, gifts_received: 3 }} matches={recent} pact={screen === "home-pact" ? { ...demoPact, count: 1 } : null} />
           <BottomNav />
         </div>
       );

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
 import { ArrowLeft, ArrowRight, Camera, Check, Lightbulb, MapPin, Mars, PenLine, Shapes, Smile, UserRound, Venus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { uploadPhoto, deletePhoto } from "@/lib/photos";
+import { photosOf, photosPatch, useMaskedPhotos } from "@/components/masks/useMaskedPhotos";
 import { ageFromBirthdate } from "@/lib/constants";
 import type { Gender, Profile } from "@/lib/types";
 import { Button, ButtonLink, tapFeedback } from "@/components/ui/Button";
@@ -19,7 +19,7 @@ import { PlacePicker } from "@/components/home/PlacePicker";
 const STEPS = [
   { title: "First, the basics", subtitle: "Only your age is shown while masked. The rest is revealed when you both unmask.", icon: UserRound },
   { title: "Show your personality", subtitle: "Your interests are what people see while you're masked. Your bio is revealed after.", icon: PenLine },
-  { title: "Add your photos", subtitle: "Hidden until you both choose to unmask. Add at least one.", icon: Camera },
+  { title: "Add your photos", subtitle: "We hide your face in each photo with a mask. Add at least one.", icon: Camera },
 ];
 
 const BIO_PROMPTS = [
@@ -44,7 +44,8 @@ export function Onboarding({ profile, demoStep, demoDone }: { profile: Profile; 
   const [gender, setGender] = useState<Gender | "">(profile.gender ?? "");
   const [bio, setBio] = useState(profile.bio ?? "");
   const [interests, setInterests] = useState<string[]>(profile.interests ?? []);
-  const [photos, setPhotos] = useState<string[]>(profile.photos ?? []);
+  const photoSet = useMaskedPhotos({ supabase, userId: profile.id, initial: photosOf(profile) });
+  const photos = photoSet.urls;
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [place, setPlace] = useState<string | null>(profile.place_label ?? null);
@@ -94,7 +95,7 @@ export function Onboarding({ profile, demoStep, demoDone }: { profile: Profile; 
       step === 0
         ? // Brand-new members start with "Open to Masquerade" switched on
           { display_name: name.trim(), birthdate, gender, ...(profile.display_name ? {} : { open_to_masquerade: true }) }
-        : step === 1 ? { bio: bio.trim(), interests } : { photos };
+        : step === 1 ? { bio: bio.trim(), interests } : photosPatch(photoSet.items);
     const { error: err } = await supabase.from("profiles").update(patch).eq("id", profile.id);
     setSaving(false);
     if (err) return setError("Couldn't save. Please check your connection and try again.");
@@ -108,15 +109,6 @@ export function Onboarding({ profile, demoStep, demoDone }: { profile: Profile; 
       }
       setDone(true);
     }
-  }
-
-  async function addPhoto(file: File) {
-    const url = await uploadPhoto(supabase, profile.id, file);
-    setPhotos((p) => [...p, url]);
-  }
-  function removePhoto(url: string) {
-    setPhotos((p) => p.filter((x) => x !== url));
-    deletePhoto(supabase, url);
   }
 
   if (done) return <AllSet name={name} />;
@@ -277,13 +269,29 @@ export function Onboarding({ profile, demoStep, demoDone }: { profile: Profile; 
 
             {step === 2 && (
               <>
-                <PhotoGrid photos={photos} onAdd={addPhoto} onRemove={removePhoto} onReorder={setPhotos} />
+                <PhotoGrid
+                  photos={photos}
+                  onAdd={photoSet.add}
+                  onRemove={photoSet.remove}
+                  onReorder={photoSet.reorder}
+                  overlay={photoSet.overlay}
+                  busyNote="Finding your face and masking it…"
+                />
+                {photoSet.ui}
+                {photos.length > 0 && (
+                  <p className="flex items-start gap-2.5 rounded-3xl bg-brand-soft p-4 text-[13.5px] text-brand-ink">
+                    <MaskIcon className="mt-0.5 w-6 shrink-0" />
+                    <span>
+                      <b>Masks are free.</b> We picked one for each photo. Tap the pencil to change it now, or any time in Profile.
+                    </span>
+                  </p>
+                )}
                 <div className="rounded-3xl border border-line bg-surface p-4 shadow-card">
                   <p className="flex items-center gap-2 text-[14px] font-semibold">
                     <Lightbulb size={17} className="text-gold" /> Photos that get the best reveals
                   </p>
                   <ul className="mt-2.5 space-y-1.5 text-[13px] text-muted">
-                    {["A clear, smiling photo of just you first", "Recent photos — no heavy filters", "Something that shows what you love doing"].map((t) => (
+                    {["A clear photo of just you first (your face gets a mask)", "Recent photos, no heavy filters", "Something that shows what you love doing"].map((t) => (
                       <li key={t} className="flex items-center gap-2">
                         <Check size={14} className="shrink-0 text-mint" strokeWidth={3} /> {t}
                       </li>

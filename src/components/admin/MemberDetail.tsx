@@ -25,6 +25,8 @@ export type MemberInfo = {
     bio: string;
     interests: string[];
     photos: string[];
+    /** The originals (members see these only after unmasking) */
+    real_photos?: string[] | null;
     open_to_masquerade: boolean;
     pref_intent: string;
     created_at: string;
@@ -139,6 +141,18 @@ export function MemberDetail({ id, info }: { id: string; info: MemberInfo }) {
               </div>
             ) : (
               <p className="text-[14px] text-muted">No photos.</p>
+            )}
+            {!!p.real_photos?.length && p.real_photos.join() !== p.photos?.join() && (
+              <>
+                <p className="mt-4 text-[12px] font-semibold tracking-wide text-muted uppercase">Originals · only their matches see these</p>
+                <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-6">
+                  {p.real_photos.map((url) => (
+                    <button key={url} onClick={() => setPhoto(url)} className="relative aspect-[3/4] overflow-hidden rounded-xl bg-line">
+                      <Photo src={url} id={p.id} gender={p.gender as Gender | null} className="h-full w-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              </>
             )}
             <p className="mt-4 text-[12px] font-semibold tracking-wide text-muted uppercase">Bio</p>
             <p className="mt-1 text-[15px] whitespace-pre-wrap text-ink-soft">{p.bio || <span className="text-muted">No bio.</span>}</p>

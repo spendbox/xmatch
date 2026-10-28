@@ -28,9 +28,15 @@ export function PhotoGrid({
   onAdd,
   onRemove,
   onReorder,
+  overlay,
+  busyNote,
 }: {
   photos: string[];
   onAdd: (file: File) => Promise<void>;
+  /** Extra things on each photo (its mask, a pencil to change it) */
+  overlay?: (url: string) => React.ReactNode;
+  /** Said while a photo is being added */
+  busyNote?: string;
   onRemove: (url: string) => void;
   /** Photos moved around: the first one is the main photo */
   onReorder?: (next: string[]) => void;
@@ -53,8 +59,8 @@ export function PhotoGrid({
         if (!f.type.startsWith("image/")) continue;
         await onAdd(f);
       }
-    } catch {
-      setError("That photo didn't upload. Please try again.");
+    } catch (e) {
+      setError(e instanceof Error && e.name === "PhotoProblem" ? e.message : "That photo didn't upload. Please try again.");
     } finally {
       setBusy(false);
       if (input.current) input.current.value = "";
@@ -180,6 +186,7 @@ export function PhotoGrid({
                     </span>
                   }
                 />
+                {!drag && overlay?.(url)}
                 {i === 0 ? (
                   <span className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-white/90 px-2 py-0.5 text-[11px] font-semibold text-ink">
                     <Star size={11} className="fill-gold text-gold" /> Main
@@ -233,6 +240,7 @@ export function PhotoGrid({
           );
         })}
       </div>
+      {busy && busyNote && <p className="mt-2.5 text-[13px] font-semibold text-brand">{busyNote}</p>}
       {onReorder && photos.length > 1 && (
         <p className="mt-2.5 text-[12px] text-muted">Hold and drag a photo to move it. The first one is your main photo.</p>
       )}
