@@ -7,8 +7,8 @@ import type { MaskSpot, PhotoMask } from "./types";
 import { maskUrl, MASKS } from "./masks";
 import { compress } from "./photos";
 
-// The mask drawing: a -10,-30 220×220 square; the face oval inside it is centred at (100,112), radii 48 × 54
-const VB = { x: -10, y: -30, w: 220, h: 220 };
+// The mask drawing: a -26,-44 252×252 square; the face oval inside it is centred at (100,112), radii 48 × 54
+const VB = { x: -26, y: -44, w: 252, h: 252 };
 const OVAL = { cx: 100, cy: 112, rx: 48, ry: 54 };
 
 /** Masks picked for you, a different one for each photo */
@@ -77,7 +77,7 @@ function outline(box: { x: number; y: number; width: number; height: number }, p
   return { box: { x: box.x, y: box.y, w: box.width, h: box.height }, yaw, roll, region };
 }
 
-type Spot = { cx: number; cy: number; s: number; rot: number; sx: number };
+type Spot = { cx: number; cy: number; s: number; rot: number; sx: number; fit?: number };
 
 function inside(m: Spot, px: number, py: number) {
   const dx = px - m.cx;
@@ -103,6 +103,7 @@ function spotFor(f: Found): Spot {
   const m: Spot = { cx: (minX + maxX) / 2, cy: (minY + maxY) / 2 + (maxY - minY) * 0.03, rot: f.roll, sx, s: 0 };
   m.s = Math.max((maxX - minX) / (OVAL.rx * 2 * sx), (maxY - minY) / (OVAL.ry * 2)) * 1.02;
   for (let k = 0; k < 30 && !f.region.every(([x, y]) => inside(m, x, y)); k++) m.s *= 1.03;
+  m.fit = m.s;
   m.s *= 1.06;
   return m;
 }
@@ -162,7 +163,21 @@ export async function prepare(file: Blob, maskId: string): Promise<Prepared> {
 export async function maskFor(canvas: HTMLCanvasElement, maskId: string): Promise<Exclude<PhotoMask, { none: true }> | null> {
   const found = await findFaces(canvas);
   if (!found.length) return null;
-  const faces: MaskSpot[] = found.map(spotFor).map((m) => ({ cx: m.cx / canvas.width, cy: m.cy / canvas.height, s: m.s / canvas.width, rot: m.rot, sx: m.sx }));
+  const W = canvas.width;
+  const H = canvas.height;
+  const r4 = (n: number) => Math.round(n * 10000) / 10000;
+  const faces: MaskSpot[] = found.map((f) => {
+    const m = spotFor(f);
+    return {
+      cx: r4(m.cx / W),
+      cy: r4(m.cy / H),
+      s: m.s / W,
+      rot: Math.round(m.rot * 10) / 10,
+      sx: Math.round(m.sx * 1000) / 1000,
+      fit: (m.fit ?? m.s / 1.06) / W,
+      ...(f.region ? { pts: f.region.flatMap(([x, y]) => [Math.round((x / W) * 1000) / 1000, Math.round((y / H) * 1000) / 1000]) } : {}),
+    };
+  });
   return { mask: maskId, color: null, trim: "gold", faces };
 }
 
@@ -182,3 +197,75 @@ export function starterMask(used: string[]) {
 }
 
 export const maskName = (id: string) => MASKS.find((m) => m.id === id)?.name ?? "Mask";
+
+/** The smallest a mask may be: it must still cover this much of the face */
+export const MIN_COVER = 0.7;
+const MAX_GROW = 1.4;
+
+/**
+ * How much of a face a mask covers (0 to 1), for a photo `ratio` wide per 1 tall. Uses the face's
+ * outline when we have it; otherwise estimates from the mask's size.
+ */
+export function coverage(f: MaskSpot, ratio: number) {
+  const fit = f.fit ?? f.s / 1.06;
+  if (!f.pts || f.pts.length < 6) return Math.min(1, (f.s / fit) ** 2);
+  // Work in photo widths (y fractions are of the height)
+  const P: [number, number][] = [];
+  for (let i = 0; i < f.pts.length; i += 2) P.push([f.pts[i], f.pts[i + 1] / ratio]);
+  const hull = convexHull(P);
+  const xs = hull.map((p) => p[0]);
+  const ys = hull.map((p) => p[1]);
+  const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+  const spot = { cx: f.cx, cy: f.cy / ratio, s: f.s, rot: f.rot, sx: f.sx };
+  let inFace = 0;
+  let covered = 0;
+  const N = 36;
+  for (let i = 0; i < N; i++) {
+    for (let j = 0; j < N; j++) {
+      const x = x0 + ((i + 0.5) / N) * (x1 - x0);
+      const y = y0 + ((j + 0.5) / N) * (y1 - y0);
+      if (!inHull(hull, x, y)) continue;
+      inFace++;
+      if (inside(spot, x, y)) covered++;
+    }
+  }
+  return inFace ? covered / inFace : 1;
+}
+
+/** The size range for a face's mask: from just covering 70% of it, up to 1.4× its full-cover size */
+export function sizeRange(f: MaskSpot, ratio: number) {
+  const fit = f.fit ?? f.s / 1.06;
+  let lo = fit * 0.5;
+  let hi = fit;
+  for (let k = 0; k < 18; k++) {
+    const mid = (lo + hi) / 2;
+    if (coverage({ ...f, s: mid }, ratio) >= MIN_COVER) hi = mid;
+    else lo = mid;
+  }
+  return { min: hi, max: fit * MAX_GROW, fit };
+}
+
+function convexHull(points: [number, number][]) {
+  const p = [...points].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cross = (o: number[], a: number[], b: number[]) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lower: [number, number][] = [];
+  for (const q of p) {
+    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], q) <= 0) lower.pop();
+    lower.push(q);
+  }
+  const upper: [number, number][] = [];
+  for (const q of [...p].reverse()) {
+    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], q) <= 0) upper.pop();
+    upper.push(q);
+  }
+  return [...lower.slice(0, -1), ...upper.slice(0, -1)];
+}
+
+function inHull(h: [number, number][], x: number, y: number) {
+  for (let i = 0; i < h.length; i++) {
+    const [ax, ay] = h[i];
+    const [bx, by] = h[(i + 1) % h.length];
+    if ((bx - ax) * (y - ay) - (by - ay) * (x - ax) < 0) return false;
+  }
+  return true;
+}

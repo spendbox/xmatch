@@ -6,6 +6,7 @@ import { AuraMock } from "./AuraMocks";
 import { MaskPhotoMock } from "./MaskPhotoMocks";
 import { MaskFlowMock } from "./MaskFlowMocks";
 import { MaskEngineTest } from "./MaskEngineTest";
+import { MaskBounds } from "./MaskBounds";
 import { MaskAllPhotos } from "@/components/admin/MaskAllPhotos";
 import { MaskedNotice } from "@/components/masks/MaskedNotice";
 import { HomeScreen } from "@/components/home/HomeScreen";
@@ -328,6 +329,7 @@ function ScreenBody({ screen }: { screen: string }) {
   if (screen.startsWith("new-xo-")) return <XOMock step={Number(screen.slice(-1)) as 1 | 2 | 3} />;
   if (screen.startsWith("new-words-")) return <WordsMock step={Number(screen.slice(-1)) as 1 | 2} />;
   if (screen.startsWith("new-cards-")) return <CardsMock step={Number(screen.slice(-1)) as 1 | 2} />;
+  if (screen === "mask-bounds") return <MaskBounds />;
   if (screen === "mask-engine") return <MaskEngineTest />;
   if (screen === "masked-notice")
     return (
