@@ -6,6 +6,7 @@ import { AuraMock } from "./AuraMocks";
 import { MaskPhotoMock } from "./MaskPhotoMocks";
 import { MaskFlowMock } from "./MaskFlowMocks";
 import { MaskEngineTest } from "./MaskEngineTest";
+import { PartyGallery } from "./PartyGallery";
 import { MaskBounds } from "./MaskBounds";
 import { MaskAllPhotos } from "@/components/admin/MaskAllPhotos";
 import { MaskedNotice } from "@/components/masks/MaskedNotice";
@@ -331,6 +332,7 @@ function ScreenBody({ screen }: { screen: string }) {
   if (screen.startsWith("new-cards-")) return <CardsMock step={Number(screen.slice(-1)) as 1 | 2} />;
   if (screen === "mask-bounds") return <MaskBounds />;
   if (screen === "mask-engine") return <MaskEngineTest />;
+  if (screen === "party-masks") return <PartyGallery />;
   if (screen === "masked-notice")
     return (
       <MaskedNotice
