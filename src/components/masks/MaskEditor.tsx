@@ -2,25 +2,28 @@
 
 import { useState } from "react";
 import clsx from "clsx";
-import { Check } from "lucide-react";
+import { Check, Move } from "lucide-react";
 import { Sheet } from "@/components/ui/Sheet";
 import { Button, tapFeedback } from "@/components/ui/Button";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { CATS, MASKS, TRIMS, maskUrl } from "@/lib/masks";
 import type { PhotoMask } from "@/lib/types";
 import { MaskedPreview } from "./MaskedPreview";
+import { MaskAdjust } from "./MaskAdjust";
 
 type Masked = Exclude<PhotoMask, { none: true }>;
 
 export const MASK_COLOURS = ["#e8b143", "#1d1a26", "#f7f0e6", "#d92f3a", "#ff3fa4", "#b44cff", "#5b3fd9", "#253a8f", "#4f86f7", "#0f8a8a", "#1f9d6b", "#f2741f"];
 
 /**
- * Changing a photo's mask: the design, its colour and its trim. The mask stays where the face
- * is (it was placed over the face for you and can't be moved off it).
+ * Changing a photo's mask: the design, its colour and its trim. It's placed over the face for you;
+ * "Move & resize" lets you move, resize and turn it to fit (full masks only a little, so they keep
+ * hiding the face).
  */
 export function MaskEditor({ open, src, mask, onClose, onSave, saving, layer }: { open: boolean; src: string; mask: Masked; onClose: () => void; onSave: (m: Masked) => void; saving?: boolean; layer?: string }) {
   const [draft, setDraft] = useState<Masked>(mask);
   const [cat, setCat] = useState("all");
+  const [adjusting, setAdjusting] = useState(false);
   const [opened, setOpened] = useState(mask);
   // A different photo opened: start from its mask
   if (opened !== mask) {
@@ -39,7 +42,7 @@ export function MaskEditor({ open, src, mask, onClose, onSave, saving, layer }: 
       open={open}
       onClose={onClose}
       title="Change mask"
-      subtitle="Free · it stays on your face"
+      subtitle="Free · move, resize or turn it to fit"
       icon={<MaskIcon className="w-6" />}
       layer={layer}
       footer={
@@ -48,7 +51,22 @@ export function MaskEditor({ open, src, mask, onClose, onSave, saving, layer }: 
         </Button>
       }
     >
-      <MaskedPreview src={src} mask={draft} natural className="mx-auto w-[64%] rounded-[24px] bg-line shadow-card" />
+      <button type="button" onClick={() => setAdjusting(true)} aria-label="Move, resize or turn the mask" className="mx-auto block w-[64%]">
+        <MaskedPreview src={src} mask={draft} natural className="w-full rounded-[24px] bg-line shadow-card" />
+      </button>
+      <div className="mt-2.5 flex justify-center">
+        <button
+          type="button"
+          onClick={() => {
+            tapFeedback();
+            setAdjusting(true);
+          }}
+          className="inline-flex h-10 items-center gap-2 rounded-full bg-brand-soft px-4 text-[14px] font-bold text-brand-ink"
+        >
+          <Move size={16} /> Move & resize
+        </button>
+      </div>
+      {adjusting && <MaskAdjust src={src} mask={draft} onChange={setDraft} onDone={() => setAdjusting(false)} />}
 
       <div className="no-scrollbar mt-4 -mx-1 flex gap-1.5 overflow-x-auto px-1">
         {CATS.map(([id, label]) => (

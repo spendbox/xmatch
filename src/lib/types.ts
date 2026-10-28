@@ -10,7 +10,12 @@ export type Seeking = string;
  * fit: the size that just covers the whole face. pts: the face's outline (x, y, x, y…), for
  * working out how much of it the mask covers when it's made smaller.
  */
-export type MaskSpot = { cx: number; cy: number; s: number; rot: number; sx: number; fit?: number; pts?: number[] };
+/**
+ * Where a mask sits on one face (fractions of the photo: x and size of its width, y of its height).
+ * adj: the person's own changes on top (moved by x/y, sized by k, turned by r degrees).
+ */
+export type MaskSpot = { cx: number; cy: number; s: number; rot: number; sx: number; fit?: number; pts?: number[]; adj?: MaskAdj };
+export type MaskAdj = { x: number; y: number; k: number; r: number };
 /** auto: masked for them by Dashpad (they're told once, and can change it) */
 export type PhotoMask = { mask: string; color: string | null; trim: string; faces: MaskSpot[]; auto?: boolean } | { none: true };
 
