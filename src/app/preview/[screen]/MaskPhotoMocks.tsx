@@ -6,7 +6,7 @@ import { Camera, Check, ChevronLeft, Move, Search, Sparkles, UserRound, Users, X
 import { MaskIcon } from "@/components/ui/MaskIcon";
 
 type MaskStyle = { id: string; name: string; base: string; shade: string; line: string; gem: string; feather: string[] };
-const MASKS: MaskStyle[] = [
+export const MASKS: MaskStyle[] = [
   { id: "gold", name: "Gold", base: "#f2b33d", shade: "#c98a1c", line: "#fff1c9", gem: "#e5484d", feather: ["#e5484d", "#f2b33d", "#7a1f3d"] },
   { id: "lace", name: "Black lace", base: "#1c1828", shade: "#000000", line: "#f2b33d", gem: "#f2b33d", feather: ["#1c1828", "#3a3448", "#f2b33d"] },
   { id: "pearl", name: "Pearl", base: "#fdfbf6", shade: "#e3d9c8", line: "#c98a1c", gem: "#5b3fd9", feather: ["#fdfbf6", "#ffd0dc", "#c98a1c"] },
@@ -81,10 +81,10 @@ function FaceMask({ m, x = 100, y = 108, s = 1 }: { m: MaskStyle; x?: number; y?
   );
 }
 
-type Scene = { bg: React.ReactNode; skin: string; hair: "afro" | "long" | "braids" | "short"; hairColor: string; outfit: string; trim: string; extra?: React.ReactNode };
+export type Scene = { bg: React.ReactNode; skin: string; hair: "afro" | "long" | "braids" | "short"; hairColor: string; outfit: string; trim: string; extra?: React.ReactNode };
 
 /** A stand-in for someone's real main photo: their scene, hair and outfit (the face is under the mask) */
-function MaskedPhoto({ sc, m, id }: { sc: Scene; m: MaskStyle; id: string }) {
+export function MaskedPhoto({ sc, m, id, bare }: { sc: Scene; m: MaskStyle; id: string; bare?: boolean }) {
   return (
     <svg viewBox="0 0 200 250" className="block h-full w-full" preserveAspectRatio="xMidYMid slice" aria-hidden>
       <clipPath id={`clip-${id}`}>
@@ -111,7 +111,7 @@ function MaskedPhoto({ sc, m, id }: { sc: Scene; m: MaskStyle; id: string }) {
         {sc.extra}
         <ellipse cx="100" cy="110" rx="34" ry="42" fill={sc.skin} />
         {/* The mask they placed */}
-        <FaceMask m={m} />
+        {!bare && <FaceMask m={m} />}
         {/* Earrings peek out */}
         <circle cx="62" cy="134" r="4" fill="#f2b33d" />
         <circle cx="138" cy="134" r="4" fill="#f2b33d" />
@@ -120,7 +120,7 @@ function MaskedPhoto({ sc, m, id }: { sc: Scene; m: MaskStyle; id: string }) {
   );
 }
 
-const SCENES: Record<string, Scene> = {
+export const SCENES: Record<string, Scene> = {
   sunset: {
     bg: (
       <>
