@@ -568,7 +568,7 @@ function maskSvg(m, colorHex, trimId) {
   const face = m.face ? m.face(p) : "url(#face)";
   const rim = m.rim === "none" ? "" : m.rim === "soft" ? `<path d="${shape}" fill="none" stroke="#000" stroke-opacity="0.22" stroke-width="1.3"/>` : m.rim === "cartoon" ? `<path d="${shape}" fill="none" stroke="${p.line}" stroke-opacity="0.75" stroke-width="2.4" stroke-linejoin="round"/>` : trimLine(shape, 2.4);
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-26 -44 252 252" width="1512" height="1512"><defs>${defs}</defs>
-    <g filter="url(#ds)">
+    <g${m.fit ? ` transform="translate(100 112) scale(${m.fit}) translate(-100 -112)"` : ""}><g filter="url(#ds)">
       ${m.back ? m.back(p) : ""}
       <path d="${shape}" fill="${face}"/>
       <g clip-path="url(#fc)">
@@ -581,13 +581,15 @@ function maskSvg(m, colorHex, trimId) {
       ${m.front ? m.front(p) : ""}
       ${m.eyes ? m.eyes(p) : holes(ALMOND)}
       ${m.top ? m.top(p) : ""}
-    </g>
+    </g></g>
   </svg>`;
 }
 
 export type MaskDesign = (typeof MASKS)[number];
 /** A mask's outline, in the drawing's own units (it must contain the face oval) */
 export const maskOutline = (id: string): string => (MASKS.find((x) => x.id === id)?.shape ?? OUT.egg) as string;
+/** How much smaller than its drawing a mask is shown (centred on the face), so it fits snugly */
+export const maskFit = (id: string): number => (MASKS.find((x) => x.id === id)?.fit as number | undefined) ?? 1;
 
 export type TrimId = keyof typeof TRIMS;
 export { MASKS, CATS, TRIMS, maskSvg, palette };
