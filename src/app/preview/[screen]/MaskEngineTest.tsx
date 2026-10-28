@@ -30,12 +30,18 @@ export function MaskEngineTest() {
       }} />
       <p id="status">{status}</p>
       <div className="grid grid-cols-2 gap-2">
-        {src && <MaskedPreview src={src} mask={mask} className="rounded-xl" />}
+        {src && <MaskedPreview src={src} mask={mask} className="aspect-[4/5] rounded-xl bg-line" />}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         {out && <img id="out" src={out} alt="" className="rounded-xl" />}
       </div>
-      {mask && src && <button id="edit" type="button" onClick={() => setEdit(true)}>Edit</button>}
-      {mask && src && <MaskEditor open={edit} src={src} mask={mask} onClose={() => setEdit(false)} onSave={(m) => { setMask(m); setEdit(false); }} />}
+      {/* Like the update pop-up: a full-screen layer above the app, with the pencil inside it */}
+      {mask && src && (
+        <div className="fixed inset-x-0 bottom-0 z-[60] h-[40%] bg-cream p-3">
+          <button id="edit" type="button" onClick={() => setEdit(true)}>Edit (inside pop-up)</button>
+          <MaskedPreview src={src} mask={mask} className="mt-2 aspect-[4/5] w-40 rounded-xl bg-line" />
+          <MaskEditor open={edit} layer="z-[80]" src={src} mask={mask} onClose={() => setEdit(false)} onSave={(m) => { setMask(m); setEdit(false); }} />
+        </div>
+      )}
     </div>
   );
 }

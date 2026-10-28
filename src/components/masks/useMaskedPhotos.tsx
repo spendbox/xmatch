@@ -96,6 +96,17 @@ export function useMaskedPhotos({ supabase, userId, initial, persist }: { supaba
     }
   }
 
+  /** Opening a photo to change its mask: the original is opened first (it's what the mask is drawn on) */
+  async function openEditor(item: MyPhoto) {
+    setEditError(null);
+    try {
+      if (!canvases.current.has(item.real)) canvases.current.set(item.real, await loadOriginal(item.real));
+      setEditing(item.masked);
+    } catch {
+      setEditError("Couldn't open that photo. Check your connection and try again.");
+    }
+  }
+
   /** On each photo in the grid: its mask, and a pencil to change it */
   function overlay(masked: string) {
     const item = items.find((i) => i.masked === masked);
@@ -108,7 +119,7 @@ export function useMaskedPhotos({ supabase, userId, initial, persist }: { supaba
         {isMasked(item.mask) && (
           <button
             type="button"
-            onClick={() => setEditing(item.masked)}
+            onClick={() => openEditor(item)}
             aria-label="Change this photo's mask"
             className="absolute right-1.5 bottom-1.5 grid h-8 w-8 place-items-center rounded-full bg-white text-brand shadow-card"
           >
@@ -139,10 +150,11 @@ export function useMaskedPhotos({ supabase, userId, initial, persist }: { supaba
           </div>
         </div>
       )}
-      {editingItem && isMasked(editingItem.mask) && (
+      {editingItem && isMasked(editingItem.mask) && canvases.current.has(editingItem.real) && (
         <MaskEditor
           open
-          src={canvases.current.has(editingItem.real) ? canvases.current.get(editingItem.real)!.toDataURL("image/jpeg", 0.8) : `/api/media/original?url=${encodeURIComponent(editingItem.real)}`}
+          layer="z-[80]"
+          src={canvases.current.get(editingItem.real)!.toDataURL("image/jpeg", 0.8)}
           mask={editingItem.mask}
           saving={saving}
           onClose={() => !saving && setEditing(null)}

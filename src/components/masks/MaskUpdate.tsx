@@ -16,7 +16,7 @@ import { MaskEditor } from "./MaskEditor";
 import { photosPatch, type MyPhoto } from "./useMaskedPhotos";
 
 type Masked = Exclude<PhotoMask, { none: true }>;
-type Row = { real: string; src: string; canvas: HTMLCanvasElement | null; mask: Masked | null; masked?: string; choice?: "keep" | "remove" };
+type Row = { real: string; src: string; canvas: HTMLCanvasElement | null; mask: Masked | null; masked?: string; choice?: "keep" | "remove"; failed?: boolean };
 
 const LATER_KEY = "dp_mask_later";
 const today = () => new Date().toISOString().slice(0, 10);
@@ -80,11 +80,26 @@ export function MaskUpdate({ userId, photos }: { userId: string; photos: MyPhoto
         if (mask) used.push(id);
         out.push({ real, canvas, src: canvas.toDataURL("image/jpeg", 0.85), mask });
       } catch {
-        out.push({ real, canvas: null, src: real, mask: null });
+        // Couldn't open it here: never kept unmasked (try again, or remove it)
+        out.push({ real, canvas: null, src: real, mask: null, failed: true });
       }
     }
     setRows(out);
     setPhase("review");
+  }
+
+  async function retry(i: number) {
+    tapFeedback();
+    const r = rows[i];
+    setRows((rs) => rs.map((x, j) => (j === i ? { ...x, failed: false, choice: undefined, src: x.src } : x)));
+    try {
+      const canvas = await loadOriginal(r.real);
+      const used = rows.map((x) => x.mask?.mask).filter(Boolean) as string[];
+      const mask = await maskFor(canvas, starterMask(used));
+      setRows((rs) => rs.map((x, j) => (j === i ? { ...x, canvas, src: canvas.toDataURL("image/jpeg", 0.85), mask } : x)));
+    } catch {
+      setRows((rs) => rs.map((x, j) => (j === i ? { ...x, failed: true } : x)));
+    }
   }
 
   function shuffle() {
@@ -94,6 +109,7 @@ export function MaskUpdate({ userId, photos }: { userId: string; photos: MyPhoto
   }
 
   async function save() {
+    if (rows.some((r) => r.failed && r.choice !== "remove")) return setError("One photo couldn't be opened. Try again, or remove it.");
     const unanswered = rows.find((r) => !r.mask && !r.choice);
     if (unanswered) return setError("Tell us about the photo with no face found first.");
     const kept = rows.filter((r) => r.choice !== "remove");
@@ -209,6 +225,18 @@ export function MaskUpdate({ userId, photos }: { userId: string; photos: MyPhoto
                         <Pencil size={14} />
                       </button>
                     </>
+                  ) : r.failed ? (
+                    <div className="absolute inset-x-2 bottom-2 rounded-[14px] bg-white/95 p-2.5 text-[12px] leading-snug">
+                      <b>Couldn&apos;t open this photo.</b> Check your connection.
+                      <div className="mt-2 grid grid-cols-2 gap-1.5">
+                        <button type="button" onClick={() => retry(i)} className="rounded-full bg-brand py-1.5 text-[11.5px] font-bold text-white">
+                          Try again
+                        </button>
+                        <button type="button" onClick={() => setRows((rs) => rs.map((x, j) => (j === i ? { ...x, choice: "remove" } : x)))} className={"inline-flex items-center justify-center gap-1 rounded-full py-1.5 text-[11.5px] font-bold " + (r.choice === "remove" ? "bg-chili text-white" : "bg-chili-soft text-chili")}>
+                          <Trash2 size={12} /> Remove
+                        </button>
+                      </div>
+                    </div>
                   ) : (
                     <div className="absolute inset-x-2 bottom-2 rounded-[14px] bg-white/95 p-2.5 text-[12px] leading-snug">
                       <b>No face found.</b> Is there a person in it?
@@ -238,6 +266,7 @@ export function MaskUpdate({ userId, photos }: { userId: string; photos: MyPhoto
           {editingRow?.mask && (
             <MaskEditor
               open
+              layer="z-[80]"
               src={editingRow.src}
               mask={editingRow.mask}
               onClose={() => setEditing(null)}
