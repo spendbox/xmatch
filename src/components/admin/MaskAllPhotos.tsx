@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 import { Check, Pause, Play } from "lucide-react";
 import { Button, Spinner } from "@/components/ui/Button";
 import { MaskIcon } from "@/components/ui/MaskIcon";
@@ -15,7 +16,17 @@ type Done = { name: string | null; mask?: string; problem?: string; url?: string
  * picks a mask (a different one for each of their photos), saves the masked copy to their profile.
  * Photos with no face found are left for the member to deal with (they get asked when they open Dashpad).
  */
+/** A request to the admin masking route; its error message if it fails */
+async function post(body: unknown) {
+  const res = await fetch("/api/admin/mask-photos", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).catch(() => null);
+  if (!res) throw new Error("No connection");
+  const out = (await res.json().catch(() => null)) as Record<string, string> | null;
+  if (!res.ok) throw new Error(out?.error ?? `The server said ${res.status}`);
+  return out ?? {};
+}
+
 export function MaskAllPhotos() {
+  const supabase = useMemo(() => createClient(), []);
   const [todo, setTodo] = useState<Todo[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
@@ -42,8 +53,10 @@ export function MaskAllPhotos() {
     while (left.length && !stop.current) {
       const t = left[0];
       try {
-        const res = await fetch(`/api/admin/mask-photos?user=${t.user}&url=${encodeURIComponent(t.url)}`);
-        if (!res.ok) throw new Error(((await res.json().catch(() => null)) as { error?: string } | null)?.error ?? "Couldn't open it");
+        // Straight from storage first (any size); through Dashpad if storage doesn't allow that
+        let res = await fetch(t.url, { mode: "cors", cache: "no-store" }).catch(() => null);
+        if (!res?.ok || !(res.headers.get("Content-Type") ?? "image/").startsWith("image/")) res = await fetch(`/api/admin/mask-photos?user=${t.user}&url=${encodeURIComponent(t.url)}`);
+        if (!res.ok) throw new Error(((await res.json().catch(() => null)) as { error?: string } | null)?.error ?? `Couldn't open it (${res.status})`);
         const canvas = await toCanvas(await res.blob());
         const mine = used.get(t.user) ?? [];
         const id = starterMask(mine);
@@ -53,18 +66,22 @@ export function MaskAllPhotos() {
         } else {
           const full = await drawMasked(canvas, mask);
           const thumb = await compress(full, 400);
-          const form = new FormData();
-          form.set("user", t.user);
-          form.set("index", String(t.index));
-          form.set("url", t.url);
-          form.set("mask", JSON.stringify(mask));
-          form.set("full", full, "masked.jpg");
-          form.set("thumb", thumb, "masked_t.jpg");
-          const saved = await fetch("/api/admin/mask-photos", { method: "POST", body: form });
-          const out = (await saved.json().catch(() => null)) as { url?: string; error?: string; skipped?: string } | null;
-          if (!saved.ok) throw new Error(out?.error ?? "Couldn't save it");
+          // Upload straight to storage (big photos never pass through the server)
+          const links = await post({ action: "links", user: t.user });
+          if (links.kind === "r2") {
+            const put = (to: string, b: Blob) => fetch(to, { method: "PUT", body: b, headers: { "Content-Type": "image/jpeg", "Cache-Control": "public, max-age=31536000, immutable" } });
+            const res = await put(links.upload, full);
+            if (!res.ok) throw new Error(`Storage refused the upload (${res.status})`);
+            await put(links.uploadThumb, thumb).catch(() => null);
+          } else {
+            const store = supabase.storage.from("photos");
+            const { error: upErr } = await store.uploadToSignedUrl(links.path, links.token, full, { contentType: "image/jpeg", cacheControl: "31536000" });
+            if (upErr) throw new Error(`Storage refused the upload: ${upErr.message}`);
+            if (links.thumbPath && links.thumbToken) await store.uploadToSignedUrl(links.thumbPath, links.thumbToken, thumb, { contentType: "image/jpeg", cacheControl: "31536000" }).catch(() => null);
+          }
+          const out = await post({ action: "attach", user: t.user, index: t.index, url: t.url, mask, masked: links.url });
           used.set(t.user, [...mine, id]);
-          setDone((d) => [{ name: t.name, mask: id, url: out?.skipped ? undefined : out?.url, problem: out?.skipped ? "They changed it meanwhile: left as it is" : undefined }, ...d]);
+          setDone((d) => [{ name: t.name, mask: id, url: out.skipped ? undefined : out.url, problem: out.skipped ? "They changed it meanwhile: left as it is" : undefined }, ...d]);
         }
       } catch (e) {
         setDone((d) => [{ name: t.name, problem: e instanceof Error ? e.message : "Something went wrong" }, ...d]);

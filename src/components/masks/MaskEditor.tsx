@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { coverage, sizeRange } from "@/lib/maskedPhotos";
+import { useState } from "react";
 import clsx from "clsx";
 import { Check } from "lucide-react";
 import { Sheet } from "@/components/ui/Sheet";
@@ -30,23 +29,6 @@ export function MaskEditor({ open, src, mask, onClose, onSave, saving, layer }: 
   }
   const shown = MASKS.filter((m) => cat === "all" || m.cat === cat);
 
-  // Size: how big the mask is next to the size that just covers the whole face (same for every face)
-  const [ratio, setRatio] = useState<number | null>(null);
-  useEffect(() => {
-    const i = new Image();
-    i.onload = () => setRatio(i.naturalWidth / i.naturalHeight);
-    i.src = src;
-  }, [src]);
-  const fitOf = (f: Masked["faces"][number]) => f.fit ?? f.s / 1.06;
-  const range = ratio
-    ? draft.faces.reduce((acc, f) => {
-        const r = sizeRange(f, ratio);
-        return { min: Math.max(acc.min, r.min / r.fit), max: Math.min(acc.max, r.max / r.fit) };
-      }, { min: 0, max: 9 })
-    : null;
-  const k = draft.faces[0] ? draft.faces[0].s / fitOf(draft.faces[0]) : 1;
-  const covered = ratio ? Math.min(...draft.faces.map((f) => coverage(f, ratio))) : 1;
-  const resize = (next: number) => setDraft((d) => ({ ...d, faces: d.faces.map((f) => ({ ...f, s: fitOf(f) * next })) }));
   const set = (patch: Partial<Masked>) => {
     tapFeedback();
     setDraft((d) => ({ ...d, ...patch }));
@@ -67,30 +49,6 @@ export function MaskEditor({ open, src, mask, onClose, onSave, saving, layer }: 
       }
     >
       <MaskedPreview src={src} mask={draft} natural className="mx-auto w-[64%] rounded-[24px] bg-line shadow-card" />
-
-      {range && draft.faces.length > 0 && (
-        <div className="mt-4">
-          <div className="flex items-center justify-between text-[13px]">
-            <label htmlFor="mask-size" className="font-bold">
-              Size
-            </label>
-            <span className={covered >= 0.995 ? "font-semibold text-mint" : "font-semibold text-[#8a5a00]"}>
-              {covered >= 0.995 ? "Covers your whole face" : `Covers ${Math.round(covered * 100)}% of your face`}
-            </span>
-          </div>
-          <input
-            id="mask-size"
-            type="range"
-            min={range.min}
-            max={range.max}
-            step={0.005}
-            value={Math.min(range.max, Math.max(range.min, k))}
-            onChange={(e) => resize(Number(e.target.value))}
-            className="mt-2 w-full accent-brand"
-          />
-          <p className="mt-1 text-[12px] text-muted">It always covers at least 70% of your face.</p>
-        </div>
-      )}
 
       <div className="no-scrollbar mt-4 -mx-1 flex gap-1.5 overflow-x-auto px-1">
         {CATS.map(([id, label]) => (

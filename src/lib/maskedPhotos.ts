@@ -50,7 +50,22 @@ async function findFaces(img: HTMLCanvasElement): Promise<Found[]> {
     const boxes = await fa.detectAllFaces(img, opts);
     if (boxes.length) return boxes.map((b) => ({ box: { x: b.box.x, y: b.box.y, w: b.box.width, h: b.box.height }, yaw: 0, roll: 0, region: null }));
   }
-  return [];
+  // Nothing: try the stronger finder (bigger download, so only when the quick one misses)
+  try {
+    if (!fa.nets.ssdMobilenetv1.isLoaded) await fa.nets.ssdMobilenetv1.loadFromUri("/models");
+    const opts = new fa.SsdMobilenetv1Options({ minConfidence: 0.35 });
+    let found: { detection: { box: { x: number; y: number; width: number; height: number } }; landmarks: { positions: { x: number; y: number }[] } }[] = [];
+    try {
+      found = (await fa.detectAllFaces(img, opts).withFaceLandmarks(true)) as unknown as typeof found;
+    } catch {
+      found = [];
+    }
+    if (found.length) return found.map((f) => outline(f.detection.box, f.landmarks.positions));
+    const boxes = await fa.detectAllFaces(img, opts);
+    return boxes.map((b) => ({ box: { x: b.box.x, y: b.box.y, w: b.box.width, h: b.box.height }, yaw: 0, roll: 0, region: null }));
+  } catch {
+    return [];
+  }
 }
 
 function outline(box: { x: number; y: number; width: number; height: number }, pts: { x: number; y: number }[]): Found {
@@ -117,13 +132,30 @@ const loadImg = (src: string) =>
   });
 
 /** A picture as a canvas (at most 1280 on the long side) */
-export async function toCanvas(blob: Blob) {
-  const bmp = await createImageBitmap(blob);
+export async function toCanvas(blob: Blob, maxSize = 1280) {
+  let src: ImageBitmap | HTMLImageElement;
+  try {
+    src = await createImageBitmap(blob);
+  } catch {
+    // Some photos only open as a normal image
+    const url = URL.createObjectURL(blob);
+    try {
+      src = await loadImg(url);
+    } catch {
+      throw new Error("This photo's file can't be opened (it may not be a JPG, PNG or WebP)");
+    } finally {
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+  }
+  const w = "naturalWidth" in src ? src.naturalWidth : src.width;
+  const h = "naturalHeight" in src ? src.naturalHeight : src.height;
+  // Never bigger than a normal Dashpad photo
+  const k = Math.min(1, maxSize / Math.max(w, h));
   const c = document.createElement("canvas");
-  c.width = bmp.width;
-  c.height = bmp.height;
-  c.getContext("2d")!.drawImage(bmp, 0, 0);
-  bmp.close?.();
+  c.width = Math.round(w * k);
+  c.height = Math.round(h * k);
+  c.getContext("2d")!.drawImage(src, 0, 0, c.width, c.height);
+  if ("close" in src) src.close();
   return c;
 }
 
@@ -183,11 +215,11 @@ export async function maskFor(canvas: HTMLCanvasElement, maskId: string): Promis
 
 /** An original photo you already have, as a canvas (fetched through Dashpad so it can be drawn on) */
 export async function loadOriginal(url: string) {
+  // Straight from storage first (any size), then through Dashpad
+  const direct = await fetch(url, { mode: "cors", cache: "no-store" }).catch(() => null);
+  if (direct?.ok && (direct.headers.get("Content-Type") ?? "image/").startsWith("image/")) return toCanvas(await direct.blob());
   const via = await fetch(`/api/media/original?url=${encodeURIComponent(url)}`).catch(() => null);
   if (via?.ok) return toCanvas(await via.blob());
-  // Straight from storage (works where the photo's host allows it)
-  const direct = await fetch(url, { mode: "cors", cache: "no-store" }).catch(() => null);
-  if (direct?.ok) return toCanvas(await direct.blob());
   throw new Error("Couldn't open that photo. Please try again.");
 }
 
@@ -197,75 +229,3 @@ export function starterMask(used: string[]) {
 }
 
 export const maskName = (id: string) => MASKS.find((m) => m.id === id)?.name ?? "Mask";
-
-/** The smallest a mask may be: it must still cover this much of the face */
-export const MIN_COVER = 0.7;
-const MAX_GROW = 1.4;
-
-/**
- * How much of a face a mask covers (0 to 1), for a photo `ratio` wide per 1 tall. Uses the face's
- * outline when we have it; otherwise estimates from the mask's size.
- */
-export function coverage(f: MaskSpot, ratio: number) {
-  const fit = f.fit ?? f.s / 1.06;
-  if (!f.pts || f.pts.length < 6) return Math.min(1, (f.s / fit) ** 2);
-  // Work in photo widths (y fractions are of the height)
-  const P: [number, number][] = [];
-  for (let i = 0; i < f.pts.length; i += 2) P.push([f.pts[i], f.pts[i + 1] / ratio]);
-  const hull = convexHull(P);
-  const xs = hull.map((p) => p[0]);
-  const ys = hull.map((p) => p[1]);
-  const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
-  const spot = { cx: f.cx, cy: f.cy / ratio, s: f.s, rot: f.rot, sx: f.sx };
-  let inFace = 0;
-  let covered = 0;
-  const N = 36;
-  for (let i = 0; i < N; i++) {
-    for (let j = 0; j < N; j++) {
-      const x = x0 + ((i + 0.5) / N) * (x1 - x0);
-      const y = y0 + ((j + 0.5) / N) * (y1 - y0);
-      if (!inHull(hull, x, y)) continue;
-      inFace++;
-      if (inside(spot, x, y)) covered++;
-    }
-  }
-  return inFace ? covered / inFace : 1;
-}
-
-/** The size range for a face's mask: from just covering 70% of it, up to 1.4× its full-cover size */
-export function sizeRange(f: MaskSpot, ratio: number) {
-  const fit = f.fit ?? f.s / 1.06;
-  let lo = fit * 0.5;
-  let hi = fit;
-  for (let k = 0; k < 18; k++) {
-    const mid = (lo + hi) / 2;
-    if (coverage({ ...f, s: mid }, ratio) >= MIN_COVER) hi = mid;
-    else lo = mid;
-  }
-  return { min: hi, max: fit * MAX_GROW, fit };
-}
-
-function convexHull(points: [number, number][]) {
-  const p = [...points].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
-  const cross = (o: number[], a: number[], b: number[]) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
-  const lower: [number, number][] = [];
-  for (const q of p) {
-    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], q) <= 0) lower.pop();
-    lower.push(q);
-  }
-  const upper: [number, number][] = [];
-  for (const q of [...p].reverse()) {
-    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], q) <= 0) upper.pop();
-    upper.push(q);
-  }
-  return [...lower.slice(0, -1), ...upper.slice(0, -1)];
-}
-
-function inHull(h: [number, number][], x: number, y: number) {
-  for (let i = 0; i < h.length; i++) {
-    const [ax, ay] = h[i];
-    const [bx, by] = h[(i + 1) % h.length];
-    if ((bx - ax) * (y - ay) - (by - ay) * (x - ax) < 0) return false;
-  }
-  return true;
-}
