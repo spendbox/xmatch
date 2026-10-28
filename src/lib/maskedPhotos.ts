@@ -116,7 +116,7 @@ const loadImg = (src: string) =>
   });
 
 /** A picture as a canvas (at most 1280 on the long side) */
-async function toCanvas(blob: Blob) {
+export async function toCanvas(blob: Blob) {
   const bmp = await createImageBitmap(blob);
   const c = document.createElement("canvas");
   c.width = bmp.width;

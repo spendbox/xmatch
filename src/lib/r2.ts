@@ -47,6 +47,12 @@ export function keyFromUrl(url: string) {
   return decodeURIComponent(url.slice(base.length + 1).split("?")[0]);
 }
 
+/** Saves a file from the server (e.g. a masked photo made in Admin) */
+export async function putObject(key: string, body: Blob, type = "image/jpeg") {
+  const res = await r2().fetch(objectUrl(key), { method: "PUT", body, headers: { "Content-Type": type, "Cache-Control": "public, max-age=31536000, immutable" } });
+  if (!res.ok) throw new Error(`R2 refused the upload (${res.status})`);
+}
+
 export async function deleteKeys(keys: string[]) {
   if (!r2Enabled()) return;
   await Promise.all(keys.map((k) => r2().fetch(objectUrl(k), { method: "DELETE" }).catch(() => null)));

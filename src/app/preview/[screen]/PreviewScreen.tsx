@@ -6,6 +6,8 @@ import { AuraMock } from "./AuraMocks";
 import { MaskPhotoMock } from "./MaskPhotoMocks";
 import { MaskFlowMock } from "./MaskFlowMocks";
 import { MaskEngineTest } from "./MaskEngineTest";
+import { MaskAllPhotos } from "@/components/admin/MaskAllPhotos";
+import { MaskedNotice } from "@/components/masks/MaskedNotice";
 import { HomeScreen } from "@/components/home/HomeScreen";
 import { WalletScreen } from "@/components/keys/WalletScreen";
 import { GiftSheet } from "@/components/keys/GiftSheet";
@@ -327,6 +329,17 @@ function ScreenBody({ screen }: { screen: string }) {
   if (screen.startsWith("new-words-")) return <WordsMock step={Number(screen.slice(-1)) as 1 | 2} />;
   if (screen.startsWith("new-cards-")) return <CardsMock step={Number(screen.slice(-1)) as 1 | 2} />;
   if (screen === "mask-engine") return <MaskEngineTest />;
+  if (screen === "masked-notice")
+    return (
+      <MaskedNotice
+        userId="me"
+        photos={[
+          { masked: "https://x.test/m1.jpg", real: "https://x.test/r1.jpg", mask: { mask: "venetian", color: null, trim: "gold", faces: [{ cx: 0.44, cy: 0.24, s: 0.0028, rot: 0, sx: 1 }], auto: true } },
+          { masked: "https://x.test/m2.jpg", real: "https://x.test/r2.jpg", mask: { mask: "fox", color: null, trim: "gold", faces: [{ cx: 0.44, cy: 0.24, s: 0.0028, rot: 0, sx: 1 }], auto: true } },
+        ]}
+      />
+    );
+  if (screen === "admin-masks") return <div className="p-4"><MaskAllPhotos /></div>;
   if (screen.startsWith("new-mm-")) return <MaskFlowMock step={Number(screen.slice(7))} />;
   if (screen.startsWith("new-mask-")) return <MaskPhotoMock step={Number(screen.slice(9))} />;
   if (screen.startsWith("new-aura-")) return <AuraMock step={Number(screen.slice(9))} />;

@@ -6,7 +6,8 @@ export type Seeking = string;
 
 /** A mask over the faces in one photo (face positions are fractions of the photo's width and height) */
 export type MaskSpot = { cx: number; cy: number; s: number; rot: number; sx: number };
-export type PhotoMask = { mask: string; color: string | null; trim: string; faces: MaskSpot[] } | { none: true };
+/** auto: masked for them by Dashpad (they're told once, and can change it) */
+export type PhotoMask = { mask: string; color: string | null; trim: string; faces: MaskSpot[]; auto?: boolean } | { none: true };
 
 export type Profile = {
   id: string;
