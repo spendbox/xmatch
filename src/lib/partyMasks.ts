@@ -49,6 +49,13 @@ const SHAPES = {
   domino: [[100, 78], [[116, 70, 140, 66, 160, 70], [176, 74, 183, 88, 179, 102], [175, 116, 160, 126, 142, 126], [130, 126, 120, 122, 116, 122], [114, 134, 108, 146, 100, 148]]],
 };
 const shapeOf = (k) => sym(SHAPES[k][0], SHAPES[k][1]);
+/**
+ * Everything but the eye holes is drawn this much smaller, centred on the eyes, so the mask is
+ * about as wide as a real party mask (roughly 2.6 times the gap between the eyes)
+ */
+const K = 0.82;
+const SIZE = `translate(100 102) scale(${K}) translate(-100 -102)`;
+const shrink = (d) => d.replace(/(-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)/g, (_, x, y) => `${+(100 + (Number(x) - 100) * K).toFixed(2)} ${+(102 + (Number(y) - 102) * K).toFixed(2)}`);
 const edgeOf = (k, per, pull, skip) => edge(SHAPES[k][0], SHAPES[k][1], per, pull, skip);
 
 // ---------- Eye holes ----------
@@ -294,8 +301,9 @@ function draw(m: Party, p, t, util) {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-26 -44 252 252" width="1512" height="1512"><defs>${defs(p, t, id)}
     <radialGradient id="${id}gem" cx="0.35" cy="0.3" r="0.8"><stop offset="0" stop-color="#fff"/><stop offset="0.3" stop-color="${gemC.light}"/><stop offset="0.75" stop-color="${gemC.base}"/><stop offset="1" stop-color="${gemC.dark}"/></radialGradient>
     <clipPath id="${id}c"><path d="${d}"/></clipPath></defs>
-    ${m.back ? m.back(id, p, t, gemC) : ""}
+    <g transform="${SIZE}">${m.back ? m.back(id, p, t, gemC) : ""}</g>
     <g filter="url(#${id}ds)">
+      <g transform="${SIZE}">
       <path d="${d}" fill="${p.deep}" transform="translate(0 1.8)"/>
       <g filter="url(#${id}mold)">
         <g clip-path="url(#${id}c)">${MAT[m.mat](id, p, d)}${m.over ? m.over(id, p, t, gemC) : ""}
@@ -306,10 +314,11 @@ function draw(m: Party, p, t, util) {
         </g>
       </g>
       <path d="${d}" fill="none" stroke="url(#${id}m)" stroke-width="2.4" stroke-linejoin="round" filter="url(#${id}bev)"/>
+      </g>
       <path d="${eyes}" fill="url(#${id}hole)"/>
       <path d="${eyes}" fill="none" stroke="#000" stroke-opacity="0.55" stroke-width="3.2" filter="url(#${id}soft)"/>
       <path d="${eyes}" fill="none" stroke="url(#${id}m)" stroke-width="1.7" stroke-linejoin="round" filter="url(#${id}bev)"/>
-      ${m.front ? m.front(id, p, t, gemC) : ""}
+      <g transform="${SIZE}">${m.front ? m.front(id, p, t, gemC) : ""}</g>
     </g>
   </svg>`;
 }
@@ -385,6 +394,7 @@ export const PARTY_MASKS = DESIGNS.map((m) => ({
   cat: "party",
   half: true,
   color: m.color,
-  shape: shapeOf(m.shape),
+  // The outline as drawn (smaller, centred on the eyes), for fitting it to the face
+  shape: shrink(shapeOf(m.shape)),
   svg: (p, t, util) => draw(m, p, t, util),
 }));

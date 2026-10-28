@@ -11,8 +11,11 @@ const OVAL_CY = 112;
 const EYE_Y = 102;
 const EYE_GAP = 44;
 
-// Face points (68-point layout): brows 17–26, nose 27–35, eyes 36–47
-const COVER = Array.from({ length: 31 }, (_, i) => 17 + i);
+// Face points (68-point layout) the mask must cover: brows 17–26, the nose bridge and tip 27–30 and 33,
+// and the eyes 36–47 (not the sides of the nostrils, so the mask doesn't balloon to reach them)
+const COVER = [...Array.from({ length: 14 }, (_, i) => 17 + i), 33, ...Array.from({ length: 12 }, (_, i) => 36 + i)];
+/** At most this much bigger than the eyes say, so it never ends up far too big for the face */
+const MAX_GROW = 1.1;
 
 let ctx: CanvasRenderingContext2D | null = null;
 const shapes = new Map<string, Path2D>();
@@ -68,8 +71,8 @@ export function placeMask(id: string, f: MaskSpot, ratio: number): MaskSpot {
       return inShape(id, x, y);
     });
   };
-  for (let k = 0; k < 40 && !covered(); k++) s *= 1.03;
-  s *= 1.05;
+  const base = s;
+  while (s < base * MAX_GROW && !covered()) s *= 1.02;
   const c = centre();
   return { ...f, cx: c.x, cy: c.y * ratio, s, rot: Math.round(((rad * 180) / Math.PI) * 10) / 10, sx };
 }
