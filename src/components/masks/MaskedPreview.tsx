@@ -5,7 +5,7 @@ import { maskUrl } from "@/lib/masks";
 import type { PhotoMask } from "@/lib/types";
 
 // The mask drawing's square and the face oval inside it (see lib/masks)
-const VB = { x: -10, y: -30, w: 220 };
+const VB = { x: -26, y: -44, w: 252 };
 const OVAL = { cx: 100, cy: 112 };
 
 /**

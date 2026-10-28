@@ -5,8 +5,14 @@ export type SeekKey = "women" | "men" | "other";
 export type Seeking = string;
 
 /** A mask over the faces in one photo (face positions are fractions of the photo's width and height) */
-export type MaskSpot = { cx: number; cy: number; s: number; rot: number; sx: number };
-export type PhotoMask = { mask: string; color: string | null; trim: string; faces: MaskSpot[] } | { none: true };
+/**
+ * Where a mask sits on one face (fractions of the photo's width and height; size in widths).
+ * fit: the size that just covers the whole face. pts: the face's outline (x, y, x, y…), for
+ * working out how much of it the mask covers when it's made smaller.
+ */
+export type MaskSpot = { cx: number; cy: number; s: number; rot: number; sx: number; fit?: number; pts?: number[] };
+/** auto: masked for them by Dashpad (they're told once, and can change it) */
+export type PhotoMask = { mask: string; color: string | null; trim: string; faces: MaskSpot[]; auto?: boolean } | { none: true };
 
 export type Profile = {
   id: string;

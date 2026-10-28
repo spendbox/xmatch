@@ -1,12 +1,12 @@
 // @ts-nocheck -- generated SVG drawing code: shapes and paths built from numbers and strings
 /**
  * Masquerade masks for photos. Each mask is drawn as an SVG from one chosen colour and a metal
- * trim. Every outline contains the face oval (centre 100,112; radii 48 × 54 in a -10,-30 220×220
+ * trim. Every outline contains the face oval (centre 100,112; radii 48 × 54 in a -26,-44 252×252
  * drawing), so any mask placed over a face fully hides it.
  */
 // The mask library. Each mask has its own outline, eyes and details, all derived from one
 // chosen colour and a metal trim. Every outline contains the face oval (centre 100,112;
-// radii 48 × 54), so any mask fully hides a face. Drawing area: -10,-30 220×220.
+// radii 48 × 54), so any mask fully hides a face. Drawing area: -26,-44 252×252.
 const F = "M100 58 C132 58 148 78 148 104 C148 138 128 162 100 166 C72 162 52 138 52 104 C52 78 68 58 100 58 Z";
 const mirror = (d) => d.replace(/(-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)/g, (_, x, y) => `${+(200 - Number(x)).toFixed(2)} ${y}`);
 const both = (d) => `${d} ${mirror(d)}`;
@@ -555,7 +555,7 @@ function maskSvg(m, colorHex, trimId) {
     <filter id="glow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="2.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`;
   const face = m.face ? m.face(p) : "url(#face)";
   const rim = m.rim === "none" ? "" : m.rim === "soft" ? `<path d="${shape}" fill="none" stroke="#000" stroke-opacity="0.22" stroke-width="1.3"/>` : m.rim === "cartoon" ? `<path d="${shape}" fill="none" stroke="${p.line}" stroke-opacity="0.75" stroke-width="2.4" stroke-linejoin="round"/>` : trimLine(shape, 2.4);
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-10 -30 220 220" width="1320" height="1320"><defs>${defs}</defs>
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-26 -44 252 252" width="1512" height="1512"><defs>${defs}</defs>
     <g filter="url(#ds)">
       ${m.back ? m.back(p) : ""}
       <path d="${shape}" fill="${face}"/>
