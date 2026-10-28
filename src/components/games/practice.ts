@@ -29,10 +29,7 @@ const shuffle = <T,>(a: T[]) => {
   return b;
 };
 const dice = () => 1 + Math.floor(Math.random() * 6);
-/** Your dice against the computer: a 6 comes up 1 time in 5 (fair dice: 1 in 6), so it feels fair.
- *  An extra 6 4% of the time, plus the usual 1 in 6 the rest of the time: 0.04 + 0.96 ÷ 6 = 0.2 */
-const kindDice = () => (Math.random() < 0.04 ? 6 : dice());
-const diceFor = (side: Side) => (side === "a" ? kindDice : dice);
+
 
 /** A fresh game against the computer, played on this phone only. You go first. */
 function fresh(kind: GameKind): { game: Game; hidden: Hidden } {
@@ -131,7 +128,7 @@ function apply(kind: GameKind, st: Record<string, unknown>, side: Side, mv: unkn
     return r;
   }
   if (kind === "ayo") return ayo.applyMove(st as unknown as ayo.AyoState, side, Number(mv));
-  if (kind === "ludo") return ludo.applyMove(st as unknown as ludo.LudoState, side, mv as ludo.LudoMove, diceFor(side));
+  if (kind === "ludo") return ludo.applyMove(st as unknown as ludo.LudoState, side, mv as ludo.LudoMove, dice);
   if (kind === "xo") return xo.applyMove(st as unknown as xo.XOState, side, mv as xo.XOMove);
   if (kind === "lastcard") {
     const r = lastcard.applyMove(st as unknown as lastcard.LastCardState, side, mv as lastcard.LastCardMove, hidden.hands, { deck: hidden.deck, discard: hidden.discard ?? [] });
@@ -143,7 +140,7 @@ function apply(kind: GameKind, st: Record<string, unknown>, side: Side, mv: unkn
     }
     return r;
   }
-  return snakes.applyMove(st as unknown as snakes.SnakesState, side, mv as snakes.SnakesMove, diceFor(side));
+  return snakes.applyMove(st as unknown as snakes.SnakesState, side, mv as snakes.SnakesMove, dice);
 }
 
 const between = (lo: number, hi: number) => lo + Math.random() * (hi - lo);
