@@ -429,11 +429,12 @@ function seekingLabel(s: string) {
 
 /** A practice game against the computer, on top of the waiting screen */
 function Practice({ kind, onClose }: { kind: GameKind; onClose: () => void }) {
-  const { game, act } = usePracticeGame(kind);
+  const { game, act, thinking } = usePracticeGame(kind);
   if (!game) return null;
   return (
     <GameArena
       practice
+      thinking={thinking}
       game={game}
       names={{ me: "You", them: "Computer" }}
       act={act}

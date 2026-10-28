@@ -4,7 +4,7 @@ import { Component, useEffect, useRef, useState } from "react";
 import { reportError } from "@/lib/reportError";
 import { lockScroll } from "@/lib/scrollLock";
 import { createPortal } from "react-dom";
-import { ChevronLeft, Gift, Volume2, VolumeX, X } from "lucide-react";
+import { Bot, ChevronLeft, Gift, Volume2, VolumeX, X } from "lucide-react";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { buzz, gameInfo, sfx, useGameSound, type Game, type GameActions } from "@/lib/games";
 import { BigButton, secondsLeft, useTicker, type Names } from "./parts";
@@ -31,6 +31,7 @@ import { XO } from "./XO";
 import { LastCard } from "./LastCard";
 import { markPlaying } from "@/lib/playing";
 import { RulesButton, RulesSheet } from "./RulesSheet";
+import { BoardBusy } from "./boardBusy";
 import { ReactionButton, ReactionHint, ReactionLayer, ReactionTray, useReactionHint, useReactions } from "./Reactions";
 
 /** The full-screen game: challenge, 3-2-1, the game itself, then results */
@@ -76,6 +77,7 @@ function GameArenaInner({
   peek,
   unmask,
   practice,
+  thinking,
   chat,
   person,
   results,
@@ -92,6 +94,8 @@ function GameArenaInner({
   unmask?: { onUnmask: () => void; done: boolean } | null;
   /** Against the computer while waiting for a player: nothing is sent anywhere */
   practice?: boolean;
+  /** Practice: the computer is thinking about its move */
+  thinking?: boolean;
   /** Play games: the chat with the other player (none yet until someone pays to start it) */
   chat?: { matchId: string | null; cost: number; balance: number | null; onStart: () => Promise<string | null>; onRefresh?: () => void } | null;
   /** Play games: who you're playing (tap their name to see them) */
@@ -112,6 +116,8 @@ function GameArenaInner({
   const reactions = useReactions(reacting ? game.id : null);
   const [tray, setTray] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
+  // A move is still playing out on the board (the game says so)
+  const [boardBusy, setBoardBusy] = useState(false);
   const reactHint = useReactionHint(game.status === "active");
   const info = gameInfo(game.kind);
   const over = game.status === "done" || game.status === "cancelled";
@@ -281,7 +287,16 @@ function GameArenaInner({
 
   const bar = !(game.status === "invited" && game.me === "b") && !resultsView;
   // Turn-based games: make it obvious when it's your move
-  const myTurn = game.status === "active" && !intro && TURN_GAMES.includes(game.kind) && game.state?.turn === game.me;
+  const turnNow = game.status === "active" && !intro && TURN_GAMES.includes(game.kind) && game.state?.turn === game.me;
+  // It only counts as your turn once their move has finished playing out on the board
+  const [turnReady, setTurnReady] = useState(false);
+  useEffect(() => {
+    if (!turnNow) return setTurnReady(false);
+    if (turnReady || boardBusy) return;
+    const t = setTimeout(() => setTurnReady(true), 450);
+    return () => clearTimeout(t);
+  }, [turnNow, turnReady, boardBusy]);
+  const myTurn = turnNow && turnReady;
 
   if (!mounted) return null;
   return createPortal(
@@ -301,6 +316,17 @@ function GameArenaInner({
               <p className="min-w-0 flex-1 text-center">
                 <span className="gm-pulse inline-block rounded-full bg-gradient-to-b from-[#ffd36b] to-gold px-3 py-1.5 font-display text-[13px] font-black tracking-[0.08em] whitespace-nowrap text-ink uppercase min-[400px]:px-4 min-[400px]:text-[15px] min-[400px]:tracking-[0.12em] shadow-[0_0_0_3px_rgba(242,179,61,0.3),0_6px_20px_-4px_rgba(242,179,61,0.8)]">
                   Your turn
+                </span>
+              </p>
+            ) : thinking ? (
+              <p className="min-w-0 flex-1 text-center" role="status">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-[12.5px] font-extrabold whitespace-nowrap ring-1 ring-white/20">
+                  <Bot size={15} className="shrink-0" /> Thinking
+                  <span className="gm-dots inline-flex gap-0.5" aria-hidden>
+                    <i />
+                    <i />
+                    <i />
+                  </span>
                 </span>
               </p>
             ) : (
@@ -333,8 +359,10 @@ function GameArenaInner({
             )}
           </div>
         )}
-        <div className="relative min-h-0 flex-1 pb-[env(safe-area-inset-bottom)]">{body}</div>
-        <TurnStamp on={myTurn && !resultsView} wait={game.kind === "xo" && game.state?.last?.roundWon ? 1900 : 0} />
+        <div className="relative min-h-0 flex-1 pb-[env(safe-area-inset-bottom)]">
+          <BoardBusy.Provider value={setBoardBusy}>{body}</BoardBusy.Provider>
+        </div>
+        <TurnStamp on={myTurn && !resultsView} />
         {reacting && resultsView && (
           <div className="absolute top-[max(12px,env(safe-area-inset-top))] right-3 z-40">
             <ReactionButton open={tray} onToggle={() => setTray((t) => !t)} />
@@ -568,26 +596,22 @@ const TURN_GAMES = ["c4", "whot", "checkers", "chess", "ayo", "gems", "bomb", "l
 const WIDE_GAMES = ["ludo", "snakes"];
 
 /** A big "Your turn!" for a moment whenever it becomes your move */
-function TurnStamp({ on, wait = 0 }: { on: boolean; wait?: number }) {
+function TurnStamp({ on }: { on: boolean }) {
   const [show, setShow] = useState(0);
   const was = useRef(on);
   useEffect(() => {
     if (on && !was.current) {
-      was.current = on;
-      // Wait first if the last move is still being shown (a won X & O round)
-      const a = setTimeout(() => {
-        setShow(Date.now());
-        buzz([15, 40, 15]);
-        sfx("tick");
-      }, wait);
-      const t = setTimeout(() => setShow(0), wait + 1100);
-      return () => {
-        clearTimeout(a);
-        clearTimeout(t);
-      };
+      setShow(Date.now());
+      buzz([15, 40, 15]);
+      sfx("tick");
     }
     was.current = on;
   }, [on]);
+  useEffect(() => {
+    if (!show) return;
+    const t = setTimeout(() => setShow(0), 1100);
+    return () => clearTimeout(t);
+  }, [show]);
   if (!show) return null;
   return (
     <div key={show} aria-hidden className="pointer-events-none absolute inset-0 z-40 grid place-items-center">

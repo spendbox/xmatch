@@ -11,6 +11,7 @@ import {
 } from "@/lib/boardgames/xo";
 import type { Side } from "@/lib/boardgames/types";
 import { GOLD, PURPLE, Player, useTicker, type Names } from "./parts";
+import { useReportBusy } from "./boardBusy";
 import { useMove } from "./useMove";
 import { GamePop, usePops } from "./GamePop";
 
@@ -43,6 +44,8 @@ export function XO({
     line: number[];
     winner: Side;
   } | null>(null);
+  // A won round stays on screen for a moment before the next one starts
+  useReportBusy(!!shown);
   // Marks that just vanished, fading out
   const [ghost, setGhost] = useState<{
     cell: number;

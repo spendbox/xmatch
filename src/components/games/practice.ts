@@ -174,18 +174,15 @@ function showMs(kind: GameKind, before: Record<string, unknown>, after: Record<s
   return 600;
 }
 
-/** How long the computer "thinks" before its move: a few seconds, like a person */
+/** How long the computer "thinks" before its move: never more than 2 seconds */
 function thinkMs(kind: GameKind, st: Record<string, unknown>): number {
   if (kind === "ludo") {
     const s = st as unknown as ludo.LudoState;
-    if (s.roll == null) return between(900, 1900); // reach for the dice
-    return ludo.legal(s, "b").length > 1 ? between(1400, 3000) : between(800, 1500); // choose a token
+    if (s.roll == null) return between(600, 1100); // reach for the dice
+    return ludo.legal(s, "b").length > 1 ? between(900, 1800) : between(600, 1000); // choose a token
   }
-  if (kind === "snakes") return between(1000, 2000);
-  if (kind === "xo") return between(1500, 3200);
-  if (kind === "ayo") return between(2200, 4500);
-  // Whot and Last Card: look over the hand
-  return between(1800, 4000);
+  if (kind === "snakes") return between(600, 1100);
+  return between(1000, 2000);
 }
 
 /**
@@ -238,19 +235,27 @@ export function usePracticeGame(kind: GameKind | null) {
   }, []);
 
   // The computer waits for the last move to finish playing out on screen,
-  // then "thinks" for a while, like a person would
+  // then shows it's thinking for a moment (2 seconds at most) before it moves
+  const [thinking, setThinking] = useState(false);
   const st = game?.state as { turn?: Side; roll?: number | null; moves?: number } | undefined;
   useEffect(() => {
     const g = ref.current;
     if (!g || g.status !== "active" || st?.turn !== "b") return;
     const shown = Math.max(0, busyUntil.current - Date.now());
     const intro = new Date(g.started_at ?? 0).getTime() - Date.now() + 600;
+    const start = Math.max(intro, shown);
+    const a = setTimeout(() => setThinking(true), start);
     const t = setTimeout(() => {
+      setThinking(false);
       const cur = ref.current;
       if (!cur || cur.status !== "active" || (cur.state as { turn?: Side }).turn !== "b") return;
       play("b", botMove(cur.kind, cur.state, hidden.current));
-    }, Math.max(intro, shown + thinkMs(g.kind, g.state)));
-    return () => clearTimeout(t);
+    }, start + thinkMs(g.kind, g.state));
+    return () => {
+      clearTimeout(a);
+      clearTimeout(t);
+      setThinking(false);
+    };
   }, [st?.turn, st?.moves, st?.roll, game?.status, play]);
 
   const act: GameActions = {
@@ -265,5 +270,5 @@ export function usePracticeGame(kind: GameKind | null) {
     refresh: async () => {},
     now: () => Date.now(),
   };
-  return { game, act };
+  return { game, act, thinking };
 }

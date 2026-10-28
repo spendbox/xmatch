@@ -12,6 +12,7 @@ import {
   type LastCardState,
 } from "@/lib/boardgames/lastcard";
 import { GOLD, PURPLE, Player, useTicker, type Names } from "./parts";
+import { useReportBusy } from "./boardBusy";
 import { useMove } from "./useMove";
 import { GamePop, usePops, type Pop } from "./GamePop";
 
@@ -83,6 +84,7 @@ export function LastCard({
   const fly = (f: Omit<Fly, "id">) =>
     setFlying((l) => [...l, { ...f, id: ++n.current }]);
   const done = (id: number) => setFlying((l) => l.filter((f) => f.id !== id));
+  useReportBusy(flying.length > 0);
 
   // Not your two-card moment any more: forget the call
   useEffect(() => {

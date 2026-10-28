@@ -7,6 +7,7 @@ import { applyMove, legalMoves, WIN, type AyoState } from "@/lib/boardgames/ayo"
 import { MoveError } from "@/lib/boardgames/types";
 import { GOLD, PURPLE, Player, useTicker, type Names } from "./parts";
 import { useMove } from "./useMove";
+import { useReportBusy } from "./boardBusy";
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -38,6 +39,7 @@ export function Ayo({ game, names, act }: { game: Game; names: Names; act: GameA
   const shownPits = useRef(st.pits);
   shownPits.current = pits;
 
+  useReportBusy(anim);
   const myTurn = game.status === "active" && started && st.turn === me && !anim;
   const legal = myTurn ? legalMoves(st, me) : [];
   const mineAll = me === "a" ? [0, 1, 2, 3, 4, 5] : [6, 7, 8, 9, 10, 11];

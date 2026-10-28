@@ -5,6 +5,7 @@ import clsx from "clsx";
 import { buzz, sfx, type Game, type GameActions } from "@/lib/games";
 import { afterRoll, HOME, legal, moveToken, pick, SAFE, START, won, type LudoState } from "@/lib/boardgames/ludo";
 import { useMove } from "./useMove";
+import { useReportBusy } from "./boardBusy";
 import { other, type Side } from "@/lib/boardgames/types";
 import { GOLD, PURPLE, Player, type Names } from "./parts";
 import { DiceArt, GamePop, usePops } from "./GamePop";
@@ -83,6 +84,7 @@ export function Ludo({ game, names, act }: { game: Game; names: Names; act: Game
   const view = (pt: { x: number; y: number }) => (flip ? { x: 15 * C - pt.x, y: 15 * C - pt.y } : pt);
 
   const busy = animating || rolling || waiting;
+  useReportBusy(animating || rolling);
   const can = st.turn === me && st.roll != null && !busy && game.status === "active" ? legal(st, me) : [];
   const over = won(st, "a") || won(st, "b");
 
