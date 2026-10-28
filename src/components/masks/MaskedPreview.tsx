@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { maskUrl } from "@/lib/masks";
-import { placeMask } from "@/lib/maskPlace";
+import { finalSpot } from "@/lib/maskPlace";
 import type { PhotoMask } from "@/lib/types";
 
 // The mask drawing's square and the face oval inside it (see lib/masks)
@@ -54,8 +54,8 @@ export function MaskedPreview({ src, mask, className = "", natural }: { src: str
           mask &&
           !("none" in mask) &&
           mask.faces.map((face, k) => {
-            // Party masks sit on the eyes and nose; full masks on the whole face
-            const f = placeMask(mask.mask, face, ratio);
+            // Placed on the face (party masks on the eyes and nose), then the person's own changes
+            const f = finalSpot(mask.mask, face, ratio);
             return (
             // eslint-disable-next-line @next/next/no-img-element
             <img

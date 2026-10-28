@@ -4,15 +4,18 @@
  * eyes, tilted with them, and the mask grows until it covers the brows, eyes and nose.
  */
 import { isHalfMask, maskShape } from "./masks";
-import type { MaskSpot } from "./types";
+import type { MaskAdj, MaskSpot } from "./types";
 
 // In the mask drawing: the face oval's centre (what a spot points at) and the eye holes
 const OVAL_CY = 112;
 const EYE_Y = 102;
 const EYE_GAP = 44;
 
-// Face points (68-point layout): brows 17–26, nose 27–35, eyes 36–47
-const COVER = Array.from({ length: 31 }, (_, i) => 17 + i);
+// Face points (68-point layout) the mask must cover: brows 17–26, the nose bridge and tip 27–30 and 33,
+// and the eyes 36–47 (not the sides of the nostrils, so the mask doesn't balloon to reach them)
+const COVER = [...Array.from({ length: 14 }, (_, i) => 17 + i), 33, ...Array.from({ length: 12 }, (_, i) => 36 + i)];
+/** At most this much bigger than the eyes say, so it never ends up far too big for the face */
+const MAX_GROW = 1.1;
 
 let ctx: CanvasRenderingContext2D | null = null;
 const shapes = new Map<string, Path2D>();
@@ -68,8 +71,43 @@ export function placeMask(id: string, f: MaskSpot, ratio: number): MaskSpot {
       return inShape(id, x, y);
     });
   };
-  for (let k = 0; k < 40 && !covered(); k++) s *= 1.03;
-  s *= 1.05;
+  const base = s;
+  while (s < base * MAX_GROW && !covered()) s *= 1.02;
   const c = centre();
   return { ...f, cx: c.x, cy: c.y * ratio, s, rot: Math.round(((rad * 180) / Math.PI) * 10) / 10, sx };
+}
+
+// ---------- The person's own changes: move, resize, turn ----------
+
+export const NO_ADJ: MaskAdj = { x: 0, y: 0, k: 1, r: 0 };
+
+/**
+ * How far a mask can be changed. Full masks must keep hiding the face, so they only fine-tune;
+ * party masks can move and change size more.
+ */
+export function adjLimits(id: string) {
+  return isHalfMask(id) ? { kMin: 0.5, kMax: 1.8, move: 0.55, turn: 60 } : { kMin: 0.85, kMax: 1.6, move: 0.22, turn: 45 };
+}
+
+/** A change kept within the limits (move is measured against the mask's own size) */
+export function clampAdj(id: string, base: MaskSpot, a: MaskAdj, ratio: number): MaskAdj {
+  const l = adjLimits(id);
+  const k = Math.min(l.kMax, Math.max(l.kMin, a.k));
+  const r = Math.min(l.turn, Math.max(-l.turn, a.r));
+  // Offset in photo widths (y is a fraction of the height, so convert)
+  const ox = a.x;
+  const oy = a.y / ratio;
+  const max = l.move * base.s * 130;
+  const len = Math.hypot(ox, oy);
+  const f = len > max && len > 0 ? max / len : 1;
+  const round = (n: number) => Math.round(n * 10000) / 10000;
+  return { x: round(ox * f), y: round(oy * f * ratio), k: Math.round(k * 1000) / 1000, r: Math.round(r * 10) / 10 };
+}
+
+/** Where the mask is drawn: placed on the face, then the person's own changes */
+export function finalSpot(id: string, f: MaskSpot, ratio: number): MaskSpot {
+  const b = placeMask(id, f, ratio);
+  const a = f.adj;
+  if (!a) return b;
+  return { ...b, cx: b.cx + a.x, cy: b.cy + a.y, s: b.s * a.k, rot: b.rot + a.r };
 }
