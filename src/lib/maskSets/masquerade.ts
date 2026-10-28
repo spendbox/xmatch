@@ -1,6 +1,6 @@
 // @ts-nocheck -- generated SVG drawing code: shapes and paths built from numbers and strings
 /**
- * Masquerades and carved masks from Nigeria and across Africa: Lagbaja, Egungun, the Eyo groups,
+ * Masquerades and carved masks from Nigeria and across Africa: Lagbaja, the Eyo groups,
  * Gelede, Mmanwu, Ekpo and Ekpe, the Benin ivory and bronze heads, Nok, and classic carved masks
  * (Dan, Punu, Fang, Baule, Chokwe, Kota, Bwa, Dogon, Senufo, Kuba, Songye and more).
  * Every outline covers the whole face; eyes are painted, carved or covered with dark mesh.
@@ -67,51 +67,6 @@ export function masqueradeSet(k) {
       },
       eyes: () => mesh(both("M64 100 C70 96 86 96 92 100 L92 106 C86 109 70 109 64 106Z")),
       front: (p) => `<path d="M100 118 C96 126 94 134 100 140 C106 134 104 126 100 118Z" fill="#000" opacity="0.12"/>`,
-    });
-  }
-
-  // ---------- Egungun: layers of rich cloth panels, a net over the face, cowries and sequins ----------
-  const EGU = [
-    ["egungun", "Egungun", "#c2122a", "velvet"],
-    ["egungun-royal", "Egungun Royal", "#5b3fd9", "velvet"],
-    ["egungun-sequins", "Egungun Sequins", "#e8b143", "sequin"],
-    ["egungun-cowrie", "Egungun Cowrie", "#7a1430", "cowrie"],
-    ["egungun-patch", "Egungun Patchwork", "#1f9d6b", "patch"],
-    ["egungun-indigo", "Egungun Indigo", "#253a8f", "stripe"],
-    ["egungun-emerald", "Egungun Emerald", "#0f8a5a", "velvet"],
-    ["egungun-ruby", "Egungun Ruby", "#9b1b30", "sequin"],
-    ["egungun-sunset", "Egungun Sunset", "#f2741f", "stripe"],
-    ["egungun-night", "Egungun Night", "#1d1a26", "cowrie"],
-  ];
-  for (const [id, name, color, style] of EGU) {
-    add({
-      id, name, color, shape: HOOD, rim: "soft",
-      back: (p) => {
-        const cols = [p.base, p.alt, p.dark, p.alt2, p.light, p.deep];
-        let s = meshDef;
-        // Panels hanging all round, wider than the head
-        for (let i = 0; i < 13; i++) {
-          // Each panel hangs from the crown and flares out, longer at the sides
-          const x = 4 + i * 16;
-          const c = cols[i % cols.length];
-          const top = 40 + Math.abs(i - 6) * 7;
-          const spread = (i - 6) * 1.6;
-          const len = 196 + Math.abs(i - 6) * 3;
-          s += `<path d="M${x + 3} ${top} L${x + 15} ${top} L${x + 18 + spread} ${len} L${x + 9 + spread} ${len + 10} L${x + spread} ${len}Z" fill="${c}" stroke="#000" stroke-opacity="0.3" stroke-width="0.8"/><path d="M${x + 9} ${top} L${x + 9 + spread} ${len + 8}" stroke="#000" stroke-opacity="0.12" stroke-width="3"/>`;
-          if (style === "sequin") for (let y = 80; y < 200; y += 9) s += `<circle cx="${x + 9}" cy="${y}" r="2.4" fill="url(#metal)"/>`;
-          else if (style === "cowrie") s += [100, 130, 160, 190].map((y) => cowrie(x + 9, y, 3)).join("");
-          else if (style === "stripe") s += `<path d="M${x + 4} 60 L${x + 4} 206 M${x + 14} 60 L${x + 14} 206" stroke="${p.pale}" stroke-opacity="0.6" stroke-width="1.6"/>`;
-          else if (style === "patch") s += `<rect x="${x + 3}" y="${90 + (i % 3) * 30}" width="12" height="20" fill="${cols[(i + 2) % cols.length]}"/>`;
-          else s += `<path d="M${x + 2} 196 L${x + 16} 196" stroke="url(#metal)" stroke-width="2"/>`;
-        }
-        // A crown on top
-        s += `<path d="M58 40 L64 6 L78 28 L90 0 L100 22 L110 0 L122 28 L136 6 L142 40Z" fill="${p.dark}" stroke="url(#metal)" stroke-width="1.4"/>` + [64, 90, 110, 136].map((x, i) => `<circle cx="${x}" cy="${[6, 0, 0, 6][i]}" r="4" fill="url(#metal)"/>`).join("");
-        return s;
-      },
-      face: (p) => p.base,
-      pattern: (p) => `<path d="M30 76 C60 70 140 70 170 76 L170 92 C140 86 60 86 30 92Z" fill="${p.deep}"/>` + mesh("M52 92 C70 88 130 88 148 92 L146 168 C126 180 74 180 54 168Z", "#160d1c") + Array.from({ length: 13 }, (_, i) => cowrie(40 + i * 10, 82, 3, 90)).join(""),
-      eyes: () => "",
-      front: (p) => trimLine("M52 92 C70 88 130 88 148 92 L146 168 C126 180 74 180 54 168Z", 1.4) + (style === "sequin" ? Array.from({ length: 16 }, (_, i) => `<circle cx="${40 + i * 8}" cy="${66 + Math.abs(Math.sin(i)) * 2}" r="2.6" fill="url(#metal)"/>`).join("") : ""),
     });
   }
 
