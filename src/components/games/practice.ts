@@ -29,8 +29,9 @@ const shuffle = <T,>(a: T[]) => {
   return b;
 };
 const dice = () => 1 + Math.floor(Math.random() * 6);
-/** Your dice against the computer: a 6 comes up about 1 time in 3 (fair dice: 1 in 6), so it feels fair */
-const kindDice = () => (Math.random() < 0.2 ? 6 : dice());
+/** Your dice against the computer: a 6 comes up 1 time in 5 (fair dice: 1 in 6), so it feels fair.
+ *  An extra 6 4% of the time, plus the usual 1 in 6 the rest of the time: 0.04 + 0.96 ÷ 6 = 0.2 */
+const kindDice = () => (Math.random() < 0.04 ? 6 : dice());
 const diceFor = (side: Side) => (side === "a" ? kindDice : dice);
 
 /** A fresh game against the computer, played on this phone only. You go first. */
