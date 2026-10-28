@@ -1,14 +1,20 @@
 // @ts-nocheck -- generated SVG drawing code: shapes and paths built from numbers and strings
 /**
  * Masquerade masks for photos. Each mask is drawn as an SVG from one chosen colour and a metal
- * trim. Every full mask's outline contains the face oval (centre 100,112; radii 48 × 54 in a
- * -26,-44 252×252 drawing), so it fully hides a face. Party masks (half: true) only cover the eyes,
- * brows and nose: their eye holes are at (78,102) and (122,102), and lib/maskPlace fits them.
+ * trim. Every outline contains the face oval (centre 100,112; radii 48 × 54 in a -26,-44 252×252
+ * drawing), so any mask placed over a face fully hides it. The big families (emoji, masquerades,
+ * world, animals, fun, flags) are built in lib/maskSets from parts.
  */
 // The mask library. Each mask has its own outline, eyes and details, all derived from one
 // chosen colour and a metal trim. Every outline contains the face oval (centre 100,112;
 // radii 48 × 54), so any mask fully hides a face. Drawing area: -26,-44 252×252.
-import { PARTY_MASKS } from "./partyMasks";
+
+import { emojiSet } from "./maskSets/emoji";
+import { masqueradeSet } from "./maskSets/masquerade";
+import { worldSet } from "./maskSets/world";
+import { animalSet } from "./maskSets/animals";
+import { funSet } from "./maskSets/fun";
+import { flagSet } from "./maskSets/flags";
 
 const F = "M100 58 C132 58 148 78 148 104 C148 138 128 162 100 166 C72 162 52 138 52 104 C52 78 68 58 100 58 Z";
 const mirror = (d) => d.replace(/(-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)/g, (_, x, y) => `${+(200 - Number(x)).toFixed(2)} ${y}`);
@@ -340,9 +346,6 @@ const MASKS = [
     front: () => `<path d="M92 112 C96 110 104 110 108 112 L100 176Z" fill="url(#metal)" filter="url(#emb)"/>`,
   },
 
-  // ============ PARTY (eyes and nose only): see lib/partyMasks ============
-  ...PARTY_MASKS,
-
   // ============ CLASSIC MASQUERADE ============
   {
     id: "venetian", name: "Venetian", cat: "classic", color: "#e8b143", shape: OUT.venetian, rim: "metal",
@@ -520,6 +523,9 @@ const MASKS = [
     front: (p) => ink("M94 144 C98 146 102 146 106 144", p.deep, 1.6),
   },
 ];
+// The big families, built from parts (lib/maskSets)
+const KIT = { F, OUT, mirror, both, gem, trimLine, ink, star, star5, heart, glossy, feather, flower, peacockEye, scallops, whiskers, nose, catMouth, cuteEye, cuteEyes, happyEyes, blush, ALMOND, holes, smileMouth, pair2, hexToHsl, hslToHex };
+MASKS.push(...emojiSet(KIT), ...masqueradeSet(KIT), ...worldSet(KIT), ...animalSet(KIT), ...funSet(KIT), ...flagSet(KIT));
 MASKS.forEach((m) => { m.color = m.color || "#e8b143"; });
 
 // Ears and other pairs: one side, then the mirrored side
@@ -528,13 +534,11 @@ function pair2(d, fill, innerFill, inner, p) {
   return one((x) => x) + one(mirror);
 }
 
-const CATS = [["all", "All"], ["party", "Party"], ["fun", "Fun"], ["animals", "Animals"], ["classic", "Classic"], ["world", "World"], ["edgy", "Edgy"]];
+const CATS = [["all", "All"], ["emoji", "Emoji"], ["masquerade", "Masquerade"], ["venetian", "Venetian"], ["world", "World"], ["animals", "Animals"], ["fun", "Fun"], ["flags", "Flags"], ["classic", "Classic"], ["edgy", "Edgy"]];
 
 function maskSvg(m, colorHex, trimId) {
   const p = palette(colorHex || m.color);
   const t = TRIMS[trimId] || TRIMS.gold;
-  // Party masks draw themselves (lib/partyMasks)
-  if (m.svg) return m.svg(p, t, { hexToHsl, hslToHex });
   const shape = m.shape || OUT.egg;
   const jh = hexToHsl(p.jewel)[0];
   const defs = `
@@ -582,17 +586,16 @@ function maskSvg(m, colorHex, trimId) {
 }
 
 export type MaskDesign = (typeof MASKS)[number];
+/** A mask's outline, in the drawing's own units (it must contain the face oval) */
+export const maskOutline = (id: string): string => (MASKS.find((x) => x.id === id)?.shape ?? OUT.egg) as string;
 
-/** Party masks cover only the eyes, brows and nose (placed from those points, not the whole face) */
-export const isHalfMask = (id: string) => !!MASKS.find((x) => x.id === id)?.half;
-/** A mask's outline, in the drawing's own units */
-export const maskShape = (id: string): string => (MASKS.find((x) => x.id === id)?.shape ?? OUT.egg) as string;
 export type TrimId = keyof typeof TRIMS;
 export { MASKS, CATS, TRIMS, maskSvg, palette };
 
 /** The mask as an image URL, for <img> or drawing on a canvas */
 export function maskUrl(id: string, color?: string | null, trim: string = "gold") {
-  const m = MASKS.find((x) => x.id === id) ?? MASKS[0];
+  // A mask that no longer exists (the old party masks) shows as the Venetian
+  const m = MASKS.find((x) => x.id === id) ?? MASKS.find((x) => x.id === "venetian");
   // Round long decimals so the drawing is identical wherever it's made (server or phone)
   const svg = maskSvg(m, color, trim).replace(/-?\d+\.\d{3,}/g, (n: string) => String(+Number(n).toFixed(2)));
   return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);

@@ -13,7 +13,7 @@ const VB = { x: -26, y: -44, w: 252, h: 252 };
 const OVAL = { cx: 100, cy: 112, rx: 48, ry: 54 };
 
 /** Masks picked for you, a different one for each photo */
-export const STARTER_MASKS = ["venetian", "fox", "hearteyes", "flowers", "cat", "shades", "butterfly", "kitsune", "unicorn", "owl", "moon", "party"];
+export const STARTER_MASKS = ["venetian", "emo-cool", "lagbaja", "fox", "volto-gold", "hearteyes", "eyo-laba", "an-corgi", "flowers", "emo-partying", "gelede", "kitsune", "an-redpanda", "dama-roses", "unicorn", "calavera-rosa"];
 export { PLACEHOLDER } from "./photoSet";
 
 type FaceApi = typeof import("@vladmandic/face-api");
@@ -169,7 +169,7 @@ export async function drawMasked(photo: HTMLCanvasElement, mask: Exclude<PhotoMa
   ctx.drawImage(photo, 0, 0);
   const img = await loadImg(maskUrl(mask.mask, mask.color, mask.trim));
   for (const face of mask.faces) {
-    // Placed on the face (party masks on the eyes and nose), then the person's own changes
+    // Placed on the face, then the person's own changes
     const f = finalSpot(mask.mask, face, out.width / out.height);
     ctx.save();
     ctx.translate(f.cx * out.width, f.cy * out.height);
@@ -231,4 +231,4 @@ export function starterMask(used: string[]) {
   return STARTER_MASKS.find((id) => !used.includes(id)) ?? STARTER_MASKS[used.length % STARTER_MASKS.length];
 }
 
-export const maskName = (id: string) => MASKS.find((m) => m.id === id)?.name ?? "Mask";
+export const maskName = (id: string) => MASKS.find((m) => m.id === id)?.name ?? "Venetian";
