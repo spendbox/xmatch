@@ -50,7 +50,22 @@ async function findFaces(img: HTMLCanvasElement): Promise<Found[]> {
     const boxes = await fa.detectAllFaces(img, opts);
     if (boxes.length) return boxes.map((b) => ({ box: { x: b.box.x, y: b.box.y, w: b.box.width, h: b.box.height }, yaw: 0, roll: 0, region: null }));
   }
-  return [];
+  // Nothing: try the stronger finder (bigger download, so only when the quick one misses)
+  try {
+    if (!fa.nets.ssdMobilenetv1.isLoaded) await fa.nets.ssdMobilenetv1.loadFromUri("/models");
+    const opts = new fa.SsdMobilenetv1Options({ minConfidence: 0.35 });
+    let found: { detection: { box: { x: number; y: number; width: number; height: number } }; landmarks: { positions: { x: number; y: number }[] } }[] = [];
+    try {
+      found = (await fa.detectAllFaces(img, opts).withFaceLandmarks(true)) as unknown as typeof found;
+    } catch {
+      found = [];
+    }
+    if (found.length) return found.map((f) => outline(f.detection.box, f.landmarks.positions));
+    const boxes = await fa.detectAllFaces(img, opts);
+    return boxes.map((b) => ({ box: { x: b.box.x, y: b.box.y, w: b.box.width, h: b.box.height }, yaw: 0, roll: 0, region: null }));
+  } catch {
+    return [];
+  }
 }
 
 function outline(box: { x: number; y: number; width: number; height: number }, pts: { x: number; y: number }[]): Found {
@@ -117,13 +132,30 @@ const loadImg = (src: string) =>
   });
 
 /** A picture as a canvas (at most 1280 on the long side) */
-export async function toCanvas(blob: Blob) {
-  const bmp = await createImageBitmap(blob);
+export async function toCanvas(blob: Blob, maxSize = 1280) {
+  let src: ImageBitmap | HTMLImageElement;
+  try {
+    src = await createImageBitmap(blob);
+  } catch {
+    // Some photos only open as a normal image
+    const url = URL.createObjectURL(blob);
+    try {
+      src = await loadImg(url);
+    } catch {
+      throw new Error("This photo's file can't be opened (it may not be a JPG, PNG or WebP)");
+    } finally {
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+  }
+  const w = "naturalWidth" in src ? src.naturalWidth : src.width;
+  const h = "naturalHeight" in src ? src.naturalHeight : src.height;
+  // Never bigger than a normal Dashpad photo
+  const k = Math.min(1, maxSize / Math.max(w, h));
   const c = document.createElement("canvas");
-  c.width = bmp.width;
-  c.height = bmp.height;
-  c.getContext("2d")!.drawImage(bmp, 0, 0);
-  bmp.close?.();
+  c.width = Math.round(w * k);
+  c.height = Math.round(h * k);
+  c.getContext("2d")!.drawImage(src, 0, 0, c.width, c.height);
+  if ("close" in src) src.close();
   return c;
 }
 
@@ -183,11 +215,11 @@ export async function maskFor(canvas: HTMLCanvasElement, maskId: string): Promis
 
 /** An original photo you already have, as a canvas (fetched through Dashpad so it can be drawn on) */
 export async function loadOriginal(url: string) {
+  // Straight from storage first (any size), then through Dashpad
+  const direct = await fetch(url, { mode: "cors", cache: "no-store" }).catch(() => null);
+  if (direct?.ok && (direct.headers.get("Content-Type") ?? "image/").startsWith("image/")) return toCanvas(await direct.blob());
   const via = await fetch(`/api/media/original?url=${encodeURIComponent(url)}`).catch(() => null);
   if (via?.ok) return toCanvas(await via.blob());
-  // Straight from storage (works where the photo's host allows it)
-  const direct = await fetch(url, { mode: "cors", cache: "no-store" }).catch(() => null);
-  if (direct?.ok) return toCanvas(await direct.blob());
   throw new Error("Couldn't open that photo. Please try again.");
 }
 
