@@ -14,6 +14,7 @@
     "@fontsource/lilita-one": "^5.3.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.118.0",
+    "@vladmandic/face-api": "1.7.12",
     "aws4fetch": "^1.0.20",
     "chess.js": "1.4.0",
     "clsx": "^2.1.1",

@@ -1,0 +1,120 @@
+"use client";
+
+import { useState } from "react";
+import clsx from "clsx";
+import { Check } from "lucide-react";
+import { Sheet } from "@/components/ui/Sheet";
+import { Button, tapFeedback } from "@/components/ui/Button";
+import { MaskIcon } from "@/components/ui/MaskIcon";
+import { CATS, MASKS, TRIMS, maskUrl } from "@/lib/masks";
+import type { PhotoMask } from "@/lib/types";
+import { MaskedPreview } from "./MaskedPreview";
+
+type Masked = Exclude<PhotoMask, { none: true }>;
+
+export const MASK_COLOURS = ["#e8b143", "#1d1a26", "#f7f0e6", "#d92f3a", "#ff3fa4", "#b44cff", "#5b3fd9", "#253a8f", "#4f86f7", "#0f8a8a", "#1f9d6b", "#f2741f"];
+
+/**
+ * Changing a photo's mask: the design, its colour and its trim. The mask stays where the face
+ * is (it was placed over the face for you and can't be moved off it).
+ */
+export function MaskEditor({ open, src, mask, onClose, onSave, saving }: { open: boolean; src: string; mask: Masked; onClose: () => void; onSave: (m: Masked) => void; saving?: boolean }) {
+  const [draft, setDraft] = useState<Masked>(mask);
+  const [cat, setCat] = useState("all");
+  const [opened, setOpened] = useState(mask);
+  // A different photo opened: start from its mask
+  if (opened !== mask) {
+    setOpened(mask);
+    setDraft(mask);
+  }
+  const shown = MASKS.filter((m) => cat === "all" || m.cat === cat);
+  const set = (patch: Partial<Masked>) => {
+    tapFeedback();
+    setDraft((d) => ({ ...d, ...patch }));
+  };
+
+  return (
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title="Change mask"
+      subtitle="Free · it stays over your face"
+      icon={<MaskIcon className="w-6" />}
+      footer={
+        <Button size="lg" onClick={() => onSave(draft)} loading={saving} loadingText="Saving…">
+          Save mask
+        </Button>
+      }
+    >
+      <MaskedPreview src={src} mask={draft} className="mx-auto w-[64%] rounded-[24px] bg-line shadow-card" />
+
+      <div className="no-scrollbar mt-4 -mx-1 flex gap-1.5 overflow-x-auto px-1">
+        {CATS.map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setCat(id)}
+            className={clsx("shrink-0 rounded-full px-3.5 py-1.5 text-[13px] font-bold", cat === id ? "bg-ink text-white" : "bg-cream text-muted")}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <div className="mt-3 grid max-h-[300px] grid-cols-4 gap-2 overflow-y-auto p-0.5">
+        {shown.map((m) => (
+          <button
+            key={m.id}
+            type="button"
+            onClick={() => set({ mask: m.id })}
+            aria-pressed={draft.mask === m.id}
+            aria-label={m.name}
+            className={clsx("grid aspect-square place-items-center rounded-[16px] bg-cream transition", draft.mask === m.id && "ring-[2.5px] ring-brand")}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={maskUrl(m.id, draft.color, draft.trim)} alt="" className="w-[88%]" loading="lazy" />
+          </button>
+        ))}
+      </div>
+
+      <p className="mt-4 text-[12px] font-extrabold tracking-[0.12em] text-muted uppercase">Colour</p>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => set({ color: null })}
+          className={clsx("h-8 rounded-full px-3 text-[12px] font-bold", draft.color === null ? "bg-ink text-white" : "bg-cream text-muted")}
+        >
+          Original
+        </button>
+        {MASK_COLOURS.map((c) => (
+          <button
+            key={c}
+            type="button"
+            onClick={() => set({ color: c })}
+            aria-label={`Colour ${c}`}
+            className={clsx("h-8 w-8 rounded-full ring-1 ring-black/10", draft.color === c && "ring-2 ring-brand ring-offset-2")}
+            style={{ background: c }}
+          />
+        ))}
+        <label className="relative grid h-8 w-8 cursor-pointer place-items-center overflow-hidden rounded-full ring-1 ring-black/10" style={{ background: "conic-gradient(red, yellow, lime, cyan, blue, magenta, red)" }} aria-label="Any colour">
+          <input type="color" className="absolute inset-0 opacity-0" value={draft.color ?? "#e8b143"} onChange={(e) => set({ color: e.target.value })} />
+        </label>
+      </div>
+
+      <p className="mt-4 text-[12px] font-extrabold tracking-[0.12em] text-muted uppercase">Trim</p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {(Object.entries(TRIMS) as [string, { name: string; hi: string; mid: string; lo: string }][]).map(([id, t]) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => set({ trim: id })}
+            className={clsx("inline-flex items-center gap-2 rounded-full py-1.5 pr-3.5 pl-1.5 text-[13px] font-bold", draft.trim === id ? "bg-ink text-white" : "bg-cream text-ink")}
+          >
+            <span className="h-6 w-6 rounded-full" style={{ background: `linear-gradient(135deg, ${t.hi}, ${t.mid} 45%, ${t.lo})` }} />
+            {t.name}
+            {draft.trim === id && <Check size={14} />}
+          </button>
+        ))}
+      </div>
+    </Sheet>
+  );
+}

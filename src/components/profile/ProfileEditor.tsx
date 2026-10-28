@@ -12,7 +12,9 @@ import {
   AtSign, BellOff, BellRing, Cake, ChevronRight, Eye, FileText, ImagePlus, MessageCircle, LogOut, Mic, PenLine, Shapes, ShieldCheck, SlidersHorizontal, Trash2,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { uploadPhoto, deletePhoto } from "@/lib/photos";
+import { photosOf, useMaskedPhotos } from "@/components/masks/useMaskedPhotos";
+import { PLACEHOLDER } from "@/lib/maskedPhotos";
+import { OPEN_MASKING } from "@/components/masks/MaskUpdate";
 import { ageFromBirthdate, GENDERS } from "@/lib/constants";
 import { replyLabel } from "@/lib/hourly";
 import { InviteCard } from "./InviteCard";
@@ -76,7 +78,16 @@ export function ProfileEditor({
   const [bio, setBio] = useState(profile.bio);
   const [confirmText, setConfirmText] = useState("");
   const [interests, setInterests] = useState(profile.interests);
-  const [photos, setPhotos] = useState(profile.photos);
+  // Photos are saved as they change (masked copies, originals, and the masks they wear)
+  const photoSet = useMaskedPhotos({
+    supabase,
+    userId: profile.id,
+    initial: photosOf(profile),
+    persist: (patch) => {
+      supabase.from("profiles").update(patch).eq("id", profile.id).then(() => {});
+    },
+  });
+  const photos = photoSet.urls;
   const [open, setOpen] = useState(profile.open_to_masquerade);
   const [panel, setPanel] = useState<Panel>(null);
   const [preview, setPreview] = useState(false);
@@ -413,28 +424,36 @@ export function ProfileEditor({
       >
         <PhotoGrid
           photos={photos}
-          onAdd={async (f) => {
-            const url = await uploadPhoto(supabase, profile.id, f);
-            setPhotos((p) => {
-              const next = [...p, url];
-              supabase.from("profiles").update({ photos: next }).eq("id", profile.id).then(() => {});
-              return next;
-            });
-          }}
+          onAdd={photoSet.add}
           onRemove={(url) => {
             if (photos.length <= 1) return setError("Keep at least one photo.");
             setError(null);
-            const next = photos.filter((p) => p !== url);
-            setPhotos(next);
-            supabase.from("profiles").update({ photos: next }).eq("id", profile.id).then(() => {});
-            deletePhoto(supabase, url);
+            photoSet.remove(url);
           }}
           onReorder={(next) => {
             setError(null);
-            setPhotos(next);
-            supabase.from("profiles").update({ photos: next }).eq("id", profile.id).then(() => {});
+            photoSet.reorder(next);
           }}
+          overlay={photoSet.overlay}
+          busyNote="Finding your face and masking it…"
         />
+        {photoSet.ui}
+        {photos.includes(PLACEHOLDER) ? (
+          <div className="mt-3 rounded-2xl bg-gold-soft p-3.5 text-[13.5px] text-[#8a5a00]">
+            Some photos aren&apos;t masked yet, so people see a plain mask instead.
+            <Button
+              className="mt-2.5"
+              onClick={() => {
+                close();
+                window.dispatchEvent(new Event(OPEN_MASKING));
+              }}
+            >
+              Mask my photos
+            </Button>
+          </div>
+        ) : (
+          <p className="mt-3 text-[13px] text-muted">Every photo is masked. Your originals only go to people you&apos;ve both unmasked with.</p>
+        )}
         {error && <p className="mt-3 text-[14px] font-medium text-chili">{error}</p>}
       </Sheet>
 

@@ -109,7 +109,7 @@ function OnboardingPhotos() {
       <div className="mt-5 flex items-start gap-3 rounded-[20px] bg-brand-soft p-3.5 text-[13.5px] text-brand-ink">
         <MaskIcon className="mt-0.5 w-7 shrink-0" />
         <span>
-          <b>Masks are free.</b> Pick a different one for each photo, and change them any time. 61 to choose from.
+          <b>Masks are free.</b> We hide your face in each photo. Change the mask any time.
         </span>
       </div>
       <span className="mt-auto block rounded-full bg-brand py-4 text-center text-[16px] font-bold text-white">Continue</span>

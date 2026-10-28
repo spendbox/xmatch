@@ -4,6 +4,10 @@ export type Intent = "friends" | "dating" | "spicy";
 export type SeekKey = "women" | "men" | "other";
 export type Seeking = string;
 
+/** A mask over the faces in one photo (face positions are fractions of the photo's width and height) */
+export type MaskSpot = { cx: number; cy: number; s: number; rot: number; sx: number };
+export type PhotoMask = { mask: string; color: string | null; trim: string; faces: MaskSpot[] } | { none: true };
+
 export type Profile = {
   id: string;
   display_name: string | null;
@@ -11,7 +15,12 @@ export type Profile = {
   gender: Gender | null;
   bio: string;
   interests: string[];
+  /** Masked photos: what everyone sees */
   photos: string[];
+  /** The originals, same order (only your matches get these). Null before masking existed. */
+  real_photos?: string[] | null;
+  /** Which mask each photo wears */
+  photo_masks?: PhotoMask[] | null;
   open_to_masquerade: boolean;
   pref_intent: Intent;
   pref_seeking: Seeking;

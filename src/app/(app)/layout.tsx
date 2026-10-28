@@ -2,6 +2,9 @@ import { redirect } from "next/navigation";
 import { getAuth, getMyProfile } from "@/lib/auth";
 import { AppChrome } from "@/components/app/AppChrome";
 import { ThingPromptsSync } from "@/components/app/ThingPromptsSync";
+import { MaskUpdate } from "@/components/masks/MaskUpdate";
+import { photosOf } from "@/components/masks/useMaskedPhotos";
+import { PLACEHOLDER } from "@/lib/maskedPhotos";
 import type { ThingPromptRow } from "@/lib/things";
 import type { GiftRow, SettingRow } from "@/components/keys/usePrices";
 
@@ -32,6 +35,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       >
         {children}
       </AppChrome>
+      {/* Photos from before masks existed: offer to mask them */}
+      {profile!.photos.includes(PLACEHOLDER) && <MaskUpdate userId={user.id} photos={photosOf(profile!)} />}
     </>
   );
 }

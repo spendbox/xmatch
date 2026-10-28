@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /** Shrinks a photo on the phone before uploading, so uploads are fast and cheap. */
-async function compress(file: File, maxSize = 1280): Promise<Blob> {
+export async function compress(file: Blob, maxSize = 1280): Promise<Blob> {
   const bitmap = await createImageBitmap(file).catch(() => null);
   if (!bitmap) return file;
   const scale = Math.min(1, maxSize / Math.max(bitmap.width, bitmap.height));
@@ -30,7 +30,7 @@ async function uploadToR2(blob: Blob, small: Blob): Promise<string | null> {
   return link.url;
 }
 
-export async function uploadPhoto(supabase: SupabaseClient, userId: string, file: File) {
+export async function uploadPhoto(supabase: SupabaseClient, userId: string, file: Blob) {
   const [blob, small] = await Promise.all([compress(file), compress(file, THUMB_SIZE)]);
   const onR2 = await uploadToR2(blob, small);
   if (onR2) return onR2;

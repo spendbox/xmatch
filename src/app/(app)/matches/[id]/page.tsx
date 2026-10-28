@@ -23,6 +23,8 @@ export default async function MatchChatPage({ params }: { params: Promise<{ id: 
   ]);
   const shared = ((other?.interests ?? []) as string[]).filter((t) => ((me?.interests ?? []) as string[]).includes(t));
   if (!other) notFound();
+  // You both unmasked: their real photos
+  if ((other.real_photos as string[] | null)?.length) other.photos = other.real_photos;
 
   return <MatchChat matchId={id} myId={user.id} other={other as Profile} initialMessages={((messages ?? []) as ChatMessage[]).reverse()} shared={shared} matchedAt={match.created_at} intent={match.intent} slowCost={(cost?.value as number | undefined) ?? 10} source={match.source as string | null} chatBg={(match.chat_bg as string | null | undefined) ?? null} />;
 }

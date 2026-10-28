@@ -142,7 +142,7 @@ export function ExploreProfileSheet({
       age={p.age}
       locked={
         hidden > 0
-          ? { count: hidden, note: canPay ? "Unlock them now, or they show free once you're connected." : "They show once you're connected.", action: canPay ? unlockButton : undefined }
+          ? { count: hidden, note: canPay ? "They stay masked. Unlock them now, or they show free once you're connected." : "They show, masked, once you're connected.", action: canPay ? unlockButton : undefined }
           : undefined
       }
       commonWith={p.id}
