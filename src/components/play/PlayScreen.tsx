@@ -215,19 +215,11 @@ export function PlayScreen({ userId, demo }: { userId: string; demo?: { status: 
           <>
             <h1 className="text-center font-display text-[34px] leading-tight font-bold text-balance">Play someone new</h1>
             <p className="mx-auto mt-2 max-w-[300px] text-center text-[14.5px] text-white/75">
-              Dashpad pairs you with someone online who fits your settings, and picks the game. Message them or send a gift while you play.
+              Dashpad pairs you with someone online who fits your settings, and picks the game for you. Message them or send a gift while you play.
             </p>
 
-            <div className="mt-6 grid grid-cols-4 gap-2">
-              {games.map((g) => (
-                <div key={g} className="grid gap-1.5 text-center">
-                  <span className="block h-[84px] overflow-hidden rounded-2xl bg-white/10 py-2 ring-1 ring-white/10">
-                    <GameArt kind={g} />
-                  </span>
-                  <span className="text-[11.5px] font-bold text-white/80">{TITLES[g]}</span>
-                </div>
-              ))}
-            </div>
+            {/* Not a menu: Dashpad picks the game, so show one card that keeps shuffling */}
+            <MysteryGame games={games} />
 
             {/* Who you're paired with: your Masquerade settings */}
             {st && (
@@ -343,8 +335,37 @@ export function PlayScreen({ userId, demo }: { userId: string; demo?: { status: 
         .pl-ring { animation: pl-ring 2.4s ease-out infinite; }
         @keyframes pl-in { 0% { transform: scale(.4) rotate(-6deg); opacity: 0 } 60% { transform: scale(1.08) rotate(2deg); opacity: 1 } 100% { transform: none } }
         .pl-in { animation: pl-in .5s cubic-bezier(.2,1.4,.4,1) both; }
-        @media (prefers-reduced-motion: reduce) { .pl-ring, .pl-in { animation: none } }
+        @keyframes pl-swap { 0% { transform: translateY(10px) scale(.94); opacity: 0 } 100% { transform: none; opacity: .8 } }
+        .pl-swap { animation: pl-swap .35s ease-out both; }
+        @media (prefers-reduced-motion: reduce) { .pl-ring, .pl-in, .pl-swap { animation: none } }
       `}</style>
+    </div>
+  );
+}
+
+/** The game is a surprise: one card that shuffles through the games you might get */
+function MysteryGame({ games }: { games: GameKind[] }) {
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    if (games.length < 2) return;
+    const t = setInterval(() => setI((n) => (n + 1) % games.length), 1100);
+    return () => clearInterval(t);
+  }, [games.length]);
+  const g = games[i % games.length];
+  return (
+    <div className="mt-6 flex flex-col items-center text-center" aria-label={`Dashpad picks the game for you. It could be ${games.map((k) => TITLES[k] ?? k).join(", ")}`}>
+      <div className="relative">
+        <span key={g} className="pl-swap block h-[96px] w-[150px] overflow-hidden rounded-[22px] bg-white/10 py-2 opacity-80 ring-1 ring-white/10" aria-hidden>
+          <GameArt kind={g} />
+        </span>
+        <span className="absolute -top-2.5 -right-2.5 grid h-9 w-9 place-items-center rounded-full bg-gold font-display text-[20px] font-black text-ink shadow-[0_4px_14px_-2px_#f2b33d]" aria-hidden>
+          ?
+        </span>
+      </div>
+      <p className="mt-3 text-[13px] font-extrabold tracking-[0.12em] text-gold uppercase">Surprise game</p>
+      <p className="mt-1 max-w-[290px] text-[13px] text-white/70">
+        You don&apos;t choose. When you&apos;re paired, Dashpad picks one game for you both.
+      </p>
     </div>
   );
 }

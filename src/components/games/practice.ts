@@ -142,6 +142,52 @@ function apply(kind: GameKind, st: Record<string, unknown>, side: Side, mv: unkn
   return snakes.applyMove(st as unknown as snakes.SnakesState, side, mv as snakes.SnakesMove, dice);
 }
 
+const between = (lo: number, hi: number) => lo + Math.random() * (hi - lo);
+
+/**
+ * Roughly how long the game screen takes to show a move (sowing seeds, hopping tokens,
+ * cards flying), so the computer doesn't move while the last move is still playing out.
+ */
+function showMs(kind: GameKind, before: Record<string, unknown>, after: Record<string, unknown>, side: Side): number {
+  const mine = side === "a";
+  if (kind === "ayo") {
+    const b = before as unknown as ayo.AyoState;
+    const a = after as unknown as ayo.AyoState;
+    const seeds = a.last ? b.pits[a.last.pit] : 4;
+    const step = Math.max(110, 260 - seeds * 10);
+    return 160 + seeds * (step + 20) + (a.last?.captured.length ? 650 : 0) + 200;
+  }
+  if (kind === "ludo") {
+    const l = (after as unknown as ludo.LudoState).last;
+    if (!l) return 300;
+    if (l.rolled) return (mine ? 250 : 520) + (l.passed ? 700 : 0) + 200;
+    const hops = l.from! < 0 ? 1 : l.to! - l.from!;
+    return hops * 150 + (l.captured?.length ? 120 : 0) + 400;
+  }
+  if (kind === "snakes") {
+    const l = (after as unknown as snakes.SnakesState).last;
+    if (!l) return 300;
+    return (mine ? 250 : 520) + (l.landed - l.from) * 140 + (l.ladder || l.snake ? 200 + 11 * 55 : 0) + 300;
+  }
+  if (kind === "xo") return (after as unknown as xo.XOState).last?.roundWon ? 1900 : 400;
+  // Card games: the card flies to the pile
+  return 600;
+}
+
+/** How long the computer "thinks" before its move: a few seconds, like a person */
+function thinkMs(kind: GameKind, st: Record<string, unknown>): number {
+  if (kind === "ludo") {
+    const s = st as unknown as ludo.LudoState;
+    if (s.roll == null) return between(900, 1900); // reach for the dice
+    return ludo.legal(s, "b").length > 1 ? between(1400, 3000) : between(800, 1500); // choose a token
+  }
+  if (kind === "snakes") return between(1000, 2000);
+  if (kind === "xo") return between(1500, 3200);
+  if (kind === "ayo") return between(2200, 4500);
+  // Whot and Last Card: look over the hand
+  return between(1800, 4000);
+}
+
 /**
  * A practice game against the computer, all on this phone: no Keys, no score kept.
  * Gives the same game and actions a real game does, so the normal game screens play it.
@@ -150,6 +196,8 @@ export function usePracticeGame(kind: GameKind | null) {
   const [game, setGame] = useState<Game | null>(null);
   const ref = useRef<Game | null>(null);
   const hidden = useRef<Hidden>({ hands: { a: [], b: [] }, deck: [] });
+  /** When the last move finishes playing out on screen */
+  const busyUntil = useRef(0);
   ref.current = game;
 
   const start = useCallback((k: GameKind) => {
@@ -167,7 +215,9 @@ export function usePracticeGame(kind: GameKind | null) {
     const g = ref.current;
     if (!g || g.status !== "active") return null;
     try {
+      const before = g.state;
       const r = apply(g.kind, g.state, side, mv, hidden.current);
+      busyUntil.current = Date.now() + showMs(g.kind, before, r.state as Record<string, unknown>, side);
       const next: Game = { ...g, state: r.state as Game["state"], mine: HANDS.includes(g.kind) ? { hand: hidden.current.hands.a } : {} };
       if (r.over) {
         Object.assign(next, {
@@ -187,17 +237,19 @@ export function usePracticeGame(kind: GameKind | null) {
     }
   }, []);
 
-  // The computer takes its turn after a short think
+  // The computer waits for the last move to finish playing out on screen,
+  // then "thinks" for a while, like a person would
   const st = game?.state as { turn?: Side; roll?: number | null; moves?: number } | undefined;
   useEffect(() => {
     const g = ref.current;
     if (!g || g.status !== "active" || st?.turn !== "b") return;
-    const wait = g.kind === "ludo" || g.kind === "snakes" ? 1500 : g.kind === "xo" ? 900 : 1300;
+    const shown = Math.max(0, busyUntil.current - Date.now());
+    const intro = new Date(g.started_at ?? 0).getTime() - Date.now() + 600;
     const t = setTimeout(() => {
       const cur = ref.current;
       if (!cur || cur.status !== "active" || (cur.state as { turn?: Side }).turn !== "b") return;
       play("b", botMove(cur.kind, cur.state, hidden.current));
-    }, Math.max(wait, new Date(g.started_at ?? 0).getTime() - Date.now() + 300));
+    }, Math.max(intro, shown + thinkMs(g.kind, g.state)));
     return () => clearTimeout(t);
   }, [st?.turn, st?.moves, st?.roll, game?.status, play]);
 

@@ -76,8 +76,8 @@ function finish(st: AyoState): MoveResult<AyoState> {
 
 export function applyMove(st: AyoState, side: Side, pit: number): MoveResult<AyoState> {
   if (st.turn !== side) throw new MoveError("Wait for your turn");
-  if (!Number.isInteger(pit) || !mine(side, pit) || st.pits[pit] === 0) throw new MoveError("Pick one of your pits with seeds");
-  if (!legalMoves(st, side).includes(pit)) throw new MoveError("They have no seeds. Pick a pit that gives them some");
+  if (!Number.isInteger(pit) || !mine(side, pit) || st.pits[pit] === 0) throw new MoveError("Pick one of your holes with seeds");
+  if (!legalMoves(st, side).includes(pit)) throw new MoveError("They have no seeds. Pick a hole that gives them some");
 
   const r = play(st.pits, side, pit);
   const store = { ...st.store, [side]: st.store[side] + r.taken };

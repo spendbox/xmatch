@@ -238,8 +238,8 @@ export function Ayo({ game, names, act }: { game: Game; names: Names; act: GameA
             ? "Sowing…"
             : myTurn
               ? legal.length && legal.length < mineAll.filter((i) => st.pits[i] > 0).length
-                ? "They have no seeds. Pick a pit that gives them some"
-                : "Tap one of your glowing pits to sow · capture 2s and 3s"
+                ? "They have no seeds. Pick a hole that gives them some"
+                : "Tap a glowing hole. If your last seed makes 2 or 3 on their side, you take them"
               : game.status === "active"
                 ? `${names.them} is thinking…`
                 : `First to ${WIN} seeds wins`)}
