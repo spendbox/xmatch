@@ -230,6 +230,11 @@ input[type="number"]::-webkit-outer-spin-button {
 
 @keyframes gm-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
 .gm-pulse { animation: gm-pulse 1.4s ease-in-out infinite; }
+/* "Thinking…": three dots that bounce in turn */
+@keyframes gm-dot { 0%, 80%, 100% { opacity: .35; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-3px); } }
+.gm-dots i { display: block; width: 4px; height: 4px; border-radius: 9999px; background: currentColor; animation: gm-dot 1s ease-in-out infinite; }
+.gm-dots i:nth-child(2) { animation-delay: .15s; }
+.gm-dots i:nth-child(3) { animation-delay: .3s; }
 
 @keyframes gm-hover { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
 .gm-hover { animation: gm-hover 1.6s ease-in-out infinite; }

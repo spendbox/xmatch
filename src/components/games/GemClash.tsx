@@ -6,6 +6,7 @@ import { Shuffle } from "lucide-react";
 import { buzz, sfx, type Game, type GameActions } from "@/lib/games";
 import { SIZE, SWAPS, TURNS, adjacent, hasMove, swapWorks, type Fx, type GemsState } from "@/lib/boardgames/gems";
 import { GOLD, PURPLE, Player, useTicker, type Names } from "./parts";
+import { useReportBusy } from "./boardBusy";
 import { useMove } from "./useMove";
 import { Gem, GemDefs } from "./Gems";
 
@@ -72,6 +73,7 @@ export function GemClash({ game, names, act }: { game: Game; names: Names; act: 
   const [burst, setBurst] = useState<Burst | null>(null);
 
   const myTurn = game.status === "active" && started && st.turn === me;
+  useReportBusy(anim);
   const canPlay = myTurn && !busy && !anim;
   const round = Math.min(TURNS, Math.min(st.done.a, st.done.b) + 1);
   const nextKey = () => keyRef.current++;

@@ -6,6 +6,7 @@ import { buzz, sfx, type Game, type GameActions } from "@/lib/games";
 import { LADDERS, roll as applyRoll, SNAKES, type SnakesState } from "@/lib/boardgames/snakes";
 import { other, type Side } from "@/lib/boardgames/types";
 import { GOLD, PURPLE, Player, type Names } from "./parts";
+import { useReportBusy } from "./boardBusy";
 import { DiceArt, GamePop, usePops, type Pop } from "./GamePop";
 import { DiceTray } from "./BoardBits";
 import { useMove } from "./useMove";
@@ -73,6 +74,7 @@ export function SnakesLadders({ game, names, act }: { game: Game; names: Names; 
   const over = st.pos.a === 100 || st.pos.b === 100;
   const myTurn = st.turn === me && !over;
   const busy = rolling || moving || waiting;
+  useReportBusy(rolling || moving);
 
   // The dice tumbles while rolling
   useEffect(() => {

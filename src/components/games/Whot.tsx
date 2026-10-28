@@ -5,6 +5,7 @@ import clsx from "clsx";
 import { buzz, sfx, type Game, type GameActions } from "@/lib/games";
 import { canPlay, parse, SHAPES, type Shape, type WhotState } from "@/lib/boardgames/whot";
 import { GOLD, PURPLE, Player, useTicker, type Names } from "./parts";
+import { useReportBusy } from "./boardBusy";
 import { useMove } from "./useMove";
 import { GamePop, usePops, type Pop } from "./GamePop";
 
@@ -59,6 +60,7 @@ export function Whot({ game, names, act }: { game: Game; names: Names; act: Game
     setFlying((l) => [...l, { ...f, id }]);
   }
   const done = (id: number) => setFlying((l) => l.filter((f) => f.id !== id));
+  useReportBusy(flying.length > 0);
 
   // Something happened at the table: play it out
   useEffect(() => {
