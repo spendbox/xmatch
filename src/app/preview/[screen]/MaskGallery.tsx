@@ -4,7 +4,7 @@
 // and a check that each one fully covers the face oval
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { MASKS, maskOutline, maskUrl } from "@/lib/masks";
+import { MASKS, maskFit, maskOutline, maskUrl } from "@/lib/masks";
 
 export function MaskGallery() {
   const q = useSearchParams();
@@ -21,9 +21,11 @@ export function MaskGallery() {
     const out: string[] = [];
     for (const m of MASKS) {
       const p = new Path2D(maskOutline(m.id));
+      // A mask shown smaller (fit) must still cover the face
+      const f = maskFit(m.id);
       for (let k = 0; k < 72; k++) {
         const a = (k / 72) * Math.PI * 2;
-        if (!ctx.isPointInPath(p, 100 + Math.cos(a) * 48, 112 + Math.sin(a) * 54)) {
+        if (!ctx.isPointInPath(p, 100 + (Math.cos(a) * 48) / f, 112 + (Math.sin(a) * 54) / f)) {
           out.push(m.id);
           break;
         }

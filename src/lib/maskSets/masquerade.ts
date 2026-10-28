@@ -27,7 +27,11 @@ export function masqueradeSet(k) {
   const scars = (c, w = 2) => ink(both("M58 120 L60 136 M64 118 L66 134 M70 120 L72 136"), c, w);
   const paintedEye = (d, white = "#f4eee4", pupil = "#1c1828") => `<path d="${d}" fill="${white}"/><path d="${d}" fill="none" stroke="#1c1828" stroke-width="1.6"/><circle cx="78" cy="104" r="4.6" fill="${pupil}"/><circle cx="122" cy="104" r="4.6" fill="${pupil}"/>`;
   const out = [];
-  const add = (m) => out.push({ cat: "masquerade", ...m });
+  // Drawn smaller, centred on the face, so each one fits snugly but still covers the whole face
+  // (measured: just above the smallest size that still covers the face; placing a mask on a face
+  // already leaves a margin round it)
+  const FIT = new Map([[HOOD, 0.74], [TALL, 0.9], [HEAD, 0.9], [LONG, 0.96]]);
+  const add = (m) => out.push({ cat: "masquerade", fit: m.fit ?? FIT.get(m.shape), ...m });
 
   // ---------- Lagbaja: a cloth head covering, no face, the person is "nobody in particular" ----------
   const LAG = [
@@ -148,7 +152,7 @@ export function masqueradeSet(k) {
   for (const [id, name, color] of [["ekpe", "Ekpe", "#d92f3a"], ["ekpe-blue", "Ekpe Indigo", "#253a8f"]]) {
     add({
       id, name, color, shape: HOOD, rim: "soft",
-      back: (p) => `<path d="M100 -24 L70 40 L130 40Z" fill="${p.base}"/>` + Array.from({ length: 6 }, (_, i) => `<path d="M${84 - i * 2} ${-2 + i * 7} L${116 + i * 2} ${-2 + i * 7}" stroke="#1c1828" stroke-width="2.6"/>`).join("") + `<circle cx="100" cy="-26" r="6" fill="#1c1828"/>` + Array.from({ length: 34 }, (_, i) => { const a = (i / 34) * Math.PI * 2; return `<path d="M${100 + Math.cos(a) * 66} ${120 + Math.sin(a) * 72} L${100 + Math.cos(a) * 90} ${120 + Math.sin(a) * 96}" stroke="${["#c9a24a", "#8a6a2a", "#e0c070"][i % 3]}" stroke-width="5" stroke-linecap="round"/>`; }).join(""),
+      back: (p) => `<path d="M100 -24 L70 40 L130 40Z" fill="${p.base}"/>` + Array.from({ length: 6 }, (_, i) => `<path d="M${84 - i * 2} ${-2 + i * 7} L${116 + i * 2} ${-2 + i * 7}" stroke="#1c1828" stroke-width="2.6"/>`).join("") + `<circle cx="100" cy="-26" r="6" fill="#1c1828"/>` + Array.from({ length: 34 }, (_, i) => { const a = (i / 34) * Math.PI * 2; return `<path d="M${100 + Math.cos(a) * 66} ${120 + Math.sin(a) * 72} L${100 + Math.cos(a) * 80} ${120 + Math.sin(a) * 86}" stroke="${["#c9a24a", "#8a6a2a", "#e0c070"][i % 3]}" stroke-width="5" stroke-linecap="round"/>`; }).join(""),
       face: (p) => p.base,
       pattern: (p) => { let s = ""; for (let y = 24; y < 190; y += 8) s += `<path d="M20 ${y} L180 ${y}" stroke="${y % 16 ? "#1c1828" : p.pale}" stroke-opacity="0.5" stroke-width="3"/>`; for (let y = 28; y < 190; y += 16) for (let x = 24; x < 180; x += 16) s += `<path d="M${x} ${y} L${x + 8} ${y + 8}" stroke="#1c1828" stroke-opacity="0.35" stroke-width="2"/>`; return s; },
       eyes: () => `<circle cx="78" cy="104" r="11" fill="#f4eee4"/><circle cx="122" cy="104" r="11" fill="#f4eee4"/><circle cx="78" cy="104" r="5" fill="#1c1828"/><circle cx="122" cy="104" r="5" fill="#1c1828"/>`,
@@ -222,7 +226,7 @@ export function masqueradeSet(k) {
     pattern: (p) => { let s = ""; for (let i = 0; i < 10; i++) s += `<path d="M${40 + i * 12} 140 L${46 + i * 12} 128 L${52 + i * 12} 140Z" fill="${i % 2 ? p.base : "#1c1828"}"/>`; return s + `<path d="M40 150 L160 150 L160 160 L40 160Z" fill="${p.base}"/><path d="M40 168 L160 168 L160 176 L40 176Z" fill="#1c1828"/><path d="M96 70 L104 70 L104 128 L96 128Z" fill="${p.base}"/>`; },
     eyes: (p) => [78, 122].map((x) => [16, 11, 6].map((r, i) => `<circle cx="${x}" cy="104" r="${r}" fill="${["#1c1828", "#f4eee4", "#1c1828"][i]}"/>`).join("")).join("") });
   // Dogon Kanaga (Mali): a box face with deep eye troughs and the cross above
-  add({ id: "kanaga", name: "Dogon Kanaga", color: "#8a5a2c", shape: "M52 40 L148 40 C156 40 160 46 160 54 L158 170 C158 180 152 186 142 186 L58 186 C48 186 42 180 42 170 L40 54 C40 46 44 40 52 40Z", rim: "soft", face: () => "url(#wood)",
+  add({ id: "kanaga", name: "Dogon Kanaga", fit: 0.83, color: "#8a5a2c", shape: "M52 40 L148 40 C156 40 160 46 160 54 L158 170 C158 180 152 186 142 186 L58 186 C48 186 42 180 42 170 L40 54 C40 46 44 40 52 40Z", rim: "soft", face: () => "url(#wood)",
     back: (p) => wood(p) + `<rect x="96" y="-40" width="8" height="84" fill="url(#wood)"/><rect x="40" y="-24" width="120" height="8" fill="url(#wood)"/><rect x="50" y="10" width="100" height="8" fill="url(#wood)"/><rect x="40" y="-24" width="8" height="22" fill="url(#wood)"/><rect x="152" y="-24" width="8" height="22" fill="url(#wood)"/><rect x="50" y="18" width="8" height="18" fill="url(#wood)"/><rect x="142" y="18" width="8" height="18" fill="url(#wood)"/>`,
     pattern: (p) => grain(p) + `<path d="M90 60 L110 60 L106 150 L94 150Z" fill="${p.deep}" opacity="0.5"/><path d="M48 60 L84 60 L84 150 L48 150Z M116 60 L152 60 L152 150 L116 150Z" fill="${p.deep}" opacity="0.35"/>`,
     eyes: () => `<path d="M58 92 L80 92 L76 116 L62 116Z M120 92 L142 92 L138 116 L124 116Z" fill="#120a06"/>`,
@@ -246,7 +250,7 @@ export function masqueradeSet(k) {
     eyes: () => `<path d="${both("M60 104 C66 92 90 92 94 104 C90 112 66 112 60 104Z")}" fill="#2a1a12" stroke="#000" stroke-width="2"/>${ink(both("M62 104 L92 104"), "#000", 2)}`,
     front: () => `<path d="M78 146 L122 146 L114 168 L86 168Z" fill="#2a1a12" stroke="#000" stroke-width="1.4"/><path d="M86 156 L114 156" stroke="#c2412a" stroke-width="3"/><path d="M96 104 L92 134 L108 134 L104 104Z" fill="#2a1a12"/>` });
   // Teke (Congo): a flat disc split by colour and line
-  add({ id: "teke", name: "Teke", color: "#f4eee4", shape: OUT.round, rim: "soft", face: () => "#f4eee4",
+  add({ id: "teke", name: "Teke", fit: 0.89, color: "#f4eee4", shape: OUT.round, rim: "soft", face: () => "#f4eee4",
     pattern: () => `<path d="M38 112 L162 112 L162 120 L38 120Z" fill="#1c1828"/><path d="M100 50 C70 70 70 100 100 112Z M100 174 C130 154 130 128 100 120Z" fill="#c2412a"/><path d="M100 50 C130 70 130 100 100 112Z M100 174 C70 154 70 128 100 120Z" fill="#1c1828"/>` + ink("M44 80 L70 92 M156 80 L130 92 M44 150 L70 140 M156 150 L130 140", "#1c1828", 2),
     eyes: () => `<path d="${both("M60 100 L94 100 L92 106 L62 106Z")}" fill="#120a06"/>`,
     front: () => `<rect x="90" y="140" width="20" height="5" fill="#120a06"/>` });
@@ -268,7 +272,7 @@ export function masqueradeSet(k) {
     eyes: () => `<path d="${both("M62 104 C68 98 88 98 94 104 C88 109 68 109 62 104Z")}" fill="#f4eee4"/><circle cx="78" cy="104" r="4" fill="#1c1828"/><circle cx="122" cy="104" r="4" fill="#1c1828"/>`,
     front: (p) => `<path d="M94 106 L90 132 C96 136 104 136 110 132 L106 106Z" fill="${p.deep}" opacity="0.4"/><ellipse cx="100" cy="152" rx="13" ry="7" fill="#c9a87a" stroke="${p.deep}" stroke-width="1.2"/><path d="M86 148 C94 144 106 144 114 148" stroke="${p.deep}" stroke-width="2" fill="none"/>` });
   // Grebo (Liberia): stacked tube eyes in a flat painted face
-  add({ id: "grebo", name: "Grebo", color: "#f4eee4", shape: "M54 40 L146 40 C156 40 160 46 160 56 L158 172 C158 180 152 186 144 186 L56 186 C48 186 42 180 42 172 L40 56 C40 46 44 40 54 40Z", rim: "soft", face: () => "#2a1a12",
+  add({ id: "grebo", name: "Grebo", fit: 0.83, color: "#f4eee4", shape: "M54 40 L146 40 C156 40 160 46 160 56 L158 172 C158 180 152 186 144 186 L56 186 C48 186 42 180 42 172 L40 56 C40 46 44 40 54 40Z", rim: "soft", face: () => "#2a1a12",
     pattern: (p) => `<path d="M90 50 L110 50 L104 150 L96 150Z" fill="${p.base}" opacity="0.8"/>` + [52, 64, 136, 148].map((x) => ink(`M${x} 50 L${x} 80`, p.base, 2)).join(""),
     eyes: (p) => [[66, 92], [134, 92], [66, 124], [134, 124]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="13" fill="#f4eee4"/><circle cx="${x}" cy="${y}" r="8" fill="#c2412a"/><circle cx="${x}" cy="${y}" r="4" fill="#1c1828"/>`).join(""),
     front: () => `<rect x="80" y="160" width="40" height="12" rx="2" fill="#f4eee4"/><path d="M84 160 L84 172 M92 160 L92 172 M100 160 L100 172 M108 160 L108 172 M116 160 L116 172" stroke="#2a1a12" stroke-width="1.4"/>` });
@@ -279,12 +283,12 @@ export function masqueradeSet(k) {
     eyes: () => `<path d="${both("M62 106 L94 100 L94 108Z")}" fill="#0b0608"/>`,
     front: (p) => `<path d="M100 76 L114 140 L100 146 L86 140Z" fill="url(#wood)" stroke="${p.deep}" stroke-width="1.4"/><path d="M84 160 L116 160 L112 166 L88 166Z" fill="${p.deep}"/>` });
   // Maasai: beaded bands of red, blue, white and orange
-  add({ id: "maasai", name: "Maasai Beads", color: "#c2122a", shape: OUT.egg, rim: "soft", face: () => "#5a2e18",
+  add({ id: "maasai", name: "Maasai Beads", fit: 0.96, color: "#c2122a", shape: OUT.egg, rim: "soft", face: () => "#5a2e18",
     back: (p) => Array.from({ length: 5 }, (_, r) => beads(arc(100, 112, 62 + r * 6, 70 + r * 6, 200, 340, 22 + r * 2), 3, [["#c2122a", "#f4eee4"], ["#1f5fbf", "#ffc61a"], ["#f2741f", "#1c1828"], ["#1f9d6b", "#f4eee4"], ["#c2122a", "#1f5fbf"]][r])).join(""),
     pattern: (p) => [64, 152].map((y) => beads(Array.from({ length: 24 }, (_, i) => [34 + i * 6, y]), 2.8, [p.base, "#f4eee4", "#1f5fbf", "#ffc61a"])).join("") + `<path d="M100 74 L100 140" stroke="#f4eee4" stroke-width="3" stroke-dasharray="3 3"/>`,
     eyes: () => `<path d="${both("M62 104 C68 96 88 96 94 104 C88 110 68 110 62 104Z")}" fill="#f4eee4"/><circle cx="78" cy="104" r="4.6" fill="#1c1828"/><circle cx="122" cy="104" r="4.6" fill="#1c1828"/>` });
   // Zulu shield: cowhide pattern with crossed spears behind
-  add({ id: "zulu", name: "Zulu Shield", color: "#f4eee4", shape: "M100 30 C138 40 156 80 156 112 C156 146 138 184 100 194 C62 184 44 146 44 112 C44 80 62 40 100 30Z", rim: "soft",
+  add({ id: "zulu", name: "Zulu Shield", fit: 0.88, color: "#f4eee4", shape: "M100 30 C138 40 156 80 156 112 C156 146 138 184 100 194 C62 184 44 146 44 112 C44 80 62 40 100 30Z", rim: "soft",
     back: () => ink("M40 10 L160 214 M160 10 L40 214", "#6a3a1e", 4) + `<path d="M34 0 L46 4 L40 20Z M166 0 L154 4 L160 20Z" fill="url(#chrome)"/>`,
     pattern: () => [[64, 64, 18], [138, 90, 22], [70, 160, 20], [134, 162, 14]].map(([x, y, r]) => `<path d="M${x - r} ${y} C${x - r} ${y - r} ${x + r * 0.6} ${y - r * 1.1} ${x + r} ${y - r * 0.2} C${x + r * 1.2} ${y + r * 0.8} ${x - r * 0.2} ${y + r * 1.1} ${x - r} ${y}Z" fill="#2a1a12"/>`).join("") + `<rect x="94" y="30" width="12" height="164" fill="#6a3a1e"/>` + Array.from({ length: 8 }, (_, i) => `<path d="M94 ${44 + i * 18} L106 ${52 + i * 18} M106 ${44 + i * 18} L94 ${52 + i * 18}" stroke="#f4eee4" stroke-width="2"/>`).join(""),
     eyes: () => `<path d="${both("M60 104 C66 96 86 96 92 104 C86 110 66 110 60 104Z")}" fill="#120a06"/>` });
