@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import {
   Ban, Clock3, Copy, Gamepad2, Hourglass, MessageCircle, Timer, CornerUpLeft, MessageCircleQuestion, Bookmark, Pencil, Phone, PhoneIncoming, PhoneMissed, PhoneOutgoing, Play, Plus, Reply, Trash2, Video,
@@ -57,6 +57,8 @@ type Props = {
   onSaveScribble?: (m: ChatMessage) => void;
   /** Open a drawing you're doing together (from its card) */
   onOpenDraw?: (id: string) => void;
+  /** There are earlier messages not loaded yet: shows "Show earlier messages" at the top */
+  onLoadOlder?: () => Promise<void>;
 };
 
 /** A slow reveal clears fully after 5 messages from each of you */
@@ -90,7 +92,7 @@ export function snippet(m: ChatMessage | undefined) {
   }
 }
 
-export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDates, footer, onGameAgain, slow, genderOf, onReact, onEdit, onSaveScribble, onOpenDraw }: Props) {
+export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDates, footer, onGameAgain, slow, genderOf, onReact, onEdit, onSaveScribble, onOpenDraw, onLoadOlder }: Props) {
   // How far each slow reveal has cleared: messages after it from each person, up to 5 each (0 to 10)
   const slowProgress = useMemo(() => {
     const out = new Map<number, number>();
@@ -144,6 +146,25 @@ export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDat
 
   const root = useRef<HTMLDivElement>(null);
   const first = useRef(true);
+  // Earlier messages added at the top: keep the view where it was instead of jumping down
+  const keep = useRef<number | null>(null);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  async function loadOlder() {
+    const sc = scrollerOf();
+    if (!onLoadOlder || loadingOlder) return;
+    setLoadingOlder(true);
+    if (sc) keep.current = sc.scrollHeight - sc.scrollTop;
+    try {
+      await onLoadOlder();
+    } finally {
+      setLoadingOlder(false);
+    }
+  }
+  useLayoutEffect(() => {
+    const sc = scrollerOf();
+    if (keep.current === null || !sc) return;
+    sc.scrollTop = sc.scrollHeight - keep.current;
+  }, [messages.length]);
 
   // Open at the newest message straight away; glide down for new ones after that
   const scrollerOf = () => {
@@ -151,6 +172,10 @@ export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDat
     return (el?.closest("[data-chat-scroll]") as HTMLElement | null) ?? el?.parentElement ?? null;
   };
   useEffect(() => {
+    if (keep.current !== null) {
+      keep.current = null;
+      return;
+    }
     const sc = scrollerOf();
     if (!sc) {
       end.current?.scrollIntoView({ block: "end" });
@@ -212,6 +237,13 @@ export function MessageList({ messages, myId, nameOf, onReply, onDelete, showDat
 
   return (
     <div ref={root} className="flex flex-col gap-1 px-3 py-4 lg:mx-auto lg:w-full lg:max-w-3xl lg:px-8">
+      {onLoadOlder && (
+        <div className="mb-2 flex justify-center">
+          <button type="button" onClick={() => void loadOlder()} disabled={loadingOlder} className="inline-flex items-center gap-2 rounded-full bg-surface px-4 py-2 text-[13px] font-semibold text-brand shadow-card disabled:opacity-60">
+            {loadingOlder && <Spinner />} Show earlier messages
+          </button>
+        </div>
+      )}
       {messages.map((m, i) => {
         const prev = messages[i - 1];
         const next = messages[i + 1];
