@@ -1046,6 +1046,7 @@ function ScreenBody({ screen }: { screen: string }) {
               { p: "weekend", a: "Owambe till late" },
               { p: "music", a: "Burna Boy, Tems, Asake" },
               { p: "dream", a: "Start a business that helps small farmers in the North sell straight to buyers in Lagos" },
+              { p: "else", a: "You just won 1 million Naira. What will you do: Spend it on a trip with friends, save half, and buy my mum a new phone too" },
             ],
           }}
           shared={["Travel", "Food"]}

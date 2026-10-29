@@ -7,6 +7,16 @@ import { ChevronLeft, ChevronRight, Hand, Pencil, Plus, X } from "lucide-react";
 import { promptOf, type Thing } from "@/lib/things";
 import { tapFeedback } from "@/components/ui/Button";
 
+/** Big card text: smaller for longer answers, so the whole answer always fits */
+function bigSize(text: string) {
+  const n = text.length;
+  if (n <= 24) return "text-[clamp(28px,8.5vw,36px)] leading-[1.12]";
+  if (n <= 50) return "text-[clamp(24px,7vw,30px)] leading-[1.15]";
+  if (n <= 85) return "text-[clamp(21px,6vw,25px)] leading-[1.2]";
+  if (n <= 130) return "text-[clamp(18px,5.2vw,22px)] leading-[1.25]";
+  return "text-[17px] leading-[1.3]";
+}
+
 /** One card's face: the prompt on top, the answer big underneath */
 function CardFace({ thing, big }: { thing: Thing; big?: boolean }) {
   const p = promptOf(thing.p);
@@ -18,8 +28,8 @@ function CardFace({ thing, big }: { thing: Thing; big?: boolean }) {
         <span className={clsx("font-semibold text-white/80", big ? "text-[15px] leading-snug" : "line-clamp-2 text-[12px] leading-tight")}>{p.text}</span>
         <span
           className={clsx(
-            "mt-auto font-display font-semibold break-words",
-            big ? "text-[clamp(26px,8vw,36px)] leading-[1.12]" : "line-clamp-3 text-[20px] leading-[1.15]",
+            "mt-auto pt-3 font-display font-semibold break-words",
+            big ? bigSize(thing.a) : thing.a.length > 40 ? "line-clamp-4 text-[16px] leading-[1.2]" : "line-clamp-3 text-[20px] leading-[1.15]",
           )}
         >
           {thing.a}
