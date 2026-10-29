@@ -7,7 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Flag, Gamepad2, Gift, Handshake, LogOut, MoreVertical, Dices, Palette, RotateCcw, ShieldCheck, Timer, X } from "lucide-react";
+import { ArrowLeft, Flag, Layers, Gamepad2, Gift, Handshake, LogOut, MoreVertical, Dices, Palette, RotateCcw, ShieldCheck, Timer, X } from "lucide-react";
 import { Button, Spinner } from "@/components/ui/Button";
 import { Sheet } from "@/components/ui/Sheet";
 import { KeyCoin } from "@/components/keys/KeyIcon";
@@ -43,6 +43,7 @@ import { MaskIcon } from "@/components/ui/MaskIcon";
 import { Chilis } from "@/components/ui/Spice";
 import { TimerRing } from "./TimerRing";
 import { InterestTag } from "@/components/profile/InterestPicker";
+import { ThingsStack, ThingsViewer } from "@/components/profile/ThingsStack";
 import { DecisionSheet } from "./DecisionSheet";
 import { Outcome } from "./Outcome";
 import { ReportSheet } from "./ReportSheet";
@@ -102,6 +103,8 @@ export function MasqueradeRoom({
   const [voiceOpen, setVoiceOpen] = useState(false);
   // What you know about them so far (connections, reply speed, spice, interests): tap their name to show
   const [about, setAbout] = useState(false);
+  // Their "things about me" cards, opened from the row under the header (phones)
+  const [thingsOpen, setThingsOpen] = useState(false);
   // Notes in the chat are saved with mask names. Show "You" for you, and their real name when you know it.
   const shownMessages = useMemo(() => {
     const mine = state.me.alias;
@@ -579,7 +582,7 @@ export function MasqueradeRoom({
         {/* What we know so far (shown in the side panel on computers). Their interests always show,
             even while masked; the rest shows when you tap their name (not needed when you can open
             their profile instead: chats you started from Meet, or where you both waved). */}
-        {(them.interests?.length > 0 || (!known?.id && about)) && (
+        {(them.interests?.length > 0 || (them.things?.length ?? 0) > 0 || (!known?.id && about)) && (
         <div className="flex animate-fade-up items-center gap-2 overflow-x-auto px-4 pb-3 no-scrollbar lg:hidden">
           {!known?.id && about && (
           <>
@@ -598,6 +601,15 @@ export function MasqueradeRoom({
             </>
           )}
           </>
+          )}
+          {(them.things?.length ?? 0) > 0 && (
+            <button
+              type="button"
+              onClick={() => setThingsOpen(true)}
+              className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-ink px-3.5 text-[13px] font-semibold text-white transition active:scale-95"
+            >
+              <Layers size={15} /> {them.things!.length} {them.things!.length === 1 ? "thing" : "things"} about them
+            </button>
           )}
           {[...(them.shared_interests ?? []), ...(them.interests ?? []).filter((i) => !(them.shared_interests ?? []).includes(i))]
             .slice(0, 8)
@@ -821,6 +833,9 @@ export function MasqueradeRoom({
           onSent={(m) => setMessages((l) => (l.some((x) => x.id === m.id) ? l : [...l, m]))}
         />
       )}
+      {thingsOpen && (them.things?.length ?? 0) > 0 && (
+        <ThingsViewer things={them.things!} start={0} title={`Things about ${theirName}`} onClose={() => setThingsOpen(false)} />
+      )}
       {profileOpen && known?.id && <ExploreProfileSheet personId={known.id} onClose={() => setProfileOpen(false)} inChat />}
       <ChatBgSheet
         open={bgOpen}
@@ -899,6 +914,16 @@ export function MasqueradeRoom({
               Them <Chilis level={them.spice} />
             </Tag>
             <Tag strong>{spiceLabel(state.spice_level)}</Tag>
+          </div>
+        </>
+      )}
+
+      {(them.things?.length ?? 0) > 0 && (
+        <>
+          <h3 className="mt-6 mb-1 text-[12px] font-semibold tracking-wide text-muted uppercase">Things about them</h3>
+          {/* A little room so the fanned cards don't touch the panel's edges */}
+          <div className="px-4">
+            <ThingsStack things={them.things!} title={`Things about ${theirName}`} />
           </div>
         </>
       )}
