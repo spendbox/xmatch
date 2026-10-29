@@ -37,6 +37,8 @@ import { useScribbleLive } from "@/components/stickers/useScribbleLive";
 import dynamic from "next/dynamic";
 
 // The shared drawing board loads only when it's opened
+import { CHAT_PAGE } from "@/lib/chatPage";
+
 const TogetherBoard = dynamic(() => import("@/components/stickers/TogetherBoard").then((m) => m.TogetherBoard), { ssr: false });
 import { LiveScribblePreview } from "@/components/stickers/ScribbleView";
 import { ContinueDrawing, openDrawing } from "@/components/stickers/ContinueDrawing";
@@ -47,6 +49,7 @@ export function MatchChat({
   myId,
   other,
   initialMessages,
+  hasOlder: startsWithOlder = false,
   shared = [],
   matchedAt,
   intent = "dating",
@@ -58,6 +61,8 @@ export function MatchChat({
   myId: string;
   other: Profile;
   initialMessages: ChatMessage[];
+  /** More messages exist before the first one loaded */
+  hasOlder?: boolean;
   shared?: string[];
   matchedAt?: string;
   intent?: Intent;
@@ -74,7 +79,25 @@ export function MatchChat({
   const activeNow = () => !!seen[other.id] && Date.now() - new Date(seen[other.id]).getTime() < 45_000;
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
+  /** The next batch of earlier messages, put in front of what's showing */
+  async function loadOlder() {
+    const oldest = messages.find((m) => m.id > 0);
+    if (!oldest) return setHasOlder(false);
+    const { data, error } = await supabase
+      .from("messages")
+      .select("*")
+      .eq("match_id", matchId)
+      .or(`created_at.lt."${oldest.created_at}",and(created_at.eq."${oldest.created_at}",id.lt.${oldest.id})`)
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(CHAT_PAGE);
+    if (error) return;
+    const older = ((data ?? []) as ChatMessage[]).reverse();
+    if (older.length < CHAT_PAGE) setHasOlder(false);
+    setMessages((l) => [...older.filter((o) => !l.some((x) => x.id === o.id)), ...l]);
+  }
   const [messages, setMessages] = useState(initialMessages);
+  const [hasOlder, setHasOlder] = useState(startsWithOlder);
   const [menu, setMenu] = useState(false);
   // The chat background: the one either of you picked for this chat (both see it), else your own default
   const [sharedBg, setSharedBg] = useState<string | null>(chatBg ?? null);
@@ -387,7 +410,7 @@ export function MatchChat({
           )}
           {messages.length === 0 && <p className="mt-3 text-[14px] text-muted">Say hi to {other.display_name} 👋</p>}
         </div>
-        <MessageList messages={messages} myId={myId} nameOf={nameOf} genderOf={(id) => (id === other.id ? other.gender : null)} onReply={setReplyTo} onDelete={remove} onReact={react} onSaveScribble={async (m) => setToast((await savedScribbles.save(m.id, false)) ?? "Saved. Send it again free from Scribble.")} onOpenDraw={setDrawId} footer={scribbleLive.theirs ? <LiveScribblePreview drawing={scribbleLive.theirs.drawing} live={scribbleLive.theirs.live} /> : undefined} onEdit={(m) => { setReplyTo(null); setEditing(m); }} showDates onGameAgain={games.rematch} slow={{ cost: slowCost, onReveal: revealSlow }} />
+        <MessageList messages={messages} myId={myId} nameOf={nameOf} genderOf={(id) => (id === other.id ? other.gender : null)} onReply={setReplyTo} onDelete={remove} onReact={react} onSaveScribble={async (m) => setToast((await savedScribbles.save(m.id, false)) ?? "Saved. Send it again free from Scribble.")} onOpenDraw={setDrawId} footer={scribbleLive.theirs ? <LiveScribblePreview drawing={scribbleLive.theirs.drawing} live={scribbleLive.theirs.live} /> : undefined} onEdit={(m) => { setReplyTo(null); setEditing(m); }} showDates onLoadOlder={hasOlder ? loadOlder : undefined} onGameAgain={games.rematch} slow={{ cost: slowCost, onReveal: revealSlow }} />
       </div>
       </div>
 

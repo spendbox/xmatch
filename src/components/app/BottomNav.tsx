@@ -27,6 +27,8 @@ export function BottomNav({ badges }: { badges?: MenuBadges }) {
             <li key={t.href}>
               <Link
                 href={t.href}
+                // Load the whole tab ahead of time, so tapping it opens straight away
+                prefetch
                 className={clsx(
                   "flex h-full flex-col items-center justify-center gap-1 text-[12px] font-semibold transition",
                   on ? "text-brand" : "text-muted",
