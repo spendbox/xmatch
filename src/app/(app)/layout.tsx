@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getAuth, getMyProfile } from "@/lib/auth";
+import { getAppConfig } from "@/lib/appConfig";
 import { AppChrome } from "@/components/app/AppChrome";
 import { ThingPromptsSync } from "@/components/app/ThingPromptsSync";
 import { MaskUpdate } from "@/components/masks/MaskUpdate";
@@ -9,17 +10,12 @@ import type { ThingPromptRow } from "@/lib/things";
 import type { GiftRow, SettingRow } from "@/components/keys/usePrices";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const { supabase, user } = await getAuth();
+  const { user } = await getAuth();
   if (!user) redirect("/login");
-  // Both at once: each one is a trip to the database
-  const [profile, { data: prompts }, { data: settings }, { data: gifts }] = await Promise.all([
-    getMyProfile(),
-    // The "Things about you" cards (before update 82 runs this finds nothing and the built-in ones are used)
-    supabase.from("thing_prompts").select("id, text, ideas, tone, sort, repeatable, active"),
-    // Prices and gifts as set in admin, so pages show the real price straight away
-    supabase.from("app_settings").select("key, value"),
-    supabase.from("gifts").select("id, name, emoji, price, sort, retired").order("sort"),
-  ]);
+  // Both at once. Your profile is fetched; prices, gifts and the "Things about you" cards are the
+  // same for everyone and kept for a minute (lib/appConfig), so they usually cost no trip at all
+  const [profile, config] = await Promise.all([getMyProfile(), getAppConfig().catch(() => ({ prompts: null, settings: null, gifts: null }))]);
+  const { prompts, settings, gifts } = config;
 
   if (!profile?.display_name || !profile.birthdate || !profile.gender || !profile.photos?.length) {
     redirect("/onboarding");

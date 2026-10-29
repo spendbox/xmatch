@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { APP_CONFIG_TAG } from "@/lib/appConfig";
 import { requireAdmin } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/server";
 
@@ -11,6 +12,7 @@ export async function setGameOn(kind: string, on: boolean) {
   if (!KINDS.includes(kind)) return { error: "Unknown game" };
   const { error } = await createAdminClient().from("app_settings").upsert({ key: `game_${kind}`, value: on ? 1 : 0, updated_at: new Date().toISOString() });
   revalidatePath("/admin/games");
+  revalidateTag(APP_CONFIG_TAG);
   return error ? { error: "Couldn't save." } : {};
 }
 
@@ -27,6 +29,7 @@ export async function addQuestions(text: string, spice: number) {
   if (!rows.length) return { error: "Write each one as: Question | This | That" };
   const { error } = await createAdminClient().from("tot_questions").upsert(rows, { onConflict: "a,b", ignoreDuplicates: true });
   revalidatePath("/admin/games");
+  revalidateTag(APP_CONFIG_TAG);
   return error ? { error: "Couldn't save." } : { added: rows.length };
 }
 
@@ -37,6 +40,7 @@ export async function setQuestion(id: number, patch: { active?: boolean; spice?:
   if (patch.spice !== undefined) p.spice = Math.max(0, Math.min(3, Math.round(patch.spice)));
   const { error } = await createAdminClient().from("tot_questions").update(p).eq("id", id);
   revalidatePath("/admin/games");
+  revalidateTag(APP_CONFIG_TAG);
   return error ? { error: "Couldn't save." } : {};
 }
 
@@ -50,6 +54,7 @@ export async function addIdeas(text: string) {
   if (!rows.length) return { error: "Write one idea per line." };
   const { error } = await createAdminClient().from("truth_ideas").upsert(rows, { onConflict: "body", ignoreDuplicates: true });
   revalidatePath("/admin/games");
+  revalidateTag(APP_CONFIG_TAG);
   return error ? { error: "Couldn't save." } : { added: rows.length };
 }
 
@@ -57,5 +62,6 @@ export async function setIdea(id: number, active: boolean) {
   await requireAdmin();
   const { error } = await createAdminClient().from("truth_ideas").update({ active }).eq("id", id);
   revalidatePath("/admin/games");
+  revalidateTag(APP_CONFIG_TAG);
   return error ? { error: "Couldn't save." } : {};
 }

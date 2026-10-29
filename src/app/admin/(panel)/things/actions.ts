@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { APP_CONFIG_TAG } from "@/lib/appConfig";
 import { requireAdmin } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/server";
 import { TONES } from "@/lib/things";
@@ -41,6 +42,7 @@ export async function saveThingPrompt(input: {
     if (error) return { error: "Couldn't add it. Please try again." };
   }
   revalidatePath("/admin/things");
+  revalidateTag(APP_CONFIG_TAG);
   return {};
 }
 
@@ -61,5 +63,6 @@ export async function moveThingPrompt(id: string, dir: -1 | 1): Promise<{ error?
     if (error) return { error: "Couldn't move it. Please try again." };
   }
   revalidatePath("/admin/things");
+  revalidateTag(APP_CONFIG_TAG);
   return {};
 }

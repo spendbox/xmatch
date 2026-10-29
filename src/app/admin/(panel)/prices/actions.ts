@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { APP_CONFIG_TAG } from "@/lib/appConfig";
 import { requireAdmin } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/server";
 
@@ -14,6 +15,7 @@ export async function saveSetting(
   const v = key === "meet_hours" ? int(value, 1, 48) : key === "pair_gap_minutes" ? int(value, 5, 1440) : key === "pair_minutes" ? int(value, 5, 180) : key === "explore_photos_paid" ? int(value, 0, 1) : key === "gift_share_percent" ? int(value, 0, 100) : key === "auto_suspend_reports" ? int(value, 0, 20) : int(value, 0, 100000);
   const { error } = await createAdminClient().from("app_settings").upsert({ key, value: v, updated_at: new Date().toISOString() });
   revalidatePath("/admin/prices");
+  revalidateTag(APP_CONFIG_TAG);
   revalidatePath("/admin/health");
   return error ? { error: "Couldn't save." } : {};
 }
@@ -24,6 +26,7 @@ export async function saveGift(id: string, patch: { name: string; price: number;
   if (!name) return { error: "Give it a name." };
   const { error } = await createAdminClient().from("gifts").update({ name, price: int(patch.price, 1, 100000), retired: !!patch.retired }).eq("id", id);
   revalidatePath("/admin/prices");
+  revalidateTag(APP_CONFIG_TAG);
   revalidatePath("/admin/health");
   return error ? { error: "Couldn't save." } : {};
 }
@@ -35,6 +38,7 @@ export async function savePack(id: string, patch: { keys: number; naira: number;
     .update({ keys: int(patch.keys, 1, 1000000), naira: int(patch.naira, 50, 100000000), tag: patch.tag.trim().slice(0, 20) || null, active: !!patch.active })
     .eq("id", id);
   revalidatePath("/admin/prices");
+  revalidateTag(APP_CONFIG_TAG);
   revalidatePath("/admin/health");
   return error ? { error: "Couldn't save." } : {};
 }
@@ -46,5 +50,6 @@ export async function addPack() {
   const id = `p${Date.now().toString(36)}`;
   await db.from("key_packs").insert({ id, keys: 100, naira: 1500, sort: (count ?? 0) + 1, active: false });
   revalidatePath("/admin/prices");
+  revalidateTag(APP_CONFIG_TAG);
   revalidatePath("/admin/health");
 }
