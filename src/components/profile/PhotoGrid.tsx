@@ -52,19 +52,28 @@ export function PhotoGrid({
 
   async function handleFiles(files: FileList | null) {
     if (!files?.length) return;
+    // Copied now: clearing the input below empties the list
+    const picked = Array.from(files).filter((f) => !f.type || f.type.startsWith("image/"));
+    const room = MAX_PHOTOS - photos.length;
+    if (input.current) input.current.value = "";
     setBusy(true);
     setError(null);
-    try {
-      for (const f of Array.from(files).slice(0, MAX_PHOTOS - photos.length)) {
-        if (!f.type.startsWith("image/")) continue;
+    // One photo that doesn't work mustn't stop the rest
+    const problems: string[] = [];
+    let failed = 0;
+    for (const f of picked.slice(0, room)) {
+      try {
         await onAdd(f);
+      } catch (e) {
+        failed++;
+        if (e instanceof Error && e.name === "PhotoProblem") problems.push(e.message);
       }
-    } catch (e) {
-      setError(e instanceof Error && e.name === "PhotoProblem" ? e.message : "That photo didn't upload. Please try again.");
-    } finally {
-      setBusy(false);
-      if (input.current) input.current.value = "";
     }
+    setBusy(false);
+    const notes: string[] = [];
+    if (failed) notes.push(problems.length === failed && failed === 1 ? problems[0] : failed === 1 ? "One photo didn't upload. Please try it again." : `${failed} photos didn't upload. Please try them again.`);
+    if (picked.length > room) notes.push(`You can have up to ${MAX_PHOTOS} photos, so only the first ${room} were added.`);
+    if (notes.length) setError(notes.join(" "));
   }
 
   // The order while dragging: the held photo moved to where the finger is
@@ -247,7 +256,7 @@ export function PhotoGrid({
       <input
         ref={input}
         type="file"
-        accept="image/jpeg,image/png,image/webp"
+        accept="image/*"
         multiple
         className="hidden"
         onChange={(e) => handleFiles(e.target.files)}
