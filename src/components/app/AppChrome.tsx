@@ -1,7 +1,7 @@
 "use client";
 
 import { registerWorker, refreshSubscription } from "@/lib/pushClient";
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { BottomNav } from "./BottomNav";
 import { Sidebar, type ChromeUser } from "./Sidebar";
@@ -12,6 +12,7 @@ import { EventMediaProvider } from "@/components/events/media/EventMediaProvider
 import { MediaHelp } from "./MediaHelp";
 import { MessagePops } from "./MessagePops";
 import { SpeedWatch } from "./SpeedWatch";
+import { NavProgress } from "./NavProgress";
 import { PlayProvider } from "@/components/play/PlayGame";
 import { chime } from "@/lib/chime";
 import { seedPrices, type GiftRow, type SettingRow } from "@/components/keys/usePrices";
@@ -59,6 +60,10 @@ export function AppChrome({
   return (
     <CallProvider userId={user.id}>
       <EventMediaProvider userId={user.id}>
+        {/* Shows at once that a tap is going somewhere */}
+        <Suspense fallback={null}>
+          <NavProgress />
+        </Suspense>
         <Sidebar user={user} badges={badges} />
         <MenuBadgesContext.Provider value={badges}>
           <PlayProvider userId={user.id}>
