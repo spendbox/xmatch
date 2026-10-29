@@ -161,7 +161,8 @@ export function ExploreProfileSheet({
             </section>
           )}
 
-          {!p.match_id && (p.things_count ?? 0) > 0 && (
+          {/* Older servers only sent the count before you'd connected */}
+          {!p.match_id && (p.things_count ?? 0) > 0 && !(p.things?.length) && (
             <section className="flex items-center gap-3 rounded-3xl bg-surface p-4 shadow-card">
               <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-brand-soft text-brand">
                 <Lock size={20} />

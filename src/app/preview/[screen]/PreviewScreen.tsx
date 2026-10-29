@@ -174,7 +174,7 @@ const session = (over: Partial<MasqueradeState> = {}): MasqueradeState => ({
   server_now: new Date(now).toISOString(),
   match_id: "m1",
   me: { id: "me", alias: "Golden Fox", spice: 1, vote: null },
-  them: { alias: "Velvet Owl", spice: 3, age: 26, gender: "woman", interests: ["Books", "Travel", "Dancing", "Food"], shared_interests: ["Travel", "Food"], distance_km: 4, has_voted: false, online: true, seen_minutes: 0, profile: null },
+  them: { alias: "Velvet Owl", spice: 3, age: 26, gender: "woman", interests: ["Books", "Travel", "Dancing", "Food"], shared_interests: ["Travel", "Food"], things: [{ p: "food", a: "Jollof rice, then suya after" }, { p: "weekend", a: "Beach day" }, { p: "music", a: "Tems" }], distance_km: 4, has_voted: false, online: true, seen_minutes: 0, profile: null },
   ...over,
 });
 

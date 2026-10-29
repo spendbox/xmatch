@@ -143,7 +143,7 @@ export function ThingsStack({
 }
 
 /** The cards one at a time, big. Slide (or tap a side) to go through them. */
-function ThingsViewer({
+export function ThingsViewer({
   things,
   start,
   title,

@@ -101,6 +101,8 @@ export type MasqueradeState = {
     has_voted: boolean;
     /** Words you both used in "things about me" */
     shared_words?: string[];
+    /** Their "things about me" cards (shown while masked too) */
+    things?: { p: string; a: string }[];
     /** In the app right now */
     online?: boolean;
     /** Minutes since they were last in the app */
