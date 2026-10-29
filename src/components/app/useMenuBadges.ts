@@ -36,6 +36,10 @@ export function useMenuBadges(userId: string): MenuBadges {
     // One request for everything (update 95); before that runs, the five separate ones
     type All = { chats?: number; event_chats?: number; feed_chats?: number; masked?: number; event?: unknown };
     const one = await supabase.rpc("menu_badges");
+    // A network problem: keep the dots as they are and try again later. (Sending five more
+    // requests into a bad connection only made things slower.)
+    const missing = !!one.error && (one.error.code === "PGRST202" || one.error.code === "42883");
+    if (one.error && !missing) return;
     const all = one.error ? null : (one.data as All | null);
     const wrap = (data: unknown) => ({ data, error: null });
     const [chats, eventChats, event, feedChats, masked] = all

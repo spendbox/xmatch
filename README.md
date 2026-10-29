@@ -42,6 +42,7 @@ Live at **dashpad.site** · Built with Next.js (hosted on Vercel) and Supabase (
    | `SUPABASE_SERVICE_ROLE_KEY` | `service_role` secret key (keep private; used for account deletion) |
    | `NEXT_PUBLIC_SITE_URL` | `https://dashpad.site` |
 3. Click **Deploy**.
+   The website's servers run in Dublin (`"regions": ["dub1"]` in `vercel.json`), next to the database in Supabase's Ireland region (eu-west-1). If the database ever moves, change this to match: every page's trips to the database stay a few milliseconds instead of crossing an ocean.
 4. In the project, go to **Settings → Domains**, add `dashpad.site`, and follow the DNS instructions shown there at your domain registrar.
 
 ## For developers
