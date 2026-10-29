@@ -47,6 +47,8 @@ export type Profile = {
   /** "Things about me" cards: prompt id and answer */
   things?: { p: string; a: string }[];
   ghost_until?: string | null;
+  /** Their age is left out of what other people see */
+  hide_age?: boolean;
 };
 
 export type MasqueradeState = {

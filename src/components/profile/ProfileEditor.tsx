@@ -89,6 +89,7 @@ export function ProfileEditor({
   });
   const photos = photoSet.urls;
   const [open, setOpen] = useState(profile.open_to_masquerade);
+  const [hideAge, setHideAge] = useState(!!profile.hide_age);
   const [panel, setPanel] = useState<Panel>(null);
   const [preview, setPreview] = useState(false);
 
@@ -161,6 +162,13 @@ export function ProfileEditor({
     if (err) setOpen(!v);
   }
 
+  async function toggleShowAge(show: boolean) {
+    tapFeedback();
+    setHideAge(!show);
+    const { error: err } = await supabase.from("profiles").update({ hide_age: !show }).eq("id", profile.id);
+    if (err) setHideAge(show);
+  }
+
   const ring = 2 * Math.PI * 22;
 
   return (
@@ -200,7 +208,7 @@ export function ProfileEditor({
               </span>
               <h2 className="font-display text-[34px] leading-none font-semibold">
                 {name || "Your name"}
-                <span className="font-normal text-white/80">, {age}</span>
+                {age != null && !hideAge && <span className="font-normal text-white/80">, {age}</span>}
               </h2>
               <p className="mt-1.5 text-[14px] text-white/75">{gender}</p>
               <div className="mt-4 grid grid-cols-3 gap-2">
@@ -488,6 +496,15 @@ export function ProfileEditor({
               <span className="block text-[12px] text-muted">Worked out from your birthday, which is never shown</span>
             </p>
           </div>
+          <div className="flex items-center justify-between gap-3 rounded-2xl border border-line px-4 py-3">
+            <p className="text-[14px]">
+              <span className="font-semibold">Show my age</span>
+              <span className="block text-[12px] text-muted">
+                {hideAge ? "Hidden · nobody sees your age" : "On · people see your age"}
+              </span>
+            </p>
+            <Toggle checked={!hideAge} onChange={toggleShowAge} label="Show my age" />
+          </div>
           <div>
             <Label htmlFor="name">First name</Label>
             <Input id="name" value={draftName} maxLength={40} onChange={(e) => setDraftName(e.target.value)} />
@@ -533,7 +550,7 @@ export function ProfileEditor({
         <div className="divide-y divide-line rounded-2xl border border-line">
           <Row label="Email" value={email} />
           <Row label="Password" value="Forgot it? Use “Forgot password” on the login page" />
-          <Row label="Age" value={age != null ? `${age} years old` : "Not set"} />
+          <Row label="Age" value={age != null ? `${age} years old${hideAge ? " · hidden from others" : ""}` : "Not set"} />
         </div>
       </Sheet>
 
@@ -617,7 +634,7 @@ export function ProfileEditor({
 
       {preview && (
         <ProfileSheet
-          profile={{ ...profile, display_name: name, bio, interests, photos }}
+          profile={{ ...profile, display_name: name, bio, interests, photos, hide_age: hideAge }}
           onClose={() => setPreview(false)}
           note="This is how you look to someone after you both unmask."
         />

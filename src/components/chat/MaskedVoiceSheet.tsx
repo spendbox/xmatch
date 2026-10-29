@@ -6,7 +6,7 @@ import { Mic, Pause, Play, RotateCcw, Send, Square } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { notify } from "@/lib/pushClient";
 import { formatDuration } from "@/lib/chatMedia";
-import { decodeRecording, disguise, MASKED_STYLES, VOICE_STYLES, type VoiceStyle } from "@/lib/voiceDisguise";
+import { decodeRecording, disguise, VOICE_STYLES, type VoiceStyle } from "@/lib/voiceDisguise";
 import { VoiceIcon } from "./VoiceIcon";
 import type { ChatMessage } from "@/lib/types";
 import { Sheet } from "@/components/ui/Sheet";
@@ -19,7 +19,8 @@ const VOICE_KEY = "dp_voice_style";
 
 /**
  * A masked voice note: record (up to 5 minutes), pick a voice, listen, send.
- * The disguise happens on this phone; only the disguised sound is uploaded.
+ * The disguise happens on this phone; only the voice you pick is uploaded
+ * (Normal is your own voice, for when you're happy for them to hear it).
  */
 export function MaskedVoiceSheet({
   open,
@@ -46,11 +47,12 @@ export function MaskedVoiceSheet({
   const [raw, setRaw] = useState<AudioBuffer | null>(null);
   // The recording as the phone made it (small and compressed): sent as is for your normal voice
   const original = useRef<{ blob: Blob; seconds: number } | null>(null);
-  const styles = allowNormal ? VOICE_STYLES : MASKED_STYLES;
+  const styles = VOICE_STYLES;
   const [style, setStyle] = useState<VoiceStyle>(() => {
     try {
       const saved = localStorage.getItem(VOICE_KEY) as VoiceStyle | null;
-      // Echo was removed, and your normal voice is never used in a masked chat
+      // Echo was removed. In a masked chat it starts disguised: your own voice is always a choice you make each time
+      if (!allowNormal && saved === "normal") return "deep";
       return saved && styles.some((v) => v.id === saved) ? saved : allowNormal ? "normal" : "deep";
     } catch {
       return allowNormal ? "normal" : "deep";
@@ -177,7 +179,7 @@ export function MaskedVoiceSheet({
       subtitle={
         allowNormal
           ? "Send your own voice, or disguise it for fun. Disguises happen on your phone."
-          : "Your voice is disguised on your phone. Only the disguised sound is sent."
+          : "Disguise your voice, or pick Normal to send your own. Disguises happen on your phone."
       }
       icon={allowNormal ? <VoiceIcon style="normal" size={24} className="text-brand" /> : <MaskIcon className="w-6" />}
     >
@@ -220,7 +222,7 @@ export function MaskedVoiceSheet({
                 {busy === "disguise" ? <Spinner className="h-5 w-5" /> : playing ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" className="ml-0.5" />}
               </button>
               <div className="min-w-0 flex-1">
-                <p className="text-[14px] font-semibold text-brand-ink">{busy === "disguise" ? "Disguising your voice…" : "Listen to how you sound"}</p>
+                <p className="text-[14px] font-semibold text-brand-ink">{busy === "disguise" ? (style === "normal" ? "Getting it ready…" : "Disguising your voice…") : "Listen to how you sound"}</p>
                 <p className="text-[12.5px] text-muted">{out ? formatDuration(out.seconds) : demo ? "0:12" : "…"} · {VOICE_STYLES.find((v) => v.id === style)?.label} voice</p>
               </div>
               {out && <audio ref={player} src={out.url} onEnded={() => setPlaying(false)} preload="auto" />}
@@ -228,7 +230,7 @@ export function MaskedVoiceSheet({
 
             <div>
               <p className="mb-2 text-[13px] font-semibold text-muted">Pick a voice</p>
-              <div className={allowNormal ? "grid grid-cols-4 gap-2" : "grid grid-cols-3 gap-2"}>
+              <div className="grid grid-cols-4 gap-2">
                 {styles.map((v) => (
                   <button
                     key={v.id}
@@ -250,6 +252,9 @@ export function MaskedVoiceSheet({
                   </button>
                 ))}
               </div>
+              {!allowNormal && style === "normal" && (
+                <p className="mt-2 text-[12.5px] font-medium text-muted">They'll hear your real voice, even though you're still masked.</p>
+              )}
             </div>
 
             <div className="flex gap-2">
