@@ -56,7 +56,7 @@ export function ProfileSheet({
   const slides = photos.length + lockedCount;
   const gender = GENDERS.find((g) => g.value === profile.gender)?.label;
   // Age and sex, small, under their name
-  const age = ageIn ?? ageFromBirthdate(profile.birthdate ?? null);
+  const age = profile.hide_age ? null : (ageIn ?? ageFromBirthdate(profile.birthdate ?? null));
   const about = [age ? String(age) : null, gender].filter(Boolean).join(" · ");
   if (!mounted) return null;
 

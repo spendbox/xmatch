@@ -576,10 +576,13 @@ export function MasqueradeRoom({
           </div>
         </div>
 
-        {/* What we know so far (shown in the side panel on computers). Not needed when you
-            can open their profile instead (chats you started from Meet, or where you both waved). */}
-        {!known?.id && about && (
+        {/* What we know so far (shown in the side panel on computers). Their interests always show,
+            even while masked; the rest shows when you tap their name (not needed when you can open
+            their profile instead: chats you started from Meet, or where you both waved). */}
+        {(them.interests?.length > 0 || (!known?.id && about)) && (
         <div className="flex animate-fade-up items-center gap-2 overflow-x-auto px-4 pb-3 no-scrollbar lg:hidden">
+          {!known?.id && about && (
+          <>
           {them.age ? <Tag strong>{them.age} years old</Tag> : null}
           <Tag strong>{connectionsLabel(them.connections)}</Tag>
           <Tag>{replyLabel(them.reply_seconds)}</Tag>
@@ -594,7 +597,9 @@ export function MasqueradeRoom({
               <Tag strong>Questions: {spiceLabel(state.spice_level)}</Tag>
             </>
           )}
-          {[...(them.shared_interests ?? []), ...them.interests.filter((i) => !(them.shared_interests ?? []).includes(i))]
+          </>
+          )}
+          {[...(them.shared_interests ?? []), ...(them.interests ?? []).filter((i) => !(them.shared_interests ?? []).includes(i))]
             .slice(0, 8)
             .map((i) => (
               <InterestTag key={i} name={i} highlight={(them.shared_interests ?? []).includes(i)} />

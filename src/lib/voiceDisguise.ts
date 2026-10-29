@@ -1,19 +1,18 @@
 "use client";
 
 /**
- * Masked voice notes: the voice is disguised here, on the phone, and only the disguised
- * sound is ever uploaded. Plain Web Audio, so it costs nothing to run.
+ * Masked voice notes: the voice is disguised here, on the phone, and only the voice
+ * picked (disguised, or Normal) is ever uploaded. Plain Web Audio, so it costs nothing to run.
  */
 export type VoiceStyle = "normal" | "deep" | "light" | "robot";
 
-/** The disguises (Normal is your own voice: only in chats where you've unmasked) */
+/** The voices to pick from (Normal is your own voice, undisguised) */
 export const VOICE_STYLES: { id: VoiceStyle; label: string }[] = [
   { id: "normal", label: "Normal" },
   { id: "deep", label: "Deep" },
   { id: "light", label: "Light" },
   { id: "robot", label: "Robot" },
 ];
-export const MASKED_STYLES = VOICE_STYLES.filter((v) => v.id !== "normal");
 
 // Clear speech; long notes use a slightly lower rate so a 5 minute note stays small (about 10 MB)
 const RATE = 22050;

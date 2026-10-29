@@ -861,7 +861,7 @@ function Bubble({
             mine={mine}
             seed={Math.abs(m.id)}
           />
-          {m.media_meta?.key ? (
+          {m.media_meta?.key && m.media_meta.voice !== "normal" ? (
             <p className={clsx("mt-1 flex items-center gap-1 text-[11px] font-semibold", mine ? "text-white/70" : "text-muted")}>
               <MaskIcon className="w-3.5" eyes={mine ? "#5b3fd9" : "#ffffff"} /> Disguised voice
             </p>
