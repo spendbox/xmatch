@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
@@ -18,17 +19,21 @@ const tabs = [
 
 export function BottomNav({ badges }: { badges?: MenuBadges }) {
   const path = usePathname();
+  // The tab you just tapped lights up straight away, before its page arrives
+  const [tapped, setTapped] = useState<string | null>(null);
+  useEffect(() => setTapped(null), [path]);
   return (
     <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden">
       <ul className="mx-auto grid h-16 max-w-md grid-cols-4">
         {tabs.map((t) => {
-          const on = isActive(path, t.href);
+          const on = tapped ? tapped === t.href : isActive(path, t.href);
           return (
             <li key={t.href}>
               <Link
                 href={t.href}
                 // Load the whole tab ahead of time, so tapping it opens straight away
                 prefetch
+                onClick={() => setTapped(t.href)}
                 className={clsx(
                   "flex h-full flex-col items-center justify-center gap-1 text-[12px] font-semibold transition",
                   on ? "text-brand" : "text-muted",

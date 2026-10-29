@@ -14,7 +14,7 @@ const nextConfig: NextConfig = {
     serverActions: { bodySizeLimit: "4mb" },
     // Pages you've just been on open instantly when you go back to them (instead of waiting on the
     // server every tap). Anything you change still shows straight away: saving clears this.
-    staleTimes: { dynamic: 30, static: 60 },
+    staleTimes: { dynamic: 30, static: 180 },
   },
   // Pacts are now Link-Ups at /link: older links keep working
   async redirects() {

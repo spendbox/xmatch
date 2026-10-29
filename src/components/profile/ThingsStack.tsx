@@ -1,20 +1,45 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import clsx from "clsx";
 import { ChevronLeft, ChevronRight, Hand, Pencil, Plus, X } from "lucide-react";
 import { promptOf, type Thing } from "@/lib/things";
 import { tapFeedback } from "@/components/ui/Button";
 
-/** Big card text: smaller for longer answers, so the whole answer always fits */
-function bigSize(text: string) {
-  const n = text.length;
-  if (n <= 24) return "text-[clamp(28px,8.5vw,36px)] leading-[1.12]";
-  if (n <= 50) return "text-[clamp(24px,7vw,30px)] leading-[1.15]";
-  if (n <= 85) return "text-[clamp(21px,6vw,25px)] leading-[1.2]";
-  if (n <= 130) return "text-[clamp(18px,5.2vw,22px)] leading-[1.25]";
-  return "text-[17px] leading-[1.3]";
+/**
+ * The answer, as big as fits. Starts large and shrinks until the whole answer fits in the space
+ * on the card, on any phone (measured, not guessed), and again if the card changes size.
+ */
+function FitText({ text, max, min }: { text: string; max: number; min: number }) {
+  const box = useRef<HTMLDivElement>(null);
+  const inner = useRef<HTMLSpanElement>(null);
+  useLayoutEffect(() => {
+    const b = box.current;
+    const t = inner.current;
+    if (!b || !t) return;
+    const fit = () => {
+      let size = max;
+      t.style.fontSize = `${size}px`;
+      while (size > min && (t.scrollHeight > b.clientHeight || t.scrollWidth > b.clientWidth)) {
+        size -= 1;
+        t.style.fontSize = `${size}px`;
+      }
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(b);
+    // The card's font can arrive after the first measure
+    void document.fonts?.ready.then(fit);
+    return () => ro.disconnect();
+  }, [text, max, min]);
+  return (
+    <div ref={box} className="relative mt-3 flex min-h-0 flex-1 items-end overflow-hidden">
+      <span ref={inner} className="block w-full font-display leading-[1.18] font-semibold break-words" style={{ fontSize: max }}>
+        {text}
+      </span>
+    </div>
+  );
 }
 
 /** One card's face: the prompt on top, the answer big underneath */
@@ -24,16 +49,9 @@ function CardFace({ thing, big }: { thing: Thing; big?: boolean }) {
     <div className="relative flex h-full w-full flex-col overflow-hidden text-left text-white" style={{ background: p.tone }}>
       <span aria-hidden className={clsx("absolute rounded-full bg-white/10", big ? "-top-20 -right-16 h-56 w-56" : "-top-10 -right-10 h-28 w-28")} />
       <span aria-hidden className={clsx("absolute rounded-full bg-black/10", big ? "-bottom-24 -left-14 h-52 w-52" : "-bottom-12 -left-8 h-24 w-24")} />
-      <div className={clsx("relative flex flex-1 flex-col", big ? "p-6" : "p-4")}>
-        <span className={clsx("font-semibold text-white/80", big ? "text-[15px] leading-snug" : "line-clamp-2 text-[12px] leading-tight")}>{p.text}</span>
-        <span
-          className={clsx(
-            "mt-auto pt-3 font-display font-semibold break-words",
-            big ? bigSize(thing.a) : thing.a.length > 40 ? "line-clamp-4 text-[16px] leading-[1.2]" : "line-clamp-3 text-[20px] leading-[1.15]",
-          )}
-        >
-          {thing.a}
-        </span>
+      <div className={clsx("relative flex min-h-0 flex-1 flex-col", big ? "p-6" : "p-4")}>
+        <span className={clsx("shrink-0 font-semibold text-white/80", big ? "text-[15px] leading-snug" : "line-clamp-2 text-[12px] leading-tight")}>{p.text}</span>
+        <FitText text={thing.a} max={big ? 36 : 22} min={big ? 13 : 10} />
       </div>
     </div>
   );
