@@ -11,6 +11,7 @@ import { CallProvider } from "@/components/calls/CallProvider";
 import { EventMediaProvider } from "@/components/events/media/EventMediaProvider";
 import { MediaHelp } from "./MediaHelp";
 import { MessagePops } from "./MessagePops";
+import { MatchPop } from "./MatchPop";
 import { SpeedWatch } from "./SpeedWatch";
 import { NavProgress } from "./NavProgress";
 import { PlayProvider } from "@/components/play/PlayGame";
@@ -76,6 +77,8 @@ export function AppChrome({
         <SpeedWatch />
         {/* New messages follow you round the site */}
         <MessagePops userId={user.id} />
+        {/* Paired or matched: a full-screen pop-up wherever you are */}
+        <MatchPop userId={user.id} myPhoto={user.realPhoto ?? user.photo} />
       </EventMediaProvider>
     </CallProvider>
   );

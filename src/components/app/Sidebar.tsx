@@ -12,7 +12,13 @@ import { useWallet } from "@/components/keys/useWallet";
 import type { MenuBadges } from "./useMenuBadges";
 import { badgeFor } from "./badges";
 
-export type ChromeUser = { id: string; name: string; photo?: string | null };
+export type ChromeUser = {
+  id: string;
+  name: string;
+  photo?: string | null;
+  /** Your own photo without its mask (shown to people you've connected with) */
+  realPhoto?: string | null;
+};
 
 const items = [
   { href: "/home", label: "Home", icon: (on: boolean) => <MaskIcon className="w-[22px]" eyes={on ? "#5b3fd9" : "#faf7f2"} /> },

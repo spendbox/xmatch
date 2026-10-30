@@ -206,6 +206,19 @@ export function PactFlow({
     const closed = phase === "closed";
     return (
       <Shell pact={pact} wide>
+        {/* Back: to where you came from in the app, or Home (signed in) / the front page (signed out) */}
+        <button
+          type="button"
+          onClick={() => {
+            if (sample) return;
+            if (signedIn && window.history.length > 1) router.back();
+            else router.push(signedIn ? "/home" : "/");
+          }}
+          aria-label="Back"
+          className="absolute top-3 left-3 z-20 grid h-11 w-11 place-items-center rounded-full bg-black/35 text-white backdrop-blur-md transition active:scale-95"
+        >
+          <ArrowLeft size={20} />
+        </button>
         {/* Computers: picture and name on the left, countdown and button on the right */}
         <div className="flex flex-1 flex-col lg:grid lg:grid-cols-2">
         <div className="flex flex-col lg:border-r lg:border-white/10 lg:pb-14">
