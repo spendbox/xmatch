@@ -24,6 +24,7 @@ export function PastPairs({ pairs, balance, onChanged }: { pairs: PastPair[]; ba
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { reopen_cost: REOPEN_COST } = usePrices();
+  const [showAll, setShowAll] = useState(false);
   if (!pairs.length) return null;
   const now = Date.now();
 
@@ -45,10 +46,10 @@ export function PastPairs({ pairs, balance, onChanged }: { pairs: PastPair[]; ba
       </h2>
       <p className="mb-3 text-[13px] text-muted">The hour ran out before you both decided. Unmask any time, or reopen the chat.</p>
       <ul className="space-y-2.5">
-        {pairs.map((p) => {
+        {(showAll ? pairs : pairs.slice(0, 2)).map((p) => {
           const open = p.status === "active";
           return (
-            <li key={p.id} className="flex items-center gap-3 rounded-3xl border border-line bg-surface p-3 shadow-card">
+            <li key={p.id} className="flex items-center gap-3 rounded-[22px] border border-line bg-surface p-3">
               <Link href={`/masquerade/${p.id}`} className="flex min-w-0 flex-1 items-center gap-3">
                 <MaskAvatar alias={p.their_alias} size={44} />
                 <span className="min-w-0">
@@ -82,6 +83,12 @@ export function PastPairs({ pairs, balance, onChanged }: { pairs: PastPair[]; ba
           );
         })}
       </ul>
+      {/* The latest two, the rest a tap away */}
+      {pairs.length > 2 && (
+        <button type="button" onClick={() => setShowAll((v) => !v)} className="mt-2 inline-flex items-center gap-0.5 text-[13px] font-semibold text-brand">
+          {showAll ? "Show less" : `See all ${pairs.length}`} <ChevronRight size={15} className={showAll ? "-rotate-90" : "rotate-90"} />
+        </button>
+      )}
 
       <Sheet
         open={!!pick}

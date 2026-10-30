@@ -36,6 +36,7 @@ export function GettingStarted({
   const supabase = useMemo(() => createClient(), []);
   const [status, setStatus] = useState<Status | null>(demo ?? null);
   const [things, setThings] = useState<Thing[]>(initialThings);
+  const [openSteps, setOpenSteps] = useState(false);
   const [deck, setDeck] = useState(false);
   const [pushHelpOpen, setPushHelpOpen] = useState(false);
   const [claiming, setClaiming] = useState(false);
@@ -89,11 +90,12 @@ export function GettingStarted({
     );
   }
 
+  // Folded to one row until tapped, so it doesn't push people down the page
   return (
-    <section className="mt-4 rounded-3xl border border-line bg-surface p-4 shadow-card">
-      <div className="flex items-center gap-3">
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-brand-soft text-brand">
-          <Sparkles size={19} />
+    <section className="mt-3 rounded-[22px] border border-line bg-surface px-3 py-2.5">
+      <button type="button" onClick={() => setOpenSteps((o) => !o)} aria-expanded={openSteps} className="flex w-full items-center gap-3 text-left">
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[12px] bg-brand-soft text-brand">
+          <Sparkles size={17} />
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-[15px] font-semibold">Get set up</p>
@@ -102,12 +104,13 @@ export function GettingStarted({
           </p>
         </div>
         <span className="shrink-0 text-[13px] font-bold text-brand tabular-nums">{done}/3</span>
-      </div>
-      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-ink/[0.07]">
+        <ChevronRight size={16} className={clsx("shrink-0 text-muted transition", openSteps && "rotate-90")} />
+      </button>
+      <div className="mt-2 h-1 overflow-hidden rounded-full bg-ink/[0.07]">
         <div className="h-full rounded-full bg-brand transition-[width] duration-500" style={{ width: `${(done / 3) * 100}%` }} />
       </div>
 
-      <ul className="mt-2 divide-y divide-line">
+      <ul className={clsx("mt-2 divide-y divide-line", !openSteps && "hidden")}>
         <Row
           icon={<Sparkles size={17} />}
           done={thingsOk}
