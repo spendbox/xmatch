@@ -18,13 +18,13 @@ const SHOWN = 20;
 export function PeopleForYou({ userId, demo }: { userId: string; demo?: ExploreList }) {
   const { list, reload } = useMeetList(userId, demo ?? null);
   const [open, setOpen] = useState<string | null>(null);
-  // Online now first, then everyone else in the order Dashpad suggests (most likely to click and reply)
-  // Who's online is checked live (every 30s), the same way as in Chats; the list itself is kept for 10 minutes
+  // In the order Dashpad suggests: people who fit your gender, mood and age first (being online
+  // already counts in that order). Who's online is checked live (every 30s), the same way as in
+  // Chats, for the green dot; the list itself is kept for 10 minutes
   const { seen, now } = usePresence(demo ? [] : (list?.people ?? []).slice(0, 50).map((p) => p.id));
   const live = (p: { id: string; online: boolean }) => (demo || !(p.id in seen) ? p.online : isOnline(seen[p.id], now));
   const people = [...(list?.people ?? [])]
     .map((p) => ({ ...p, online: live(p) }))
-    .sort((a, b) => Number(b.online) - Number(a.online))
     .slice(0, SHOWN);
   if (list && people.length === 0) return null;
 
