@@ -13,6 +13,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { ChatMessage, Intent, Profile } from "@/lib/types";
 import { INTENT_ICONS, InterestIcon } from "@/components/ui/icons";
 import { intentLabel } from "@/lib/constants";
+import { moodOf } from "@/lib/moods";
 import { Avatar } from "@/components/ui/Avatar";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { MessageList } from "@/components/chat/MessageList";
@@ -101,10 +102,10 @@ export function MatchChat({
   const [menu, setMenu] = useState(false);
   // The chat background: the one either of you picked for this chat (both see it), else your own default
   const [sharedBg, setSharedBg] = useState<string | null>(chatBg ?? null);
-  const [myBg, setMyBg] = useState<ChatBgId>("classic");
+  const [myBg, setMyBg] = useState<ChatBgId>(moodOf(intent).chatBg);
   const [bgOpen, setBgOpen] = useState(false);
   const iSetBg = useRef<string | null>(null);
-  useEffect(() => setMyBg(loadChatBg(`m-${matchId}`)), [matchId]);
+  useEffect(() => setMyBg(loadChatBg(`m-${matchId}`, moodOf(intent).chatBg)), [matchId, intent]);
   const bg: ChatBgId = isChatBg(sharedBg) ? sharedBg : myBg;
   const [showProfile, setShowProfile] = useState(false);
   const [reporting, setReporting] = useState(false);
@@ -484,6 +485,7 @@ export function MatchChat({
         onClose={() => setGiftOpen(false)}
         balance={wallet?.balance ?? null}
         toName={other.display_name ?? "them"}
+        intent={intent}
         onSend={async (g) => {
           const { error } = await supabase.rpc("send_gift", { p_gift: g.id, p_match: matchId });
           if (!error && !activeNow()) notify({ kind: "message", matchId });

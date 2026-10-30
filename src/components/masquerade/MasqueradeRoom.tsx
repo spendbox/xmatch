@@ -43,6 +43,7 @@ import { MaskIcon } from "@/components/ui/MaskIcon";
 import { Chilis } from "@/components/ui/Spice";
 import { TimerRing } from "./TimerRing";
 import { InterestTag } from "@/components/profile/InterestPicker";
+import { moodOf } from "@/lib/moods";
 import { ThingsStack, ThingsViewer } from "@/components/profile/ThingsStack";
 import { DecisionSheet } from "./DecisionSheet";
 import { Outcome } from "./Outcome";
@@ -84,6 +85,8 @@ export function MasqueradeRoom({
   const known = paidChat?.started_by_me === false ? undefined : paidChat;
   const theyPaid = paidChat?.started_by_me === false;
   const theirName = known?.name || state.them.alias;
+  // The chat's mood: the unmask button's words and colour
+  const mood = moodOf(state.intent);
   // Chats from a wave need no explaining: you both chose each other
   const whoSees = paidChat?.waved ? null : known?.name ? (
     <>
@@ -136,9 +139,10 @@ export function MasqueradeRoom({
   const [menu, setMenu] = useState(false);
   // The chat background: the one either of you picked for this chat (both see it), else your own default
   const [sharedBg, setSharedBg] = useState<string | null>(null);
-  const [myBg, setMyBg] = useState<ChatBgId>("classic");
+  // Nobody picked a background: the chat's mood picks one (friends bright, dating soft, spicy dark)
+  const [myBg, setMyBg] = useState<ChatBgId>(moodOf(initial.intent).chatBg);
   const [bgOpen, setBgOpen] = useState(false);
-  useEffect(() => setMyBg(loadChatBg(`s-${initial.id}`)), [initial.id]);
+  useEffect(() => setMyBg(loadChatBg(`s-${initial.id}`, moodOf(initial.intent).chatBg)), [initial.id, initial.intent]);
   const bg: ChatBgId = isChatBg(sharedBg) ? sharedBg : myBg;
   const [reporting, setReporting] = useState(false);
   const [voting, setVoting] = useState(false);
@@ -546,11 +550,12 @@ export function MasqueradeRoom({
               type="button"
               onClick={() => setAskUnmask(true)}
               disabled={voting}
-              className="inline-flex h-10 w-10 shrink-0 items-center justify-center gap-1 rounded-full bg-brand text-[13px] font-semibold text-white shadow-[0_6px_16px_-6px_rgb(91_63_217/0.7)] transition active:scale-95 disabled:opacity-60 sm:w-auto sm:px-3.5"
-              aria-label="Unmask"
-              title="Unmask"
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center gap-1 rounded-full text-[13px] font-semibold text-white shadow-[0_6px_16px_-6px_rgb(28_24_40/0.5)] transition active:scale-95 disabled:opacity-60 sm:w-auto sm:px-3.5"
+              style={{ background: mood.accent }}
+              aria-label={mood.unmask}
+              title={mood.unmask}
             >
-              <MaskIcon className="w-6 sm:w-5" eyes="#5b3fd9" /> <span className="hidden sm:inline">Unmask</span>
+              <MaskIcon className="w-6 sm:w-5" eyes={mood.accent} /> <span className="hidden sm:inline">{mood.unmask}</span>
             </button>
           )}
           <div className="relative">
@@ -649,6 +654,12 @@ export function MasqueradeRoom({
             {whoSees}
           </p>
         )}
+        {/* Spicy chats: a short reminder, with Report a tap away in the ⋮ menu */}
+        {state.intent === "spicy" && (
+          <p className="mx-auto mt-2 flex w-fit max-w-[90%] items-center gap-1.5 rounded-full bg-surface/90 px-3 py-1 text-center text-[12px] font-medium text-ink-soft">
+            <ShieldCheck size={14} className="shrink-0 text-chili" /> Keep it flirty and consensual. Anything off? ⋮ → Report
+          </p>
+        )}
         {refundNote && (
           <p className="mx-auto mt-2 flex w-fit max-w-[90%] items-center gap-1.5 rounded-full bg-mint-soft px-3 py-1 text-center text-[12px] font-medium text-ink-soft">
             <ShieldCheck size={14} className="shrink-0 text-mint" /> {refundNote}
@@ -725,9 +736,10 @@ export function MasqueradeRoom({
                 type="button"
                 onClick={() => setAskUnmask(true)}
                 disabled={voting}
-                className="inline-flex h-12 items-center justify-center gap-1.5 rounded-2xl bg-brand text-[15px] font-semibold text-white disabled:opacity-60"
+                className="inline-flex h-12 items-center justify-center gap-1.5 rounded-2xl text-[15px] font-semibold text-white disabled:opacity-60"
+                style={{ background: mood.accent }}
               >
-                <Handshake size={18} /> Unmask
+                <Handshake size={18} /> {mood.unmask}
               </button>
             ) : (
               <span className="inline-flex h-12 items-center justify-center rounded-2xl bg-mint-soft text-[14px] font-semibold text-mint">Unmasked ✓</span>
@@ -811,6 +823,7 @@ export function MasqueradeRoom({
         onClose={() => setGiftOpen(false)}
         balance={wallet?.balance ?? null}
         toName={theirName}
+        intent={state.intent}
         onSend={async (g) => {
           const { error } = await supabase.rpc("send_gift", { p_gift: g.id, p_session: state.id });
           if (error) return keysError(error.message);

@@ -72,15 +72,15 @@ export function saveMyDefaultBg(id: ChatBgId) {
   } catch {}
 }
 
-/** The background for a chat: its own, else the one for all chats, else Classic */
-export function loadChatBg(chat: string): ChatBgId {
+/** The background for a chat: its own, else the one for all chats, else the fallback (the chat's mood, or Classic) */
+export function loadChatBg(chat: string, fallback: ChatBgId = "classic"): ChatBgId {
   try {
     const one = localStorage.getItem(ONE_KEY(chat));
     if (valid(one)) return one;
     const all = localStorage.getItem(ALL_KEY);
     if (valid(all)) return all;
   } catch {}
-  return "classic";
+  return fallback;
 }
 
 export function saveChatBg(chat: string, id: ChatBgId, everywhere: boolean) {

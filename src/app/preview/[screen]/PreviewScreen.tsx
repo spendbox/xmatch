@@ -356,6 +356,22 @@ function ScreenBody({ screen }: { screen: string }) {
   if (screen === "chat-bgs") return <ChatBgGallery />;
   if (screen === "chat-bgs-moving") return <ChatBgGallery only={["beach", "sunset", "stars", "aurora", "rain", "snow", "hearts", "fireflies", "ocean", "clouds", "lagos", "bokeh"]} />;
   if (screen.startsWith("chat-bg-")) return <ChatBgGallery only={[screen.slice(8) as never]} big />;
+  // Each mood's look: mood-friends-home, mood-spicy-chat, mood-dating-gifts…
+  if (screen.startsWith("mood-")) {
+    const [, intent, part] = screen.split("-") as [string, "friends" | "dating" | "spicy", string];
+    if (part === "chat") return <MasqueradeRoom initial={session({ intent })} initialMessages={msgs} demo={{ remaining: 121 }} />;
+    if (part === "gifts")
+      return (
+        <div className="min-h-dvh bg-cream">
+          <GiftSheet open onClose={() => {}} balance={120} toName="Ada" intent={intent} onSend={async () => null} />
+        </div>
+      );
+    return (
+      <div className="pb-24">
+        <HomeScreen demoPeople={homePeople} demoViews={homeViews} demoMasked={homeMasked} demoSetup={{ place: true, push: false, things: 4, claimed: false, reward: 5 }} hour={demoHour("wait")} profile={{ ...me, pref_intent: intent }} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} matches={recent} />
+      </div>
+    );
+  }
   // The full-screen "you've been paired / it's a match" pop-ups, one per mood
   if (screen.startsWith("pop-")) {
     const [, intent, kind] = screen.split("-") as [string, "friends" | "dating" | "spicy", "pair" | "match"];
