@@ -212,11 +212,17 @@ export function MasqueradeCard({
         <>
           <span className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/15">
             {looking && <span aria-hidden className="absolute inset-0 animate-ping rounded-full bg-white/20 [animation-duration:2.4s]" />}
-            <MaskIcon className="relative w-7 text-white" eyes="#6d4ff0" />
+            {/* Your mood (friends, dating, spicy) in the circle; the mask while it's off */}
+            {enabled && prefs ? (
+              <span className="relative text-white">{INTENT_ICONS[prefs.intent]({ size: 22, strokeWidth: 2.2 })}</span>
+            ) : (
+              <MaskIcon className="relative w-7 text-white" eyes="#6d4ff0" />
+            )}
           </span>
           <div className="relative min-w-0 flex-1">
             {enabled && prefs ? (
-              // Your settings at a glance: mood, who you'd like to meet (if set), question spice (dating and spicy)
+              // Your settings at a glance: who you'd like to meet (if set), question spice (dating and spicy).
+              // The mood is in the circle beside it.
               <button
                 type="button"
                 onClick={() => {
@@ -226,7 +232,10 @@ export function MasqueradeCard({
                 className="flex max-w-full items-center gap-1 text-left"
                 aria-label={settingsLabel}
               >
-                <span className={chip}>{INTENT_ICONS[prefs.intent]({ size: 14, strokeWidth: 2.2 })}</span>
+                {/* Nothing else to show (friends, meeting anyone): just the name */}
+                {seekingList(prefs.seeking).length === 0 && prefs.intent === "friends" && (
+                  <span className="truncate text-[15px] leading-tight font-semibold">Masquerade</span>
+                )}
                 {seekingList(prefs.seeking).map((g) => {
                   const Icon = SEEKING_ICONS[g];
                   return (

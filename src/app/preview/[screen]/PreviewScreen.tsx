@@ -66,6 +66,7 @@ const sampleScribble: Drawing = (() => {
   };
 })();
 import { MaskedVoiceSheet } from "@/components/chat/MaskedVoiceSheet";
+import { MatchPopView } from "@/components/app/MatchPop";
 import { Outcome } from "@/components/masquerade/Outcome";
 import { MatchesList } from "@/components/matches/MatchesList";
 import { MatchChat } from "@/components/matches/MatchChat";
@@ -355,6 +356,16 @@ function ScreenBody({ screen }: { screen: string }) {
   if (screen === "chat-bgs") return <ChatBgGallery />;
   if (screen === "chat-bgs-moving") return <ChatBgGallery only={["beach", "sunset", "stars", "aurora", "rain", "snow", "hearts", "fireflies", "ocean", "clouds", "lagos", "bokeh"]} />;
   if (screen.startsWith("chat-bg-")) return <ChatBgGallery only={[screen.slice(8) as never]} big />;
+  // The full-screen "you've been paired / it's a match" pop-ups, one per mood
+  if (screen.startsWith("pop-")) {
+    const [, intent, kind] = screen.split("-") as [string, "friends" | "dating" | "spicy", "pair" | "match"];
+    return (
+      <div className="pb-24">
+        <HomeScreen demoPeople={homePeople} demoViews={homeViews} demoMasked={homeMasked} demoSetup={{ place: true, push: false, things: 4, claimed: false, reward: 5 }} hour={demoHour("wait")} profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} matches={recent} />
+        <MatchPopView pop={{ kind, intent, name: kind === "pair" ? "Velvet Owl" : "Ada", href: "#" }} onOpen={() => {}} onClose={() => {}} />
+      </div>
+    );
+  }
   switch (screen) {
     case "play":
     case "play-waiting":
