@@ -5,6 +5,8 @@ import { useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
 import { SENDABLE_GIFTS, type Gift } from "@/lib/keys";
+import { giftsForMood } from "@/lib/moods";
+import type { Intent } from "@/lib/types";
 import { useGifts } from "./usePrices";
 import { Sheet } from "@/components/ui/Sheet";
 import { Button, tapFeedback } from "@/components/ui/Button";
@@ -19,6 +21,7 @@ export function GiftSheet({
   onSend,
   subtitle = "Gifts pop up in the chat. A fun way to stand out.",
   layer,
+  intent,
 }: {
   open: boolean;
   onClose: () => void;
@@ -27,10 +30,13 @@ export function GiftSheet({
   onSend: (gift: Gift) => Promise<string | null>; // returns an error message, or null
   subtitle?: string;
   layer?: string;
+  /** The chat's mood: its gifts come first */
+  intent?: Intent;
 }) {
   const all = useGifts();
-  const GIFTS = all.filter((g) => !g.retired);
-  const [pickedId, setPickedId] = useState<string>(SENDABLE_GIFTS[0].id);
+  // The chat's mood puts its gifts first (roses for dating, fire for spicy…)
+  const GIFTS = giftsForMood(all.filter((g) => !g.retired), intent);
+  const [pickedId, setPickedId] = useState<string>(giftsForMood(SENDABLE_GIFTS, intent)[0].id);
   const picked = GIFTS.find((g) => g.id === pickedId) ?? GIFTS[0];
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);

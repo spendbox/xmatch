@@ -17,6 +17,7 @@ import { INTENT_ICONS, SEEKING_ICONS, SpiceIcon } from "@/components/ui/icons";
 import type { SetupPrefs } from "./prefs";
 import type { Intent } from "@/lib/types";
 import { nameColor } from "@/lib/eventSpace";
+import { moodOf } from "@/lib/moods";
 
 /** Keeps the hourly pairing state fresh: on open, on focus, when the hour turns, and when your pair changes. */
 export function useMasqueradeHour(userId: string, initial: MasqueradeHour | null) {
@@ -129,6 +130,9 @@ export function MasqueradeCard({
 
   // Switched on, nothing live, and free to be paired now
   const looking = !!hour && enabled && !live && cur?.status !== "matched" && (hour.looking ?? hour.hour_open);
+  // The card takes on the mood: your pair's chat while it's on, else the mood you've picked (purple while off)
+  const moodNow = live && cur ? cur.intent : enabled ? prefs?.intent : null;
+  const mood = moodNow ? moodOf(moodNow) : null;
   const settingsLabel = prefs
     ? `Masquerade settings: ${[intentLabel(prefs.intent), prefs.seeking !== "anyone" ? `meeting ${seekingLabel(prefs.seeking)}` : null, prefs.intent !== "friends" ? `${spiceLabel(prefs.spice)} questions` : null].filter(Boolean).join(", ")}. Edit`
     : "Masquerade settings";
@@ -155,7 +159,8 @@ export function MasqueradeCard({
       data-tour="masquerade-card"
       aria-label="Masquerade"
       onClick={tapCard}
-      className="relative flex min-h-[68px] cursor-pointer items-center gap-3 overflow-hidden rounded-[24px] bg-gradient-to-br from-brand via-[#6d4ff0] to-[#8f6bff] px-3.5 py-3 text-white shadow-[0_14px_30px_-16px_rgb(91_63_217/0.8)] transition active:scale-[0.99]"
+      className="relative flex min-h-[68px] cursor-pointer items-center gap-3 overflow-hidden rounded-[24px] bg-gradient-to-br from-brand via-[#6d4ff0] to-[#8f6bff] px-3.5 py-3 text-white shadow-[0_14px_30px_-16px_rgb(28_24_40/0.55)] transition-[background] duration-500 active:scale-[0.99]"
+      style={mood ? { background: mood.gradient } : undefined}
     >
       <div aria-hidden className="absolute -top-10 -right-8 h-24 w-24 rounded-full bg-white/10" />
 
@@ -232,10 +237,6 @@ export function MasqueradeCard({
                 className="flex max-w-full items-center gap-1 text-left"
                 aria-label={settingsLabel}
               >
-                {/* Nothing else to show (friends, meeting anyone): just the name */}
-                {seekingList(prefs.seeking).length === 0 && prefs.intent === "friends" && (
-                  <span className="truncate text-[15px] leading-tight font-semibold">Masquerade</span>
-                )}
                 {seekingList(prefs.seeking).map((g) => {
                   const Icon = SEEKING_ICONS[g];
                   return (
@@ -254,7 +255,7 @@ export function MasqueradeCard({
                 </span>
               </button>
             ) : (
-              <p className="text-[15px] leading-tight font-semibold">{enabled ? "Masquerade" : "Masquerade is off"}</p>
+              !enabled && <p className="text-[15px] leading-tight font-semibold">Pairing is off</p>
             )}
             {/* Quiet: no countdown. You're paired the moment someone who fits is online too. */}
             <p className="mt-0.5 flex items-center gap-1.5 truncate text-[12px] text-white/85" aria-live="polite">
@@ -264,16 +265,16 @@ export function MasqueradeCard({
                 <>
                   <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-[#7dffb5]" aria-hidden />
                   <span className="truncate">
-                    Looking for your pair{hour.pulse && hour.pulse.all > 0 ? ` · ${onlineCount(hour)} online` : "…"}
+                    {mood?.looking ?? "Looking for your pair"}{hour.pulse && hour.pulse.all > 0 ? ` · ${onlineCount(hour)} online` : "…"}
                   </span>
                 </>
               ) : (
-                <span className="truncate">{waitText(hour)}</span>
+                <span className="truncate">{waitText(hour, mood?.pairWord)}</span>
               )}
             </p>
           </div>
           <span className="relative">
-            <Toggle checked={enabled} onChange={toggle} label="Masquerade pairing" />
+            <Toggle checked={enabled} onChange={toggle} label="Masquerade pairing" onColor="light" />
           </span>
         </>
       )}
@@ -309,7 +310,7 @@ function onlineCount(h: MasqueradeHour) {
 }
 
 /** When you're not looking yet: between pairs, or outside pairing hours */
-function waitText(h: MasqueradeHour) {
+function waitText(h: MasqueradeHour, pairWord = "pair") {
   const at = lagosTime(h.next_at).replace(/\s?([AP]M)$/i, (_, m: string) => m.toLowerCase());
-  return h.hour_open && new Date(h.next_at).getTime() - Date.now() < 3 * 3600_000 ? `Your next pair after ${at}` : `Pairing starts at ${at}`;
+  return h.hour_open && new Date(h.next_at).getTime() - Date.now() < 3 * 3600_000 ? `Your next ${pairWord} after ${at}` : `Pairing starts at ${at}`;
 }

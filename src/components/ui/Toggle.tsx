@@ -7,11 +7,14 @@ export function Toggle({
   onChange,
   label,
   disabled,
+  onColor,
 }: {
   checked: boolean;
   onChange: (v: boolean) => void;
   label: string;
   disabled?: boolean;
+  /** On a coloured card: "light" turns on as a see-through white, so it fits any colour */
+  onColor?: "light";
 }) {
   return (
     <button
@@ -23,7 +26,7 @@ export function Toggle({
       onClick={() => onChange(!checked)}
       className={clsx(
         "relative h-8 w-14 shrink-0 rounded-full transition disabled:opacity-50",
-        checked ? "bg-brand" : "bg-[#cfe2fb]",
+        checked ? (onColor === "light" ? "bg-white/35 ring-1 ring-white/50" : "bg-brand") : "bg-[#cfe2fb]",
       )}
     >
       <span
