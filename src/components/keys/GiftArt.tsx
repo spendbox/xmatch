@@ -27,6 +27,25 @@ export function GiftArt({ id, size = 48, className }: { id: string; size?: numbe
           <path d="M23 26c-2 3-3 6-3 10" stroke="#fff" strokeWidth="2" strokeLinecap="round" fill="none" opacity=".45" />
         </svg>
       );
+    case "thumbsup":
+      return (
+        <svg {...common}>
+          <defs>
+            <linearGradient id={g("thumb")} x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stopColor="#ffd27a" />
+              <stop offset="1" stopColor="#f2a33d" />
+            </linearGradient>
+          </defs>
+          <rect x="7" y="28" width="13" height="28" rx="3" fill="#5b3fd9" />
+          <rect x="9" y="31" width="3" height="22" rx="1.5" fill="#fff" opacity=".25" />
+          <path
+            d="M20 29h8c2-4 3-9 3-15 0-4 2-6 5-6 3 0 5 3 5 7 0 5-1 10-3 14h11c3 0 5 2 5 5 0 2-1 3-2 4 2 1 3 2 3 4s-1 4-3 4c1 1 2 2 2 4s-2 4-4 4h-1c1 1 1 2 1 3 0 2-2 4-4 4H20Z"
+            fill={url("thumb")}
+          />
+          <path d="M42 41h9M42 48h8M41 54h6" stroke="#c97a1a" strokeWidth="1.8" fill="none" strokeLinecap="round" opacity=".6" />
+          <path d="M34 13c0-2 1-3 2-3" stroke="#fff" strokeWidth="2" fill="none" strokeLinecap="round" opacity=".6" />
+        </svg>
+      );
     case "clap":
       return (
         <svg {...common}>

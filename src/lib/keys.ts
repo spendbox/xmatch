@@ -20,6 +20,7 @@ export type Gift = { id: string; name: string; emoji: string; price: number; ret
 
 // Fun, friendly gifts first. Retired ones still show in old chats but can't be sent.
 export const GIFTS: Gift[] = [
+  { id: "thumbsup", name: "Thumbs up", emoji: "👍", price: 1 },
   { id: "fire", name: "Fire", emoji: "🔥", price: 5 },
   { id: "rose", name: "Rose", emoji: "🌹", price: 5 },
   { id: "clap", name: "Respect", emoji: "👏", price: 10 },
