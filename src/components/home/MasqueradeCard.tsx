@@ -237,10 +237,6 @@ export function MasqueradeCard({
                 className="flex max-w-full items-center gap-1 text-left"
                 aria-label={settingsLabel}
               >
-                {/* Nothing else to show (friends, meeting anyone): just the name */}
-                {seekingList(prefs.seeking).length === 0 && prefs.intent === "friends" && (
-                  <span className="truncate text-[15px] leading-tight font-semibold">Masquerade</span>
-                )}
                 {seekingList(prefs.seeking).map((g) => {
                   const Icon = SEEKING_ICONS[g];
                   return (
@@ -259,7 +255,7 @@ export function MasqueradeCard({
                 </span>
               </button>
             ) : (
-              <p className="text-[15px] leading-tight font-semibold">{enabled ? "Masquerade" : "Masquerade is off"}</p>
+              !enabled && <p className="text-[15px] leading-tight font-semibold">Pairing is off</p>
             )}
             {/* Quiet: no countdown. You're paired the moment someone who fits is online too. */}
             <p className="mt-0.5 flex items-center gap-1.5 truncate text-[12px] text-white/85" aria-live="polite">
