@@ -24,6 +24,9 @@ export type MatchPopData = {
   photo?: string | null;
   personId?: string;
   href: string;
+  /** Your own photo, beside theirs when you match */
+  myPhoto?: string | null;
+  myId?: string;
 };
 
 type Theme = {
@@ -68,7 +71,7 @@ export const MATCH_THEMES: Record<Intent, Theme> = {
  * connect with someone. Not shown on that chat's own page (it has its own), or during a call
  * (it waits until the call ends).
  */
-export function MatchPop({ userId }: { userId: string }) {
+export function MatchPop({ userId, myPhoto }: { userId: string; myPhoto?: string | null }) {
   const supabase = useMemo(() => createClient(), []);
   const path = usePathname();
   const router = useRouter();
@@ -104,9 +107,14 @@ export function MatchPop({ userId }: { userId: string }) {
       // Already watching it happen in that chat
       if (here.current === href || (row.session_id && here.current === `/masquerade/${row.session_id}`)) return;
       if (shown(`dp_pop_${row.id}`)) return;
-      const { data } = await supabase.rpc("get_matches");
-      const m = (Array.isArray(data) ? (data as MatchSummary[]) : []).find((x) => x.id === row.id);
-      add({ kind: "match", intent: row.intent ?? "dating", name: m?.display_name ?? "your match", photo: m?.photos?.[0], personId: m?.other_id, href });
+      // Their name and unlocked photo (the originals, now you're connected). Tried twice, in case it's not there yet.
+      let m: MatchSummary | undefined;
+      for (let i = 0; i < 2 && !m; i++) {
+        if (i) await new Promise((r) => setTimeout(r, 1200));
+        const { data } = await supabase.rpc("get_matches");
+        m = (Array.isArray(data) ? (data as MatchSummary[]) : []).find((x) => x.id === row.id);
+      }
+      add({ kind: "match", intent: row.intent ?? "dating", name: m?.display_name ?? "your match", photo: m?.photos?.[0], personId: m?.other_id, href, myPhoto, myId: userId });
     };
 
     const ch = supabase
@@ -119,7 +127,7 @@ export function MatchPop({ userId }: { userId: string }) {
     return () => {
       supabase.removeChannel(ch);
     };
-  }, [supabase, userId]);
+  }, [supabase, userId, myPhoto]);
 
   const pop = queue[0];
   // Went to that chat some other way: no need to show it
@@ -171,12 +179,29 @@ export function MatchPopView({ pop, onOpen, onClose }: { pop: MatchPopData; onOp
       </button>
 
       <div className="relative w-full max-w-sm animate-pop text-center">
-        {/* A pair: their mask with the mood. A match: the two of you, their photo */}
+        {/* A pair: their mask with the mood. A match: the two of you, side by side, their photo unlocked */}
         <div className="mx-auto flex items-center justify-center">
-          {pop.kind === "match" && pop.photo ? (
-            <span className="relative h-28 w-28 overflow-hidden rounded-full ring-4 ring-white/70 shadow-2xl">
-              <Photo src={pop.photo} id={pop.personId} className="h-full w-full object-cover" />
-            </span>
+          {pop.kind === "match" ? (
+            <div className="relative flex items-center">
+              <span className="relative h-28 w-28 -rotate-6 overflow-hidden rounded-full bg-white/20 shadow-2xl ring-4 ring-white">
+                {pop.myPhoto ? (
+                  <Photo src={pop.myPhoto} id={pop.myId} small={false} className="h-full w-full object-cover" />
+                ) : (
+                  <span className="grid h-full w-full place-items-center"><MaskIcon className="w-14 text-white" eyes="transparent" /></span>
+                )}
+              </span>
+              <span className="relative -ml-6 h-32 w-32 rotate-6 overflow-hidden rounded-full bg-white/20 shadow-2xl ring-4 ring-white">
+                {pop.photo ? (
+                  <Photo src={pop.photo} id={pop.personId} small={false} className="h-full w-full object-cover" />
+                ) : (
+                  <span className="grid h-full w-full place-items-center"><MaskIcon className="w-14 text-white" eyes="transparent" /></span>
+                )}
+              </span>
+              {/* The mood, where the two photos meet */}
+              <span className="absolute -bottom-2 left-1/2 grid h-12 w-12 -translate-x-1/2 place-items-center rounded-full bg-white shadow-lift" style={{ color: t.button }}>
+                {pop.intent === "friends" ? <Smile size={24} strokeWidth={2.4} /> : pop.intent === "spicy" ? <Flame size={24} fill="currentColor" /> : <Heart size={24} fill="currentColor" />}
+              </span>
+            </div>
           ) : (
             <span className="relative grid h-28 w-28 place-items-center rounded-full bg-white/15 ring-4 ring-white/40 shadow-2xl">
               <span aria-hidden className="absolute inset-0 animate-ping rounded-full bg-white/15 [animation-duration:2.2s]" />
@@ -184,7 +209,7 @@ export function MatchPopView({ pop, onOpen, onClose }: { pop: MatchPopData; onOp
             </span>
           )}
         </div>
-        <span className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[12.5px] font-bold tracking-wide uppercase">
+        <span className={(pop.kind === "match" ? "mt-8" : "mt-5") + " inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[12.5px] font-bold tracking-wide uppercase"}>
           {pop.intent === "friends" ? <Smile size={14} /> : pop.intent === "spicy" ? <Flame size={14} /> : <Heart size={14} />}
           {pop.kind === "pair" ? "You've been paired" : "It's a match"}
         </span>

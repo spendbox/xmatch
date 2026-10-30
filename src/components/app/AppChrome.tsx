@@ -78,7 +78,7 @@ export function AppChrome({
         {/* New messages follow you round the site */}
         <MessagePops userId={user.id} />
         {/* Paired or matched: a full-screen pop-up wherever you are */}
-        <MatchPop userId={user.id} />
+        <MatchPop userId={user.id} myPhoto={user.realPhoto ?? user.photo} />
       </EventMediaProvider>
     </CallProvider>
   );

@@ -25,7 +25,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <>
       <ThingPromptsSync rows={(prompts ?? null) as ThingPromptRow[] | null} />
       <AppChrome
-        user={{ id: user.id, name: profile!.display_name ?? "You", photo: profile!.photos?.[0] }}
+        user={{ id: user.id, name: profile!.display_name ?? "You", photo: profile!.photos?.[0], realPhoto: profile!.real_photos?.[0] ?? profile!.photos?.[0] }}
         settings={(settings ?? null) as SettingRow[] | null}
         gifts={(gifts ?? null) as GiftRow[] | null}
       >
