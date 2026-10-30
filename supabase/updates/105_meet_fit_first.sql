@@ -1,7 +1,6 @@
--- Meet and "People for you": mood, age and gender are strict filters.
--- Before, they only moved people up or down the list. Now you only see people who fit you
--- both ways: the same mood (friends, dating, spicy), each other's gender, and each other's age range.
--- Searching by name still looks at everyone.
+-- Meet and "People for you": gender, mood and age count for much more.
+-- Nobody is left out, but people who fit you on gender (both ways), the same mood
+-- (friends, dating, spicy) and age (both ways) now always come before people who don't.
 -- Run once in Supabase (SQL Editor → New query → paste → Run), after 102_hide_age.sql.
 
 create or replace function public.explore_people(p_q text DEFAULT NULL::text, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0)
@@ -36,12 +35,14 @@ begin
         from (
           select c.*, public.explore_match_id(uid, c.id) is not null as connected,
             (case when q is not null and lower(c.name) = lower(q) then 1000 else 0 end)
-            -- How well you fit each other
-            + (case when public.gender_fits(me.pref_seeking, c.gender) and public.gender_fits(c.pref_seeking, me.gender) then 40
-                    when public.gender_fits(me.pref_seeking, c.gender) then 20 else 0 end)
-            + (case when c.pref_intent = me.pref_intent then 15 else 0 end)
-            + (case when c.age between me.pref_age_min and me.pref_age_max then 15 else 0 end)
-            + (case when my_age between c.pref_age_min and c.pref_age_max then 10 else 0 end)
+            -- How well you fit each other: these count far more than everything below (which adds
+            -- up to about 110 at most), so people who fit your gender, mood and age always come
+            -- first. Nobody is left out; people who fit less just come later.
+            + (case when public.gender_fits(me.pref_seeking, c.gender) and public.gender_fits(c.pref_seeking, me.gender) then 200
+                    when public.gender_fits(me.pref_seeking, c.gender) then 80 else 0 end)
+            + (case when c.pref_intent = me.pref_intent then 150 else 0 end)
+            + (case when c.age between me.pref_age_min and me.pref_age_max then 130 else 0 end)
+            + (case when my_age between c.pref_age_min and c.pref_age_max then 120 else 0 end)
             -- How close they are
             + (case when c.km is not null then greatest(0, 20 - c.km / 5)
                     when c.place_country = me.place_country and c.place_region = me.place_region then 14
@@ -70,13 +71,6 @@ begin
               select * from profiles p0
               where case when q is not null then p0.display_name ilike '%' || replace(replace(q, '%', ''), '_', '') || '%'
                          else p0.last_seen_at > now() - interval '30 days' end
-                -- Only people who fit you both ways: the same mood, each other's gender, and each
-                -- other's age range (searching by name still looks at everyone)
-                and (q is not null or (
-                  p0.pref_intent = me.pref_intent
-                  and public.gender_fits(me.pref_seeking, p0.gender) and public.gender_fits(p0.pref_seeking, me.gender)
-                  and public.age_years(p0.birthdate) between me.pref_age_min and me.pref_age_max
-                  and my_age between p0.pref_age_min and p0.pref_age_max))
               order by p0.last_seen_at desc nulls last
               limit 600
             ) p
