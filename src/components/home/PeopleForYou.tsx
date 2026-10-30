@@ -12,7 +12,7 @@ import { useMeetList } from "@/components/explore/useMeetList";
 import { isOnline, usePresence } from "@/lib/usePresence";
 import { ExploreProfileSheet } from "@/components/explore/ExploreProfileSheet";
 
-const SHOWN = 20;
+const SHOWN = 8;
 
 /** Home: your 20 closest matches from Meet, in small circles (4 across), and a way to the rest */
 export function PeopleForYou({ userId, demo }: { userId: string; demo?: ExploreList }) {
@@ -37,7 +37,7 @@ export function PeopleForYou({ userId, demo }: { userId: string; demo?: ExploreL
         </Link>
       </div>
 
-      <ul className="grid grid-cols-4 gap-x-2 gap-y-3 rounded-[28px] border border-line bg-surface px-3 py-4 shadow-card">
+      <ul className="grid grid-cols-4 gap-x-2 gap-y-3 rounded-[24px] border border-line bg-surface px-3 py-3.5">
         {list
           ? people.map((p, i) => (
               <li key={p.id} className="min-w-0 animate-fade-up" style={{ animationDelay: `${Math.min(i, 12) * 30}ms` }}>

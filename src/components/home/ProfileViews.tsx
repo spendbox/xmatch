@@ -109,23 +109,19 @@ export function ProfileViews({ demo, onKeys }: { demo?: Viewers; /** Keys were s
           tapFeedback();
           setOpen(true);
         }}
-        className="mt-5 flex w-full items-center gap-2.5 rounded-[24px] border border-line bg-surface px-3 py-2.5 min-[360px]:gap-3 min-[360px]:px-3.5 text-left shadow-card transition active:scale-[0.99] lg:mt-6"
+        className="mt-4 flex w-full items-center gap-2.5 rounded-full bg-ink/[0.04] px-2.5 py-1.5 text-left transition active:scale-[0.99] lg:mt-6"
         aria-label={`${count} ${count === 1 ? "person" : "people"} viewed you ${today > 0 ? "today" : "this week"}. See who`}
       >
         <span className="flex shrink-0 -space-x-4">
           {faces.map((v) => (
-            <Face key={v.id} v={v} size={32} />
+            <Face key={v.id} v={v} size={24} />
           ))}
         </span>
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-[14px] font-semibold text-ink min-[360px]:text-[15px]">
-            {count} viewed you {today > 0 ? "today" : "this week"}
-          </span>
-          <span className="block truncate text-[12.5px] text-muted">
-            {waves > 0 ? `${waves} waved at you 👋` : "Tap to see who"}
-          </span>
+        <span className="min-w-0 flex-1 truncate text-[13px] text-ink-soft">
+          <b className="font-semibold text-ink">{count} viewed you</b> {today > 0 ? "today" : "this week"}
+          {waves > 0 ? ` · ${waves} waved 👋` : ""}
         </span>
-        <ChevronRight size={18} className="shrink-0 text-muted max-[359px]:hidden" />
+        <ChevronRight size={16} className="shrink-0 text-muted" />
       </button>
 
       <Sheet

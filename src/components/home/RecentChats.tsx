@@ -105,10 +105,10 @@ export function RecentChats({ matches, myId, demoMasked }: { matches: MatchSumma
           <li key={c.key} className="shrink-0">
             <Link href={c.href} className="relative block active:scale-95" aria-label={`Chat with ${c.label}${c.unread ? ", new message" : c.waiting ? ", waiting for your reply" : ""}`}>
               {c.photo || !c.mask ? (
-                <Avatar src={c.photo ?? undefined} name={c.name ?? c.label} size={48} className={c.unread ? "ring-2 ring-brand ring-offset-2 ring-offset-cream" : "ring-2 ring-surface"} />
+                <Avatar src={c.photo ?? undefined} name={c.name ?? c.label} size={48} className={"ring-2 ring-surface"} />
               ) : (
                 <span
-                  className={`grid h-12 w-12 place-items-center rounded-full ${c.unread ? "ring-2 ring-brand ring-offset-2 ring-offset-cream" : "ring-2 ring-surface"}`}
+                  className={`grid h-12 w-12 place-items-center rounded-full ${"ring-2 ring-surface"}`}
                   style={{ background: nameColor(c.mask) }}
                 >
                   <MaskIcon className="w-7 text-white" eyes={nameColor(c.mask)} />
