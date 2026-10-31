@@ -34,7 +34,7 @@ export function useMenuBadges(userId: string): MenuBadges {
 
   const refresh = useCallback(async () => {
     // One request for everything (update 95); before that runs, the five separate ones
-    type All = { chats?: number; event_chats?: number; feed_chats?: number; masked?: number; event?: unknown };
+    type All = { chats?: number; event_chats?: number; feed_chats?: number; masked?: number; event?: unknown; ice?: number };
     const one = await supabase.rpc("menu_badges");
     // A network problem: keep the dots as they are and try again later. (Sending five more
     // requests into a bad connection only made things slower.)
@@ -56,7 +56,8 @@ export function useMenuBadges(userId: string): MenuBadges {
     const eventLive =
       !!ev?.i_am_going && !!ev.starts_at && !!ev.ends_at && new Date(ev.starts_at).getTime() <= now && new Date(ev.ends_at).getTime() > now;
     const num = (x: unknown) => (typeof x === "number" ? x : 0);
-    const n = num(chats.data) + num(eventChats.data) + num(feedChats.data) + num(masked.data);
+    // Icebreakers waiting for an answer count too (update 106)
+    const n = num(chats.data) + num(eventChats.data) + num(feedChats.data) + num(masked.data) + num(all?.ice);
     setBadges((b) => ({
       chats: chats.error && eventChats.error ? b.chats : n,
       eventLive,
@@ -98,6 +99,7 @@ export function useMenuBadges(userId: string): MenuBadges {
       .on("postgres_changes", { event: "*", schema: "public", table: "feed_chats", filter: `user_b=eq.${userId}` }, changed)
       // Masked chats: one small row per person, touched on every message (update 65)
       .on("postgres_changes", { event: "*", schema: "public", table: "masked_activity", filter: `user_id=eq.${userId}` }, changed)
+      .on("postgres_changes", { event: "*", schema: "public", table: "ice_breaks", filter: `to_user=eq.${userId}` }, changed)
       .subscribe();
     const onFocus = () => document.visibilityState === "visible" && soon();
     window.addEventListener("dp:badges", soon);

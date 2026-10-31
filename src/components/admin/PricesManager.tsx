@@ -33,6 +33,12 @@ type Settings = {
   explore_photos_paid: number;
   ghost_cost: number;
   wave_cost: number;
+  /** Icebreakers (update 106): free ones a day, then a price for each kind */
+  ice_free_per_day: number;
+  ice_cost_card: number;
+  ice_cost_this: number;
+  ice_cost_voice: number;
+  ice_cost_game: number;
   pair_gap_minutes: number;
   pair_minutes: number;
   setup_reward: number;
@@ -76,6 +82,20 @@ export function PricesManager({ settings, gifts, packs, invites = null }: { sett
           hint="Main photos always show. Off: someone's other photos only show once you're both connected (people who already paid keep theirs)."
           value={settings.explore_photos_paid}
         />
+      </section>
+
+      <section className="mt-6 rounded-3xl border border-line bg-surface p-5 shadow-card">
+        <h2 className="text-[16px] font-semibold">Break the ice</h2>
+        <p className="mt-1 text-[13px] text-muted">
+          How people start with someone they&apos;ve never met on Explore. Paid once it&apos;s sent; the Keys go back if they say not now or don&apos;t answer in time (2 days, 30 minutes for a game).
+        </p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <SettingField k="ice_free_per_day" label="Free each day" hint="Free icebreakers per person per day (cards, This or That and voice; not games)" value={settings.ice_free_per_day} keysIcon={false} />
+          <SettingField k="ice_cost_card" label="Reply to their card" hint="Keys after the free ones are used" value={settings.ice_cost_card} />
+          <SettingField k="ice_cost_this" label="This or That" hint="Keys after the free ones are used" value={settings.ice_cost_this} />
+          <SettingField k="ice_cost_voice" label="Voice hello" hint="Keys after the free ones are used" value={settings.ice_cost_voice} />
+          <SettingField k="ice_cost_game" label="Play a game" hint="Keys for a game challenge, every time (0 = free)" value={settings.ice_cost_game} />
+        </div>
       </section>
 
       <section className="mt-6 rounded-3xl border border-line bg-surface p-5 shadow-card">

@@ -58,6 +58,8 @@ export type Wallet = { balance: number; passes: number; free_left: number; next_
 export const KEY_REASONS: Record<string, string> = {
   purchase: "Bought Keys",
   gift: "Sent a gift",
+  icebreaker: "Broke the ice",
+  icebreaker_refund: "Icebreaker not answered (Keys back)",
   feed_gift: "Sent a gift on the Feed",
   gift_received: "Received a gift",
   extend: "Added 2 minutes",

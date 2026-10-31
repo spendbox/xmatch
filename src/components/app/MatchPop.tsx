@@ -117,12 +117,27 @@ export function MatchPop({ userId, myPhoto }: { userId: string; myPhoto?: string
       add({ kind: "match", intent: row.intent ?? "dating", name: m?.display_name ?? "your match", photo: m?.photos?.[0], personId: m?.other_id, href, myPhoto, myId: userId });
     };
 
+    // They answered your icebreaker: your masked chat just opened
+    type IceRow = { id: string; status: string; session_id: string | null; to_user: string };
+    const onIce = async (row: IceRow) => {
+      if (row?.status !== "answered" || !row.session_id) return;
+      const href = `/masquerade/${row.session_id}`;
+      if (here.current === href || shown(`dp_pop_${row.session_id}`)) return;
+      const [{ data: s }, { data: mine }] = await Promise.all([
+        supabase.from("masquerade_sessions").select("intent").eq("id", row.session_id).maybeSingle(),
+        supabase.rpc("my_ice_breaks"),
+      ]);
+      const sent = ((mine as { sent?: { id: string; name: string | null }[] } | null)?.sent ?? []).find((x) => x.id === row.id);
+      add({ kind: "pair", intent: ((s as { intent?: Intent } | null)?.intent ?? "dating") as Intent, name: sent?.name?.split(" ")[0] ?? "They", href });
+    };
+
     const ch = supabase
       .channel(`match-pop-${userId}-${Math.random().toString(36).slice(2, 8)}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "masquerade_sessions", filter: `user_a=eq.${userId}` }, (p) => onSession(p.new as SessionRow))
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "masquerade_sessions", filter: `user_b=eq.${userId}` }, (p) => onSession(p.new as SessionRow))
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "matches", filter: `user_a=eq.${userId}` }, (p) => void onMatch(p.new as MatchRow))
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "matches", filter: `user_b=eq.${userId}` }, (p) => void onMatch(p.new as MatchRow))
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "ice_breaks", filter: `from_user=eq.${userId}` }, (p) => void onIce(p.new as IceRow))
       .subscribe();
     return () => {
       supabase.removeChannel(ch);

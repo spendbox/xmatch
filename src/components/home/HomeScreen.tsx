@@ -21,10 +21,8 @@ import { useWallet } from "@/components/keys/useWallet";
 import { EventCard } from "@/components/events/EventCard";
 import { PactCard, type PactListItem } from "@/components/pacts/PactCard";
 import type { DashpadEvent } from "@/lib/events";
-import { PlayCard } from "./PlayCard";
 import { DailyCard, StreakChip } from "./DailyCard";
 import { MasqueradeCard, useMasqueradeHour } from "./MasqueradeCard";
-import { PastPairs } from "./PastPairs";
 import { intentLabel } from "@/lib/constants";
 import { INTENT_ICONS } from "@/components/ui/icons";
 import { prefsFromProfile, type SetupPrefs } from "./prefs";
@@ -60,6 +58,8 @@ export function HomeScreen({
   matches = [],
   demoSetup,
   demoTour,
+  demoBreak,
+  demoBreakMode,
   demoDaily,
 }: {
   profile: Profile;
@@ -82,6 +82,9 @@ export function HomeScreen({
   demoSetup?: { place: boolean; push: boolean; things: number; claimed: boolean; reward: number };
   /** Design previews: open the welcome tour */
   demoTour?: boolean;
+  /** Previews: open the icebreaker for one of the people */
+  demoBreak?: number;
+  demoBreakMode?: "card" | "this" | "voice" | "game";
   /** Design preview of the Daily Word Hunt card */
   demoDaily?: "todo" | "done";
 }) {
@@ -173,13 +176,14 @@ export function HomeScreen({
       </header>
       </Sticky>
 
+      <div className="mt-4">
+        <MasqueradeCard userId={profile.id} ctl={ctl} prefs={prefs} onSettings={() => setMeetOpen(true)} />
+      </div>
       <RecentChats matches={matches} myId={profile.id} demoMasked={demoMasked} />
       <ProfileViews demo={demoViews} onKeys={refreshWallet} />
 
       <div className="lg:mt-8 lg:grid lg:grid-cols-12 lg:items-start lg:gap-8">
-      <div className="mt-5 lg:col-span-7 lg:mt-0">
-        <MasqueradeCard userId={profile.id} ctl={ctl} prefs={prefs} onSettings={() => setMeetOpen(true)} />
-        <PlayCard />
+      <div className="mt-4 lg:col-span-7 lg:mt-0">
         {demoDaily && <DailyCard done={demoDaily === "done"} />}
 
         {pact && (
@@ -199,11 +203,10 @@ export function HomeScreen({
 
       </div>
 
-      {/* On computers: people, past pairs and events in the right column (same order as on phones) */}
+      {/* On computers: people and events in the right column (same order as on phones). Past pairs are a filter in Chats */}
       <div className="lg:col-span-5">
-        <PeopleForYou userId={profile.id} demo={demoPeople} />
+        <PeopleForYou userId={profile.id} demo={demoPeople} demoBreak={demoBreak} demoBreakMode={demoBreakMode} />
         <WelcomeTour force={demoTour} off={!!demoPeople && !demoTour} />
-      <PastPairs pairs={ctl.hour?.past ?? []} balance={wallet?.balance ?? null} onChanged={ctl.load} />
 
       {nextEvent && (
         <div className="mt-7 lg:mt-0 lg:mb-7">

@@ -14,6 +14,12 @@ export type ExplorePerson = {
   online: boolean;
   /** You already have a chat with them */
   connected: boolean;
+  /** How well you match, 0 to 100 (update 106) */
+  match?: number;
+  /** An interest to show: one you share first */
+  tag?: string | null;
+  /** How far away, in km (when you've both shared where you are) */
+  km?: number | null;
 };
 
 export type ExploreList = {

@@ -5,7 +5,11 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import clsx from "clsx";
 import { CHATS_EVENT } from "@/components/app/useMenuBadges";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { IcebreakersReceived, type MyIcebreakers } from "./IcebreakersReceived";
+import { PastPairs } from "@/components/home/PastPairs";
+import type { PastPair } from "@/lib/hourly";
 import { MessageCircle, Search, Users, X } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Sticky } from "@/components/ui/Sticky";
@@ -32,7 +36,15 @@ export function MatchesList({
   variant = "page",
   maskedDemo,
   renderId,
+  demoPast,
+  demoIce,
+  initialFilter,
 }: {
+  /** Design previews: past pairs (the hour ran out), now a filter here instead of on Home */
+  demoPast?: PastPair[];
+  /** Design previews: icebreakers */
+  demoIce?: MyIcebreakers;
+  initialFilter?: "all" | "unread" | "ice" | "past";
   matches: MatchSummary[];
   myId: string;
   /** Sample masked chats (design preview) */
@@ -43,6 +55,7 @@ export function MatchesList({
   variant?: "page" | "sidebar";
 }) {
   const path = usePathname();
+  const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const side = variant === "sidebar";
   // Unread dots stay current: fetch fresh when the list shows (going back can show an old copy),
@@ -74,7 +87,35 @@ export function MatchesList({
   const { seen, now } = usePresence(matches.map((m) => m.other_id));
   const online = (id: string) => isOnline(seen[id], now);
   const [q, setQ] = useState("");
-  const [filter, setFilter] = useState<"all" | "unread">("all");
+  const [filter, setFilter] = useState<"all" | "unread" | "ice" | "past">(initialFilter ?? "all");
+  // Icebreakers (update 106): loaded with the list, kept live; past pairs load when you open that filter
+  const [ice, setIce] = useState<MyIcebreakers | null>(demoIce ?? null);
+  const [past, setPast] = useState<PastPair[] | null>(demoPast ?? null);
+  const loadIce = useCallback(() => {
+    if (demoIce) return;
+    void supabase.rpc("my_ice_breaks").then(({ data, error }) => !error && data && setIce(data as MyIcebreakers));
+  }, [supabase, demoIce]);
+  const loadPast = useCallback(() => {
+    if (demoPast) return;
+    void supabase.rpc("my_masquerade_hour").then(({ data }) => setPast(((data as { past?: PastPair[] } | null)?.past ?? []) as PastPair[]));
+  }, [supabase, demoPast]);
+  useEffect(() => {
+    // Sent here from a notification: open Icebreakers
+    if (!initialFilter && new URLSearchParams(window.location.search).get("f") === "ice") setFilter("ice");
+    loadIce();
+    if (demoIce) return;
+    const ch = supabase
+      .channel(`ice-${myId}-${Math.random().toString(36).slice(2, 8)}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "ice_breaks", filter: `to_user=eq.${myId}` }, loadIce)
+      .on("postgres_changes", { event: "*", schema: "public", table: "ice_breaks", filter: `from_user=eq.${myId}` }, loadIce)
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [supabase, myId, loadIce, demoIce, initialFilter]);
+  useEffect(() => {
+    if (filter === "past" && past === null) loadPast();
+  }, [filter, past, loadPast]);
   const term = q.trim().toLowerCase();
   // Masked chats sit in the same list as everyone else, by their latest message
   const masked = useMaskedChats(maskedDemo);
@@ -87,7 +128,7 @@ export function MatchesList({
   const unreadCount = all.filter((i) => i.unread).length;
   const shown = all.filter(
     (i) =>
-      (filter === "all" || i.unread) &&
+      (filter === "all" || (filter === "unread" && i.unread)) &&
       (i.masked
         ? maskedMatches(i.masked, paid[i.masked.id], term)
         : !term || i.match!.display_name.toLowerCase().includes(term) || (i.match!.last_message ?? "").toLowerCase().includes(term)),
@@ -137,8 +178,8 @@ export function MatchesList({
               </button>
             )}
           </label>
-          <div className="mt-2.5 flex gap-2" role="tablist" aria-label="Show">
-            {(["all", "unread"] as const).map((f) => (
+          <div className="-mx-5 mt-2.5 flex gap-2 overflow-x-auto px-5 no-scrollbar" role="tablist" aria-label="Show">
+            {(["all", "unread", "ice", "past"] as const).map((f) => (
               <button
                 key={f}
                 type="button"
@@ -146,19 +187,40 @@ export function MatchesList({
                 aria-selected={filter === f}
                 onClick={() => setFilter(f)}
                 className={clsx(
-                  "inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-[14px] font-semibold transition",
+                  "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-4 text-[14px] font-semibold whitespace-nowrap transition",
                   filter === f ? "bg-ink text-white" : "border border-line-strong bg-surface text-ink-soft hover:bg-ink/5",
                 )}
               >
-                {f === "all" ? "All" : "Unread"}
-                {f === "unread" && unreadCount > 0 && (
-                  <span className={clsx("grid h-5 min-w-5 place-items-center rounded-full px-1.5 text-[11px]", filter === f ? "bg-white text-ink" : "bg-brand text-white")}>{unreadCount}</span>
-                )}
+                {f === "all" ? "All" : f === "unread" ? "Unread" : f === "ice" ? "Icebreakers" : "Past pairs"}
+                {(() => {
+                  const n = f === "unread" ? unreadCount : f === "ice" ? (ice?.received.length ?? 0) : f === "past" ? (past?.length ?? 0) : 0;
+                  return n > 0 ? (
+                    <span className={clsx("grid h-5 min-w-5 place-items-center rounded-full px-1.5 text-[11px]", filter === f ? "bg-white text-ink" : f === "past" ? "bg-ink/10 text-ink-soft" : "bg-brand text-white")}>{n}</span>
+                  ) : null;
+                })()}
               </button>
             ))}
           </div>
           </Sticky>
 
+          {filter === "ice" && (
+            <section className="mt-3">
+              <p className="mb-2.5 text-[13px] text-muted">People who broke the ice with you. Answer and your masked chat opens.</p>
+              <IcebreakersReceived data={ice} onChanged={loadIce} demo={!!demoIce} />
+            </section>
+          )}
+          {filter === "past" && (
+            <section className="mt-1">
+              {past === null ? (
+                <p className="mt-3 rounded-2xl bg-surface p-4 text-center text-[14px] text-muted">Loading…</p>
+              ) : past.length === 0 ? (
+                <p className="mt-3 rounded-2xl bg-surface p-4 text-center text-[14px] text-muted">No past pairs. When an hour runs out before you both decide, the chat waits here.</p>
+              ) : (
+                <PastPairs pairs={past} balance={null} onChanged={loadPast} />
+              )}
+            </section>
+          )}
+          {(filter === "all" || filter === "unread") && (<>
           <LiveEventChats compact={side} divided userId={myId} />
           {FEATURES.feed && <LiveFeedChats divided userId={myId} />}
 
@@ -178,6 +240,7 @@ export function MatchesList({
               )}
             </ul>
           </section>
+          </>)}
         </>
       )}
     </main>
