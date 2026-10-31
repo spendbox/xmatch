@@ -24,8 +24,11 @@ export function CardPhotos({
   photosCost,
   onUnlocked,
   demo,
+  tall,
 }: {
   person: ExplorePerson;
+  /** The whole card is the photo (Explore): taller, with room for the words at the bottom */
+  tall?: boolean;
   /** Labels drawn over the photos (masked, you both like…) */
   overlay?: React.ReactNode;
   onOpen: () => void;
@@ -78,7 +81,7 @@ export function CardPhotos({
   }
 
   return (
-    <div className="relative aspect-[4/4.4] w-full overflow-hidden bg-brand-soft">
+    <div className={clsx("relative w-full overflow-hidden bg-brand-soft", tall ? "aspect-[4/5.6]" : "aspect-[4/4.4]")}>
       <div
         ref={strip}
         onScroll={(e) => {
@@ -107,7 +110,7 @@ export function CardPhotos({
         {locked > 0 && (
           <div className="relative h-full w-full shrink-0 snap-center overflow-hidden">
             {shown[0] && <Photo src={shown[0]} id={p.id} gender={p.gender} loading="lazy" className="h-full w-full scale-110 object-cover blur-2xl" />}
-            <div className="absolute inset-0 grid place-items-center bg-black/30">
+            <div className={clsx("absolute inset-0 grid place-items-center bg-black/30", tall && "pb-44")}>
               <div className="flex flex-col items-center gap-2 px-6 text-center text-white">
                 <span className="grid h-12 w-12 place-items-center rounded-full bg-white/20">
                   <Lock size={22} />
