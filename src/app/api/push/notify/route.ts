@@ -11,7 +11,7 @@ import type { Intent } from "@/lib/types";
  * send a message, start a call, say hi at an event, or keep an event chat.
  * We check it really was you, then notify the other person.
  */
-type Body = { kind?: string; personId?: string; matchId?: string; callId?: string; chatId?: string; answerId?: string; sessionId?: string; gameId?: string };
+type Body = { kind?: string; personId?: string; matchId?: string; callId?: string; chatId?: string; answerId?: string; sessionId?: string; gameId?: string; iceId?: string };
 
 const RECENT_MS = 60_000;
 const firstName = (n: string | null | undefined) => (n ?? "").split(" ")[0] || "Someone";
@@ -162,6 +162,36 @@ export async function POST(req: Request) {
         icon,
       });
     }
+    return ok;
+  }
+
+  // Someone broke the ice with you (masked: they only see your mask name… and you see theirs)
+  if (b.kind === "icebreaker" && b.iceId) {
+    const { data: i } = await db.from("ice_breaks").select("id, from_user, to_user, alias, kind, game, status, created_at").eq("id", b.iceId).maybeSingle();
+    if (!i || i.from_user !== uid || i.status !== "pending" || Date.now() - new Date(i.created_at as string).getTime() > RECENT_MS) return ok;
+    const what =
+      i.kind === "card" ? "replied to one of your cards" : i.kind === "this" ? "asked you a This or That" : i.kind === "voice" ? "sent you a voice hello" : "challenged you to a game";
+    await pushToUsers([i.to_user as string], {
+      title: `${i.alias} broke the ice 🧊`,
+      body: `Someone masked ${what}. Answer and your chat opens.`,
+      url: "/matches?f=ice",
+      tag: `ice-${i.id}`,
+    });
+    return ok;
+  }
+
+  // They answered your icebreaker: your masked chat is open
+  if (b.kind === "icebreaker_answer" && b.iceId) {
+    const { data: i } = await db.from("ice_breaks").select("id, from_user, to_user, session_id, status, answered_at").eq("id", b.iceId).maybeSingle();
+    if (!i || i.to_user !== uid || i.status !== "answered" || !i.session_id || Date.now() - new Date(i.answered_at as string).getTime() > RECENT_MS) return ok;
+    const { data: me } = await db.from("profiles").select("display_name, photos").eq("id", uid).single();
+    await pushToUsers([i.from_user as string], {
+      title: `${firstName(me?.display_name as string | null)} answered your icebreaker`,
+      body: "Your masked chat is open. Say hi!",
+      url: `/masquerade/${i.session_id}`,
+      tag: `masked-${i.session_id}`,
+      icon: (me?.photos as string[] | null)?.[0] ?? null,
+    });
     return ok;
   }
 

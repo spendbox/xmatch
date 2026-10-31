@@ -30,7 +30,7 @@ type Item = { key: string; href: string; at: string; label: string; unread: bool
  * Home: your latest chats (connected and masked) as small circles, no names.
  * Red dot and ring: a new message you haven't read. Small dark dot: you've read it but not replied.
  */
-export function RecentChats({ matches, myId, demoMasked }: { matches: MatchSummary[]; myId: string; demoMasked?: RecentMasked[] }) {
+export function RecentChats({ matches, myId, demoMasked, lead }: { matches: MatchSummary[]; myId: string; demoMasked?: RecentMasked[]; /** First in the row (who viewed you) */ lead?: React.ReactNode }) {
   const supabase = useMemo(() => createClient(), []);
   const [masked, setMasked] = useState<RecentMasked[]>(demoMasked ?? []);
   const paid = usePaidChatPeople(!!demoMasked);
@@ -91,7 +91,7 @@ export function RecentChats({ matches, myId, demoMasked }: { matches: MatchSumma
     .sort((a, b) => b.at.localeCompare(a.at))
     .slice(0, 12);
 
-  if (!items.length) return null;
+  if (!items.length && !lead) return null;
   return (
     <section className="mt-4 lg:mt-8" aria-label="Recent chats">
       <div className="mb-2 flex items-center justify-between">
@@ -101,9 +101,10 @@ export function RecentChats({ matches, myId, demoMasked }: { matches: MatchSumma
         </Link>
       </div>
       <ul className="-mx-5 flex gap-2.5 overflow-x-auto px-5 py-1 no-scrollbar lg:mx-0 lg:px-1">
+        {lead && <li className="shrink-0">{lead}</li>}
         {items.map((c) => (
-          <li key={c.key} className="shrink-0">
-            <Link href={c.href} className="relative block active:scale-95" aria-label={`Chat with ${c.label}${c.unread ? ", new message" : c.waiting ? ", waiting for your reply" : ""}`}>
+          <li key={c.key} className="flex w-[52px] shrink-0 flex-col items-center gap-1">
+            <Link href={c.href} className="relative block h-12 w-12 active:scale-95" aria-label={`Chat with ${c.label}${c.unread ? ", new message" : c.waiting ? ", waiting for your reply" : ""}`}>
               {c.photo || !c.mask ? (
                 <Avatar src={c.photo ?? undefined} name={c.name ?? c.label} size={48} className={"ring-2 ring-surface"} />
               ) : (
@@ -127,6 +128,8 @@ export function RecentChats({ matches, myId, demoMasked }: { matches: MatchSumma
                 </span>
               )}
             </Link>
+            {/* Their name under the circle */}
+            <span className="w-full truncate text-center text-[11px] leading-[16.5px] font-medium text-ink-soft">{(c.name ?? c.label).split(" ")[0]}</span>
           </li>
         ))}
       </ul>

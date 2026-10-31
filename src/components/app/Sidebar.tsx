@@ -4,7 +4,7 @@ import Link from "next/link";
 import { FeedbackButton } from "./FeedbackButton";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
-import { MessageCircle, PanelLeftClose, PanelLeftOpen, UserRound, UsersRound } from "lucide-react";
+import { MessageCircle, PanelLeftClose, PanelLeftOpen, UserRound } from "lucide-react";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { Avatar } from "@/components/ui/Avatar";
 import { KeyCoin } from "@/components/keys/KeyIcon";
@@ -21,8 +21,7 @@ export type ChromeUser = {
 };
 
 const items = [
-  { href: "/home", label: "Home", icon: (on: boolean) => <MaskIcon className="w-[22px]" eyes={on ? "#5b3fd9" : "#faf7f2"} /> },
-  { href: "/meet", label: "Meet", icon: () => <UsersRound size={21} /> },
+  { href: "/home", label: "Explore", icon: (on: boolean) => <MaskIcon className="w-[22px]" eyes={on ? "#5b3fd9" : "#faf7f2"} /> },
   { href: "/matches", label: "Chats", icon: () => <MessageCircle size={21} /> },
   { href: "/wallet", label: "Keys", icon: () => <KeyCoin size={22} /> },
   { href: "/profile", label: "Profile", icon: () => <UserRound size={21} /> },
@@ -75,7 +74,8 @@ export function Sidebar({ user, badges }: { user: ChromeUser; badges?: MenuBadge
 
       <nav className="mt-8 space-y-1" aria-label="Main">
         {items.map((it) => {
-          const on = isActive(path, it.href);
+          // Meet lives inside Explore, so Explore stays lit there
+          const on = isActive(path, it.href) || (it.href === "/home" && isActive(path, "/meet"));
           const home = it.href === "/home";
           return (
             <div key={it.href}>

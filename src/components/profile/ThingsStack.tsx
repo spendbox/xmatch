@@ -43,7 +43,7 @@ function FitText({ text, max, min }: { text: string; max: number; min: number })
 }
 
 /** One card's face: the prompt on top, the answer big underneath */
-function CardFace({ thing, big }: { thing: Thing; big?: boolean }) {
+export function CardFace({ thing, big }: { thing: Thing; big?: boolean }) {
   const p = promptOf(thing.p);
   return (
     <div className="relative flex h-full w-full flex-col overflow-hidden text-left text-white" style={{ background: p.tone }}>

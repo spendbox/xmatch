@@ -102,6 +102,8 @@ async function handle(req: Request) {
   const { data: back } = await db.rpc("refund_quiet_paid_chats", { p_limit: 200 });
   // And chats paid for after a Play game (update 78)
   const { data: playBack } = await db.rpc("refund_quiet_play_chats", { p_limit: 200 });
+  // Icebreakers nobody answered in time: Keys back to the sender (update 106; does nothing before it runs)
+  await db.rpc("ice_expire");
   const refunds = [...(Array.isArray(back) ? back : []), ...(Array.isArray(playBack) ? playBack : [])] as {
     user_id: string;
     keys: number;

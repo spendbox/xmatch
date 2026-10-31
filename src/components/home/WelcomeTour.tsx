@@ -39,7 +39,7 @@ const STEPS: Step[] = [
     target: "people",
     icon: <UsersRound size={22} />,
     title: "People for you",
-    body: "People we think you'll click with, online first. Tap someone to see their profile, wave, or say hi with an opener made for the two of you.",
+    body: "People we think you'll click with, with how well you match. Tap Break the ice to reply to one of their cards, ask a This or That, send a voice hello or challenge them to a game. Meet everyone has the full list.",
   },
   {
     icon: <Gamepad2 size={22} />,

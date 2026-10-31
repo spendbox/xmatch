@@ -195,7 +195,7 @@ const recent = [
   { id: "m3", created_at: iso(3000), last_message_at: iso(200), intent: "spicy" as const, other_id: "z", display_name: "Zara", photos: [photo("#5b3fd9", "#e5484d", "Z")], age: 29, last_message: null, last_sender: null },
 ];
 
-const APP_SCREENS = ["events-empty", "event-spotlight", "event-spotlight-live", "events", "event-upcoming", "event-live", "event-waiting", "event-ended", "home", "matches", "wallet", "profile", "rich-chat", "extend", "chat", "desktop-matches", "gifts", "home-next", "home-wait", "voice-chat", "voice-sheet", "voice-sheet-normal", "voice-record", "home-off", "home-clicked", "people", "feed", "feed-locked", "feed-chat", "feed-gifts", "meet", "meet-events", "meet-post", "explore"];
+const APP_SCREENS = ["events-empty", "event-spotlight", "event-spotlight-live", "events", "event-upcoming", "event-live", "event-waiting", "event-ended", "home", "matches", "wallet", "profile", "rich-chat", "extend", "chat", "desktop-matches", "gifts", "home-next", "home-wait", "voice-chat", "voice-sheet", "voice-sheet-normal", "voice-record", "home-off", "home-clicked", "people", "feed", "feed-locked", "feed-chat", "feed-gifts", "meet", "meet-events", "meet-post", "explore", "chats-ice", "chats-past"];
 
 function ev(over: Partial<DashpadEvent> = {}): DashpadEvent {
   return {
@@ -228,6 +228,8 @@ function demoHour(kind: "live" | "next" | "off" | "clicked" | "wait" = "live"): 
     past: [
       { id: "p1", status: "lapsed", intent: "friends", hour_at: new Date(h.getTime() - 3 * 3600_000).toISOString(), reopened_at: null, their_alias: "Quiet Heron", their_age: 29, their_gender: "man", my_vote: true, last_message: "Haha same. Talk soon?" },
       { id: "p2", status: "active", intent: "dating", hour_at: new Date(h.getTime() - 26 * 3600_000).toISOString(), reopened_at: iso(3600), their_alias: "Wild Comet", their_age: 24, their_gender: "woman", my_vote: null, last_message: "You reopened the chat 👀" },
+      { id: "p3", status: "lapsed", intent: "dating", hour_at: new Date(h.getTime() - 50 * 3600_000).toISOString(), reopened_at: null, their_alias: "Amber Hare", their_age: 27, their_gender: "woman", my_vote: null, last_message: "Wait, you've been to Zanzibar too?" },
+      { id: "p4", status: "lapsed", intent: "friends", hour_at: new Date(h.getTime() - 74 * 3600_000).toISOString(), reopened_at: null, their_alias: "Lucky Ram", their_age: 31, their_gender: "man", my_vote: null, last_message: "Arsenal will win it this year" },
     ],
   };
 }
@@ -293,7 +295,8 @@ const homePeople: ExploreList = {
   ...explorePeople,
   people: Array.from({ length: 20 }, (_, i) => {
     const p = explorePeople.people[i % explorePeople.people.length];
-    return i < explorePeople.people.length ? p : { ...p, id: `${p.id}-${i}`, name: NAMES[i % NAMES.length], online: i % 3 === 0, connected: false };
+    const extra = { connected: i === 1, match: 97 - i * 3, tag: ["Afrobeats", "Foodie", "Travel", "Books", "Football", "Art"][i % 6], km: [3, 5, 8, 2, 12, 6][i % 6] };
+    return i < explorePeople.people.length ? { ...p, ...extra } : { ...p, ...extra, id: `${p.id}-${i}`, name: NAMES[i % NAMES.length], online: i % 3 === 0, connected: false };
   }),
 };
 // Masked chats in Recent chats (Home)
@@ -356,6 +359,14 @@ function ScreenBody({ screen }: { screen: string }) {
   if (screen === "chat-bgs") return <ChatBgGallery />;
   if (screen === "chat-bgs-moving") return <ChatBgGallery only={["beach", "sunset", "stars", "aurora", "rain", "snow", "hearts", "fireflies", "ocean", "clouds", "lagos", "bokeh"]} />;
   if (screen.startsWith("chat-bg-")) return <ChatBgGallery only={[screen.slice(8) as never]} big />;
+  if (screen === "explore-break" || screen === "explore" || screen === "explore-game") {
+    return (
+      <div className="pb-24">
+        <HomeScreen demoPeople={homePeople} demoViews={homeViews} demoMasked={homeMasked} demoSetup={{ place: true, push: false, things: 4, claimed: false, reward: 5 }} hour={demoHour("wait")} profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} matches={recent} demoBreak={screen === "explore" ? undefined : 0} demoBreakMode={screen === "explore-game" ? "game" : undefined} />
+        <BottomNav />
+      </div>
+    );
+  }
   // Each mood's look: mood-friends-home, mood-spicy-chat, mood-dating-gifts…
   if (screen.startsWith("mood-")) {
     const [, intent, part] = screen.split("-") as [string, "friends" | "dating" | "spicy", string];
@@ -518,7 +529,7 @@ function ScreenBody({ screen }: { screen: string }) {
     case "people":
       return <div className="pb-24"><YourPeople matches={recent} myId="me" /><BottomNav /></div>;
     case "admin-prices":
-      return <AdminShell><PricesManager settings={{ reopen_cost: 10, reveal_cost: 1, free_reveals: 10, invite_reward: 10, meet_cost: 10, meet_free_posts: 1, meet_hours: 3, explore_message_cost: 15, explore_photos_cost: 5, explore_photos_paid: 1, ghost_cost: 100, wave_cost: 0, pair_gap_minutes: 60, pair_minutes: 60, setup_reward: 5, signup_keys: 5, slow_reveal_cost: 10, gift_share_percent: 50, play_cost: 1, sticker_pack_cost: 40, scribble_cost: 1, draw_together_cost: 2 }} invites={{ joined: 64, joined_7d: 12, buyers: 19, keys_paid: 410, top: [{ name: "Tolu", joined: 9, earned: 90 }, { name: "Kemi", joined: 6, earned: 40 }] }}
+      return <AdminShell><PricesManager settings={{ ice_free_per_day: 3, ice_cost_card: 2, ice_cost_this: 2, ice_cost_voice: 3, ice_cost_game: 1, reopen_cost: 10, reveal_cost: 1, free_reveals: 10, invite_reward: 10, meet_cost: 10, meet_free_posts: 1, meet_hours: 3, explore_message_cost: 15, explore_photos_cost: 5, explore_photos_paid: 1, ghost_cost: 100, wave_cost: 0, pair_gap_minutes: 60, pair_minutes: 60, setup_reward: 5, signup_keys: 5, slow_reveal_cost: 10, gift_share_percent: 50, play_cost: 1, sticker_pack_cost: 40, scribble_cost: 1, draw_together_cost: 2 }} invites={{ joined: 64, joined_7d: 12, buyers: 19, keys_paid: 410, top: [{ name: "Tolu", joined: 9, earned: 90 }, { name: "Kemi", joined: 6, earned: 40 }] }}
         gifts={[{ id: "fire", name: "Fire", emoji: "🔥", price: 5, sort: 1, retired: false }, { id: "rose", name: "Rose", emoji: "🌹", price: 5, sort: 2, retired: false }, { id: "jollof", name: "Jollof", emoji: "🍛", price: 15, sort: 5, retired: false }, { id: "teddy", name: "Teddy bear", emoji: "🧸", price: 30, sort: 91, retired: true }]}
         packs={[{ id: "p50", keys: 50, naira: 750, tag: null, sort: 1, active: true }, { id: "p150", keys: 150, naira: 2000, tag: "Popular", sort: 2, active: true }, { id: "p500", keys: 500, naira: 4500, tag: "Best value", sort: 3, active: true }]} /></AdminShell>;
     case "admin-masquerade": {
@@ -765,10 +776,26 @@ function ScreenBody({ screen }: { screen: string }) {
         </div>
       );
     case "matches":
+    case "chats-ice":
+    case "chats-past":
       return (
         <div className="pb-24">
           <MatchesList
             myId="me"
+            initialFilter={screen === "chats-ice" ? "ice" : screen === "chats-past" ? "past" : "all"}
+            demoPast={demoHour("wait").past}
+            demoIce={{
+              received: [
+                { id: "i1", alias: "Velvet Owl", age: 27, kind: "card", thing: { p: "food", a: "Jollof rice" }, body: "Okay but who makes the best jollof rice? Choose wisely 😅", expires_at: new Date(Date.now() + 41 * 3600_000).toISOString() },
+                { id: "i2", alias: "Golden Lynx", age: 25, kind: "game", game: "whot", body: "Loser buys the next Chapman 🃏", expires_at: new Date(Date.now() + 22 * 60_000).toISOString() },
+                { id: "i3", alias: "Soft Wren", age: 29, kind: "this", question: { q: "Beach day or owambe?", a: "Beach day", b: "Owambe" }, expires_at: new Date(Date.now() + 30 * 3600_000).toISOString() },
+              ],
+              sent: [
+                { id: "o1", name: "Ada", photo: photo("#e5484d", "#f2b33d", "A"), kind: "card", status: "answered", paid: 0, session_id: "s1", expires_at: iso(-3600) },
+                { id: "o2", name: "Bisi", photo: photo("#c2306b", "#f2b33d", "B"), kind: "voice", status: "pending", paid: 3, session_id: null, expires_at: new Date(Date.now() + 40 * 3600_000).toISOString() },
+                { id: "o3", name: "Zainab", photo: photo("#1f9d6b", "#f2b33d", "Z"), kind: "this", status: "expired", paid: 2, session_id: null, expires_at: iso(3600) },
+              ],
+            }}
             maskedDemo={[
               { id: "s1", alias: "Misty Moth", my_alias: "Golden Fox", from_meet: false, live_pair: true, ends_at: iso(-53 * 60), my_vote: null, they_unmasked: false, online: false, last_message: "Voice note", last_mine: true, last_at: iso(240), unread: false },
               { id: "s2", alias: "Coral Heron", my_alias: "Golden Fox", from_meet: true, my_vote: null, they_unmasked: false, online: true, last_message: "Hiii", last_mine: false, last_at: iso(30), unread: true },
