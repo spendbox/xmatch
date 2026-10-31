@@ -149,7 +149,7 @@ export function Composer({
       el.setSelectionRange(draft.text.length, draft.text.length);
     });
   }, [draft]);
-  const hasPlus = !!(onSendMedia || onGift || actions.length > 0);
+  const hasPlus = !!(onSendMedia || onGift || onSendSticker || actions.length > 0);
 
   // Someone's first 3 chats: a little tip pointing at the + (gone once they've tapped it)
   const [tip, setTip] = useState(false);
@@ -301,7 +301,7 @@ export function Composer({
                 className="absolute bottom-[calc(100%+12px)] left-0 z-20 w-[230px] animate-pop rounded-2xl bg-ink px-3.5 py-2.5 text-left text-[13px] leading-snug text-white shadow-lift"
               >
                 <b className="block text-[14px]">Tap + for more 🎮</b>
-                Games, gifts{actions.some((a) => a.key === "ice") ? ", icebreakers" : ""} and more live here.
+                Games, gifts, stickers{actions.some((a) => a.key === "ice") ? ", icebreakers" : ""} and more live here.
                 <span className="mt-1 block text-[11px] font-semibold text-white/60">Got it</span>
                 <span aria-hidden className="absolute -bottom-1.5 left-[18px] h-3 w-3 rotate-45 bg-ink" />
               </button>
@@ -312,13 +312,15 @@ export function Composer({
                 tapFeedback();
                 plusSeen();
                 setAttachOpen(true);
+                // Stickers are in here now: start loading them while the menu opens
+                if (onSendSticker) void import("@/components/stickers/StickerSheet");
               }}
               disabled={disabled}
               className={clsx(
                 "relative grid h-10 w-10 shrink-0 place-items-center rounded-full transition active:scale-95 disabled:opacity-50",
                 attachOpen ? "bg-brand text-white" : "bg-surface text-ink-soft shadow-[0_1px_3px_rgb(28_24_40/0.12)]",
               )}
-              aria-label="More: games, gifts and more"
+              aria-label="More: games, gifts, stickers and more"
               aria-expanded={attachOpen}
             >
               <Plus size={22} className={clsx("transition-transform duration-200", attachOpen && "rotate-45")} />
@@ -345,22 +347,6 @@ export function Composer({
             className="no-scrollbar max-h-[132px] min-h-10 min-w-0 flex-1 resize-none bg-transparent px-2.5 py-[9px] text-[16px] leading-[22px] outline-none placeholder:text-muted disabled:opacity-60"
             aria-label="Message"
           />
-          {onSendSticker && !hasText && !editing && (
-            <button
-              type="button"
-              // Start loading the sticker tools as soon as a finger touches the button
-              onPointerDown={() => void import("@/components/stickers/StickerSheet")}
-              onClick={() => {
-                tapFeedback();
-                setStickersOpen(true);
-              }}
-              disabled={disabled}
-              aria-label="Stickers"
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-ink-soft transition hover:bg-ink/5 active:scale-95 disabled:opacity-50"
-            >
-              <StickerIcon size={23} />
-            </button>
-          )}
           {hasText || editing || (!onSendVoice && !onVoiceTap) ? (
             <button
               type="submit"
@@ -412,6 +398,17 @@ export function Composer({
               }}
             />
           ))}
+          {onSendSticker && (
+            <AttachTile
+              icon={<StickerIcon size={26} />}
+              label="Stickers"
+              tone="bg-[#e8f1fe] text-[#2563c9]"
+              onClick={() => {
+                setAttachOpen(false);
+                setStickersOpen(true);
+              }}
+            />
+          )}
           {onSendMedia && (
             <>
               <AttachTile icon={<Images size={24} strokeWidth={1.75} />} label="Photo & video" tone="bg-brand-soft text-brand" onClick={() => gallery.current?.click()} />
