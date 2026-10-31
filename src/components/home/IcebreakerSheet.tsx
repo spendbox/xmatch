@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { Check, Gamepad2, Mic, Pause, Play, RotateCcw, Send, Shuffle, Sparkles, Split, Square } from "lucide-react";
+import { Check, Gamepad2, Layers, Mic, Pause, Play, RotateCcw, Send, Shuffle, Split, Square } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { notify } from "@/lib/pushClient";
 import { Sheet } from "@/components/ui/Sheet";
@@ -35,38 +35,6 @@ export const ICE_GAMES: { id: "whot" | "xo" | "ludo" | "tot"; name: string; emoj
   { id: "tot", name: "This or That", emoji: "🤔" },
 ];
 const MAX_VOICE = 15;
-
-/** Little openers for the card they wrote, so nobody stares at an empty box */
-function openers(thing: Thing) {
-  const a = thing.a.trim();
-  const low = a.charAt(0).toLowerCase() + a.slice(1);
-  const by: Record<string, string[]> = {
-    food: [`${a}? Where's the best one in town?`, `Okay but who makes the best ${low}?`, `I'd fight you for the last plate of ${low} 😅`],
-    weekend: [`${a} sounds perfect. Who's coming?`, `Okay, plan my weekend then 😄`, `${a}? You've just described my dream Saturday`],
-    music: [`${a} is a vibe. Favourite song?`, `Concert or headphones for ${a}?`, `Top 3 ${a} songs. Go.`],
-    team: [`${a}? We need to talk 😤`, `Best ${a} player right now?`, `How was your ${a} weekend?`],
-    work: [`${a}? What's the best part of it?`, `How did you get into ${low}?`, `Tell me one thing people get wrong about ${low}`],
-    spot: [`${a}? I might see you there 👀`, `What keeps you going back?`, `Take me with you next time`],
-    trip: [`${a}! Who would you take?`, `First thing you'd do in ${a}?`, `${a} is on my list too 👀`],
-    drink: [`${a}? Good taste 🥂`, `Where's the best ${low} in town?`, `I'll get the first round of ${low}`],
-    love: [`${a}? How do you show it?`, `Same here. What's the sweetest thing someone's done?`, `Noted 📝 What else should I know?`],
-    green: [`"${a}" is a great one. Am I passing so far? 😄`, `What made that your green flag?`, `Love that. What's your other one?`],
-    red: [`"${a}"? Fair. Story behind it? 👀`, `Noted, I'll be on my best behaviour 😅`, `Okay, now tell me a green flag`],
-    skill: [`${a}? I need proof 😄`, `How did you get good at ${low}?`, `Teach me one thing about ${low}`],
-    show: [`${a}! Favourite character?`, `Okay, ${a}: best season?`, `I need a show to watch. Is ${a} worth starting?`],
-    game: [`${a}? I'd beat you 😏`, `How long have you played ${a}?`, `Rematch rules: loser buys the drinks`],
-    lang: [`${a}! Teach me a word?`, `Which one do you dream in?`, `Say something nice in one of them 😄`],
-    clock: [`${a}? Same here, honestly`, `So when's the best time to text you?`, `Defend it. Why ${low}?`],
-    pet: [`"${a}"? Okay, same 😤`, `I'll make sure I never do that 😅`, `What's your second biggest one?`],
-    dream: [`${a}? I love that. What's step one?`, `When you do, can I come? 😄`, `That's a big one. What's stopping you?`],
-    kid: [`${a}! What happened? 😄`, `Little you had big plans`, `Is there still a bit of ${low} in you?`],
-    need: [`${a}? Same honestly`, `Okay, why ${low}?`, `A day without ${low}. Could you do it? 😄`],
-    take: [`"${a}"? Defend it 😤`, `Hot take accepted. Here's mine…`, `Okay, I half agree. Convince me`],
-    place: [`${a}? Haven't been. Worth it?`, `What should I order at ${a}?`, `Meet you at ${a} some day? 👀`],
-    fact: [`Wait, "${low}"? Tell me more 😄`, `Okay, that's a good one`, `I didn't see that coming. Story?`],
-  };
-  return by[thing.p] ?? [`"${a}"? Okay, now I'm curious`, `Tell me more about that`, `Same here! What's the story?`];
-}
 
 const SAMPLE: Question[] = [
   { q: "Beach day or owambe?", a: "Beach day", b: "Owambe" },
@@ -134,13 +102,19 @@ export function IcebreakerSheet({
   const [playing, setPlaying] = useState(false);
   const [audio] = useState(() => (typeof Audio !== "undefined" ? new Audio() : null));
 
-  // Fresh each time it opens
+  // Fresh each time it opens for someone. Keyed on who it's for (not the person object, which is
+  // rebuilt every time the page behind it refreshes) so typing, a pick or "Sent!" never resets.
+  const personId = person?.id ?? null;
+  const [loadError, setLoadError] = useState(false);
+  const [tries, setTries] = useState(0);
   useEffect(() => {
-    if (!open || !person) return;
+    if (!open || !personId) return;
+    let live = true;
     setMode(demoMode ?? "card");
     setText("");
     setPick(null);
     setError(null);
+    setLoadError(false);
     setDone(false);
     setTi(0);
     setRaw(null);
@@ -156,10 +130,16 @@ export function IcebreakerSheet({
     }
     setStatus(null);
     setThings(null);
-    void supabase.rpc("ice_status", { p_to: person.id }).then(({ data }) => data && setStatus(data as Status));
-    void supabase.rpc("explore_profile", { p_id: person.id }).then(({ data }) => {
+    // Only the answers for this person, this time (a slow answer for someone else is ignored)
+    void supabase.rpc("ice_status", { p_to: personId }).then(({ data, error: err }) => {
+      if (!live) return;
+      if (err || !data) setLoadError(true);
+      else setStatus(data as Status);
+    });
+    void supabase.rpc("explore_profile", { p_id: personId }).then(({ data }) => {
+      if (!live) return;
       const t = (data as { things?: Thing[] } | null)?.things;
-      setThings(Array.isArray(t) ? t.filter((x) => x?.a) : []);
+      setThings(Array.isArray(t) ? t.filter((x) => x?.p && x?.a) : []);
     });
     void supabase
       .from("tot_questions")
@@ -168,10 +148,14 @@ export function IcebreakerSheet({
       .lte("spice", 1)
       .limit(60)
       .then(({ data }) => {
+        if (!live) return;
         const list = ((data ?? []) as { prompt: string; a: string; b: string }[]).map((r) => ({ q: r.prompt, a: r.a, b: r.b }));
         setQuestions(list.length ? list.sort(() => Math.random() - 0.5) : SAMPLE);
       });
-  }, [open, person, demo, demoMode, supabase]);
+    return () => {
+      live = false;
+    };
+  }, [open, personId, demo, demoMode, supabase, tries]);
 
   // No cards to reply to: start on This or That
   useEffect(() => {
@@ -287,7 +271,14 @@ export function IcebreakerSheet({
         ) : (
           <div className="space-y-2">
             {error && error !== "NOT_ENOUGH_KEYS" && <p className="text-center text-[13px] font-medium text-chili">{error}</p>}
-            {error === "NOT_ENOUGH_KEYS" ? (
+            {loadError ? (
+              <>
+                <p className="text-center text-[13px] font-medium text-chili">Couldn&apos;t load. Check your connection.</p>
+                <Button size="lg" variant="secondary" onClick={() => setTries((t) => t + 1)}>
+                  <RotateCcw size={18} /> Try again
+                </Button>
+              </>
+            ) : error === "NOT_ENOUGH_KEYS" ? (
               <Link href="/wallet" className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gold font-semibold text-ink">
                 <KeyCoin size={22} /> Get Keys
               </Link>
@@ -346,7 +337,7 @@ export function IcebreakerSheet({
           <div className="grid grid-cols-4 gap-2">
             {(
               [
-                ["card", "Their card", <Sparkles key="i" size={20} />],
+                ["card", "Their card", <Layers key="i" size={20} />],
                 ["this", "This or That", <Split key="i" size={20} />],
                 ["voice", "Voice hello", <Mic key="i" size={20} />],
                 ["game", "Play a game", <Gamepad2 key="i" size={20} />],
@@ -398,18 +389,6 @@ export function IcebreakerSheet({
                     <Shuffle size={15} /> Another of {first}&apos;s cards
                   </button>
                 )}
-                <div className="flex flex-wrap gap-2">
-                  {openers(thing).map((o) => (
-                    <button
-                      key={o}
-                      type="button"
-                      onClick={() => setText(o)}
-                      className={clsx("rounded-full border px-3 py-1.5 text-left text-[13px] transition", text === o ? "border-brand bg-brand-soft text-brand-ink" : "border-line bg-surface text-ink-soft")}
-                    >
-                      {o}
-                    </button>
-                  ))}
-                </div>
                 <textarea
                   value={text}
                   onChange={(e) => setText(e.target.value)}
@@ -557,7 +536,7 @@ export function IcebreakerSheet({
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 maxLength={160}
-                placeholder="Add a line (optional): loser buys the Chapman 😄"
+                placeholder="Add a message (optional)"
                 className="h-12 w-full rounded-2xl border border-line bg-surface px-4 text-[15px] outline-none focus:border-brand"
               />
             </div>

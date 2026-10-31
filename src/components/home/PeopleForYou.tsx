@@ -1,7 +1,7 @@
 "use client";
 
 import { MaskIcon } from "@/components/ui/MaskIcon";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Photo } from "@/components/ui/Photo";
 import Link from "next/link";
 import clsx from "clsx";
@@ -18,9 +18,32 @@ import { useMeetList } from "@/components/explore/useMeetList";
 import { isOnline, usePresence } from "@/lib/usePresence";
 import { ExploreProfileSheet } from "@/components/explore/ExploreProfileSheet";
 
-const SHOWN = 6;
+/** How many show at first, and how many more each "See more people" adds */
+const PAGE = 6;
 
-/** Home: your 20 closest matches from Meet, in small circles (4 across), and a way to the rest */
+/**
+ * A new shuffle each time the app opens (kept while you use it, so the list doesn't jump around),
+ * so Explore never feels the same twice.
+ */
+function sessionSeed() {
+  try {
+    const saved = sessionStorage.getItem("dp_people_seed");
+    if (saved) return Number(saved);
+    const s = Math.floor(Math.random() * 1e9);
+    sessionStorage.setItem("dp_people_seed", String(s));
+    return s;
+  } catch {
+    return Math.floor(Math.random() * 1e9);
+  }
+}
+/** 0 to 1, the same for the same person and seed */
+function jitter(seed: number, id: string) {
+  let h = seed >>> 0;
+  for (let i = 0; i < id.length; i++) h = Math.imul(h ^ id.charCodeAt(i), 2654435761) >>> 0;
+  return (h % 10000) / 10000;
+}
+
+/** Explore: people for you, like Instagram posts. Online first, shuffled each visit, more on tap */
 export function PeopleForYou({ userId, demo, demoBreak, demoBreakMode }: { userId: string; demo?: ExploreList; /** Previews: open the icebreaker for this person */ demoBreak?: number; demoBreakMode?: "card" | "this" | "voice" | "game" }) {
   const { list, reload } = useMeetList(userId, demo ?? null);
   const supabase = useMemo(() => createClient(), []);
@@ -48,15 +71,29 @@ export function PeopleForYou({ userId, demo, demoBreak, demoBreakMode }: { userI
     if (r.mutual) notify({ kind: "wave", personId: p.id });
     router.push(r.kind === "match" ? `/matches/${r.id}` : `/masquerade/${r.id}`);
   }
-  const [breaking, setBreaking] = useState<string | null>(demoBreak != null ? (demo?.people[demoBreak]?.id ?? null) : null);
-  // In the order Dashpad suggests: people who fit your gender, mood and age first (being online
-  // already counts in that order). Who's online is checked live (every 30s), the same way as in
-  // Chats, for the green dot; the list itself is kept for 10 minutes
-  const { seen, now } = usePresence(demo ? [] : (list?.people ?? []).slice(0, 50).map((p) => p.id));
+  // Who you're breaking the ice with (kept as it was when you tapped, even if the list refreshes)
+  const [breaking, setBreaking] = useState<ExplorePerson | null>(demoBreak != null ? (demo?.people[demoBreak] ?? null) : null);
+  // The order: people online now first, then everyone else. Within each, better matches come
+  // first, shuffled a little each time the app opens so it never feels the same. The order is set
+  // when the list loads; the green dot is checked live (every 30s), like in Chats.
+  const [shown, setShown] = useState(PAGE);
+  const [seed] = useState(() => (demo ? 1 : sessionSeed()));
+  // Once set, people keep their places when the list reloads (after a wave or an icebreaker), so
+  // nothing jumps while you scroll; anyone new joins at the end
+  const placed = useRef<string[]>([]);
+  const ordered = useMemo(() => {
+    const all = [...(list?.people ?? [])];
+    const rank = (p: ExplorePerson) => (p.match ?? 50) + jitter(seed, p.id) * 30;
+    const fresh = all.sort((a, b) => Number(b.online) - Number(a.online) || rank(b) - rank(a));
+    const byId = new Map(fresh.map((p) => [p.id, p]));
+    const kept = placed.current.filter((id) => byId.has(id));
+    const order = [...kept, ...fresh.map((p) => p.id).filter((id) => !kept.includes(id))];
+    placed.current = order;
+    return order.map((id) => byId.get(id)!);
+  }, [list, seed]);
+  const { seen, now } = usePresence(demo ? [] : ordered.slice(0, 50).map((p) => p.id));
   const live = (p: { id: string; online: boolean }) => (demo || !(p.id in seen) ? p.online : isOnline(seen[p.id], now));
-  const people = [...(list?.people ?? [])]
-    .map((p) => ({ ...p, online: live(p) }))
-    .slice(0, SHOWN);
+  const people = ordered.slice(0, shown).map((p) => ({ ...p, online: live(p) }));
   if (list && people.length === 0) return null;
 
   return (
@@ -114,15 +151,44 @@ export function PeopleForYou({ userId, demo, demoBreak, demoBreakMode }: { userI
                       <MaskIcon className="w-3.5 text-white" eyes="rgba(0,0,0,0.4)" /> Masked
                     </span>
                   )}
+                  {/* What you're both into, on the photo */}
+                  <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/35 to-transparent px-3.5 pt-10 pb-3 text-left text-[13.5px] leading-snug text-white">
+                    <span className="block truncate">
+                      {p.shared?.length ? (
+                        <>
+                          <b className="font-semibold">You both like</b> {listOf(p.shared)}
+                        </>
+                      ) : p.tag ? (
+                        <>
+                          <b className="font-semibold">{p.name.split(" ")[0]}</b> is into {p.tag}
+                        </>
+                      ) : (
+                        <>
+                          <b className="font-semibold">{p.name.split(" ")[0]}</b> is new here
+                        </>
+                      )}
+                    </span>
+                    {(p.waved_me && !p.connected) || p.online ? (
+                      <span className="mt-0.5 flex items-center gap-1.5 text-[12px] text-white/85">
+                        {p.waved_me && !p.connected ? (
+                          "👋 Waved at you"
+                        ) : (
+                          <>
+                            <span className="h-1.5 w-1.5 rounded-full bg-[#7dffb5]" /> Online now
+                          </>
+                        )}
+                      </span>
+                    ) : null}
+                  </span>
                 </button>
                 {/* What to do */}
-                <div className="flex items-center gap-2 px-3 pt-2.5">
+                <div className="flex items-center gap-2 px-3 pt-2.5 pb-3">
                   <button
                     type="button"
                     onClick={() => {
                       tapFeedback();
                       if (p.connected) setOpen(p.id);
-                      else setBreaking(p.id);
+                      else setBreaking(p);
                     }}
                     className={clsx(
                       "inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full text-[14px] font-semibold transition active:scale-95",
@@ -166,35 +232,26 @@ export function PeopleForYou({ userId, demo, demoBreak, demoBreakMode }: { userI
                     </button>
                   )}
                 </div>
-                {/* What you're both into */}
-                <p className="truncate px-3.5 pt-2 pb-3 text-[13px] text-ink-soft">
-                  {p.shared?.length ? (
-                    <>
-                      <b className="font-semibold text-ink">You both like</b> {listOf(p.shared)}
-                    </>
-                  ) : p.tag ? (
-                    <>
-                      <b className="font-semibold text-ink">{p.name.split(" ")[0]}</b> is into {p.tag}
-                    </>
-                  ) : (
-                    <>
-                      <b className="font-semibold text-ink">{p.name.split(" ")[0]}</b> is new here
-                    </>
-                  )}
-                  {p.waved_me && !p.connected ? " · waved at you 👋" : p.online ? " · online now" : ""}
-                </p>
               </li>
             ))
           : Array.from({ length: 2 }, (_, i) => <li key={i} className="aspect-[4/5.6] animate-pulse rounded-[24px] bg-ink/[0.06]" />)}
       </ul>
-      {list && (
-        <Link href="/meet" onClick={tapFeedback} className="mt-4 flex h-12 items-center justify-center gap-1.5 rounded-full border border-line bg-surface text-[14px] font-semibold text-brand transition active:scale-[0.98]">
-          <UsersRound size={16} /> See more people on Meet
-        </Link>
+      {/* More right here (the rest are on Meet, from the button at the top) */}
+      {list && shown < ordered.length && (
+        <button
+          type="button"
+          onClick={() => {
+            tapFeedback();
+            setShown((n) => n + PAGE);
+          }}
+          className="mt-4 flex h-12 w-full items-center justify-center gap-1.5 rounded-full border border-line bg-surface text-[14px] font-semibold text-brand transition active:scale-[0.98]"
+        >
+          <UsersRound size={16} /> See more people
+        </button>
       )}
 
       {open && <ExploreProfileSheet personId={open} onClose={() => setOpen(null)} onChanged={reload} />}
-      <IcebreakerSheet person={people.find((x) => x.id === breaking) ?? null} open={!!breaking} onClose={() => setBreaking(null)} demoMode={demoBreakMode} demo={!!demo} onSent={reload} />
+      <IcebreakerSheet person={breaking} open={!!breaking} onClose={() => setBreaking(null)} demoMode={demoBreakMode} demo={!!demo} onSent={reload} />
     </section>
   );
 }

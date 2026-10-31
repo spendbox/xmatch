@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import clsx from "clsx";
-import { Check, Mail, Megaphone, RefreshCw, Send, Sparkles } from "lucide-react";
+import { Check, Mail, Megaphone, RefreshCw, Send, Zap } from "lucide-react";
 import { emailAttendeesNow, postToRoom, roomMessages, type AdminRoomMessage } from "@/app/admin/(panel)/actions";
 import { Button } from "@/components/ui/Button";
 import { FormError, Input, Textarea } from "@/components/ui/Field";
@@ -60,7 +60,7 @@ export function LiveRoomCard({ eventId, initial }: { eventId: string; initial: A
         </Button>
       </div>
 
-      <p className="mt-5 mb-2 flex items-center gap-1.5 text-sm font-semibold text-ink-soft"><Sparkles size={15} /> Hype moments</p>
+      <p className="mt-5 mb-2 flex items-center gap-1.5 text-sm font-semibold text-ink-soft"><Zap size={15} /> Hype moments</p>
       <div className="flex flex-wrap gap-2">
         {MOMENTS.map((m) => (
           <button key={m} type="button" disabled={pending} onClick={() => post("moment", m)}

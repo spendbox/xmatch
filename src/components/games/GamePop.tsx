@@ -109,7 +109,7 @@ export function GamePop({ pop, big }: { pop: Pop | null; big?: boolean }) {
             opacity="0.95"
           />
         </svg>
-        {/* Sparkles flying out */}
+        {/* Little bursts flying out */}
         {sparks.map((s, i) => (
           <span
             key={i}

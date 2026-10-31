@@ -4,7 +4,7 @@ import { plural, word } from "@/lib/plural";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
-import { ArrowLeft, CalendarDays, Clock3, Handshake, MessageCircle, Repeat, Sparkles, Users } from "lucide-react";
+import { ArrowLeft, CalendarDays, Clock3, Gift, Handshake, MessageCircle, Repeat, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { countdown, eventPhase, eventWhen, themeBg, type DashpadEvent } from "@/lib/events";
 import { intentLabel } from "@/lib/constants";
@@ -285,7 +285,7 @@ export function EventLobby({
               <Li icon={<Clock3 size={16} />} text="Each round is a 5-minute masked chat with icebreakers made for tonight." />
               <Li icon={<Handshake size={16} />} text="Both unmask? You're connected. If not, the chat disappears." />
               <Li icon={<Repeat size={16} />} text="Then a new person — you'll never meet the same one twice tonight." />
-              <Li icon={<Sparkles size={16} />} text="Rounds don't use your 5 free daily masquerades." />
+              <Li icon={<Gift size={16} />} text="Rounds don't use your 5 free daily masquerades." />
             </ul>
           </div>
         </aside>

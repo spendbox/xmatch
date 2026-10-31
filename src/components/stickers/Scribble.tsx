@@ -3,10 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useCanvas } from "./ScribbleView";
 import clsx from "clsx";
-import {
-  Brush as BrushIcon, Droplets, Eraser, Flame, Heart, Highlighter, Maximize2, Minimize2, PaintBucket, Pencil, PenLine, Plus, Rainbow, Redo2, Sparkles,
-  SprayCan, Star, Trash2, Undo2, Waves, Zap,
-} from "lucide-react";
+import { Brush as BrushIcon, Droplets, Eraser, Flame, Heart, Highlighter, Maximize2, Minimize2, PaintBucket, Pencil, PenLine, Plus, Rainbow, Redo2, SprayCan, Star, Trash2, Undo2, Waves, Zap } from "lucide-react";
 import { tapFeedback } from "@/components/ui/Button";
 import {
   MAGIC, MAX_SIZE, MIN_SIZE, PAINT, PALETTE, SCRIBBLE_MAX_POINTS, START_COLOURS, brushName, drawScribble, pointCount, sizeOf, timeline,
@@ -24,7 +21,7 @@ const ICONS: Record<Brush, React.ComponentType<{ size?: number; className?: stri
   eraser: Eraser,
   neon: Zap,
   rainbow: Rainbow,
-  glitter: Sparkles,
+  glitter: Star,
   wobble: Waves,
   fire: Flame,
   hearts: Heart,

@@ -324,7 +324,7 @@ export function drawScribble(
       path(pts, (w) => w, (n) => `hsl(${Math.round(hue0 + n * 6 + shift) % 360}, 92%, 58%)`); // commas: older browsers need them
     } else if (s.b === "glitter") {
       path(pts, (w) => w, () => s.c);
-      // Sparkles along the line
+      // Glitter along the line
       let along = 0;
       for (let n = 1; n < pts.length; n++) {
         along += Math.hypot(pts[n].x - pts[n - 1].x, pts[n].y - pts[n - 1].y);

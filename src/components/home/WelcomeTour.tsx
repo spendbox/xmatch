@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import clsx from "clsx";
-import { Eye, Gamepad2, Sparkles, UsersRound } from "lucide-react";
+import { Eye, Gamepad2, Radar, UsersRound } from "lucide-react";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { tapFeedback } from "@/components/ui/Button";
 
@@ -25,7 +25,7 @@ const STEPS: Step[] = [
   },
   {
     target: "masquerade-card",
-    icon: <Sparkles size={22} />,
+    icon: <Radar size={22} />,
     title: "Your Masquerade card",
     body: "Your pair shows up here as soon as someone who fits is online. Tap the mic to send a disguised voice note, or the icons to change who you'd like to meet.",
   },

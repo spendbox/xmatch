@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
-import { Megaphone, MessageSquareOff, SendHorizontal, Sparkles, Timer } from "lucide-react";
+import { Megaphone, MessageSquareOff, SendHorizontal, Timer, Zap } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { HYPE_REACTIONS, type EventSettings, type RoomMessage } from "@/lib/events";
 import { eventError, nameColor } from "@/lib/eventSpace";
@@ -252,7 +252,7 @@ function RoomLine({ m, mine }: { m: RoomMessage; mine: boolean }) {
     return (
       <div className="my-2 animate-fade-up rounded-2xl border border-gold/50 bg-gold-soft px-4 py-3">
         <p className="inline-flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-[#9a6a0c] uppercase">
-          <Sparkles size={13} /> Moment
+          <Zap size={13} /> Moment
         </p>
         <p className="mt-0.5 text-[15px] leading-snug font-medium break-words text-ink">{m.body}</p>
       </div>

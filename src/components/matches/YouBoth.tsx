@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Gamepad2, MapPin, Sparkles, Stamp } from "lucide-react";
+import { Gamepad2, MapPin, Quote, Stamp } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { InterestIcon } from "@/components/ui/icons";
 
@@ -42,7 +42,7 @@ export function YouBoth({ other, session, tone = "light", demo }: { other?: stri
       title: `Picked the same in ${data.tot.same} of ${data.tot.rounds} This or That`,
       detail: data.tot.items.length ? data.tot.items.map((x) => x.a).join(" · ") : undefined,
     });
-  if (data.words?.length) rows.push({ key: "w", icon: <Sparkles size={16} />, title: `Mentioned ${list(data.words.slice(0, 4))}` });
+  if (data.words?.length) rows.push({ key: "w", icon: <Quote size={16} />, title: `Mentioned ${list(data.words.slice(0, 4))}` });
   if (data.linkups?.count)
     rows.push({
       key: "l",

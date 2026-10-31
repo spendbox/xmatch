@@ -3,7 +3,7 @@
 import { sexLabel } from "@/lib/eventSpace";
 import { useMemo, useState } from "react";
 import clsx from "clsx";
-import { Eye, MessageCircle, RefreshCw, Sparkles, Users } from "lucide-react";
+import { Eye, MessageCircle, RefreshCw, Shapes, Users } from "lucide-react";
 import type { WallPerson } from "@/lib/events";
 import { BlurPhoto } from "./common";
 
@@ -113,7 +113,7 @@ export function Wall({
                   {sexLabel(p.gender) && <span className="block text-[12px] font-medium text-white/85">{sexLabel(p.gender)}</span>}
                   {p.shared > 0 && (
                     <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-semibold backdrop-blur">
-                      <Sparkles size={11} /> {p.shared} in common
+                      <Shapes size={11} /> {p.shared} in common
                     </span>
                   )}
                 </span>

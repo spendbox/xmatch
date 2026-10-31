@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
-import { BellRing, Check, ChevronRight, Gift, MapPin, Sparkles } from "lucide-react";
+import { BellRing, Check, ChevronRight, Gift, Layers, ListChecks, MapPin } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { NEEDED, type Thing } from "@/lib/things";
 import { NotificationsPanel, usePushState } from "@/components/app/Notifications";
@@ -95,7 +95,7 @@ export function GettingStarted({
     <section className="mt-3 rounded-[22px] border border-line bg-surface px-3 py-2.5">
       <button type="button" onClick={() => setOpenSteps((o) => !o)} aria-expanded={openSteps} className="flex w-full items-center gap-3 text-left">
         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[12px] bg-brand-soft text-brand">
-          <Sparkles size={17} />
+          <ListChecks size={17} />
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-[15px] font-semibold">Get set up</p>
@@ -112,7 +112,7 @@ export function GettingStarted({
 
       <ul className={clsx("mt-2 divide-y divide-line", !openSteps && "hidden")}>
         <Row
-          icon={<Sparkles size={17} />}
+          icon={<Layers size={17} />}
           done={thingsOk}
           title={`Tell us ${NEEDED} things about you`}
           sub={thingsOk ? `${things.length} added · used to find your people` : `${things.length}/${NEEDED} · helps us pair you with people you click with`}
