@@ -936,10 +936,7 @@ export function MasqueradeRoom({
       {(them.things?.length ?? 0) > 0 && (
         <>
           <h3 className="mt-6 mb-1 text-[12px] font-semibold tracking-wide text-muted uppercase">Things about them</h3>
-          {/* A little room so the fanned cards don't touch the panel's edges */}
-          <div className="px-4">
-            <ThingsStack things={them.things!} title={`Things about ${theirName}`} />
-          </div>
+          <ThingsStack things={them.things!} title={`Things about ${theirName}`} />
         </>
       )}
 
