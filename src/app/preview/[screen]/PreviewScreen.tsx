@@ -1098,6 +1098,7 @@ function ScreenBody({ screen }: { screen: string }) {
           profile={{
             ...ada,
             things: [
+              { p: "else", a: "Games you love: Board games with friends, Card games, Scrabble, Ludo and Whot on Sunday evenings with the whole family, plus a little FIFA when my brother visits from Abuja" },
               { p: "food", a: "Jollof rice, Suya, Amala and ewedu, Pounded yam and egusi, Shawarma" },
               { p: "weekend", a: "Owambe till late" },
               { p: "music", a: "Burna Boy, Tems, Asake" },
