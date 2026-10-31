@@ -9,32 +9,53 @@ import { tapFeedback } from "@/components/ui/Button";
 
 /**
  * The answer, as big as fits. Starts large and shrinks until the whole answer fits in the space
- * on the card, on any phone (measured, not guessed), and again if the card changes size.
+ * on the card, on any phone (measured, not guessed). It measures again when the card changes size
+ * and when the card's font arrives (on a first visit it often lands after the first measure, and
+ * the bigger letters then spilled off the card). An answer too long even at the smallest size
+ * scrolls inside the card, so it's never cut off.
  */
 function FitText({ text, max, min }: { text: string; max: number; min: number }) {
   const box = useRef<HTMLDivElement>(null);
   const inner = useRef<HTMLSpanElement>(null);
+  const [scroll, setScroll] = useState(false);
   useLayoutEffect(() => {
     const b = box.current;
     const t = inner.current;
     if (!b || !t) return;
+    let frame = 0;
     const fit = () => {
+      if (!b.clientHeight || !b.clientWidth) return; // not on screen yet
       let size = max;
       t.style.fontSize = `${size}px`;
       while (size > min && (t.scrollHeight > b.clientHeight || t.scrollWidth > b.clientWidth)) {
         size -= 1;
         t.style.fontSize = `${size}px`;
       }
+      setScroll(t.scrollHeight > b.clientHeight + 1);
+    };
+    const soon = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(fit);
     };
     fit();
-    const ro = new ResizeObserver(fit);
+    const ro = new ResizeObserver(soon);
     ro.observe(b);
-    // The card's font can arrive after the first measure
-    void document.fonts?.ready.then(fit);
-    return () => ro.disconnect();
+    const fonts = document.fonts;
+    void fonts?.ready.then(soon);
+    fonts?.addEventListener?.("loadingdone", soon);
+    return () => {
+      ro.disconnect();
+      cancelAnimationFrame(frame);
+      fonts?.removeEventListener?.("loadingdone", soon);
+    };
   }, [text, max, min]);
   return (
-    <div ref={box} className="relative mt-3 flex min-h-0 flex-1 items-end overflow-hidden">
+    <div
+      ref={box}
+      className={clsx("relative mt-3 flex min-h-0 flex-1 overflow-hidden", scroll ? "items-start overflow-y-auto overscroll-contain" : "items-end")}
+      // Scrolling a long answer shouldn't swipe to the next card
+      onPointerDown={scroll ? (e) => e.stopPropagation() : undefined}
+    >
       <span ref={inner} className="block w-full font-display leading-[1.18] font-semibold break-words" style={{ fontSize: max }}>
         {text}
       </span>
@@ -42,7 +63,7 @@ function FitText({ text, max, min }: { text: string; max: number; min: number })
   );
 }
 
-/** One card's face: the prompt on top, the answer big underneath */
+/** One card's face: the question in a small label on top, the answer big underneath */
 export function CardFace({ thing, big }: { thing: Thing; big?: boolean }) {
   const p = promptOf(thing.p);
   return (
@@ -50,8 +71,15 @@ export function CardFace({ thing, big }: { thing: Thing; big?: boolean }) {
       <span aria-hidden className={clsx("absolute rounded-full bg-white/10", big ? "-top-20 -right-16 h-56 w-56" : "-top-10 -right-10 h-28 w-28")} />
       <span aria-hidden className={clsx("absolute rounded-full bg-black/10", big ? "-bottom-24 -left-14 h-52 w-52" : "-bottom-12 -left-8 h-24 w-24")} />
       <div className={clsx("relative flex min-h-0 flex-1 flex-col", big ? "p-6" : "p-4")}>
-        <span className={clsx("shrink-0 font-semibold text-white/80", big ? "text-[15px] leading-snug" : "line-clamp-2 text-[12px] leading-tight")}>{p.text}</span>
-        <FitText text={thing.a} max={big ? 36 : 22} min={big ? 13 : 10} />
+        <span
+          className={clsx(
+            "w-fit max-w-full shrink-0 rounded-full bg-black/20 font-semibold text-white/90",
+            big ? "px-3 py-1 text-[13.5px] leading-snug" : "line-clamp-1 px-2.5 py-0.5 text-[11px] leading-tight",
+          )}
+        >
+          {p.text}
+        </span>
+        <FitText text={thing.a} max={big ? 36 : 22} min={big ? 15 : 10} />
       </div>
     </div>
   );

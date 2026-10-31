@@ -191,7 +191,7 @@ const msgs: ChatMessage[] = [
 
 const recent = [
   { id: "m1", created_at: iso(3000), last_message_at: iso(200), intent: "dating" as const, other_id: "ada", display_name: "Ada", photos: [photo("#e5484d", "#f2b33d", "A")], age: 26, last_message: "Are you coming?", last_sender: "ada", unread: true },
-  { id: "m2", created_at: iso(3000), last_message_at: iso(200), intent: "friends" as const, other_id: "k", display_name: "Kemi", photos: [photo("#1f9d6b", "#f2b33d", "K")], age: 24, last_message: null, last_sender: null },
+  { id: "m2", created_at: iso(3000), last_message_at: iso(200), intent: "friends" as const, other_id: "k", display_name: "Kemi", photos: [photo("#1f9d6b", "#f2b33d", "K")], age: 24, last_message: null, last_sender: null, note: "Need a gym buddy 💪" },
   { id: "m3", created_at: iso(3000), last_message_at: iso(200), intent: "spicy" as const, other_id: "z", display_name: "Zara", photos: [photo("#5b3fd9", "#e5484d", "Z")], age: 29, last_message: null, last_sender: null },
 ];
 
@@ -295,7 +295,8 @@ const homePeople: ExploreList = {
   ...explorePeople,
   people: Array.from({ length: 20 }, (_, i) => {
     const p = explorePeople.people[i % explorePeople.people.length];
-    const extra = { shared: i % 3 === 2 ? [] : i % 2 ? ["Food"] : ["Afrobeats", "Food"], waved_me: i === 2, connected: i === 1, match: 97 - i * 3, tag: ["Afrobeats", "Foodie", "Travel", "Books", "Football", "Art"][i % 6], km: [3, 5, 8, 2, 12, 6][i % 6] };
+    const notes = ["Looking for the best suya in Yaba 🍢", null, "Beach this weekend? 🏖️", null, "Who's watching AFCON tonight? ⚽", null];
+    const extra = { note: notes[i % 6], photos: [p.photo, photo(["#5b3fd9", "#1f9d6b", "#e0477e"][i % 3], "#f2b33d", "2")].filter(Boolean) as string[], photo_count: i % 2 ? 2 : 4, seen_minutes: i % 3 ? 12 + i : null, reply_seconds: i % 2 ? 300 : 4000, reply_rate: 0.8, is_new: i === 3, views_7d: i === 0 ? 40 : 3, shared: i % 3 === 2 ? [] : i % 2 ? ["Food"] : ["Afrobeats", "Food"], waved_me: i === 2, connected: i === 1, match: 97 - i * 3, tag: ["Afrobeats", "Foodie", "Travel", "Books", "Football", "Art"][i % 6], km: [3, 5, 8, 2, 12, 6][i % 6] };
     return i < explorePeople.people.length ? { ...p, ...extra } : { ...p, ...extra, id: `${p.id}-${i}`, name: NAMES[i % NAMES.length], online: i % 3 === 0, connected: false };
   }),
 };

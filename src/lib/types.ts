@@ -47,6 +47,9 @@ export type Profile = {
   /** "Things about me" cards: prompt id and answer */
   things?: { p: string; a: string }[];
   ghost_until?: string | null;
+  /** Your note: one short line shown for 24 hours (update 108) */
+  note?: string | null;
+  note_at?: string | null;
   /** Their age is left out of what other people see */
   hide_age?: boolean;
 };
@@ -186,4 +189,6 @@ export type MatchSummary = {
   shared?: number;
   /** Something new from them since you last opened the chat */
   unread?: boolean;
+  /** Their note for today (update 108) */
+  note?: string | null;
 };
