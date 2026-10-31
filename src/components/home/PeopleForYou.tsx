@@ -167,7 +167,8 @@ export function PeopleForYou({ userId, demo, demoBreak, demoBreakMode }: { userI
                     <>
                       {/* Their voice intro: tap to hear them */}
                       {p.voice_intro && (
-                        <span className="absolute top-3 left-3">
+                        // Under the photo dots when they have more than one photo
+                        <span className={clsx("absolute left-3", (p.photo_count ?? 1) > 1 ? "top-11" : "top-3")}>
                           <HearMe id={`intro-${p.id}`} src={voiceUrl(p.voice_intro) ?? ""} seconds={p.voice_seconds} name={p.name.split(" ")[0]} />
                         </span>
                       )}

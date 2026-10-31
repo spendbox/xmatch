@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import clsx from "clsx";
 import { Check, ChevronLeft, Dices, PartyPopper, Trash2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { MAX_ANSWER, MAX_THINGS, NEEDED, ideasIn, nextPrompt, promptOf, toggleIdea, type Thing } from "@/lib/things";
+import { MAX_ANSWER, MAX_QUESTION, MAX_THINGS, NEEDED, ideasIn, joinOwn, nextPrompt, promptOf, splitOwn, toggleIdea, type Thing } from "@/lib/things";
 import { tapFeedback, Spinner } from "@/components/ui/Button";
 
 /**
@@ -33,7 +33,9 @@ export function ThingsDeck({
   const [things, setThings] = useState<Thing[]>(initial);
   const [skipped, setSkipped] = useState<string[]>([]);
   const [promptId, setPromptId] = useState<string>(() => (edit !== null ? initial[edit]?.p : nextPrompt(initial).id) ?? "else");
-  const [answer, setAnswer] = useState(edit !== null ? (initial[edit]?.a ?? "") : "");
+  // "Something else about me": your own question, kept apart from the answer while you write
+  const [answer, setAnswer] = useState(edit !== null && initial[edit] ? splitOwn(initial[edit]).a : "");
+  const [question, setQuestion] = useState(edit !== null && initial[edit] ? (splitOwn(initial[edit]).q ?? "") : "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [celebrate, setCelebrate] = useState(false);
@@ -57,7 +59,8 @@ export function ThingsDeck({
     setError(null);
     setCursor(edit);
     setPromptId(edit !== null ? (initial[edit]?.p ?? "else") : nextPrompt(initial).id);
-    setAnswer(edit !== null ? (initial[edit]?.a ?? "") : "");
+    setAnswer(edit !== null && initial[edit] ? splitOwn(initial[edit]).a : "");
+    setQuestion(edit !== null && initial[edit] ? (splitOwn(initial[edit]).q ?? "") : "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, edit]);
 
@@ -65,7 +68,8 @@ export function ThingsDeck({
   function go(i: number, list = things) {
     setCursor(i);
     setPromptId(list[i].p);
-    setAnswer(list[i].a);
+    setAnswer(splitOwn(list[i]).a);
+    setQuestion(splitOwn(list[i]).q ?? "");
     setError(null);
     setN((x) => x + 1);
   }
@@ -74,6 +78,7 @@ export function ThingsDeck({
     setCursor(null);
     setPromptId(nextPrompt(list, skipped).id);
     setAnswer("");
+    setQuestion("");
     setError(null);
     setN((x) => x + 1);
   }
@@ -98,7 +103,8 @@ export function ThingsDeck({
   }
 
   async function next() {
-    const a = answer.trim();
+    // Your own question (Something else about me) is saved with the answer
+    const a = promptId === "else" ? joinOwn(question, answer) : answer.trim();
     if (!a || busy) return;
     // Going back through your cards without changing one: just move on
     if (editing && !single && things[cursor!].a === a) {
@@ -116,6 +122,7 @@ export function ThingsDeck({
       if (single) return onClose();
       if (editing) return cursor! + 1 < saved.length ? go(cursor! + 1, saved) : fresh(saved);
       setAnswer("");
+      setQuestion("");
       setN((x) => x + 1);
       if (saved.length === NEEDED) setCelebrate(true);
       else if (saved.length >= MAX_THINGS) onClose();
@@ -250,6 +257,17 @@ export function ThingsDeck({
               }}
             >
               <p className="mt-6 font-display text-[30px] leading-[1.1] font-semibold">{prompt.text}</p>
+              {/* Something else about me: ask your own question, then answer it */}
+              {promptId === "else" && (
+                <input
+                  value={question}
+                  onChange={(e) => setQuestion(e.target.value.slice(0, MAX_QUESTION))}
+                  maxLength={MAX_QUESTION}
+                  placeholder="Your own question (optional), e.g. Games I love"
+                  aria-label="Your own question"
+                  className="mt-4 h-12 w-full rounded-2xl bg-black/15 px-4 text-[15px] font-semibold text-white outline-none placeholder:font-normal placeholder:text-white/55 focus:bg-black/20"
+                />
+              )}
               <textarea
                 ref={input}
                 value={answer}
@@ -315,7 +333,7 @@ export function ThingsDeck({
                   className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-white text-[15px] font-bold text-ink transition active:scale-[0.98] disabled:opacity-60"
                 >
                   {busy ? <Spinner className="h-4 w-4" /> : <Check size={18} />}
-                  {single ? "Save" : editing ? (things[cursor!]?.a === answer.trim() ? "Next" : "Save & next") : left > 1 ? `Next · ${left - 1} to go` : left === 1 ? "Finish" : "Add"}
+                  {single ? "Save" : editing ? (things[cursor!]?.a === (promptId === "else" ? joinOwn(question, answer) : answer.trim()) ? "Next" : "Save & next") : left > 1 ? `Next · ${left - 1} to go` : left === 1 ? "Finish" : "Add"}
                 </button>
               </div>
             </form>

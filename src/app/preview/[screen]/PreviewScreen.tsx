@@ -67,6 +67,7 @@ const sampleScribble: Drawing = (() => {
 })();
 import { MaskedVoiceSheet } from "@/components/chat/MaskedVoiceSheet";
 import { MatchPopView } from "@/components/app/MatchPop";
+import { AdminMoods } from "@/components/admin/AdminMoods";
 import { Outcome } from "@/components/masquerade/Outcome";
 import { MatchesList } from "@/components/matches/MatchesList";
 import { MatchChat } from "@/components/matches/MatchChat";
@@ -929,7 +930,7 @@ function ScreenBody({ screen }: { screen: string }) {
     case "admin-night-spotlight":
       return <AdminShell><NightEditor night={{ ...adminNights[0], kind: "spotlight", settings: { free_reveals: 10, reveal_cost: 1, max_chats: 5 } }} /></AdminShell>;
     case "admin":
-      return <AdminShell><AdminOverview promptsAhead={1} overview={{ users: 2841, new_users_7d: 312, online_now: 214, masquerades_today: 1290, unmasks_today: 388, matches_total: 6120, revenue_30d_kobo: 184500000, keys_sold_30d: 112400, gifts_7d: 2290, gift_keys_7d: 31400, gifts_free_7d: 640, reports_7d: 4, icebreakers: 112 }} nights={adminNights} /></AdminShell>;
+      return <AdminShell><AdminOverview promptsAhead={1} overview={{ users: 2841, new_users_7d: 312, online_now: 214, masquerades_today: 1290, unmasks_today: 388, matches_total: 6120, revenue_30d_kobo: 184500000, keys_sold_30d: 112400, gifts_7d: 2290, gift_keys_7d: 31400, gifts_free_7d: 640, reports_7d: 4, icebreakers: 112 }} nights={adminNights} moods={<AdminMoods rows={[{ intent: "dating", total: 1480, active_7d: 902, online: 118, masquerade_on: 1105, women: 640, men: 812 }, { intent: "friends", total: 934, active_7d: 511, online: 61, masquerade_on: 640, women: 498, men: 421 }, { intent: "spicy", total: 427, active_7d: 296, online: 35, masquerade_on: 380, women: 151, men: 268 }]} />} /></AdminShell>;
     case "feed":
     case "feed-gifts":
       return (

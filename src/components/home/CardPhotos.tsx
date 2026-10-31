@@ -152,9 +152,9 @@ export function CardPhotos({
       )}
       <style>{`@keyframes dp-wave-burst{0%{transform:scale(.4);opacity:0}25%{transform:scale(1.15);opacity:1}70%{transform:scale(1);opacity:1}100%{transform:scale(1.05);opacity:0}}.dp-wave-burst{animation:dp-wave-burst .9s ease-out both}`}</style>
 
-      {/* Which photo you're on */}
+      {/* Which photo you're on: top left, out of the way of the words at the bottom */}
       {slides > 1 && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-1.5 flex justify-center gap-1">
+        <div className="pointer-events-none absolute top-3 left-3 flex items-center gap-1 rounded-full bg-black/35 px-2 py-1.5 backdrop-blur">
           {Array.from({ length: slides }, (_, i) => (
             <span key={i} className={clsx("h-1.5 rounded-full transition-all", i === index ? "w-4 bg-white" : "w-1.5 bg-white/55")} />
           ))}

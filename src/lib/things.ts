@@ -24,8 +24,29 @@ export type ThingPromptRow = { id: string; text: string; ideas: string[]; tone: 
 
 export const NEEDED = 10;
 export const MAX_THINGS = 40;
-// Room for a few picks from the ideas ("Jollof rice, Suya, Shawarma")
-export const MAX_ANSWER = 120;
+// Room for a few picks from the ideas ("Jollof rice, Suya, Shawarma") or a proper sentence
+export const MAX_ANSWER = 140;
+/** "Something else about me": your own question, up to this long */
+export const MAX_QUESTION = 50;
+
+/**
+ * "Something else about me" lets you ask your own question. It's saved with the answer as
+ * "Question: answer" (or "Question? answer"); this splits it back so the card can show your
+ * question as its label and your answer underneath. Other cards: no question of their own.
+ */
+export function splitOwn(t: Thing): { q: string | null; a: string } {
+  if (t.p !== "else") return { q: null, a: t.a };
+  const m = t.a.match(/^(.{3,80}?[?:])\s+([\s\S]+)$/);
+  if (!m) return { q: null, a: t.a };
+  const q = m[1].endsWith(":") ? m[1].slice(0, -1).trim() : m[1].trim();
+  return q ? { q, a: m[2].trim() } : { q: null, a: t.a };
+}
+/** Your own question and answer, saved together */
+export function joinOwn(q: string, a: string) {
+  const question = q.trim().replace(/:+$/, "");
+  if (!question) return a.trim();
+  return question.endsWith("?") ? `${question} ${a.trim()}` : `${question}: ${a.trim()}`;
+}
 
 /** Card colours Admin can pick from */
 export const TONES = {

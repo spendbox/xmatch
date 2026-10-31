@@ -24,7 +24,7 @@ export type Overview = {
   icebreakers: number;
 };
 
-export function AdminOverview({ overview: o, nights, promptsAhead = 0 }: { overview: Overview; nights: AdminNight[]; promptsAhead?: number }) {
+export function AdminOverview({ overview: o, nights, promptsAhead = 0, moods }: { overview: Overview; nights: AdminNight[]; promptsAhead?: number; /** What mood people choose, under the numbers */ moods?: React.ReactNode }) {
   const upcoming = nights.filter((n) => n.status !== "cancelled" && new Date(n.ends_at).getTime() > Date.now()).reverse().slice(0, 3);
   const stats = [
     { label: "Members", value: o.users.toLocaleString(), sub: `+${o.new_users_7d} this week`, icon: Users, tone: "bg-brand-soft text-brand" },
@@ -70,6 +70,7 @@ export function AdminOverview({ overview: o, nights, promptsAhead = 0 }: { overv
           </div>
         ))}
       </div>
+      {moods}
 
       <div className="mt-10 mb-4 flex items-center justify-between">
         <h2 className="text-[18px] font-semibold">Upcoming events</h2>

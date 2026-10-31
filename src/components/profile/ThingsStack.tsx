@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import clsx from "clsx";
 import { ChevronLeft, ChevronRight, Hand, Pencil, Plus, X } from "lucide-react";
-import { promptOf, type Thing } from "@/lib/things";
+import { promptOf, splitOwn, type Thing } from "@/lib/things";
 import { tapFeedback } from "@/components/ui/Button";
 
 /**
@@ -78,6 +78,8 @@ function FitText({ text, big }: { text: string; big: boolean }) {
 /** One card's face: the question in a small label on top, the answer big underneath */
 export function CardFace({ thing, big }: { thing: Thing; big?: boolean }) {
   const p = promptOf(thing.p);
+  // "Something else about me": their own question is the label, their answer the big words
+  const own = splitOwn(thing);
   return (
     <div className="relative flex h-full w-full flex-col overflow-hidden text-left text-white" style={{ background: p.tone }}>
       <span aria-hidden className={clsx("absolute rounded-full bg-white/10", big ? "-top-20 -right-16 h-56 w-56" : "-top-10 -right-10 h-28 w-28")} />
@@ -85,13 +87,13 @@ export function CardFace({ thing, big }: { thing: Thing; big?: boolean }) {
       <div className={clsx("relative flex min-h-0 flex-1 flex-col", big ? "p-6" : "p-4")}>
         <span
           className={clsx(
-            "w-fit max-w-full shrink-0 rounded-full bg-black/20 font-semibold text-white/90",
+            "w-fit max-w-full shrink-0 rounded-2xl bg-black/20 font-semibold text-white/90",
             big ? "px-3 py-1 text-[13.5px] leading-snug" : "line-clamp-1 px-2.5 py-0.5 text-[11px] leading-tight",
           )}
         >
-          {p.text}
+          {own.q ?? p.text}
         </span>
-        <FitText text={thing.a} big={!!big} />
+        <FitText text={own.a} big={!!big} />
       </div>
     </div>
   );
