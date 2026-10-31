@@ -14,6 +14,8 @@ export type ExplorePerson = {
   online: boolean;
   /** You already have a chat with them */
   connected: boolean;
+  /** You've both unmasked: their real face shows (update 111) */
+  unmasked?: boolean;
   /** How well you match, 0 to 100 (update 106) */
   match?: number;
   /** An interest to show: one you share first */
@@ -65,6 +67,8 @@ export type ExploreProfile = {
   photos: string[];
   photo_count: number;
   photos_unlocked: boolean;
+  /** You've both unmasked: these are their real photos (update 111) */
+  unmasked?: boolean;
   /** Whether you can pay Keys to see their other photos (otherwise: once you're connected) */
   photos_paid?: boolean;
   /** You've waved at them / they've waved at you */

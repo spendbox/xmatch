@@ -150,7 +150,7 @@ export function PeopleForYou({ userId, demo, demoBreak, demoBreakMode }: { userI
                     ))}
                   </div>
                 )}
-                {/* Their photos to swipe (masked until you both unmask). Tap: profile. Double-tap: wave */}
+                {/* Their photos to swipe (masked until you both unmask, then their real face). Tap: profile. Double-tap: wave */}
                 <CardPhotos
                   person={p}
                   demo={!!demo}
@@ -172,7 +172,7 @@ export function PeopleForYou({ userId, demo, demoBreak, demoBreakMode }: { userI
                           <HearMe id={`intro-${p.id}`} src={voiceUrl(p.voice_intro) ?? ""} seconds={p.voice_seconds} name={p.name.split(" ")[0]} />
                         </span>
                       )}
-                  {!p.connected && (
+                  {!p.unmasked && (
                     <span className="absolute top-3 right-3 inline-flex items-center gap-1 rounded-full bg-ink/55 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur">
                       <MaskIcon className="w-3.5 text-white" eyes="rgba(0,0,0,0.4)" /> Masked
                     </span>
