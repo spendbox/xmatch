@@ -1107,6 +1107,7 @@ function ScreenBody({ screen }: { screen: string }) {
             ],
           }}
           shared={["Travel", "Food"]}
+          sharedWords={["jollof", "suya", "scrabble"]}
           onClose={() => {}}
         />
       );

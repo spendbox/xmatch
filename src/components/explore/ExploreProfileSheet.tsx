@@ -149,6 +149,7 @@ export function ExploreProfileSheet({
           : undefined
       }
       commonWith={p.id}
+      sharedWords={p.shared_words}
       shared={p.shared_interests}
       onClose={onClose}
       note={[(personId in presence.seen ? isOnline(presence.seen[personId], presence.now) : p.online) ? "Online now" : null, p.place, both].filter(Boolean).join(" · ") || undefined}

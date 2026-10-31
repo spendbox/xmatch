@@ -22,6 +22,7 @@ export function ProfileSheet({
   locked,
   commonWith,
   age: ageIn,
+  sharedWords,
 }: {
   profile: Profile;
   onClose: () => void;
@@ -37,6 +38,8 @@ export function ProfileSheet({
   commonWith?: string;
   /** Their age, when you don't have their birthday (Meet) */
   age?: number | null;
+  /** Words you both used in your things: marked on their cards */
+  sharedWords?: string[];
 }) {
   const [i, setI] = useState(0);
   const [mounted, setMounted] = useState(false);
@@ -179,7 +182,7 @@ export function ProfileSheet({
           {(profile.things?.length ?? 0) > 0 && (
             <section className="rounded-3xl bg-surface p-5 shadow-card">
               <h3 className="mb-3 text-[13px] font-semibold tracking-wide text-muted uppercase">Things about {profile.display_name?.split(" ")[0] ?? "them"}</h3>
-              <ThingsStack things={profile.things!} title={`Things about ${profile.display_name?.split(" ")[0] ?? "them"}`} />
+              <ThingsStack things={profile.things!} shared={sharedWords} title={`Things about ${profile.display_name?.split(" ")[0] ?? "them"}`} />
             </section>
           )}
           {profile.interests?.length > 0 && (

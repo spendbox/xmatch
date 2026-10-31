@@ -21,30 +21,30 @@ const STEPS: Step[] = [
   {
     icon: <MaskIcon className="w-8" eyes="#5b3fd9" />,
     title: "Welcome to Dashpad",
-    body: "Turn on Masquerade to match with someone online, completely anonymous. Chat, send disguised voice notes, play games, and unmask when you're both ready.",
+    body: "Everyone here is masked. Chat, send voice notes and play games without showing your face. When you both unmask, you see each other's real photos.",
   },
   {
     target: "masquerade-card",
     icon: <Radar size={22} />,
     title: "Your Masquerade card",
-    body: "Your pair shows up here as soon as someone who fits is online. Tap the mic to send a disguised voice note, or the icons to change who you'd like to meet.",
+    body: "Switch it on and you're paired the moment someone who fits is online. Once paired, tap the mic to send them a voice note. Tap your icons to change who you'd like to meet.",
   },
   {
     target: "views",
     icon: <Eye size={22} />,
     title: "Who viewed you",
-    body: "See who looked at your profile this week. Wave at someone you like: if you both wave, a chat opens for free.",
+    body: "See who looked at your profile this week. Wave at someone you like: if you both wave, a masked chat opens.",
   },
   {
     target: "people",
     icon: <UsersRound size={22} />,
     title: "People for you",
-    body: "People we think you'll click with, with how well you match. Tap Break the ice to reply to one of their cards, ask a This or That, send a voice hello or challenge them to a game. Meet everyone has the full list.",
+    body: "People who fit you, with how well you match. Swipe their photos, tap Hear me for their voice intro, or double-tap to wave. Break the ice to reply to a card, ask a This or That, send a voice hello or challenge them to a game.",
   },
   {
     icon: <Gamepad2 size={22} />,
     title: "Games, gifts and voice notes",
-    body: "In any chat, tap + for games and gifts. In masked chats, the mic sends a voice note in a disguised voice.",
+    body: "In any chat, tap + for games and gifts. In masked chats your voice notes are disguised, unless you pick Normal to use your real voice.",
   },
 ];
 
