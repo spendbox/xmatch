@@ -2,7 +2,6 @@
 
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { useMemo, useRef, useState } from "react";
-import { Photo } from "@/components/ui/Photo";
 import Link from "next/link";
 import clsx from "clsx";
 import { Check, ChevronRight, MessageCircle, Snowflake, UsersRound } from "lucide-react";
@@ -46,7 +45,7 @@ function jitter(seed: number, id: string) {
   return (h % 10000) / 10000;
 }
 
-/** Explore: people for you, like Instagram posts. Online first, shuffled each visit, more on tap */
+/** Explore: people for you, one full-photo card each. Online first, shuffled each visit, more on tap */
 export function PeopleForYou({ userId, demo, demoBreak, demoBreakMode }: { userId: string; demo?: ExploreList; /** Previews: open the icebreaker for this person */ demoBreak?: number; demoBreakMode?: "card" | "this" | "voice" | "game" }) {
   const { list, reload } = useMeetList(userId, demo ?? null);
   const supabase = useMemo(() => createClient(), []);
@@ -109,50 +108,17 @@ export function PeopleForYou({ userId, demo, demoBreak, demoBreakMode }: { userI
         </Link>
       </div>
 
-      {/* One post per person, like Instagram: every card the same size */}
+      {/* One full-photo card per person, every card the same size */}
       {waveError && <p className="mb-2 text-center text-[13px] font-medium text-chili">{waveError}</p>}
       <ul className="space-y-4">
         {list
           ? people.map((p, i) => (
-              <li key={p.id} className="animate-fade-up overflow-hidden rounded-[24px] border border-line bg-surface" style={{ animationDelay: `${Math.min(i, 12) * 40}ms` }}>
-                {/* Who */}
-                <div className="flex items-center gap-2.5 px-3 py-2.5">
-                  <span className="relative h-9 w-9 shrink-0">
-                    <span className="block h-full w-full overflow-hidden rounded-full p-[2px]" style={{ background: "linear-gradient(135deg,#f2b33d,#e0477e,#8f3fd9)" }}>
-                      <span className="block h-full w-full overflow-hidden rounded-full bg-surface p-[1.5px]">
-                        {p.photo ? <Photo src={p.photo} id={p.id} gender={p.gender} className="h-full w-full rounded-full object-cover" /> : <span className="block h-full w-full rounded-full bg-brand-soft" />}
-                      </span>
-                    </span>
-                    {p.online && <span className="absolute -right-0.5 -bottom-0.5 h-3 w-3 rounded-full bg-mint ring-2 ring-surface" />}
-                  </span>
-                  <div className="min-w-0 flex-1 leading-tight">
-                    <p className="truncate text-[14px] font-semibold">
-                      {p.name.split(" ")[0]}
-                      {p.age != null && <span className="font-normal text-muted">, {p.age}</span>}
-                    </p>
-                    <p className="truncate text-[12px] text-muted">{[p.place, p.km != null ? `${p.km} km away` : null].filter(Boolean).join(" · ")}</p>
-                  </div>
-                  {p.match != null && <span className="shrink-0 rounded-full bg-brand-soft px-2.5 py-1 text-[12px] font-bold text-brand-ink">{p.match}% match</span>}
-                </div>
-                {/* Their note for today, in a bubble from their photo */}
-                {p.note && (
-                  <div className="mx-3 mb-2.5 w-fit max-w-[85%] rounded-2xl rounded-tl-md bg-cream px-3 py-2 text-[13.5px] leading-snug font-medium text-ink">
-                    {p.note}
-                  </div>
-                )}
-                {/* Signs of life */}
-                {chipsFor(p).length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 px-3 pb-2.5">
-                    {chipsFor(p).map((c) => (
-                      <span key={c} className="rounded-full bg-cream px-2.5 py-1 text-[11.5px] font-semibold text-ink-soft">
-                        {c}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                {/* Their photos to swipe (masked until you both unmask, then their real face). Tap: profile. Double-tap: wave */}
+              <li key={p.id} className="animate-fade-up overflow-hidden rounded-[28px] bg-ink shadow-[0_18px_40px_-22px_rgba(28,24,40,0.55)]" style={{ animationDelay: `${Math.min(i, 12) * 40}ms` }}>
+                {/* The whole card is their photos (swipe through them). Everything sits on top.
+                    Tap the photo: profile. Double-tap: wave */}
                 <CardPhotos
                   person={p}
+                  tall
                   demo={!!demo}
                   photosPaid={list?.photos_paid ?? true}
                   photosCost={list?.photos_cost ?? 0}
@@ -165,104 +131,118 @@ export function PeopleForYou({ userId, demo, demoBreak, demoBreakMode }: { userI
                   }}
                   overlay={
                     <>
-                      {/* Their voice intro: tap to hear them */}
+                      {/* Top left, under the photo dots: their voice intro */}
                       {p.voice_intro && (
-                        // Under the photo dots when they have more than one photo
                         <span className={clsx("absolute left-3", (p.photo_count ?? 1) > 1 ? "top-11" : "top-3")}>
                           <HearMe id={`intro-${p.id}`} src={voiceUrl(p.voice_intro) ?? ""} seconds={p.voice_seconds} name={p.name.split(" ")[0]} />
                         </span>
                       )}
-                  {!p.unmasked && (
-                    <span className="absolute top-3 right-3 inline-flex items-center gap-1 rounded-full bg-ink/55 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur">
-                      <MaskIcon className="w-3.5 text-white" eyes="rgba(0,0,0,0.4)" /> Masked
-                    </span>
-                  )}
-                  {/* What you're both into, on the photo */}
-                  <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/35 to-transparent px-3.5 pt-10 pb-3 text-left text-[13.5px] leading-snug text-white">
-                    <span className="block truncate">
-                      {p.shared?.length ? (
-                        <>
-                          <b className="font-semibold">You both like</b> {listOf(p.shared)}
-                        </>
-                      ) : p.tag ? (
-                        <>
-                          <b className="font-semibold">{p.name.split(" ")[0]}</b> is into {p.tag}
-                        </>
-                      ) : (
-                        <>
-                          <b className="font-semibold">{p.name.split(" ")[0]}</b> is new here
-                        </>
-                      )}
-                    </span>
-                    {(p.waved_me && !p.connected) || p.online ? (
-                      <span className="mt-0.5 flex items-center gap-1.5 text-[12px] text-white/85">
-                        {p.waved_me && !p.connected ? (
-                          "👋 Waved at you"
-                        ) : (
-                          <>
-                            <span className="h-1.5 w-1.5 rounded-full bg-[#7dffb5]" /> Online now
-                          </>
+                      {/* Top right: how well you match, and whether they're masked */}
+                      <span className="absolute top-3 right-3 flex flex-col items-end gap-1.5">
+                        {p.match != null && <span className="rounded-full bg-white/90 px-2.5 py-1 text-[12px] font-bold text-brand-ink backdrop-blur">{p.match}% match</span>}
+                        {!p.unmasked && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-black/40 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur">
+                            <MaskIcon className="w-3.5 text-white" eyes="rgba(0,0,0,0.4)" /> Masked
+                          </span>
                         )}
                       </span>
-                    ) : null}
-                  </span>
+
+                      {/* Bottom: who they are, what you share, and what to do */}
+                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/55 to-transparent px-3.5 pt-24 pb-3.5 text-left text-white">
+                        {/* Their note for today */}
+                        {p.note && <p className="mb-2.5 w-fit max-w-[90%] rounded-2xl rounded-bl-md bg-white/95 px-3 py-2 text-[13.5px] leading-snug font-medium text-ink">{p.note}</p>}
+                        <p className="flex items-center gap-2 text-[22px] leading-tight font-bold">
+                          <span className="truncate">
+                            {p.name.split(" ")[0]}
+                            {p.age != null && <span className="font-medium text-white/85">, {p.age}</span>}
+                          </span>
+                          {p.online && <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#7dffb5] ring-2 ring-black/30" aria-label="Online now" />}
+                        </p>
+                        <p className="mt-0.5 truncate text-[13px] text-white/80">
+                          {[p.place, p.km != null ? `${p.km} km away` : null, p.waved_me && !p.connected ? "👋 Waved at you" : null].filter(Boolean).join(" · ")}
+                        </p>
+                        <p className="mt-1.5 truncate text-[13.5px] leading-snug">
+                          {p.shared?.length ? (
+                            <>
+                              <b className="font-semibold">You both like</b> {listOf(p.shared)}
+                            </>
+                          ) : p.tag ? (
+                            <>
+                              <b className="font-semibold">Into</b> {p.tag}
+                            </>
+                          ) : (
+                            <>New here</>
+                          )}
+                        </p>
+                        {/* Signs of life */}
+                        {chipsFor(p).length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {chipsFor(p).map((c) => (
+                              <span key={c} className="rounded-full bg-white/15 px-2.5 py-1 text-[11.5px] font-semibold text-white backdrop-blur">
+                                {c}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {/* What to do (the buttons take taps; the rest of the card still opens their profile) */}
+                        <div className="pointer-events-auto mt-3 flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              tapFeedback();
+                              if (p.connected) setOpen(p.id);
+                              else setBreaking(p);
+                            }}
+                            className="inline-flex h-11 flex-1 items-center justify-center gap-1.5 rounded-full bg-white text-[14.5px] font-bold text-ink transition active:scale-95"
+                          >
+                            {/* Never met: break the ice. Already chatting: Message */}
+                            {p.connected ? (
+                              <>
+                                <MessageCircle size={17} /> Message
+                              </>
+                            ) : (
+                              <>
+                                <Snowflake size={17} className="text-brand" /> Break the ice
+                              </>
+                            )}
+                          </button>
+                          {/* A quick wave (free unless Admin sets a price). If they waved first, waving back opens your chat */}
+                          {!p.connected && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void wave(p);
+                              }}
+                              disabled={!!waved[p.id] || p.i_waved || waving === p.id}
+                              aria-label={waved[p.id] || p.i_waved ? `You waved at ${p.name}` : p.waved_me ? `Wave back at ${p.name}` : `Wave at ${p.name}`}
+                              className={clsx(
+                                "inline-flex h-11 shrink-0 items-center justify-center gap-1 rounded-full px-4 text-[14.5px] font-semibold backdrop-blur transition active:scale-95 disabled:active:scale-100",
+                                p.waved_me && !(waved[p.id] || p.i_waved) ? "bg-gold text-ink" : "border border-white/30 bg-white/15 text-white",
+                              )}
+                            >
+                              {waving === p.id ? (
+                                <Spinner className="h-4 w-4" />
+                              ) : waved[p.id] || p.i_waved ? (
+                                <>
+                                  <Check size={16} /> Waved
+                                </>
+                              ) : (
+                                <>
+                                  <span aria-hidden className="text-[17px] leading-none">👋</span> {p.waved_me ? "Wave back" : "Wave"}
+                                </>
+                              )}
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     </>
                   }
                 />
-                {/* What to do */}
-                <div className="flex items-center gap-2 px-3 pt-2.5 pb-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      tapFeedback();
-                      if (p.connected) setOpen(p.id);
-                      else setBreaking(p);
-                    }}
-                    className={clsx(
-                      "inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full text-[14px] font-semibold transition active:scale-95",
-                      p.connected ? "border border-line bg-surface text-ink" : "bg-brand text-white",
-                    )}
-                  >
-                    {/* Never met: break the ice. Already chatting: Message */}
-                    {p.connected ? (
-                      <>
-                        <MessageCircle size={16} /> Message
-                      </>
-                    ) : (
-                      <>
-                        <Snowflake size={16} /> Break the ice
-                      </>
-                    )}
-                  </button>
-                  {/* A quick wave (free unless Admin sets a price). If they waved first, waving back opens your chat */}
-                  {!p.connected && (
-                    <button
-                      type="button"
-                      onClick={() => void wave(p)}
-                      disabled={!!waved[p.id] || p.i_waved || waving === p.id}
-                      aria-label={waved[p.id] || p.i_waved ? `You waved at ${p.name}` : p.waved_me ? `Wave back at ${p.name}` : `Wave at ${p.name}`}
-                      className={clsx(
-                        "inline-flex h-10 shrink-0 items-center justify-center gap-1 rounded-full border px-3.5 text-[14px] font-semibold transition active:scale-95 disabled:active:scale-100",
-                        p.waved_me && !(waved[p.id] || p.i_waved) ? "border-gold/60 bg-gold-soft text-[#8a5a00]" : "border-line text-ink-soft",
-                      )}
-                    >
-                      {waving === p.id ? (
-                        <Spinner className="h-4 w-4" />
-                      ) : waved[p.id] || p.i_waved ? (
-                        <>
-                          <Check size={16} /> Waved
-                        </>
-                      ) : (
-                        <>
-                          <span aria-hidden className="text-[17px] leading-none">👋</span> {p.waved_me ? "Wave back" : "Wave"}
-                        </>
-                      )}
-                    </button>
-                  )}
-                </div>
               </li>
             ))
-          : Array.from({ length: 2 }, (_, i) => <li key={i} className="aspect-[4/5.6] animate-pulse rounded-[24px] bg-ink/[0.06]" />)}
+          : Array.from({ length: 2 }, (_, i) => <li key={i} className="aspect-[4/5.6] animate-pulse rounded-[28px] bg-ink/[0.06]" />)}
       </ul>
       {/* More right here (the rest are on Meet, from the button at the top) */}
       {list && shown < ordered.length && (
