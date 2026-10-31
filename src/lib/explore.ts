@@ -25,11 +25,25 @@ export type ExplorePerson = {
   /** You waved at them / they waved at you */
   i_waved?: boolean;
   waved_me?: boolean;
+  /** Photos you can see (all once unlocked or connected), and how many they have (update 108) */
+  photos?: string[];
+  photo_count?: number;
+  photos_unlocked?: boolean;
+  /** Their note for today */
+  note?: string | null;
+  /** Signs of life: minutes since they were last on, reply speed and rate, new this week, views this week */
+  seen_minutes?: number | null;
+  reply_seconds?: number | null;
+  reply_rate?: number | null;
+  is_new?: boolean;
+  views_7d?: number;
 };
 
 export type ExploreList = {
   message_cost: number;
   photos_cost: number;
+  /** People can pay to see someone's other photos (Admin switch) */
+  photos_paid?: boolean;
   people: ExplorePerson[];
 };
 

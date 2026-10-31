@@ -179,7 +179,12 @@ export function HomeScreen({
       <div className="mt-4">
         <MasqueradeCard userId={profile.id} ctl={ctl} prefs={prefs} onSettings={() => setMeetOpen(true)} />
       </div>
-      <RecentChats matches={matches} myId={profile.id} demoMasked={demoMasked} />
+      <RecentChats
+        matches={matches}
+        myId={profile.id}
+        demoMasked={demoMasked}
+        me={{ photo: profile.real_photos?.[0] ?? profile.photos?.[0], note: profile.note, noteAt: profile.note_at, intent: prefs.intent, demo: !!demoPeople }}
+      />
       <ProfileViews demo={demoViews} onKeys={refreshWallet} />
 
       <div className="lg:mt-8 lg:grid lg:grid-cols-12 lg:items-start lg:gap-8">

@@ -7,7 +7,10 @@ import { CHATS_EVENT } from "@/components/app/useMenuBadges";
 import { ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { nameColor } from "@/lib/eventSpace";
-import type { MatchSummary } from "@/lib/types";
+import type { Intent, MatchSummary } from "@/lib/types";
+import clsx from "clsx";
+import { tapFeedback } from "@/components/ui/Button";
+import { NoteSheet } from "./NoteSheet";
 import { Avatar } from "@/components/ui/Avatar";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { usePaidChatPeople } from "@/components/masquerade/usePaidChatPeople";
@@ -24,13 +27,46 @@ export type RecentMasked = {
   unread: boolean;
 };
 
-type Item = { key: string; href: string; at: string; label: string; unread: boolean; waiting: boolean; photo?: string | null; name?: string; mask?: string };
+type Item = { key: string; href: string; at: string; label: string; unread: boolean; waiting: boolean; photo?: string | null; name?: string; mask?: string; note?: string | null };
+
+/** A note in a bubble above someone's circle (like Instagram Notes) */
+function NoteBubble({ text, muted }: { text: string; muted?: boolean }) {
+  return (
+    <span
+      className={clsx(
+        "absolute -top-[42px] left-1/2 z-10 w-[84px] -translate-x-1/2 rounded-2xl px-2 py-1 text-center text-[10.5px] leading-tight font-medium shadow-[0_6px_14px_-8px_rgba(28,24,40,0.5)] ring-1 ring-line",
+        muted ? "bg-cream text-muted" : "bg-surface text-ink",
+      )}
+    >
+      <span className="line-clamp-2 break-words">{text}</span>
+      <span aria-hidden className="absolute -bottom-1 left-6 h-2.5 w-2.5 rounded-full bg-inherit ring-1 ring-line" />
+    </span>
+  );
+}
+
+const fresh = (at?: string | null) => !!at && Date.now() - new Date(at).getTime() < 24 * 3_600_000;
 
 /**
  * Home: your latest chats (connected and masked) as small circles, no names.
  * Red dot and ring: a new message you haven't read. Small dark dot: you've read it but not replied.
  */
-export function RecentChats({ matches, myId, demoMasked, lead }: { matches: MatchSummary[]; myId: string; demoMasked?: RecentMasked[]; /** First in the row (who viewed you) */ lead?: React.ReactNode }) {
+export function RecentChats({
+  matches,
+  myId,
+  demoMasked,
+  lead,
+  me,
+}: {
+  matches: MatchSummary[];
+  myId: string;
+  demoMasked?: RecentMasked[];
+  /** First in the row (who viewed you) */
+  lead?: React.ReactNode;
+  /** You: your photo and note (first in the row; tap to write a note) */
+  me?: { photo?: string | null; note?: string | null; noteAt?: string | null; intent: Intent; demo?: boolean };
+}) {
+  const [myNote, setMyNote] = useState<{ note: string | null; at: string | null }>({ note: me?.note ?? null, at: me?.noteAt ?? null });
+  const [noteOpen, setNoteOpen] = useState(false);
   const supabase = useMemo(() => createClient(), []);
   const [masked, setMasked] = useState<RecentMasked[]>(demoMasked ?? []);
   const paid = usePaidChatPeople(!!demoMasked);
@@ -71,6 +107,7 @@ export function RecentChats({ matches, myId, demoMasked, lead }: { matches: Matc
       label: m.display_name,
       unread: !!m.unread,
       waiting: !!m.last_message && !!m.last_sender && m.last_sender !== myId,
+      note: m.note ?? null,
     })),
     ...masked.map((c) => {
       // You can see who it is if you paid to start it on Meet, or you both waved
@@ -91,7 +128,10 @@ export function RecentChats({ matches, myId, demoMasked, lead }: { matches: Matc
     .sort((a, b) => b.at.localeCompare(a.at))
     .slice(0, 12);
 
-  if (!items.length && !lead) return null;
+  if (!items.length && !lead && !me) return null;
+  const mine = fresh(myNote.at) ? myNote.note : null;
+  // Room above the circles for note bubbles
+  const notes = !!me || items.some((c) => c.note);
   return (
     <section className="mt-4 lg:mt-8" aria-label="Recent chats">
       <div className="mb-2 flex items-center justify-between">
@@ -100,10 +140,29 @@ export function RecentChats({ matches, myId, demoMasked, lead }: { matches: Matc
           All <ChevronRight size={15} />
         </Link>
       </div>
-      <ul className="-mx-5 flex gap-2.5 overflow-x-auto px-5 py-1 no-scrollbar lg:mx-0 lg:px-1">
+      <ul className={clsx("-mx-5 flex overflow-x-auto px-5 no-scrollbar lg:mx-0 lg:px-1", notes ? "gap-3 pt-[46px] pb-1" : "gap-2.5 py-1")}>
         {lead && <li className="shrink-0">{lead}</li>}
+        {/* You: your note (tap to write one) */}
+        {me && (
+          <li className="relative flex w-[60px] shrink-0 flex-col items-center gap-1">
+            <button
+              type="button"
+              onClick={() => {
+                tapFeedback();
+                setNoteOpen(true);
+              }}
+              className="relative block h-12 w-12 active:scale-95"
+              aria-label={mine ? `Your note: ${mine}. Change it` : "Write a note"}
+            >
+              <NoteBubble text={mine ?? "+ Note"} muted={!mine} />
+              <Avatar src={me.photo ?? undefined} name="You" size={48} className="ring-2 ring-surface" />
+            </button>
+            <span className="w-full truncate text-center text-[11px] leading-[16.5px] font-medium text-muted">Your note</span>
+          </li>
+        )}
         {items.map((c) => (
-          <li key={c.key} className="flex w-[52px] shrink-0 flex-col items-center gap-1">
+          <li key={c.key} className={clsx("relative flex shrink-0 flex-col items-center gap-1", notes ? "w-[60px]" : "w-[52px]")}>
+            {c.note && <NoteBubble text={c.note} />}
             <Link href={c.href} className="relative block h-12 w-12 active:scale-95" aria-label={`Chat with ${c.label}${c.unread ? ", new message" : c.waiting ? ", waiting for your reply" : ""}`}>
               {c.photo || !c.mask ? (
                 <Avatar src={c.photo ?? undefined} name={c.name ?? c.label} size={48} className={"ring-2 ring-surface"} />
@@ -133,6 +192,17 @@ export function RecentChats({ matches, myId, demoMasked, lead }: { matches: Matc
           </li>
         ))}
       </ul>
+      {me && (
+        <NoteSheet
+          open={noteOpen}
+          onClose={() => setNoteOpen(false)}
+          note={mine}
+          noteAt={myNote.at}
+          intent={me.intent}
+          demo={me.demo}
+          onSaved={(note, at) => setMyNote({ note, at })}
+        />
+      )}
     </section>
   );
 }

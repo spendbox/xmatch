@@ -12,6 +12,7 @@ import { notify } from "@/lib/pushClient";
 import { Spinner } from "@/components/ui/Button";
 import type { ExplorePerson } from "@/lib/explore";
 import { IcebreakerSheet } from "./IcebreakerSheet";
+import { CardPhotos } from "./CardPhotos";
 import type { ExploreList } from "@/lib/explore";
 import { tapFeedback } from "@/components/ui/Button";
 import { useMeetList } from "@/components/explore/useMeetList";
@@ -131,21 +132,37 @@ export function PeopleForYou({ userId, demo, demoBreak, demoBreakMode }: { userI
                   </div>
                   {p.match != null && <span className="shrink-0 rounded-full bg-brand-soft px-2.5 py-1 text-[12px] font-bold text-brand-ink">{p.match}% match</span>}
                 </div>
-                {/* Their photo (masked until you both unmask) */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    tapFeedback();
-                    setOpen(p.id);
+                {/* Their note for today, in a bubble from their photo */}
+                {p.note && (
+                  <div className="mx-3 mb-2.5 w-fit max-w-[85%] rounded-2xl rounded-tl-md bg-cream px-3 py-2 text-[13.5px] leading-snug font-medium text-ink">
+                    {p.note}
+                  </div>
+                )}
+                {/* Signs of life */}
+                {chipsFor(p).length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 px-3 pb-2.5">
+                    {chipsFor(p).map((c) => (
+                      <span key={c} className="rounded-full bg-cream px-2.5 py-1 text-[11.5px] font-semibold text-ink-soft">
+                        {c}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {/* Their photos to swipe (masked until you both unmask). Tap: profile. Double-tap: wave */}
+                <CardPhotos
+                  person={p}
+                  demo={!!demo}
+                  photosPaid={list?.photos_paid ?? true}
+                  photosCost={list?.photos_cost ?? 0}
+                  onUnlocked={reload}
+                  onOpen={() => setOpen(p.id)}
+                  onDoubleTap={() => {
+                    if (p.connected || waved[p.id] || p.i_waved) return false;
+                    void wave(p);
+                    return true;
                   }}
-                  className="group relative block aspect-[4/4.4] w-full overflow-hidden bg-brand-soft"
-                  aria-label={`${p.name}'s profile`}
-                >
-                  {p.photo ? (
-                    <Photo src={p.photo} id={p.id} gender={p.gender} loading="lazy" small={false} className="h-full w-full object-cover" />
-                  ) : (
-                    <span className="grid h-full w-full place-items-center text-[40px] font-semibold text-brand">{p.name.charAt(0)}</span>
-                  )}
+                  overlay={
+                    <>
                   {!p.connected && (
                     <span className="absolute top-3 right-3 inline-flex items-center gap-1 rounded-full bg-ink/55 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur">
                       <MaskIcon className="w-3.5 text-white" eyes="rgba(0,0,0,0.4)" /> Masked
@@ -180,7 +197,9 @@ export function PeopleForYou({ userId, demo, demoBreak, demoBreakMode }: { userI
                       </span>
                     ) : null}
                   </span>
-                </button>
+                    </>
+                  }
+                />
                 {/* What to do */}
                 <div className="flex items-center gap-2 px-3 pt-2.5 pb-3">
                   <button
@@ -257,3 +276,16 @@ export function PeopleForYou({ userId, demo, demoBreak, demoBreakMode }: { userI
 }
 
 const listOf = (w: string[]) => (w.length < 2 ? w[0] : `${w.slice(0, -1).join(", ")} and ${w[w.length - 1]}`);
+
+/** Small signs that someone's around and worth talking to (up to 3) */
+function chipsFor(p: ExplorePerson) {
+  const out: string[] = [];
+  if (!p.online && p.seen_minutes != null) {
+    if (p.seen_minutes < 60) out.push(`Active ${Math.max(1, p.seen_minutes)} min ago`);
+    else if (p.seen_minutes < 24 * 60) out.push("Active today");
+  }
+  if (p.reply_seconds != null && p.reply_seconds < 15 * 60 && (p.reply_rate ?? 0.5) >= 0.5) out.push("Replies fast");
+  if (p.is_new) out.push("New here");
+  if ((p.views_7d ?? 0) >= 15) out.push("Popular this week 🔥");
+  return out.slice(0, 3);
+}
