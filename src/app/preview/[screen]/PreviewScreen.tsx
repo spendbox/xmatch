@@ -296,7 +296,7 @@ const homePeople: ExploreList = {
   people: Array.from({ length: 20 }, (_, i) => {
     const p = explorePeople.people[i % explorePeople.people.length];
     const notes = ["Looking for the best suya in Yaba 🍢", null, "Beach this weekend? 🏖️", null, "Who's watching AFCON tonight? ⚽", null];
-    const extra = { note: notes[i % 6], photos: [p.photo, photo(["#5b3fd9", "#1f9d6b", "#e0477e"][i % 3], "#f2b33d", "2")].filter(Boolean) as string[], photo_count: i % 2 ? 2 : 4, seen_minutes: i % 3 ? 12 + i : null, reply_seconds: i % 2 ? 300 : 4000, reply_rate: 0.8, is_new: i === 3, views_7d: i === 0 ? 40 : 3, shared: i % 3 === 2 ? [] : i % 2 ? ["Food"] : ["Afrobeats", "Food"], waved_me: i === 2, connected: i === 1, match: 97 - i * 3, tag: ["Afrobeats", "Foodie", "Travel", "Books", "Football", "Art"][i % 6], km: [3, 5, 8, 2, 12, 6][i % 6] };
+    const extra = { voice_intro: i % 2 === 0 ? `intro/demo/${i}.wav` : null, voice_seconds: 6 + (i % 4), note: notes[i % 6], photos: [p.photo, photo(["#5b3fd9", "#1f9d6b", "#e0477e"][i % 3], "#f2b33d", "2")].filter(Boolean) as string[], photo_count: i % 2 ? 2 : 4, seen_minutes: i % 3 ? 12 + i : null, reply_seconds: i % 2 ? 300 : 4000, reply_rate: 0.8, is_new: i === 3, views_7d: i === 0 ? 40 : 3, shared: i % 3 === 2 ? [] : i % 2 ? ["Food"] : ["Afrobeats", "Food"], waved_me: i === 2, connected: i === 1, match: 97 - i * 3, tag: ["Afrobeats", "Foodie", "Travel", "Books", "Football", "Art"][i % 6], km: [3, 5, 8, 2, 12, 6][i % 6] };
     return i < explorePeople.people.length ? { ...p, ...extra } : { ...p, ...extra, id: `${p.id}-${i}`, name: NAMES[i % NAMES.length], online: i % 3 === 0, connected: false };
   }),
 };

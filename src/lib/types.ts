@@ -50,6 +50,10 @@ export type Profile = {
   /** Your note: one short line shown for 24 hours (update 108) */
   note?: string | null;
   note_at?: string | null;
+  /** Voice intro: a short hello, disguised unless they chose Normal (update 109) */
+  voice_intro_key?: string | null;
+  voice_intro_seconds?: number | null;
+  voice_intro_style?: string | null;
   /** Their age is left out of what other people see */
   hide_age?: boolean;
 };

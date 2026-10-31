@@ -8,15 +8,25 @@ import { promptOf, type Thing } from "@/lib/things";
 import { tapFeedback } from "@/components/ui/Button";
 
 /**
- * The answer, as big as fits. Starts large and shrinks until the whole answer fits in the space
- * on the card, on any phone (measured, not guessed). It measures again when the card changes size
- * and when the card's font arrives (on a first visit it often lands after the first measure, and
- * the bigger letters then spilled off the card). An answer too long even at the smallest size
- * scrolls inside the card, so it's never cut off.
+ * How big the answer starts, from how long it is. Long answers start small enough to fit on any
+ * phone without measuring anything (measuring can fail on some phones, and the end got cut off).
  */
-function FitText({ text, max, min }: { text: string; max: number; min: number }) {
+function startSize(text: string, big: boolean) {
+  const n = text.trim().length;
+  const size = n <= 18 ? 36 : n <= 32 ? 32 : n <= 50 ? 28 : n <= 75 ? 24 : n <= 105 ? 21 : n <= 140 ? 19 : 17;
+  return big ? size : Math.max(11, Math.round(size * 0.6));
+}
+
+/**
+ * The answer. It starts at a size that fits its length, then shrinks a little more if the card
+ * is extra small (measured). It's never cut off: if it's still too tall, it scrolls inside the
+ * card, starting from the first word.
+ */
+function FitText({ text, big }: { text: string; big: boolean }) {
   const box = useRef<HTMLDivElement>(null);
   const inner = useRef<HTMLSpanElement>(null);
+  const start = startSize(text, big);
+  const min = big ? 15 : 10;
   const [scroll, setScroll] = useState(false);
   useLayoutEffect(() => {
     const b = box.current;
@@ -25,13 +35,13 @@ function FitText({ text, max, min }: { text: string; max: number; min: number })
     let frame = 0;
     const fit = () => {
       if (!b.clientHeight || !b.clientWidth) return; // not on screen yet
-      let size = max;
+      let size = start;
       t.style.fontSize = `${size}px`;
-      while (size > min && (t.scrollHeight > b.clientHeight || t.scrollWidth > b.clientWidth)) {
+      while (size > min && (t.offsetHeight > b.clientHeight || t.scrollWidth > b.clientWidth)) {
         size -= 1;
         t.style.fontSize = `${size}px`;
       }
-      setScroll(t.scrollHeight > b.clientHeight + 1);
+      setScroll(t.offsetHeight > b.clientHeight + 1);
     };
     const soon = () => {
       cancelAnimationFrame(frame);
@@ -40,6 +50,7 @@ function FitText({ text, max, min }: { text: string; max: number; min: number })
     fit();
     const ro = new ResizeObserver(soon);
     ro.observe(b);
+    ro.observe(t);
     const fonts = document.fonts;
     void fonts?.ready.then(soon);
     fonts?.addEventListener?.("loadingdone", soon);
@@ -48,15 +59,16 @@ function FitText({ text, max, min }: { text: string; max: number; min: number })
       cancelAnimationFrame(frame);
       fonts?.removeEventListener?.("loadingdone", soon);
     };
-  }, [text, max, min]);
+  }, [text, start, min]);
   return (
     <div
       ref={box}
-      className={clsx("relative mt-3 flex min-h-0 flex-1 overflow-hidden", scroll ? "items-start overflow-y-auto overscroll-contain" : "items-end")}
+      // Never hides text: short answers sit at the bottom, a long one scrolls from its first word
+      className="relative mt-3 flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain no-scrollbar"
       // Scrolling a long answer shouldn't swipe to the next card
       onPointerDown={scroll ? (e) => e.stopPropagation() : undefined}
     >
-      <span ref={inner} className="block w-full font-display leading-[1.18] font-semibold break-words" style={{ fontSize: max }}>
+      <span ref={inner} className="mt-auto block w-full shrink-0 font-display leading-[1.18] font-semibold break-words" style={{ fontSize: start }}>
         {text}
       </span>
     </div>
@@ -79,7 +91,7 @@ export function CardFace({ thing, big }: { thing: Thing; big?: boolean }) {
         >
           {p.text}
         </span>
-        <FitText text={thing.a} max={big ? 36 : 22} min={big ? 15 : 10} />
+        <FitText text={thing.a} big={!!big} />
       </div>
     </div>
   );
