@@ -1,97 +1,90 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import clsx from "clsx";
 import { ChevronLeft, ChevronRight, Hand, Pencil, Plus, X } from "lucide-react";
-import { promptOf, type Thing } from "@/lib/things";
+import { promptOf, splitOwn, type Thing } from "@/lib/things";
 import { tapFeedback } from "@/components/ui/Button";
 
-/**
- * How big the answer starts, from how long it is. Long answers start small enough to fit on any
- * phone without measuring anything (measuring can fail on some phones, and the end got cut off).
- */
-function startSize(text: string, big: boolean) {
+/** Answer size from its length only: nothing to measure, so it can't go wrong on any phone */
+function answerSize(text: string, big: boolean) {
   const n = text.trim().length;
-  const size = n <= 18 ? 36 : n <= 32 ? 32 : n <= 50 ? 28 : n <= 75 ? 24 : n <= 105 ? 21 : n <= 140 ? 19 : 17;
-  return big ? size : Math.max(11, Math.round(size * 0.6));
+  if (big)
+    return n <= 20 ? 34 : n <= 40 ? 30 : n <= 70 ? 26 : n <= 110 ? 23 : 20;
+  return n <= 20 ? 24 : n <= 40 ? 21 : n <= 70 ? 18 : n <= 110 ? 16 : 15;
 }
 
 /**
- * The answer. It starts at a size that fits its length, then shrinks a little more if the card
- * is extra small (measured). It's never cut off: if it's still too tall, it scrolls inside the
- * card, starting from the first word.
+ * One card: the question in a small label on top, the full answer underneath. The card keeps its
+ * shape for short answers and simply grows taller for long ones, so every word always shows.
  */
-function FitText({ text, big }: { text: string; big: boolean }) {
-  const box = useRef<HTMLDivElement>(null);
-  const inner = useRef<HTMLSpanElement>(null);
-  const start = startSize(text, big);
-  const min = big ? 15 : 10;
-  const [scroll, setScroll] = useState(false);
-  useLayoutEffect(() => {
-    const b = box.current;
-    const t = inner.current;
-    if (!b || !t) return;
-    let frame = 0;
-    const fit = () => {
-      if (!b.clientHeight || !b.clientWidth) return; // not on screen yet
-      let size = start;
-      t.style.fontSize = `${size}px`;
-      while (size > min && (t.offsetHeight > b.clientHeight || t.scrollWidth > b.clientWidth)) {
-        size -= 1;
-        t.style.fontSize = `${size}px`;
-      }
-      setScroll(t.offsetHeight > b.clientHeight + 1);
-    };
-    const soon = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(fit);
-    };
-    fit();
-    const ro = new ResizeObserver(soon);
-    ro.observe(b);
-    ro.observe(t);
-    const fonts = document.fonts;
-    void fonts?.ready.then(soon);
-    fonts?.addEventListener?.("loadingdone", soon);
-    return () => {
-      ro.disconnect();
-      cancelAnimationFrame(frame);
-      fonts?.removeEventListener?.("loadingdone", soon);
-    };
-  }, [text, start, min]);
+export function CardFace({
+  thing,
+  big,
+  wide,
+}: {
+  thing: Thing;
+  big?: boolean;
+  /** A shorter shape (in Break the ice) */ wide?: boolean;
+}) {
+  const p = promptOf(thing.p);
+  // "Something else about me": their own question is the label, their answer the big words
+  const own = splitOwn(thing);
   return (
     <div
-      ref={box}
-      // Never hides text: short answers sit at the bottom, a long one scrolls from its first word
-      className="relative mt-3 flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain no-scrollbar"
-      // Scrolling a long answer shouldn't swipe to the next card
-      onPointerDown={scroll ? (e) => e.stopPropagation() : undefined}
+      className="relative grid h-full w-full overflow-hidden text-left text-white"
+      style={{ background: p.tone }}
     >
-      <span ref={inner} className="mt-auto block w-full shrink-0 font-display leading-[1.18] font-semibold break-words" style={{ fontSize: start }}>
-        {text}
-      </span>
-    </div>
-  );
-}
-
-/** One card's face: the question in a small label on top, the answer big underneath */
-export function CardFace({ thing, big }: { thing: Thing; big?: boolean }) {
-  const p = promptOf(thing.p);
-  return (
-    <div className="relative flex h-full w-full flex-col overflow-hidden text-left text-white" style={{ background: p.tone }}>
-      <span aria-hidden className={clsx("absolute rounded-full bg-white/10", big ? "-top-20 -right-16 h-56 w-56" : "-top-10 -right-10 h-28 w-28")} />
-      <span aria-hidden className={clsx("absolute rounded-full bg-black/10", big ? "-bottom-24 -left-14 h-52 w-52" : "-bottom-12 -left-8 h-24 w-24")} />
-      <div className={clsx("relative flex min-h-0 flex-1 flex-col", big ? "p-6" : "p-4")}>
+      {/* Sets the card's usual shape; a longer answer makes it taller instead of being cut */}
+      <span
+        aria-hidden
+        className={clsx(
+          "col-start-1 row-start-1 block w-full",
+          wide ? "aspect-[4/3]" : big ? "aspect-[3/4]" : "aspect-[4/3.1]",
+        )}
+      />
+      <span
+        aria-hidden
+        className={clsx(
+          "absolute rounded-full bg-white/10",
+          big ? "-top-20 -right-16 h-56 w-56" : "-top-10 -right-10 h-28 w-28",
+        )}
+      />
+      <span
+        aria-hidden
+        className={clsx(
+          "absolute rounded-full bg-black/10",
+          big
+            ? "-bottom-24 -left-14 h-52 w-52"
+            : "-bottom-12 -left-8 h-24 w-24",
+        )}
+      />
+      <div
+        className={clsx(
+          "relative col-start-1 row-start-1 flex min-w-0 flex-col",
+          big ? "p-6" : "p-4",
+        )}
+      >
         <span
           className={clsx(
-            "w-fit max-w-full shrink-0 rounded-full bg-black/20 font-semibold text-white/90",
-            big ? "px-3 py-1 text-[13.5px] leading-snug" : "line-clamp-1 px-2.5 py-0.5 text-[11px] leading-tight",
+            "w-fit max-w-full rounded-2xl bg-black/20 font-semibold break-words text-white/90",
+            big
+              ? "px-3 py-1 text-[13.5px] leading-snug"
+              : "px-2.5 py-0.5 text-[11px] leading-snug",
           )}
         >
-          {p.text}
+          {own.q ?? p.text}
         </span>
-        <FitText text={thing.a} big={!!big} />
+        <p
+          className={clsx(
+            "mt-auto font-display leading-[1.2] font-semibold break-words whitespace-pre-line",
+            big ? "pt-5" : "pt-3",
+          )}
+          style={{ fontSize: answerSize(own.a, !!big) }}
+        >
+          {own.a}
+        </p>
       </div>
     </div>
   );
@@ -133,22 +126,30 @@ export function ThingsStack({
         className="group relative mx-auto block w-full max-w-[280px] pt-8 pb-3 transition active:scale-[0.98]"
         aria-label={`${title}: ${n} cards. Tap to open`}
       >
-        <div className="relative aspect-[4/3.1] w-full">
+        <div className="relative w-full">
           {/* The cards underneath, fanned out */}
           {behind >= 2 && (
-            <div aria-hidden className="absolute inset-0 origin-bottom translate-x-3 -translate-y-2 rotate-[7deg] overflow-hidden rounded-[26px] opacity-80 shadow-card transition group-hover:rotate-[9deg]">
+            <div
+              aria-hidden
+              className="absolute inset-0 origin-bottom translate-x-3 -translate-y-2 rotate-[7deg] overflow-hidden rounded-[26px] opacity-80 shadow-card transition group-hover:rotate-[9deg]"
+            >
               <CardFace thing={things[2]} />
             </div>
           )}
           {behind >= 1 && (
-            <div aria-hidden className="absolute inset-0 origin-bottom -translate-x-2 -translate-y-1 -rotate-[5deg] overflow-hidden rounded-[26px] opacity-90 shadow-card transition group-hover:-rotate-[7deg]">
+            <div
+              aria-hidden
+              className="absolute inset-0 origin-bottom -translate-x-2 -translate-y-1 -rotate-[5deg] overflow-hidden rounded-[26px] opacity-90 shadow-card transition group-hover:-rotate-[7deg]"
+            >
               <CardFace thing={things[1]} />
             </div>
           )}
-          <div className="absolute inset-0 overflow-hidden rounded-[26px] shadow-[0_18px_40px_-18px_rgba(28,24,40,0.55)]">
+          <div className="relative overflow-hidden rounded-[26px] shadow-[0_18px_40px_-18px_rgba(28,24,40,0.55)]">
             <CardFace thing={top} />
           </div>
-          <span className="absolute -top-2 -right-2 grid h-9 min-w-9 place-items-center rounded-full bg-ink px-2 text-[14px] font-bold text-white ring-4 ring-surface">{n}</span>
+          <span className="absolute -top-2 -right-2 grid h-9 min-w-9 place-items-center rounded-full bg-ink px-2 text-[14px] font-bold text-white ring-4 ring-surface">
+            {n}
+          </span>
         </div>
         <span className="mt-4 inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand">
           <Hand size={15} /> Tap to flip through {n === 1 ? "it" : `all ${n}`}
@@ -206,7 +207,12 @@ export function ThingsViewer({
   const [dragging, setDragging] = useState(false);
   // Card flying off after a slide: which way
   const [fly, setFly] = useState<0 | 1 | -1>(0);
-  const drag = useRef<{ x: number; y: number; moved: boolean; id: number } | null>(null);
+  const drag = useRef<{
+    x: number;
+    y: number;
+    moved: boolean;
+    id: number;
+  } | null>(null);
   const width = useRef(360);
   const card = useRef<HTMLDivElement>(null);
 
@@ -250,15 +256,27 @@ export function ThingsViewer({
   const under = underIdx >= 0 && underIdx < n ? things[underIdx] : null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[80] flex flex-col bg-ink/80 backdrop-blur-md animate-fade-in" role="dialog" aria-modal="true" aria-label={title}>
+    <div
+      className="fixed inset-0 z-[80] flex flex-col bg-ink/80 backdrop-blur-md animate-fade-in"
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+    >
       <div className="mx-auto flex w-full max-w-md items-center gap-3 px-4 pt-[max(16px,env(safe-area-inset-top))]">
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[15px] font-semibold text-white">{title}</p>
+          <p className="truncate text-[15px] font-semibold text-white">
+            {title}
+          </p>
           <p className="text-[13px] text-white/60">
             {idx + 1} of {n}
           </p>
         </div>
-        <button type="button" onClick={onClose} aria-label="Close" className="grid h-10 w-10 place-items-center rounded-full bg-white/15 text-white">
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          className="grid h-10 w-10 place-items-center rounded-full bg-white/15 text-white"
+        >
           <X size={20} />
         </button>
       </div>
@@ -266,67 +284,93 @@ export function ThingsViewer({
       {/* Progress: one bar per card */}
       <div className="mx-auto mt-3 flex w-full max-w-md gap-1 px-4" aria-hidden>
         {things.map((_, i) => (
-          <span key={i} className={clsx("h-1 flex-1 rounded-full transition-colors", i <= idx ? "bg-white" : "bg-white/25")} />
+          <span
+            key={i}
+            className={clsx(
+              "h-1 flex-1 rounded-full transition-colors",
+              i <= idx ? "bg-white" : "bg-white/25",
+            )}
+          />
         ))}
       </div>
 
-      <div className="relative mx-auto flex w-full max-w-md flex-1 items-center justify-center px-6 py-6">
-        <div className="relative aspect-[3/4] max-h-full w-full max-w-[340px]">
-          {under && (
+      {/* A very long card scrolls up and down here; nothing is ever hidden */}
+      <div className="mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col overflow-y-auto overscroll-contain no-scrollbar">
+        <div className="m-auto w-full px-6 py-6">
+          <div className="relative mx-auto w-full max-w-[340px]">
+            {under && (
+              <div
+                aria-hidden
+                className="absolute inset-0 overflow-hidden rounded-[32px] shadow-[0_30px_60px_-25px_rgba(0,0,0,0.7)]"
+                style={{
+                  transform: `scale(${0.9 + 0.1 * progress}) translateY(${(1 - progress) * 14}px)`,
+                  opacity: 0.5 + 0.5 * progress,
+                  transition: dragging
+                    ? "none"
+                    : "transform 220ms ease, opacity 220ms ease",
+                }}
+              >
+                <CardFace thing={under} big />
+              </div>
+            )}
             <div
-              aria-hidden
-              className="absolute inset-0 overflow-hidden rounded-[32px] shadow-[0_30px_60px_-25px_rgba(0,0,0,0.7)]"
-              style={{ transform: `scale(${0.9 + 0.1 * progress}) translateY(${(1 - progress) * 14}px)`, opacity: 0.5 + 0.5 * progress, transition: dragging ? "none" : "transform 220ms ease, opacity 220ms ease" }}
-            >
-              <CardFace thing={under} big />
-            </div>
-          )}
-          <div
-            key={idx}
-            ref={card}
-            className={clsx("absolute inset-0 cursor-grab touch-none overflow-hidden rounded-[32px] shadow-[0_30px_60px_-20px_rgba(0,0,0,0.7)] select-none active:cursor-grabbing", !fly && !dragging && dx === 0 && "animate-pop")}
-            style={{
-              transform: `translateX(${shown}px) rotate(${shown / 18}deg)`,
-              transition: dragging ? "none" : "transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1)",
-            }}
-            onPointerDown={(e) => {
-              if (fly) return;
-              width.current = card.current?.offsetWidth ?? 360;
-              drag.current = { x: e.clientX, y: e.clientY, moved: false, id: e.pointerId };
-              e.currentTarget.setPointerCapture(e.pointerId);
-              setDragging(true);
-            }}
-            onPointerMove={(e) => {
-              const d = drag.current;
-              if (!d || d.id !== e.pointerId) return;
-              const mx = e.clientX - d.x;
-              if (Math.abs(mx) > 6) d.moved = true;
-              setDx(mx);
-            }}
-            onPointerUp={(e) => {
-              const d = drag.current;
-              drag.current = null;
-              setDragging(false);
-              if (!d) return;
-              const mx = e.clientX - d.x;
-              // A tap: right side goes on, left side goes back (like stories)
-              if (!d.moved) {
+              key={idx}
+              ref={card}
+              className={clsx(
+                "relative cursor-grab touch-pan-y overflow-hidden rounded-[32px] shadow-[0_30px_60px_-20px_rgba(0,0,0,0.7)] select-none active:cursor-grabbing",
+                !fly && !dragging && dx === 0 && "animate-pop",
+              )}
+              style={{
+                transform: `translateX(${shown}px) rotate(${shown / 18}deg)`,
+                transition: dragging
+                  ? "none"
+                  : "transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1)",
+              }}
+              onPointerDown={(e) => {
+                if (fly) return;
+                width.current = card.current?.offsetWidth ?? 360;
+                drag.current = {
+                  x: e.clientX,
+                  y: e.clientY,
+                  moved: false,
+                  id: e.pointerId,
+                };
+                e.currentTarget.setPointerCapture(e.pointerId);
+                setDragging(true);
+              }}
+              onPointerMove={(e) => {
+                const d = drag.current;
+                if (!d || d.id !== e.pointerId) return;
+                const mx = e.clientX - d.x;
+                if (Math.abs(mx) > 6) d.moved = true;
+                setDx(mx);
+              }}
+              onPointerUp={(e) => {
+                const d = drag.current;
+                drag.current = null;
+                setDragging(false);
+                if (!d) return;
+                const mx = e.clientX - d.x;
+                // A tap: right side goes on, left side goes back (like stories)
+                if (!d.moved) {
+                  setDx(0);
+                  const r = e.currentTarget.getBoundingClientRect();
+                  go(e.clientX - r.left > r.width * 0.35 ? 1 : -1);
+                  return;
+                }
+                const dir = mx < 0 ? 1 : -1;
+                if (Math.abs(mx) > 70 && idx + dir >= 0 && idx + dir < n)
+                  go(dir);
+                else setDx(0);
+              }}
+              onPointerCancel={() => {
+                drag.current = null;
+                setDragging(false);
                 setDx(0);
-                const r = e.currentTarget.getBoundingClientRect();
-                go(e.clientX - r.left > r.width * 0.35 ? 1 : -1);
-                return;
-              }
-              const dir = mx < 0 ? 1 : -1;
-              if (Math.abs(mx) > 70 && idx + dir >= 0 && idx + dir < n) go(dir);
-              else setDx(0);
-            }}
-            onPointerCancel={() => {
-              drag.current = null;
-              setDragging(false);
-              setDx(0);
-            }}
-          >
-            <CardFace thing={things[idx]} big />
+              }}
+            >
+              <CardFace thing={things[idx]} big />
+            </div>
           </div>
         </div>
       </div>
@@ -343,16 +387,28 @@ export function ThingsViewer({
         </button>
         <div className="flex flex-1 justify-center gap-2">
           {onEdit && (
-            <button type="button" onClick={() => onEdit(idx)} className="inline-flex h-12 items-center gap-2 rounded-full bg-white/15 px-5 text-[14px] font-semibold text-white active:scale-95">
+            <button
+              type="button"
+              onClick={() => onEdit(idx)}
+              className="inline-flex h-12 items-center gap-2 rounded-full bg-white/15 px-5 text-[14px] font-semibold text-white active:scale-95"
+            >
               <Pencil size={16} /> Edit
             </button>
           )}
           {onAdd && (
-            <button type="button" onClick={onAdd} className="inline-flex h-12 items-center gap-2 rounded-full bg-white px-5 text-[14px] font-bold text-ink active:scale-95">
+            <button
+              type="button"
+              onClick={onAdd}
+              className="inline-flex h-12 items-center gap-2 rounded-full bg-white px-5 text-[14px] font-bold text-ink active:scale-95"
+            >
               <Plus size={17} /> {addLabel ?? "Add"}
             </button>
           )}
-          {!onEdit && !onAdd && <p className="self-center text-[13px] text-white/60">Slide or tap to see more</p>}
+          {!onEdit && !onAdd && (
+            <p className="self-center text-[13px] text-white/60">
+              Slide or tap to see more
+            </p>
+          )}
         </div>
         <button
           type="button"
