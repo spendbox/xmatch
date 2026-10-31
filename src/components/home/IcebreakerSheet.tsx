@@ -134,13 +134,19 @@ export function IcebreakerSheet({
   const [playing, setPlaying] = useState(false);
   const [audio] = useState(() => (typeof Audio !== "undefined" ? new Audio() : null));
 
-  // Fresh each time it opens
+  // Fresh each time it opens for someone. Keyed on who it's for (not the person object, which is
+  // rebuilt every time the page behind it refreshes) so typing, a pick or "Sent!" never resets.
+  const personId = person?.id ?? null;
+  const [loadError, setLoadError] = useState(false);
+  const [tries, setTries] = useState(0);
   useEffect(() => {
-    if (!open || !person) return;
+    if (!open || !personId) return;
+    let live = true;
     setMode(demoMode ?? "card");
     setText("");
     setPick(null);
     setError(null);
+    setLoadError(false);
     setDone(false);
     setTi(0);
     setRaw(null);
@@ -156,10 +162,16 @@ export function IcebreakerSheet({
     }
     setStatus(null);
     setThings(null);
-    void supabase.rpc("ice_status", { p_to: person.id }).then(({ data }) => data && setStatus(data as Status));
-    void supabase.rpc("explore_profile", { p_id: person.id }).then(({ data }) => {
+    // Only the answers for this person, this time (a slow answer for someone else is ignored)
+    void supabase.rpc("ice_status", { p_to: personId }).then(({ data, error: err }) => {
+      if (!live) return;
+      if (err || !data) setLoadError(true);
+      else setStatus(data as Status);
+    });
+    void supabase.rpc("explore_profile", { p_id: personId }).then(({ data }) => {
+      if (!live) return;
       const t = (data as { things?: Thing[] } | null)?.things;
-      setThings(Array.isArray(t) ? t.filter((x) => x?.a) : []);
+      setThings(Array.isArray(t) ? t.filter((x) => x?.p && x?.a) : []);
     });
     void supabase
       .from("tot_questions")
@@ -168,10 +180,14 @@ export function IcebreakerSheet({
       .lte("spice", 1)
       .limit(60)
       .then(({ data }) => {
+        if (!live) return;
         const list = ((data ?? []) as { prompt: string; a: string; b: string }[]).map((r) => ({ q: r.prompt, a: r.a, b: r.b }));
         setQuestions(list.length ? list.sort(() => Math.random() - 0.5) : SAMPLE);
       });
-  }, [open, person, demo, demoMode, supabase]);
+    return () => {
+      live = false;
+    };
+  }, [open, personId, demo, demoMode, supabase, tries]);
 
   // No cards to reply to: start on This or That
   useEffect(() => {
@@ -287,7 +303,14 @@ export function IcebreakerSheet({
         ) : (
           <div className="space-y-2">
             {error && error !== "NOT_ENOUGH_KEYS" && <p className="text-center text-[13px] font-medium text-chili">{error}</p>}
-            {error === "NOT_ENOUGH_KEYS" ? (
+            {loadError ? (
+              <>
+                <p className="text-center text-[13px] font-medium text-chili">Couldn&apos;t load. Check your connection.</p>
+                <Button size="lg" variant="secondary" onClick={() => setTries((t) => t + 1)}>
+                  <RotateCcw size={18} /> Try again
+                </Button>
+              </>
+            ) : error === "NOT_ENOUGH_KEYS" ? (
               <Link href="/wallet" className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gold font-semibold text-ink">
                 <KeyCoin size={22} /> Get Keys
               </Link>

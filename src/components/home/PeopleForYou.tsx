@@ -48,7 +48,8 @@ export function PeopleForYou({ userId, demo, demoBreak, demoBreakMode }: { userI
     if (r.mutual) notify({ kind: "wave", personId: p.id });
     router.push(r.kind === "match" ? `/matches/${r.id}` : `/masquerade/${r.id}`);
   }
-  const [breaking, setBreaking] = useState<string | null>(demoBreak != null ? (demo?.people[demoBreak]?.id ?? null) : null);
+  // Who you're breaking the ice with (kept as it was when you tapped, even if the list refreshes)
+  const [breaking, setBreaking] = useState<ExplorePerson | null>(demoBreak != null ? (demo?.people[demoBreak] ?? null) : null);
   // In the order Dashpad suggests: people who fit your gender, mood and age first (being online
   // already counts in that order). Who's online is checked live (every 30s), the same way as in
   // Chats, for the green dot; the list itself is kept for 10 minutes
@@ -122,7 +123,7 @@ export function PeopleForYou({ userId, demo, demoBreak, demoBreakMode }: { userI
                     onClick={() => {
                       tapFeedback();
                       if (p.connected) setOpen(p.id);
-                      else setBreaking(p.id);
+                      else setBreaking(p);
                     }}
                     className={clsx(
                       "inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full text-[14px] font-semibold transition active:scale-95",
@@ -194,7 +195,7 @@ export function PeopleForYou({ userId, demo, demoBreak, demoBreakMode }: { userI
       )}
 
       {open && <ExploreProfileSheet personId={open} onClose={() => setOpen(null)} onChanged={reload} />}
-      <IcebreakerSheet person={people.find((x) => x.id === breaking) ?? null} open={!!breaking} onClose={() => setBreaking(null)} demoMode={demoBreakMode} demo={!!demo} onSent={reload} />
+      <IcebreakerSheet person={breaking} open={!!breaking} onClose={() => setBreaking(null)} demoMode={demoBreakMode} demo={!!demo} onSent={reload} />
     </section>
   );
 }
