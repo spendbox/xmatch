@@ -112,10 +112,12 @@ export function MasqueradeRoom({
   const shownMessages = useMemo(() => {
     const mine = state.me.alias;
     const theirs = state.them.alias;
-    // The automatic icebreaker that used to start every chat: hidden (ones you ask for from + still show)
+    // The automatic icebreaker that used to start every chat (until update 73, 25 Oct 2026): hidden in
+    // those older chats. Newer chats show every icebreaker, even one asked for from + straight away.
     const start = new Date(state.started_at).getTime();
+    const oldChat = start < Date.UTC(2026, 9, 26);
     return messages
-      .filter((m) => !(m.kind === "icebreaker" && !m.sender_id && new Date(m.created_at).getTime() - start < 15_000))
+      .filter((m) => !(oldChat && m.kind === "icebreaker" && !m.sender_id && new Date(m.created_at).getTime() - start < 15_000))
       .map((m) => {
       if (m.kind !== "system" || !m.body) return m;
       let body = m.body;
