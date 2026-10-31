@@ -13,6 +13,8 @@ import { Spinner } from "@/components/ui/Button";
 import type { ExplorePerson } from "@/lib/explore";
 import { IcebreakerSheet } from "./IcebreakerSheet";
 import { CardPhotos } from "./CardPhotos";
+import { HearMe } from "./VoiceIntro";
+import { voiceUrl } from "@/lib/voiceDisguise";
 import type { ExploreList } from "@/lib/explore";
 import { tapFeedback } from "@/components/ui/Button";
 import { useMeetList } from "@/components/explore/useMeetList";
@@ -163,6 +165,12 @@ export function PeopleForYou({ userId, demo, demoBreak, demoBreakMode }: { userI
                   }}
                   overlay={
                     <>
+                      {/* Their voice intro: tap to hear them */}
+                      {p.voice_intro && (
+                        <span className="absolute top-3 left-3">
+                          <HearMe id={`intro-${p.id}`} src={voiceUrl(p.voice_intro) ?? ""} seconds={p.voice_seconds} name={p.name.split(" ")[0]} />
+                        </span>
+                      )}
                   {!p.connected && (
                     <span className="absolute top-3 right-3 inline-flex items-center gap-1 rounded-full bg-ink/55 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur">
                       <MaskIcon className="w-3.5 text-white" eyes="rgba(0,0,0,0.4)" /> Masked

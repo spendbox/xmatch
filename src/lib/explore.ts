@@ -31,6 +31,9 @@ export type ExplorePerson = {
   photos_unlocked?: boolean;
   /** Their note for today */
   note?: string | null;
+  /** Their voice intro (a sound file) and how long it is (update 109) */
+  voice_intro?: string | null;
+  voice_seconds?: number | null;
   /** Signs of life: minutes since they were last on, reply speed and rate, new this week, views this week */
   seen_minutes?: number | null;
   reply_seconds?: number | null;
