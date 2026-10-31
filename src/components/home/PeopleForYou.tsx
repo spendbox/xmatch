@@ -151,9 +151,38 @@ export function PeopleForYou({ userId, demo, demoBreak, demoBreakMode }: { userI
                       <MaskIcon className="w-3.5 text-white" eyes="rgba(0,0,0,0.4)" /> Masked
                     </span>
                   )}
+                  {/* What you're both into, on the photo */}
+                  <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/35 to-transparent px-3.5 pt-10 pb-3 text-left text-[13.5px] leading-snug text-white">
+                    <span className="block truncate">
+                      {p.shared?.length ? (
+                        <>
+                          <b className="font-semibold">You both like</b> {listOf(p.shared)}
+                        </>
+                      ) : p.tag ? (
+                        <>
+                          <b className="font-semibold">{p.name.split(" ")[0]}</b> is into {p.tag}
+                        </>
+                      ) : (
+                        <>
+                          <b className="font-semibold">{p.name.split(" ")[0]}</b> is new here
+                        </>
+                      )}
+                    </span>
+                    {(p.waved_me && !p.connected) || p.online ? (
+                      <span className="mt-0.5 flex items-center gap-1.5 text-[12px] text-white/85">
+                        {p.waved_me && !p.connected ? (
+                          "👋 Waved at you"
+                        ) : (
+                          <>
+                            <span className="h-1.5 w-1.5 rounded-full bg-[#7dffb5]" /> Online now
+                          </>
+                        )}
+                      </span>
+                    ) : null}
+                  </span>
                 </button>
                 {/* What to do */}
-                <div className="flex items-center gap-2 px-3 pt-2.5">
+                <div className="flex items-center gap-2 px-3 pt-2.5 pb-3">
                   <button
                     type="button"
                     onClick={() => {
@@ -203,23 +232,6 @@ export function PeopleForYou({ userId, demo, demoBreak, demoBreakMode }: { userI
                     </button>
                   )}
                 </div>
-                {/* What you're both into */}
-                <p className="truncate px-3.5 pt-2 pb-3 text-[13px] text-ink-soft">
-                  {p.shared?.length ? (
-                    <>
-                      <b className="font-semibold text-ink">You both like</b> {listOf(p.shared)}
-                    </>
-                  ) : p.tag ? (
-                    <>
-                      <b className="font-semibold text-ink">{p.name.split(" ")[0]}</b> is into {p.tag}
-                    </>
-                  ) : (
-                    <>
-                      <b className="font-semibold text-ink">{p.name.split(" ")[0]}</b> is new here
-                    </>
-                  )}
-                  {p.waved_me && !p.connected ? " · waved at you 👋" : p.online ? " · online now" : ""}
-                </p>
               </li>
             ))
           : Array.from({ length: 2 }, (_, i) => <li key={i} className="aspect-[4/5.6] animate-pulse rounded-[24px] bg-ink/[0.06]" />)}
