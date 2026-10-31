@@ -6,7 +6,7 @@ import { FEATURES } from "@/lib/features";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import { useEffect, useState } from "react";
-import { Activity, HeartPulse, Bug, ScanFace, CalendarDays, Gauge, ListChecks, ExternalLink, Gamepad2, Inbox, LayoutDashboard, LogOut, Menu, MessageCircleQuestion, Sparkles, Tag, Users, X, Stamp } from "lucide-react";
+import { Activity, Bug, CalendarDays, ExternalLink, Gamepad2, Gauge, HeartPulse, Inbox, LayoutDashboard, ListChecks, LogOut, Menu, MessageCircleQuestion, MessageSquareText, ScanFace, Stamp, Tag, Users, X } from "lucide-react";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { adminLogout } from "@/app/admin/actions";
 
@@ -19,7 +19,7 @@ const NAV = [
   { href: "/admin/games", label: "Games", icon: Gamepad2 },
   { href: "/admin/nights", label: "Events", icon: CalendarDays },
   { href: "/admin/link-ups", label: "Link-Ups", icon: Stamp },
-  ...(FEATURES.feed ? [{ href: "/admin/prompts", label: "Daily prompts", icon: Sparkles }] : []),
+  ...(FEATURES.feed ? [{ href: "/admin/prompts", label: "Daily prompts", icon: MessageSquareText }] : []),
   { href: "/admin/icebreakers", label: "Icebreakers", icon: MessageCircleQuestion },
   { href: "/admin/things", label: "Profile questions", icon: ListChecks },
   { href: "/admin/prices", label: "Prices", icon: Tag },

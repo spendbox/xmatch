@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { Check, Gamepad2, Mic, Sparkles, Split } from "lucide-react";
+import { Check, Gamepad2, Layers, Mic, Split } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { notify } from "@/lib/pushClient";
 import { MaskAvatar } from "@/components/feed/MaskAvatar";
@@ -46,7 +46,7 @@ export type IcebreakerOut = {
 export type MyIcebreakers = { received: IcebreakerIn[]; sent: IcebreakerOut[] };
 
 const KIND = {
-  card: { icon: <Sparkles size={13} />, label: "Replied to your card", sent: "Replied to their card" },
+  card: { icon: <Layers size={13} />, label: "Replied to your card", sent: "Replied to their card" },
   this: { icon: <Split size={13} />, label: "Asked you This or That", sent: "This or That" },
   voice: { icon: <Mic size={13} />, label: "Sent a voice hello", sent: "Voice hello" },
   game: { icon: <Gamepad2 size={13} />, label: "Wants to play", sent: "Game challenge" },

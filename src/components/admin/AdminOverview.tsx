@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { FEATURES } from "@/lib/features";
 import { plural, word } from "@/lib/plural";
-import { CalendarDays, ChevronRight, Flag, Gift, Handshake, MessageCircleQuestion, Plus, Sparkles, Users, Wallet, Wifi } from "lucide-react";
+import { CalendarDays, ChevronRight, Flag, Gift, Handshake, MessageCircleQuestion, MessageSquareText, Plus, Users, Wallet, Wifi } from "lucide-react";
 import { MaskLineIcon } from "@/components/ui/icons";
 import { naira } from "@/lib/keys";
 import { AdminTitle } from "./AdminShell";
@@ -47,7 +47,7 @@ export function AdminOverview({ overview: o, nights, promptsAhead = 0 }: { overv
           (promptsAhead < 2 ? "border-chili/30 bg-chili-soft text-chili" : promptsAhead < 7 ? "border-gold/50 bg-gold-soft text-[#8a5a00]" : "border-line bg-surface text-ink")
         }
       >
-        <Sparkles size={20} className="shrink-0" />
+        <MessageSquareText size={20} className="shrink-0" />
         <span className="min-w-0 flex-1 text-[14px] font-semibold">
           {promptsAhead === 0
             ? "No Daily prompt today. Add one now."

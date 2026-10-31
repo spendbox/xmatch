@@ -19,7 +19,7 @@ export function chatPreview(kind: string | null | undefined, body: string | null
     case "game":
       return `🎮 ${text || "Game"}`;
     case "sticker":
-      return `✨ Sticker${text ? `: ${text}` : ""}`;
+      return `Sticker${text ? `: ${text}` : ""}`;
     case "scribble":
       return text === "Drawing" ? "🎨 Drawing" : "✍️ Scribble";
     case "draw":

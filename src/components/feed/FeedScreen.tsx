@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { ChevronRight, Flag, Gift, Lock, MessageCircle, MoreHorizontal, Pencil, Sparkles, Trash2 } from "lucide-react";
+import { ChevronRight, Flag, Gift, Lock, MessageCircle, MessageSquareText, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { notify } from "@/lib/pushClient";
 import { plural, word } from "@/lib/plural";
@@ -213,7 +213,7 @@ export function FeedScreen({
       {!prompt ? (
         <section className="mt-6 rounded-[28px] border border-line bg-surface p-7 text-center shadow-card">
           <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-brand-soft text-brand">
-            <Sparkles size={26} />
+            <MessageSquareText size={26} />
           </span>
           <p className="mt-4 text-[18px] font-semibold">Today&apos;s prompt is on its way</p>
           <p className="mx-auto mt-1 max-w-xs text-[14px] text-muted">Check back soon. We&apos;ll ask everyone one question, and you answer masked.</p>
@@ -225,7 +225,7 @@ export function FeedScreen({
             <div aria-hidden className="absolute -top-14 -right-12 h-44 w-44 rounded-full bg-white/10" />
             <div className="relative flex items-center justify-between gap-2 text-[12px] font-semibold">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5">
-                <Sparkles size={13} /> Today&apos;s prompt
+                <MessageSquareText size={13} /> Today&apos;s prompt
               </span>
               <span className="text-white/75">{now ? `New one in ${untilNext(now)}` : ""}</span>
             </div>

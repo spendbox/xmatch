@@ -4,7 +4,7 @@ import { plural, word } from "@/lib/plural";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
-import { CalendarDays, KeyRound, MessageCircleQuestion, Music, Plus, Sparkles, Users } from "lucide-react";
+import { CalendarDays, KeyRound, MessageCircleQuestion, Music, Plus, Star, Users } from "lucide-react";
 import { EVENT_KINDS, eventPhase, eventWhen, themeBg, type EventKind, type EventSettings } from "@/lib/events";
 import { intentLabel } from "@/lib/constants";
 import type { Intent } from "@/lib/types";
@@ -46,7 +46,7 @@ const BADGE: Record<string, string> = {
 
 /** The little picture for each kind of event. */
 export function KindIcon({ kind, size = 16, className }: { kind: string; size?: number; className?: string }) {
-  if (kind === "spotlight") return <Sparkles size={size} className={className} />;
+  if (kind === "spotlight") return <Star size={size} className={className} />;
   if (kind === "party") return <Music size={size} className={className} />;
   return (
     <span className={clsx("inline-flex", className)} style={{ width: size + 4 }}>

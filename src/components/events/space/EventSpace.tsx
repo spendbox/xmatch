@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { ArrowLeft, Eye, Handshake, Headphones, LayoutGrid, MessageCircle, MessagesSquare, PartyPopper, Sparkles, Users } from "lucide-react";
+import { ArrowLeft, Eye, Handshake, Headphones, LayoutGrid, MessageCircle, MessagesSquare, PartyPopper, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { plural } from "@/lib/plural";
 import { countdown, eventPhase, eventWhen, settingsOf, themeBg, type DashpadEvent, type EventChatSummary, type WallPerson } from "@/lib/events";
@@ -393,7 +393,7 @@ export function EventSpace({
           </div>
           {!e.cover_url && (
             <span className="mt-6 hidden h-28 w-28 shrink-0 animate-float place-items-center rounded-[32px] bg-white/15 lg:grid">
-              {e.kind === "party" ? <Headphones size={56} strokeWidth={1.5} /> : <Sparkles size={56} strokeWidth={1.5} />}
+              {e.kind === "party" ? <Headphones size={56} strokeWidth={1.5} /> : <PartyPopper size={56} strokeWidth={1.5} />}
             </span>
           )}
         </div>

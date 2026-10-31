@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePathname, useRouter } from "next/navigation";
-import { Flame, Heart, Smile, Sparkles, Wine, X } from "lucide-react";
+import { Flame, Heart, Smile, Star, Wine, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useCall } from "@/components/calls/CallProvider";
 import { MaskIcon } from "@/components/ui/MaskIcon";
@@ -45,7 +45,7 @@ export const MATCH_THEMES: Record<Intent, Theme> = {
   friends: {
     bg: "linear-gradient(160deg, #0f7a55 0%, #1f9d6b 45%, #f2b33d 100%)",
     button: "#0f7a55",
-    floaty: (s) => (s % 2 ? <Smile size={s} /> : <Sparkles size={s} />),
+    floaty: (s) => (s % 2 ? <Smile size={s} /> : <Star size={s} />),
     icon: <Smile size={40} strokeWidth={2} />,
     pair: { title: "New friend incoming!", body: (n) => `${n} is up for a chat. Say hi before the timer runs out.`, cta: "Say hi" },
     match: { title: "Friends unlocked!", body: (n) => `You and ${n} both unmasked. Keep the conversation going.`, cta: "Open your chat" },
