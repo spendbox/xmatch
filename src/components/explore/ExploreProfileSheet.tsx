@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Lock, MessageCircle, ShieldCheck } from "lucide-react";
+import { Check, Lock, MessageCircle, Snowflake } from "lucide-react";
+import { IcebreakerSheet } from "@/components/home/IcebreakerSheet";
 import { createClient } from "@/lib/supabase/client";
 import { clearNotice, notify } from "@/lib/pushClient";
 import { isOnline, usePresence } from "@/lib/usePresence";
@@ -35,6 +36,7 @@ export function ExploreProfileSheet({
   const [p, setP] = useState<ExploreProfile | null>(demo ?? null);
   const [busy, setBusy] = useState<"photos" | "message" | "wave" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [breaking, setBreaking] = useState(false);
   // Online, checked the same way as everywhere else
   const presence = usePresence(demo ? [] : [personId]);
 
@@ -137,6 +139,7 @@ export function ExploreProfileSheet({
   );
 
   return (
+    <>
     <ProfileSheet
       profile={profile}
       age={p.age}
@@ -225,18 +228,16 @@ export function ExploreProfileSheet({
                     )}
                   </Button>
                 )}
+                {/* People you've never met: break the ice instead of a plain message */}
                 {!p.waved_me && (
-                  <Button size="lg" onClick={message} loading={busy === "message"} loadingText="Opening chat…" className="min-w-0 flex-1">
-                    <MessageCircle size={20} />
-                    Message · <KeyCoin size={20} /> {p.message_cost}
+                  <Button size="lg" onClick={() => setBreaking(true)} className="min-w-0 flex-1">
+                    <Snowflake size={20} /> Break the ice
                   </Button>
                 )}
               </div>
-              {p.waved_me ? null : p.message_cost > 0 ? (
-                <p className="flex items-center justify-center gap-1.5 text-[12px] text-muted">
-                  <ShieldCheck size={14} className="text-mint" /> Message Keys come back if {first} doesn&apos;t reply in 48 hours
-                </p>
-              ) : null}
+              {!p.waved_me && (
+                <p className="text-center text-[12px] text-muted">Reply to one of {first}&apos;s cards, ask a This or That, send a voice hello or a game.</p>
+              )}
               {!p.waved_me && p.i_waved && <p className="text-center text-[12px] text-muted">If {first} waves back, your chat opens free.</p>}
             </>
           ) : (
@@ -249,6 +250,16 @@ export function ExploreProfileSheet({
         )
       }
     />
+    {/* Break the ice, over the profile */}
+    <IcebreakerSheet
+      person={{ id: p.id, name: p.name, age: p.age, gender: p.gender, photo: p.photos[0] ?? null, place: p.place, intent: null, online: p.online, connected: false }}
+      open={breaking}
+      onClose={() => setBreaking(false)}
+      onSent={onChanged}
+      demo={!!demo}
+      layer="z-[70]"
+    />
+    </>
   );
 }
 

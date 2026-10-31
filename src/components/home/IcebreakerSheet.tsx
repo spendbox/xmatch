@@ -38,20 +38,34 @@ const MAX_VOICE = 15;
 
 /** Little openers for the card they wrote, so nobody stares at an empty box */
 function openers(thing: Thing) {
-  const a = thing.a;
+  const a = thing.a.trim();
   const low = a.charAt(0).toLowerCase() + a.slice(1);
-  switch (thing.p) {
-    case "food":
-      return [`${a}? Where's the best one in town?`, `Okay but who makes the best ${low}?`, `I'd fight you for the last plate of ${low} 😅`];
-    case "music":
-      return [`${a} is a vibe. Favourite song?`, `Concert or headphones for ${a}?`, `Top 3 ${a} songs. Go.`];
-    case "trip":
-      return [`${a}! Who would you take?`, `First thing you'd do in ${a}?`, `${a} is on my list too 👀`];
-    case "team":
-      return [`${a}? We need to talk 😤`, `Best ${a} player right now?`, `How was your ${a} weekend?`];
-    default:
-      return [`"${a}"? Okay, now I'm curious`, `Tell me more about "${low}"`, `Same here! What's the story?`];
-  }
+  const by: Record<string, string[]> = {
+    food: [`${a}? Where's the best one in town?`, `Okay but who makes the best ${low}?`, `I'd fight you for the last plate of ${low} 😅`],
+    weekend: [`${a} sounds perfect. Who's coming?`, `Okay, plan my weekend then 😄`, `${a}? You've just described my dream Saturday`],
+    music: [`${a} is a vibe. Favourite song?`, `Concert or headphones for ${a}?`, `Top 3 ${a} songs. Go.`],
+    team: [`${a}? We need to talk 😤`, `Best ${a} player right now?`, `How was your ${a} weekend?`],
+    work: [`${a}? What's the best part of it?`, `How did you get into ${low}?`, `Tell me one thing people get wrong about ${low}`],
+    spot: [`${a}? I might see you there 👀`, `What keeps you going back?`, `Take me with you next time`],
+    trip: [`${a}! Who would you take?`, `First thing you'd do in ${a}?`, `${a} is on my list too 👀`],
+    drink: [`${a}? Good taste 🥂`, `Where's the best ${low} in town?`, `I'll get the first round of ${low}`],
+    love: [`${a}? How do you show it?`, `Same here. What's the sweetest thing someone's done?`, `Noted 📝 What else should I know?`],
+    green: [`"${a}" is a great one. Am I passing so far? 😄`, `What made that your green flag?`, `Love that. What's your other one?`],
+    red: [`"${a}"? Fair. Story behind it? 👀`, `Noted, I'll be on my best behaviour 😅`, `Okay, now tell me a green flag`],
+    skill: [`${a}? I need proof 😄`, `How did you get good at ${low}?`, `Teach me one thing about ${low}`],
+    show: [`${a}! Favourite character?`, `Okay, ${a}: best season?`, `I need a show to watch. Is ${a} worth starting?`],
+    game: [`${a}? I'd beat you 😏`, `How long have you played ${a}?`, `Rematch rules: loser buys the drinks`],
+    lang: [`${a}! Teach me a word?`, `Which one do you dream in?`, `Say something nice in one of them 😄`],
+    clock: [`${a}? Same here, honestly`, `So when's the best time to text you?`, `Defend it. Why ${low}?`],
+    pet: [`"${a}"? Okay, same 😤`, `I'll make sure I never do that 😅`, `What's your second biggest one?`],
+    dream: [`${a}? I love that. What's step one?`, `When you do, can I come? 😄`, `That's a big one. What's stopping you?`],
+    kid: [`${a}! What happened? 😄`, `Little you had big plans`, `Is there still a bit of ${low} in you?`],
+    need: [`${a}? Same honestly`, `Okay, why ${low}?`, `A day without ${low}. Could you do it? 😄`],
+    take: [`"${a}"? Defend it 😤`, `Hot take accepted. Here's mine…`, `Okay, I half agree. Convince me`],
+    place: [`${a}? Haven't been. Worth it?`, `What should I order at ${a}?`, `Meet you at ${a} some day? 👀`],
+    fact: [`Wait, "${low}"? Tell me more 😄`, `Okay, that's a good one`, `I didn't see that coming. Story?`],
+  };
+  return by[thing.p] ?? [`"${a}"? Okay, now I'm curious`, `Tell me more about that`, `Same here! What's the story?`];
 }
 
 const SAMPLE: Question[] = [
@@ -84,6 +98,7 @@ export function IcebreakerSheet({
   onSent,
   demo,
   demoMode,
+  layer,
 }: {
   person: ExplorePerson | null;
   open: boolean;
@@ -92,6 +107,8 @@ export function IcebreakerSheet({
   /** Design previews: sample data, nothing is sent */
   demo?: boolean;
   demoMode?: IceKind;
+  /** Opened over something else (a profile): sit above it */
+  layer?: string;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
@@ -129,7 +146,7 @@ export function IcebreakerSheet({
     setRaw(null);
     setClip(null);
     if (demo) {
-      setStatus({ free_left: 2, free_per_day: 3, prices: { card: 2, this: 2, voice: 3, game: 1 }, sent: null, received: null });
+      setStatus({ free_left: 2, free_per_day: 3, prices: { card: 3, this: 3, voice: 3, game: 3 }, sent: null, received: null });
       setThings([
         { p: "food", a: "Jollof rice" },
         { p: "music", a: "Tems" },
@@ -259,6 +276,7 @@ export function IcebreakerSheet({
     <Sheet
       open={open}
       onClose={close}
+      layer={layer}
       title={done ? "Sent!" : `Break the ice with ${first}`}
       subtitle={done ? undefined : `${first} sees it without knowing who you are. If ${first} answers, your masked chat opens.`}
       footer={

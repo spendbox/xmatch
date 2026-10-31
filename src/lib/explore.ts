@@ -20,6 +20,11 @@ export type ExplorePerson = {
   tag?: string | null;
   /** How far away, in km (when you've both shared where you are) */
   km?: number | null;
+  /** Interests you share, up to 3 (update 107) */
+  shared?: string[];
+  /** You waved at them / they waved at you */
+  i_waved?: boolean;
+  waved_me?: boolean;
 };
 
 export type ExploreList = {

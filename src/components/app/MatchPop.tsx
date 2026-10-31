@@ -17,7 +17,8 @@ import type { Intent, MatchSummary } from "@/lib/types";
  * - match: you've both unmasked (or waved back), so you're connected
  */
 export type MatchPopData = {
-  kind: "pair" | "match";
+  /** ice: they answered your icebreaker */
+  kind: "pair" | "match" | "ice";
   intent: Intent;
   /** Their mask name (pair) or real name (match) */
   name: string;
@@ -36,6 +37,7 @@ type Theme = {
   icon: React.ReactNode;
   pair: { title: string; body: (n: string) => string; cta: string };
   match: { title: string; body: (n: string) => string; cta: string };
+  ice: { title: string; body: (n: string) => string; cta: string };
 };
 
 /** Each mood gets its own look and words */
@@ -47,6 +49,7 @@ export const MATCH_THEMES: Record<Intent, Theme> = {
     icon: <Smile size={40} strokeWidth={2} />,
     pair: { title: "New friend incoming!", body: (n) => `${n} is up for a chat. Say hi before the timer runs out.`, cta: "Say hi" },
     match: { title: "Friends unlocked!", body: (n) => `You and ${n} both unmasked. Keep the conversation going.`, cta: "Open your chat" },
+    ice: { title: "The ice is broken!", body: (n) => `${n} answered your icebreaker. Your masked chat is open, so say hi.`, cta: "Say hi" },
   },
   dating: {
     bg: "linear-gradient(160deg, #3b1fa8 0%, #8f3fd9 50%, #e0477e 100%)",
@@ -55,6 +58,7 @@ export const MATCH_THEMES: Record<Intent, Theme> = {
     icon: <Wine size={40} strokeWidth={2} />,
     pair: { title: "Your date has arrived", body: (n) => `${n} is waiting, masked. Make a good first impression.`, cta: "Start chatting" },
     match: { title: "You clicked!", body: (n) => `You and ${n} unmasked each other. Your chat is waiting.`, cta: "Open your chat" },
+    ice: { title: `They answered!`, body: (n) => `${n} answered your icebreaker. Your masked chat is open. Make it count.`, cta: "Open the chat" },
   },
   spicy: {
     bg: "linear-gradient(160deg, #1c0610 0%, #8a1030 50%, #ff5a36 100%)",
@@ -63,6 +67,7 @@ export const MATCH_THEMES: Record<Intent, Theme> = {
     icon: <Flame size={40} strokeWidth={2} />,
     pair: { title: "Things just got spicy", body: (n) => `${n} is here and in the mood to flirt.`, cta: "Turn up the heat" },
     match: { title: "Sparks flew!", body: (n) => `You and ${n} unmasked. Take it from here.`, cta: "Open your chat" },
+    ice: { title: "The ice melted 🔥", body: (n) => `${n} answered your icebreaker. Your masked chat is open. Take it from here.`, cta: "Open the chat" },
   },
 };
 
@@ -128,7 +133,7 @@ export function MatchPop({ userId, myPhoto }: { userId: string; myPhoto?: string
         supabase.rpc("my_ice_breaks"),
       ]);
       const sent = ((mine as { sent?: { id: string; name: string | null }[] } | null)?.sent ?? []).find((x) => x.id === row.id);
-      add({ kind: "pair", intent: ((s as { intent?: Intent } | null)?.intent ?? "dating") as Intent, name: sent?.name?.split(" ")[0] ?? "They", href });
+      add({ kind: "ice", intent: ((s as { intent?: Intent } | null)?.intent ?? "dating") as Intent, name: sent?.name?.split(" ")[0] ?? "They", href });
     };
 
     const ch = supabase
@@ -175,7 +180,7 @@ export function MatchPopView({ pop, onOpen, onClose }: { pop: MatchPopData; onOp
   }, [onClose]);
   if (!mounted) return null;
   const t = MATCH_THEMES[pop.intent] ?? MATCH_THEMES.dating;
-  const words = pop.kind === "pair" ? t.pair : t.match;
+  const words = pop.kind === "pair" ? t.pair : pop.kind === "ice" ? t.ice : t.match;
 
   return createPortal(
     <div role="dialog" aria-modal="true" aria-label={words.title} className="fixed inset-0 z-[90] grid animate-fade-in place-items-center overflow-hidden p-6 text-white" style={{ background: t.bg }}>
@@ -220,13 +225,13 @@ export function MatchPopView({ pop, onOpen, onClose }: { pop: MatchPopData; onOp
           ) : (
             <span className="relative grid h-28 w-28 place-items-center rounded-full bg-white/15 ring-4 ring-white/40 shadow-2xl">
               <span aria-hidden className="absolute inset-0 animate-ping rounded-full bg-white/15 [animation-duration:2.2s]" />
-              {pop.kind === "pair" ? <MaskIcon className="relative w-16 text-white" eyes="transparent" /> : t.icon}
+              {pop.kind === "pair" || pop.kind === "ice" ? <MaskIcon className="relative w-16 text-white" eyes="transparent" /> : t.icon}
             </span>
           )}
         </div>
         <span className={(pop.kind === "match" ? "mt-8" : "mt-5") + " inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[12.5px] font-bold tracking-wide uppercase"}>
           {pop.intent === "friends" ? <Smile size={14} /> : pop.intent === "spicy" ? <Flame size={14} /> : <Heart size={14} />}
-          {pop.kind === "pair" ? "You've been paired" : "It's a match"}
+          {pop.kind === "pair" ? "You've been paired" : pop.kind === "ice" ? "Icebreaker answered" : "It's a match"}
         </span>
         <h2 className="mt-3 font-display text-[40px] leading-[1.02] font-semibold [text-wrap:balance]">{words.title}</h2>
         <p className="mx-auto mt-3 max-w-[300px] text-[16px] leading-relaxed text-white/90">{words.body(pop.name)}</p>

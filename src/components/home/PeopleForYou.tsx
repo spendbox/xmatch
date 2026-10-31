@@ -1,11 +1,16 @@
 "use client";
 
 import { MaskIcon } from "@/components/ui/MaskIcon";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Photo } from "@/components/ui/Photo";
 import Link from "next/link";
 import clsx from "clsx";
-import { ChevronRight, MessageCircle, Snowflake, UserRound, UsersRound } from "lucide-react";
+import { Check, ChevronRight, MessageCircle, Snowflake, UsersRound } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { notify } from "@/lib/pushClient";
+import { Spinner } from "@/components/ui/Button";
+import type { ExplorePerson } from "@/lib/explore";
 import { IcebreakerSheet } from "./IcebreakerSheet";
 import type { ExploreList } from "@/lib/explore";
 import { tapFeedback } from "@/components/ui/Button";
@@ -18,7 +23,31 @@ const SHOWN = 6;
 /** Home: your 20 closest matches from Meet, in small circles (4 across), and a way to the rest */
 export function PeopleForYou({ userId, demo, demoBreak, demoBreakMode }: { userId: string; demo?: ExploreList; /** Previews: open the icebreaker for this person */ demoBreak?: number; demoBreakMode?: "card" | "this" | "voice" | "game" }) {
   const { list, reload } = useMeetList(userId, demo ?? null);
+  const supabase = useMemo(() => createClient(), []);
+  const router = useRouter();
   const [open, setOpen] = useState<string | null>(null);
+  // Waves sent from here (before the list reloads)
+  const [waved, setWaved] = useState<Record<string, boolean>>({});
+  const [waving, setWaving] = useState<string | null>(null);
+  const [waveError, setWaveError] = useState<string | null>(null);
+  async function wave(p: ExplorePerson) {
+    tapFeedback();
+    if (demo) return setWaved((w) => ({ ...w, [p.id]: true }));
+    setWaving(p.id);
+    setWaveError(null);
+    const { data, error } = await supabase.rpc("wave_person", { p_id: p.id });
+    setWaving(null);
+    if (error || !data) return setWaveError(error?.message?.includes("NOT_ENOUGH_KEYS") ? "You don't have enough Keys to wave." : error?.message?.replace(/^.*?: /, "") || "Couldn't wave. Try again.");
+    const r = data as { kind: "waved" | "match" | "masked"; id?: string; again?: boolean; mutual?: boolean };
+    if (r.kind === "waved") {
+      setWaved((w) => ({ ...w, [p.id]: true }));
+      if (!r.again) notify({ kind: "wave", personId: p.id });
+      return;
+    }
+    // You both waved (or you already chat): open it
+    if (r.mutual) notify({ kind: "wave", personId: p.id });
+    router.push(r.kind === "match" ? `/matches/${r.id}` : `/masquerade/${r.id}`);
+  }
   const [breaking, setBreaking] = useState<string | null>(demoBreak != null ? (demo?.people[demoBreak]?.id ?? null) : null);
   // In the order Dashpad suggests: people who fit your gender, mood and age first (being online
   // already counts in that order). Who's online is checked live (every 30s), the same way as in
@@ -41,6 +70,7 @@ export function PeopleForYou({ userId, demo, demoBreak, demoBreakMode }: { userI
       </div>
 
       {/* One post per person, like Instagram: every card the same size */}
+      {waveError && <p className="mb-2 text-center text-[13px] font-medium text-chili">{waveError}</p>}
       <ul className="space-y-4">
         {list
           ? people.map((p, i) => (
@@ -110,22 +140,48 @@ export function PeopleForYou({ userId, demo, demoBreak, demoBreakMode }: { userI
                       </>
                     )}
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      tapFeedback();
-                      setOpen(p.id);
-                    }}
-                    aria-label={`See ${p.name}'s profile`}
-                    className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-line text-ink-soft active:scale-95"
-                  >
-                    <UserRound size={18} />
-                  </button>
+                  {/* A quick wave (free unless Admin sets a price). If they waved first, waving back opens your chat */}
+                  {!p.connected && (
+                    <button
+                      type="button"
+                      onClick={() => void wave(p)}
+                      disabled={!!waved[p.id] || p.i_waved || waving === p.id}
+                      aria-label={waved[p.id] || p.i_waved ? `You waved at ${p.name}` : p.waved_me ? `Wave back at ${p.name}` : `Wave at ${p.name}`}
+                      className={clsx(
+                        "inline-flex h-10 shrink-0 items-center justify-center gap-1 rounded-full border px-3.5 text-[14px] font-semibold transition active:scale-95 disabled:active:scale-100",
+                        p.waved_me && !(waved[p.id] || p.i_waved) ? "border-gold/60 bg-gold-soft text-[#8a5a00]" : "border-line text-ink-soft",
+                      )}
+                    >
+                      {waving === p.id ? (
+                        <Spinner className="h-4 w-4" />
+                      ) : waved[p.id] || p.i_waved ? (
+                        <>
+                          <Check size={16} /> Waved
+                        </>
+                      ) : (
+                        <>
+                          <span aria-hidden className="text-[17px] leading-none">👋</span> {p.waved_me ? "Wave back" : "Wave"}
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
-                {/* Caption */}
+                {/* What you're both into */}
                 <p className="truncate px-3.5 pt-2 pb-3 text-[13px] text-ink-soft">
-                  <b className="font-semibold text-ink">{p.name.split(" ")[0]}</b> is into {p.tag ?? "meeting new people"}
-                  {p.online ? " · online now" : ""}
+                  {p.shared?.length ? (
+                    <>
+                      <b className="font-semibold text-ink">You both like</b> {listOf(p.shared)}
+                    </>
+                  ) : p.tag ? (
+                    <>
+                      <b className="font-semibold text-ink">{p.name.split(" ")[0]}</b> is into {p.tag}
+                    </>
+                  ) : (
+                    <>
+                      <b className="font-semibold text-ink">{p.name.split(" ")[0]}</b> is new here
+                    </>
+                  )}
+                  {p.waved_me && !p.connected ? " · waved at you 👋" : p.online ? " · online now" : ""}
                 </p>
               </li>
             ))
@@ -142,3 +198,5 @@ export function PeopleForYou({ userId, demo, demoBreak, demoBreakMode }: { userI
     </section>
   );
 }
+
+const listOf = (w: string[]) => (w.length < 2 ? w[0] : `${w.slice(0, -1).join(", ")} and ${w[w.length - 1]}`);
