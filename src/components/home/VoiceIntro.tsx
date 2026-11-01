@@ -27,7 +27,7 @@ function Bars() {
 }
 
 /** "Hear me" on someone's photo: plays their voice intro (one at a time across the app) */
-export function HearMe({ id, src, seconds, name }: { id: string; src: string; seconds?: number | null; name: string }) {
+export function HearMe({ id, src, seconds, name, compact }: { id: string; src: string; seconds?: number | null; name: string; /** Smaller, for Explore cards */ compact?: boolean }) {
   const playing = usePlayingIntro() === id;
   return (
     <button
@@ -38,9 +38,9 @@ export function HearMe({ id, src, seconds, name }: { id: string; src: string; se
         playIntro(id, src);
       }}
       aria-label={playing ? `Stop ${name}'s voice intro` : `Hear ${name}'s voice intro`}
-      className="pointer-events-auto inline-flex h-9 items-center gap-1.5 rounded-full bg-ink/55 pr-3 pl-1.5 text-[12px] font-semibold text-white backdrop-blur transition active:scale-95"
+      className={clsx("pointer-events-auto inline-flex items-center gap-1.5 rounded-full bg-ink/55 font-semibold text-white backdrop-blur transition active:scale-95", compact ? "h-7 pr-2.5 pl-1 text-[11px]" : "h-9 pr-3 pl-1.5 text-[12px]")}
     >
-      <span className="grid h-6 w-6 place-items-center rounded-full bg-white text-ink">
+      <span className={clsx("grid place-items-center rounded-full bg-white text-ink", compact ? "h-5 w-5" : "h-6 w-6")}>
         {playing ? <Pause size={12} fill="currentColor" /> : <Volume2 size={14} />}
       </span>
       {playing ? <Bars /> : `Hear me${seconds ? ` · ${formatDuration(seconds)}` : ""}`}
