@@ -1,5 +1,6 @@
 "use client";
 
+import { ChatIsland } from "@/components/island/ChatIsland";
 import { ChatBackdrop } from "@/components/chat/ChatBackdrop";
 import { ChatBgSheet } from "@/components/chat/ChatBgSheet";
 import { chatBgInfo, isChatBg, loadChatBg, saveChatBg, saveMyDefaultBg, type ChatBgId } from "@/lib/chatBackgrounds";
@@ -626,6 +627,14 @@ export function MasqueradeRoom({
         </div>
         )}
       </header>
+
+      {/* Your Island: grows with every message you two send (the fog clears as you talk) */}
+      <ChatIsland
+        session={demo ? null : state.id}
+        refresh={messages.length}
+        latest={messages[messages.length - 1]}
+        demo={demo ? { total: messages.length + 40, since: null, items: messages.map((m) => [m.kind ?? "text", m.body] as [string, string]), unmasked: false, names: null } : undefined}
+      />
 
       {/* After someone chooses to unmask: a small note (the button itself is in the header) */}
       {state.hourly && !lapsed && (iUnmasked || them.has_voted) && (

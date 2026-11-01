@@ -1,5 +1,6 @@
 "use client";
 
+import { ChatIsland } from "@/components/island/ChatIsland";
 import { ChatBackdrop } from "@/components/chat/ChatBackdrop";
 import { ChatBgSheet } from "@/components/chat/ChatBgSheet";
 import { chatBgInfo, isChatBg, loadChatBg, saveChatBg, saveMyDefaultBg, type ChatBgId } from "@/lib/chatBackgrounds";
@@ -382,6 +383,9 @@ export function MatchChat({
           )}
         </div>
       </header>
+
+      {/* Your Island: grows with every message you two send */}
+      <ChatIsland match={matchId} refresh={messages.length} latest={messages[messages.length - 1]} />
 
       <div className="relative flex min-h-0 flex-1 flex-col" data-bg={bg !== "classic" ? "" : undefined} data-bg-dark={chatBgInfo(bg).dark ? "" : undefined}>
       <ChatBackdrop id={bg} />

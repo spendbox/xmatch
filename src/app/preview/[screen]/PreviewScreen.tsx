@@ -1,5 +1,6 @@
 "use client";
 
+import { ChatIsland } from "@/components/island/ChatIsland";
 import { DailyMock } from "./DailyMocks";
 import { BigMomentPop, CoreMock } from "./CoreMocks";
 import { AuraMock } from "./AuraMocks";
@@ -1111,6 +1112,32 @@ function ScreenBody({ screen }: { screen: string }) {
           onClose={() => {}}
         />
       );
+    case "island":
+    case "island-full":
+    case "island-unmasked":
+    case "island-new": {
+      const chat: [string, string][] = [
+        ["text", "hi stranger"], ["audio", ""], ["text", "I love flowers honestly"], ["text", "omo I need jollof right now"], ["text", "Mama Put tomorrow? my treat"],
+        ["text", "traffic on third mainland is wild"], ["text", "beach on saturday?"], ["text", "my mum keeps calling lol"], ["text", "this song is a vibe"], ["gift", "rose"],
+        ["text", "you're so sweet"], ["text", "what are you doing"], ["text", "home now"], ["text", "suya later?"], ["audio", ""], ["text", "haha stop"], ["text", "ok ok"],
+        ["sticker", "Hey"], ["text", "danfo almost hit me"], ["text", "the party was mad"], ["text", "sleeping soon"], ["text", "good morning"], ["text", "breakfast?"],
+        ["text", "tell me something"], ["text", "I miss you already"], ["text", "beach again"], ["text", "night night"], ["text", "lunch break"], ["text", "random thought"],
+        ["text", "family dinner tonight"], ["text", "this traffic again"], ["text", "chill weekend"], ["text", "music on repeat"], ["text", "more jollof"], ["text", "ok"],
+      ];
+      const items = screen === "island-new" ? chat.slice(0, 3) : chat;
+      const data = {
+        total: screen === "island-new" ? 3 : screen === "island-unmasked" ? 214 : 64,
+        since: new Date(Date.now() - (screen === "island-new" ? 1 : 7) * 86400000).toISOString(),
+        items,
+        unmasked: screen === "island-unmasked",
+        names: screen === "island-unmasked" ? (["Tolu", "Kemi"] as [string, string]) : null,
+      };
+      return (
+        <div className="min-h-dvh bg-cream pt-2">
+          <ChatIsland refresh={items.length} demo={data} startFull={screen !== "island"} />
+        </div>
+      );
+    }
     case "things-deck":
       return <ThingsDeck open onClose={() => {}} things={me.things ?? []} onSaved={() => {}} demo />;
     case "pact-intro":
