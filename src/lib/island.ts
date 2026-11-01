@@ -1,11 +1,13 @@
 /**
- * Your Island: every chat grows little islands, one piece per message. It's worked out from the
- * chat's messages only (nothing extra is saved), the same way on both phones, so you both always
- * see the same islands.
+ * Your Island: every chat grows one island town, one building per message. It's worked out from
+ * the chat's messages only (nothing extra is saved), the same way on both phones, so you both
+ * always see the same island.
  *
- * - Each message adds a piece; its words pick what ("jollof" a food stall, "football" a pitch).
+ * - The island is a grid: roads every few tiles, and plots between them. Each piece gets its own
+ *   plot, so nothing ever overlaps.
+ * - The land keeps getting bigger as you chat (there's no limit).
  * - Pieces level up as you keep talking: a cottage becomes a two-storey house, then flats.
- * - Every 30 pieces a new island rises next to the last one, joined by a bridge.
+ * - Every 60 messages a pedestrian bridge goes up over a road.
  */
 
 export type PieceKind = "house" | "palm" | "tree" | "stall" | "bus" | "lamp" | "flowers" | "rocks" | "office" | "pitch" | "stage" | "cafe";
@@ -22,8 +24,8 @@ export type IslandData = {
 export type Piece = {
   kind: PieceKind;
   level: 1 | 2 | 3;
-  x: number;
-  y: number;
+  gx: number;
+  gy: number;
   scale: number;
   roof: string;
   wall: string;
@@ -31,7 +33,30 @@ export type Piece = {
   label: string;
 };
 
-export type IslandOne = { index: number; ox: number; oy: number; size: number; pieces: Piece[] };
+export type Road = { gx: number; gy: number; axis: "x" | "y" | "both" };
+export type Spot = { gx: number; gy: number };
+
+export type IslandLayout = {
+  /** Land tiles, as "gx,gy" */
+  land: Set<string>;
+  roads: Road[];
+  pieces: Piece[];
+  /** Empty plots with a little bush */
+  shrubs: Spot[];
+  footbridges: Road[];
+  cars: (Road & { color: string })[];
+  lighthouse: Spot | null;
+  signpost: Spot | null;
+  /** How far the land reaches from the middle, in tiles */
+  radius: number;
+  birds: number;
+  boat: boolean;
+  /** 0 (clear) to 0.9 (thick fog) */
+  fog: number;
+  total: number;
+  days: number;
+  pieceCount: number;
+};
 
 /** A small, steady hash: the same text always gives the same number, on every phone */
 export function hash(s: string) {
@@ -70,9 +95,10 @@ const WORDS: [PieceKind, RegExp][] = [
   ["flowers", /(\blove\b|❤|💕|😍|🥰|\bheart\b|\bmiss you\b|\bcute\b|\bbeautiful\b|\bsweet\b)/i],
 ];
 
-const DEFAULTS: PieceKind[] = ["tree", "house", "flowers", "palm", "tree", "rocks", "house", "flowers", "cafe", "lamp"];
+const DEFAULTS: PieceKind[] = ["tree", "house", "flowers", "palm", "tree", "rocks", "house", "flowers", "cafe", "lamp", "house", "office"];
 const ROOFS = ["#6d4ff0", "#e0477e", "#1aa774", "#2f80ed", "#ef6a3a", "#b4532a"];
 const WALLS = ["#fff3e0", "#ffe3d6", "#e2f6ec", "#ece6ff", "#fff6c4", "#dcefff"];
+const CARS = ["#e5484d", "#2f80ed", "#f7c614", "#ffffff", "#1aa774", "#3a3350"];
 
 /** The piece one message adds, and the word that chose it */
 export function pieceFor(kind: string, body: string, salt = ""): { kind: PieceKind; word: string | null } {
@@ -87,102 +113,110 @@ export function pieceFor(kind: string, body: string, salt = ""): { kind: PieceKi
   return { kind: DEFAULTS[hash(body + salt) % DEFAULTS.length], word: null };
 }
 
-/** A short line about a message: "'jollof' built a food stall" or "a voice note brought a bird" */
-export function pieceLine(kind: string, body: string) {
-  if (kind === "audio") return "A voice note brought a bird";
-  const p = pieceFor(kind, body);
-  return p.word ? `"${p.word}" built ${NAMES[p.kind][0]}` : `Your island got ${NAMES[p.kind][0]}`;
-}
+/** Roads run every this many tiles, both ways */
+export const BLOCK = 4;
+const mod = (n: number, m: number) => ((n % m) + m) % m;
+const key = (gx: number, gy: number) => `${gx},${gy}`;
+/** -0.5 to 0.5, steady per tile: makes the coast wiggle */
+const wiggle = (gx: number, gy: number) => (hash(`c${gx},${gy}`) % 1000) / 1000 - 0.5;
+const isLandAt = (gx: number, gy: number, r: number) => Math.hypot(gx, gy) <= r + wiggle(gx, gy) * 1.4;
+const isRoad = (gx: number, gy: number) => mod(gx, BLOCK) === 0 || mod(gy, BLOCK) === 0;
 
-/** How many pieces fit on one island before the next one rises */
-export const PER_ISLAND = 30;
-/** How far apart the islands sit */
-const STEP = 320;
-
-// Where pieces can stand on an island: points on the grass, roughly the middle first. The
-// lighthouse has its own spot.
-const CX = 195;
-const CY = 470;
-const SLOTS: { x: number; y: number }[] = (() => {
-  const out: { x: number; y: number; r: number }[] = [];
-  for (let row = 0; row < 7; row++) {
-    const y = 414 + row * 21;
-    for (let col = 0; col < 10; col++) {
-      const x = 52 + col * 36 + (row % 2 ? 18 : 0);
-      const dx = (x - CX) / 146;
-      const dy = (y - CY) / 64;
-      if (dx * dx + dy * dy > 0.86) continue;
-      if (Math.hypot(x - 302, (y - 444) * 1.6) < 36) continue;
-      const d = Math.hypot(x - CX, (y - CY) * 2.2);
-      out.push({ x, y, r: d * (0.55 + (hash(`${x},${y}`) % 1000) / 1100) });
+/**
+ * Every plot (not a road) in the same order for every chat: middle first, loosely, so the town
+ * fills out naturally. Piece number i always gets plot number i, so nothing moves as it grows.
+ */
+const ORDER: { gx: number; gy: number }[] = (() => {
+  const out: { gx: number; gy: number; d: number }[] = [];
+  const n = 48;
+  for (let gx = -n; gx <= n; gx++)
+    for (let gy = -n; gy <= n; gy++) {
+      if (isRoad(gx, gy)) continue;
+      out.push({ gx, gy, d: Math.hypot(gx, gy) + (hash(`p${gx},${gy}`) % 1000) / 600 });
     }
-  }
-  return out.sort((a, b) => a.r - b.r).map(({ x, y }) => ({ x, y }));
+  return out.sort((a, b) => a.d - b.d).map(({ gx, gy }) => ({ gx, gy }));
 })();
 
-export type IslandLayout = {
-  islands: IslandOne[];
-  /** How wide the whole chain of islands is */
-  width: number;
-  birds: number;
-  boat: boolean;
-  lighthouse: boolean;
-  /** 0 (clear) to 0.9 (thick fog) */
-  fog: number;
-  total: number;
-  days: number;
-  pieceCount: number;
-};
-
-/** Where island number i sits (they zig-zag across the sea) */
-export function islandOffset(i: number) {
-  return { ox: i * STEP, oy: i === 0 ? 0 : i % 2 ? -46 : 18 };
-}
-
-/** Lay the islands out from the chat */
+/** Lay the island out from the chat */
 export function layoutIsland(d: IslandData): IslandLayout {
   const items = d.items ?? [];
   const voices = items.filter(([k]) => k === "audio").length;
   const built = items.filter(([k]) => k !== "audio" && k !== "system");
-  const count = Math.max(1, Math.ceil(built.length / PER_ISLAND));
-  const islands: IslandOne[] = [];
-  for (let i = 0; i < count; i++) {
-    const chunk = built.slice(i * PER_ISLAND, (i + 1) * PER_ISLAND);
-    const { ox, oy } = islandOffset(i);
-    const pieces = chunk
-      .map(([kind, body], j) => {
-        const n = i * PER_ISLAND + j;
-        const p = pieceFor(kind, body, String(n));
-        const h = hash(`${n}:${body}`);
-        // Older pieces level up as you keep talking
-        const age = built.length - 1 - n;
-        const level: 1 | 2 | 3 = age >= 120 ? 3 : age >= 40 ? 2 : 1;
-        const slot = SLOTS[j];
-        return {
-          kind: p.kind,
-          level,
-          x: slot.x + ((h % 7) - 3),
-          y: slot.y + (((h >>> 4) % 5) - 2),
-          scale: 0.78 + ((h >>> 8) % 16) / 100,
-          roof: ROOFS[(h >>> 12) % ROOFS.length],
-          wall: WALLS[(h >>> 16) % WALLS.length],
-          from: body,
-          label: NAMES[p.kind][level - 1],
-        };
-      })
-      // Back to front, so nearer things sit in front
-      .sort((a, b) => a.y - b.y);
-    // The newest island grows as it fills; the ones before it are full size
-    const size = i < count - 1 ? 1 : 0.5 + 0.5 * Math.min(1, chunk.length / (PER_ISLAND * 0.8));
-    islands.push({ index: i, ox, oy, size, pieces });
-  }
+
+  // Big enough that every piece's plot (and a few spare) is on land
+  const plots = ORDER.slice(0, Math.min(ORDER.length, built.length + 6));
+  const radius = Math.max(3.2, ...plots.map((p) => Math.hypot(p.gx, p.gy) - wiggle(p.gx, p.gy) * 1.4 + 0.05));
+
+  const land = new Set<string>();
+  const roads: Road[] = [];
+  const n = Math.ceil(radius + 1);
+  for (let gx = -n; gx <= n; gx++)
+    for (let gy = -n; gy <= n; gy++) {
+      if (!isLandAt(gx, gy, radius)) continue;
+      land.add(key(gx, gy));
+      if (isRoad(gx, gy)) {
+        const rx = mod(gx, BLOCK) === 0;
+        const ry = mod(gy, BLOCK) === 0;
+        roads.push({ gx, gy, axis: rx && ry ? "both" : rx ? "y" : "x" });
+      }
+    }
+
+  const pieces: Piece[] = built.map(([kind, body], i) => {
+    const p = pieceFor(kind, body, String(i));
+    const h = hash(`${i}:${body}`);
+    // Older pieces level up as you keep talking
+    const age = built.length - 1 - i;
+    const level: 1 | 2 | 3 = age >= 120 ? 3 : age >= 40 ? 2 : 1;
+    const plot = plots[i];
+    return {
+      kind: p.kind,
+      level,
+      gx: plot.gx,
+      gy: plot.gy,
+      scale: p.kind === "pitch" ? 0.62 : 0.82 + ((h >>> 8) % 10) / 100,
+      roof: ROOFS[(h >>> 12) % ROOFS.length],
+      wall: WALLS[(h >>> 16) % WALLS.length],
+      from: body,
+      label: NAMES[p.kind][level - 1],
+    };
+  });
+
+  const used = new Set(pieces.map((p) => key(p.gx, p.gy)));
+  const free: { gx: number; gy: number }[] = [];
+  land.forEach((k) => {
+    const [gx, gy] = k.split(",").map(Number);
+    if (!used.has(k) && !isRoad(gx, gy)) free.push({ gx, gy });
+  });
+  const coast = (p: { gx: number; gy: number }) => [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => !land.has(key(p.gx + dx, p.gy + dy)));
+  const coastal = free.filter(coast);
+  // The lighthouse stands on the coast to the east, the signpost on the front coast
+  const lighthouse = d.total >= 100 && coastal.length ? coastal.reduce((a, b) => (b.gx - b.gy > a.gx - a.gy ? b : a)) : null;
+  const signpost = d.unmasked && coastal.length ? coastal.filter((p) => p !== lighthouse).reduce((a, b) => (b.gx + b.gy > a.gx + a.gy ? b : a), coastal[0]) : null;
+  const taken = new Set([lighthouse, signpost].filter(Boolean).map((p) => key(p!.gx, p!.gy)));
+  const shrubs = free.filter((p) => !taken.has(key(p.gx, p.gy)) && hash(`s${p.gx},${p.gy}`) % 5 < 2).map(({ gx, gy }) => ({ gx, gy }));
+
+  // Straight road pieces (not crossings), nearest the middle first
+  const straight = roads.filter((r) => r.axis !== "both").sort((a, b) => Math.hypot(a.gx, a.gy) - Math.hypot(b.gx, b.gy));
+  const footbridges = straight.filter((_, i) => i % 5 === 2).slice(0, Math.floor(d.total / 60));
+  const bridged = new Set(footbridges.map((r) => key(r.gx, r.gy)));
+  const cars = straight
+    .filter((r) => !bridged.has(key(r.gx, r.gy)) && hash(`car${r.gx},${r.gy}`) % 4 === 0)
+    .slice(0, 6 + Math.floor(built.length / 6))
+    .map((r) => ({ ...r, color: CARS[hash(`cc${r.gx},${r.gy}`) % CARS.length] }));
+
   const days = d.since ? Math.max(1, Math.ceil((Date.now() - new Date(d.since).getTime()) / 86400000)) : 1;
   return {
-    islands,
-    width: 390 + (count - 1) * STEP,
+    land,
+    roads,
+    pieces,
+    shrubs,
+    footbridges,
+    cars,
+    lighthouse,
+    signpost,
+    radius,
     birds: Math.min(6, voices),
     boat: d.total >= 20,
-    lighthouse: d.total >= 100,
     fog: d.unmasked ? 0 : Math.max(0.06, 0.9 * (1 - d.total / 150)),
     total: d.total,
     days,

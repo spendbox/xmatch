@@ -1118,7 +1118,7 @@ function ScreenBody({ screen }: { screen: string }) {
     case "island-new":
     case "island-night": {
       const words = [
-        "hi stranger", "I love flowers honestly", "omo I need jollof right now", "Mama Put tomorrow? my treat", "traffic on third mainland is wild",
+        "hi stranger", "I love flowers honestly", "omo I need food right now", "Mama Put tomorrow? my treat", "traffic on third mainland is wild",
         "beach on saturday?", "my mum keeps calling lol", "this song is a vibe", "work is stressing me", "football tonight?", "coffee date?",
         "you're so sweet", "home now", "suya later?", "haha stop", "ok ok", "danfo almost hit me", "the party was mad", "sleeping soon",
         "good morning", "breakfast?", "tell me something", "I miss you already", "exam tomorrow", "arsenal won!", "night walk",

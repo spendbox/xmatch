@@ -1,7 +1,7 @@
 "use client";
 
 import { forwardRef, useId } from "react";
-import type { IslandLayout, Piece } from "@/lib/island";
+import { hash, type IslandLayout, type Piece } from "@/lib/island";
 
 type Sky = "day" | "sunset" | "night";
 type P = [number, number];
@@ -64,9 +64,38 @@ function Shadow({ rx, ry = rx / 3 }: { rx: number; ry?: number }) {
   return <ellipse cx="0" cy="2" rx={rx} ry={ry} fill="#0b2a1a" opacity=".18" />;
 }
 
+export type IslandView = { x: number; y: number; s: number };
+
+/** Half a tile's width on screen, and how tall the cliffs are */
+export const TILE = 30;
+const CLIFF = 12;
+
+/** Turn the grid a quarter at a time (rotate the view) */
+function turn(gx: number, gy: number, rot: number): [number, number] {
+  switch (rot % 4) {
+    case 1:
+      return [-gy, gx];
+    case 2:
+      return [-gx, -gy];
+    case 3:
+      return [gy, -gx];
+    default:
+      return [gx, gy];
+  }
+}
+/** Where a grid square sits on screen */
+const proj = (rx: number, ry: number): P => [(rx - ry) * TILE, ((rx + ry) * TILE) / 2];
+const diamond = (c: P, k = 1) => pts([c[0], c[1] - (TILE / 2) * k], [c[0] + TILE * k, c[1]], [c[0], c[1] + (TILE / 2) * k], [c[0] - TILE * k, c[1]]);
+
+/** How big the island looks on screen, from its middle (for fitting it to the screen) */
+export function islandExtent(layout: IslandLayout) {
+  const r = layout.radius + 2;
+  return { halfW: r * TILE * 1.42, halfH: r * TILE * 0.72 };
+}
+
 /**
- * The islands, drawn: one or more islands joined by bridges, on the sea, under the sky.
- * `crop` shows just part of it (a viewBox). Tap a piece to see the message that made it.
+ * The island town, drawn on the sea. `view` places and zooms it, `rot` turns it. Tap a piece to
+ * see the message that made it.
  */
 export const IslandArt = forwardRef<
   SVGSVGElement,
@@ -74,168 +103,224 @@ export const IslandArt = forwardRef<
     layout: IslandLayout;
     sky: Sky;
     names?: [string, string] | null;
-    picked?: string | null;
-    onPick?: (key: string) => void;
-    crop?: string;
+    picked?: number | null;
+    onPick?: (i: number) => void;
+    rot?: number;
+    view: IslandView;
+    width: number;
+    height: number;
+    worldRef?: React.Ref<SVGGElement>;
     className?: string;
     style?: React.CSSProperties;
   }
->(function IslandArt({ layout, sky, names, picked, onPick, crop, className, style }, ref) {
+>(function IslandArt({ layout, sky, names, picked, onPick, rot = 0, view, width, height, worldRef, className, style }, ref) {
   const raw = useId();
   const id = (s: string) => `i${raw.replace(/[^a-zA-Z0-9]/g, "")}${s}`;
   const u = (s: string) => `url(#${id(s)})`;
   const c = SKIES[sky];
   const night = sky === "night";
-  const W = layout.width;
-  const last = layout.islands[layout.islands.length - 1];
+  const { halfW, halfH } = islandExtent(layout);
+
+  // Everything in turned grid squares
+  const land = new Set<string>();
+  layout.land.forEach((k) => {
+    const [gx, gy] = k.split(",").map(Number);
+    const [rx, ry] = turn(gx, gy, rot);
+    land.add(`${rx},${ry}`);
+  });
+  const roadAxis = (a: "x" | "y" | "both"): "x" | "y" | "both" => (a === "both" || rot % 2 === 0 ? a : a === "x" ? "y" : "x");
+  const roadSet = new Map<string, "x" | "y" | "both">();
+  layout.roads.forEach((r) => {
+    const [rx, ry] = turn(r.gx, r.gy, rot);
+    roadSet.set(`${rx},${ry}`, roadAxis(r.axis));
+  });
+  const tiles = Array.from(land).map((k) => k.split(",").map(Number) as [number, number]).sort((a, b) => a[0] + a[1] - (b[0] + b[1]));
+
+  // Things that stand on the island, back to front
+  type Thing = { depth: number; key: string; node: React.ReactNode };
+  const things: Thing[] = [];
+  layout.pieces.forEach((p, i) => {
+    const [rx, ry] = turn(p.gx, p.gy, rot);
+    const [x, y] = proj(rx, ry);
+    things.push({
+      depth: rx + ry,
+      key: `p${i}`,
+      node: (
+        <g
+          transform={`translate(${x} ${y}) scale(${p.scale})`}
+          onClick={
+            onPick
+              ? (e) => {
+                  e.stopPropagation();
+                  onPick(i);
+                }
+              : undefined
+          }
+          className={onPick ? "cursor-pointer" : undefined}
+          opacity={picked != null && picked !== i ? 0.45 : 1}
+        >
+          <PieceArt p={p} night={night} glow={u("glow")} />
+          {picked === i && <ellipse cx="0" cy="0" rx="34" ry="17" fill="none" stroke="#fff" strokeWidth="2.5" strokeDasharray="5 4" />}
+        </g>
+      ),
+    });
+  });
+  layout.shrubs.forEach((t, i) => {
+    const [rx, ry] = turn(t.gx, t.gy, rot);
+    const [x, y] = proj(rx, ry);
+    things.push({ depth: rx + ry, key: `s${i}`, node: <Shrub x={x} y={y} night={night} big={i % 3 === 0} /> });
+  });
+  layout.cars.forEach((car, i) => {
+    const [rx, ry] = turn(car.gx, car.gy, rot);
+    const [x, y] = proj(rx, ry);
+    const ax = roadAxis(car.axis);
+    // Keep to the left lane
+    const off: P = ax === "x" ? [-5, 2.5] : [5, 2.5];
+    things.push({
+      depth: rx + ry + 0.1,
+      key: `c${i}`,
+      node: (
+        <g transform={`translate(${x + off[0]} ${y + off[1]})`}>
+          <ellipse cx="0" cy="2" rx="10" ry="4" fill="#000" opacity=".2" />
+          <Box a={ax === "x" ? 7 : 15} b={ax === "x" ? 15 : 7} h={5} left={shade(car.color, 0.9)} right={shade(car.color, 0.72)} top={car.color} />
+          <Box a={ax === "x" ? 6 : 8} b={ax === "x" ? 8 : 6} h={3} z={5} left="#2b3a55" right="#22304a" top={shade(car.color, 0.95)} />
+          {night && <circle cx={ax === "x" ? 8 : -8} cy="0" r="6" fill={u("glow")} />}
+        </g>
+      ),
+    });
+  });
+  layout.footbridges.forEach((b, i) => {
+    const [rx, ry] = turn(b.gx, b.gy, rot);
+    const c0 = proj(rx, ry);
+    const ax = roadAxis(b.axis);
+    // It crosses the road: from the plot on one side to the plot on the other
+    const v: P = ax === "x" ? [-TILE / 2, TILE / 4] : [TILE / 2, TILE / 4];
+    const p1: P = [c0[0] - v[0] * 1.1, c0[1] - v[1] * 1.1];
+    const p2: P = [c0[0] + v[0] * 1.1, c0[1] + v[1] * 1.1];
+    things.push({
+      depth: rx + ry + 0.5,
+      key: `b${i}`,
+      node: (
+        <g>
+          <g transform={`translate(${p1[0]} ${p1[1]})`}><Box a={6} b={6} h={22} left="#2fb79c" right="#1f8f79" top="#5fd6bd" /></g>
+          <g transform={`translate(${p2[0]} ${p2[1]})`}><Box a={6} b={6} h={22} left="#2fb79c" right="#1f8f79" top="#5fd6bd" /></g>
+          <path d={`M${p1[0]} ${p1[1] - 22} L${p2[0]} ${p2[1] - 22}`} stroke="#1f8f79" strokeWidth="7" strokeLinecap="round" />
+          <path d={`M${p1[0]} ${p1[1] - 24} L${p2[0]} ${p2[1] - 24}`} stroke="#5fd6bd" strokeWidth="3" strokeLinecap="round" />
+          <path d={`M${p1[0]} ${p1[1] - 30} L${p2[0]} ${p2[1] - 30}`} stroke="#e9f7f4" strokeWidth="1.2" />
+        </g>
+      ),
+    });
+  });
+  if (layout.lighthouse) {
+    const [rx, ry] = turn(layout.lighthouse.gx, layout.lighthouse.gy, rot);
+    const [x, y] = proj(rx, ry);
+    things.push({ depth: rx + ry, key: "lh", node: <g transform={`scale(.9) translate(${x / 0.9} ${y / 0.9})`}><Lighthouse x={0} y={0} night={night} lh={u("lh")} glow={u("glow")} /></g> });
+  }
+  if (layout.signpost && names) {
+    const [rx, ry] = turn(layout.signpost.gx, layout.signpost.gy, rot);
+    const [x, y] = proj(rx, ry);
+    things.push({ depth: rx + ry, key: "sign", node: <g transform={`translate(${x} ${y + 6}) scale(.75)`}><Signpost names={names} wood={u("wood")} /></g> });
+  }
+  things.sort((a, b) => a.depth - b.depth);
 
   return (
-    <svg
-      ref={ref}
-      viewBox={crop ?? `0 0 ${W} 844`}
-      xmlns="http://www.w3.org/2000/svg"
-      preserveAspectRatio={crop ? "xMidYMid slice" : "xMinYMid meet"}
-      className={className}
-      style={style}
-      role="img"
-      aria-label={`Your island: ${layout.total} messages`}
-    >
+    <svg ref={ref} viewBox={`0 0 ${width} ${height}`} width={width} height={height} xmlns="http://www.w3.org/2000/svg" className={className} style={style} role="img" aria-label={`Your island: ${layout.total} messages`}>
       <defs>
-        <linearGradient id={id("sky")} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={c.top} /><stop offset="1" stopColor={c.bottom} /></linearGradient>
         <linearGradient id={id("sea")} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={c.seaTop} /><stop offset="1" stopColor={c.seaBottom} /></linearGradient>
-        <radialGradient id={id("grass")} cx=".45" cy=".4" r=".7"><stop offset="0" stopColor={night ? "#7cb55e" : "#b9ee86"} /><stop offset="1" stopColor={night ? "#3e7c3d" : "#5fb553"} /></radialGradient>
-        <linearGradient id={id("cliff")} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#c48a56" /><stop offset=".55" stopColor="#9c6439" /><stop offset="1" stopColor="#6e4026" /></linearGradient>
         <linearGradient id={id("lh")} x1="0" y1="0" x2="1" y2="0"><stop offset="0" stopColor="#ffffff" /><stop offset="1" stopColor="#c7cfdb" /></linearGradient>
         <linearGradient id={id("wood")} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#dca46a" /><stop offset="1" stopColor="#a86b3c" /></linearGradient>
         <radialGradient id={id("glow")}><stop offset="0" stopColor="#ffe9a8" stopOpacity=".95" /><stop offset="1" stopColor="#ffe9a8" stopOpacity="0" /></radialGradient>
-        <radialGradient id={id("sun")} cx=".5" cy=".5" r=".5"><stop offset="0" stopColor="#fff4cc" /><stop offset=".5" stopColor="#ffd06e" /><stop offset="1" stopColor="#ffd06e" stopOpacity="0" /></radialGradient>
-        <filter id={id("blur")} x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="14" /></filter>
-        <path id={id("isl")} d="M38 468 C34 432 92 400 158 396 C206 392 248 388 292 404 C336 420 360 446 352 476 C344 508 300 540 236 548 C182 556 118 552 78 528 C50 512 40 492 38 468 Z" />
+        <filter id={id("blur")} x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="16" /></filter>
       </defs>
 
-      {/* Sky */}
-      <rect width={W} height="844" fill={u("sky")} />
-      {night ? (
-        <g fill="#fff">
-          {Array.from({ length: Math.round(W / 12) }, (_, i) => (
-            <circle key={i} cx={(i * 97) % W} cy={30 + ((i * 53) % 280)} r={i % 3 ? 1.1 : 1.7} opacity={0.5 + (i % 4) * 0.12} />
-          ))}
-          <circle cx={W - 90} cy="150" r="18" fill="#fdf6d8" />
-          <circle cx={W - 82} cy="144" r="16" fill={c.top} />
+      {/* The sea fills the screen */}
+      <rect width={width} height={height} fill={u("sea")} />
+
+      <g ref={worldRef} transform={`translate(${view.x} ${view.y}) scale(${view.s})`}>
+        {/* Waves around the island */}
+        <g stroke="#ffffff" strokeWidth="2" strokeLinecap="round" fill="none" opacity={night ? 0.16 : 0.3}>
+          {Array.from({ length: 40 }, (_, i) => {
+            const a = (i * 2.399) % (Math.PI * 2);
+            const r = 1.15 + ((i * 37) % 100) / 120;
+            return <path key={i} d={`M${Math.cos(a) * halfW * r} ${Math.sin(a) * halfH * r} q6 -5 12 0 q6 -5 12 0`} />;
+          })}
         </g>
-      ) : (
-        <>
-          <circle cx={W - 100} cy={sky === "day" ? 180 : 300} r="74" fill={u("sun")} />
-          <g fill="#fff" opacity=".9">
-            {Array.from({ length: Math.ceil(W / 260) }, (_, i) => (
-              <Cloud key={i} x={70 + i * 260} y={170 + (i % 2) * 50} s={i % 2 ? 0.8 : 1.05} />
-            ))}
-          </g>
-        </>
-      )}
-      {Array.from({ length: layout.birds }, (_, i) => (
-        <path key={i} d={`M${60 + i * 58} ${232 - (i % 2) * 26} q5 -5 10 0 q5 -5 10 0`} stroke={night ? "#c9d3f0" : "#3b2a3f"} strokeWidth="2" fill="none" />
-      ))}
+        {/* Shallow water and foam */}
+        <ellipse cx="0" cy={CLIFF + 6} rx={halfW * 1.08} ry={halfH * 1.12} fill="#7fe6ee" opacity={night ? 0.14 : 0.38} />
+        <ellipse cx="0" cy={CLIFF + 6} rx={halfW * 0.98} ry={halfH * 1.0} fill="none" stroke="#fff" strokeWidth="3" strokeDasharray="20 12" opacity={night ? 0.35 : 0.75} />
 
-      {/* Sea */}
-      <rect y="330" width={W} height="514" fill={u("sea")} />
-      <g stroke="#ffffff" strokeWidth="2" strokeLinecap="round" fill="none" opacity={night ? 0.18 : 0.32}>
-        {Array.from({ length: Math.round(W / 40) }, (_, i) => (
-          <path key={i} d={`M${(i * 131) % W} ${350 + ((i * 71) % 470)} q6 -5 12 0 q6 -5 12 0`} />
-        ))}
-      </g>
-
-      {/* Bridges between islands */}
-      {layout.islands.slice(1).map((isl, k) => {
-        const prev = layout.islands[k];
-        const a: P = [prev.ox + 342, prev.oy + 488];
-        const b: P = [isl.ox + 48, isl.oy + 482];
-        const d = `M${a[0]} ${a[1]} Q${(a[0] + b[0]) / 2} ${(a[1] + b[1]) / 2 + 26} ${b[0]} ${b[1]}`;
-        return (
-          <g key={k}>
-            <path d={d} transform="translate(0 10)" stroke="#0b3554" strokeWidth="14" fill="none" opacity=".25" />
-            <path d={d} stroke="#b07a46" strokeWidth="13" fill="none" strokeLinecap="round" />
-            <path d={d} stroke="#8a5a33" strokeWidth="13" fill="none" strokeDasharray="2 5" />
-            <path d={d} transform="translate(0 -6)" stroke="#6e4026" strokeWidth="1.8" fill="none" />
-            <path d={d} transform="translate(0 6)" stroke="#6e4026" strokeWidth="1.8" fill="none" />
-          </g>
-        );
-      })}
-
-      {layout.islands.map((isl) => (
-        <g key={isl.index} transform={`translate(${isl.ox} ${isl.oy})`}>
-          <g transform={`translate(195 476) scale(${isl.size}) translate(-195 -476)`}>
-            <IslandBase id={id} u={u} night={night} />
-            {isl.index === 0 && layout.lighthouse && <Lighthouse x={302} y={444} night={night} lh={u("lh")} glow={u("glow")} />}
-            {isl.pieces.map((p, i) => {
-              const key = `${isl.index}-${i}`;
-              return (
-                <g
-                  key={key}
-                  transform={`translate(${p.x} ${p.y}) scale(${p.scale})`}
-                  onClick={
-                    onPick
-                      ? (e) => {
-                          e.stopPropagation();
-                          onPick(key);
-                        }
-                      : undefined
-                  }
-                  className={onPick ? "cursor-pointer" : undefined}
-                  opacity={picked && picked !== key ? 0.5 : 1}
-                >
-                  <PieceArt p={p} night={night} glow={u("glow")} />
-                  {picked === key && <circle cx="0" cy="-20" r="32" fill="none" stroke="#fff" strokeWidth="2.5" strokeDasharray="5 4" />}
-                </g>
-              );
-            })}
-            {isl.index === 0 && names && <Signpost names={names} wood={u("wood")} />}
-          </g>
+        {/* Beach under the cliffs */}
+        <g fill={night ? "#cdb386" : "#f4daa6"}>
+          {tiles.map(([rx, ry]) => {
+            const [x, y] = proj(rx, ry);
+            return <polygon key={`b${rx},${ry}`} points={diamond([x, y + CLIFF + 4], 1.45)} />;
+          })}
         </g>
-      ))}
-      {layout.boat && last && <Boat x={last.ox + 318} y={last.oy + 626} />}
-
-      {/* Fog that clears as you talk */}
-      {layout.fog > 0.02 && (
-        <g filter={`url(#${id("blur")})`} fill="#ffffff" opacity={layout.fog} pointerEvents="none">
-          {layout.islands.map((isl) => (
-            <g key={isl.index} transform={`translate(${isl.ox} ${isl.oy})`}>
-              <ellipse cx="60" cy="430" rx="120" ry="60" />
-              <ellipse cx="340" cy="510" rx="130" ry="64" />
-              <ellipse cx="320" cy="390" rx="90" ry="40" />
-              <ellipse cx="110" cy="560" rx="120" ry="50" />
-              <ellipse cx="200" cy="370" rx="150" ry="36" />
-              <ellipse cx="190" cy="610" rx="200" ry="60" />
+        {/* Cliffs on the edges facing us */}
+        {tiles.map(([rx, ry]) => {
+          const [x, y] = proj(rx, ry);
+          const R: P = [x + TILE, y];
+          const B: P = [x, y + TILE / 2];
+          const L: P = [x - TILE, y];
+          return (
+            <g key={`c${rx},${ry}`}>
+              {!land.has(`${rx + 1},${ry}`) && <polygon points={pts(R, B, [B[0], B[1] + CLIFF], [R[0], R[1] + CLIFF])} fill={night ? "#6e4a2e" : "#9c6439"} />}
+              {!land.has(`${rx},${ry + 1}`) && <polygon points={pts(B, L, [L[0], L[1] + CLIFF], [B[0], B[1] + CLIFF])} fill={night ? "#8a5d3a" : "#c08552"} />}
             </g>
-          ))}
-        </g>
-      )}
+          );
+        })}
+        {/* Grass and roads */}
+        {tiles.map(([rx, ry]) => {
+          const [x, y] = proj(rx, ry);
+          const k = `${rx},${ry}`;
+          const road = roadSet.get(k);
+          if (!road) {
+            const tone = (hash(`g${k}`) % 3) as 0 | 1 | 2;
+            const g = night ? ["#5f9a4f", "#5a944b", "#64a054"][tone] : ["#8fd36b", "#86cc63", "#97da72"][tone];
+            return <polygon key={`t${k}`} points={diamond([x, y])} fill={g} stroke={g} strokeWidth="0.8" />;
+          }
+          const asphalt = night ? "#3d414c" : "#5b606c";
+          const half: P = road === "x" ? [TILE / 2, TILE / 4] : [-TILE / 2, TILE / 4];
+          return (
+            <g key={`t${k}`}>
+              <polygon points={diamond([x, y])} fill={asphalt} stroke={asphalt} strokeWidth="0.8" />
+              {road !== "both" && <path d={`M${x - half[0]} ${y - half[1]} L${x + half[0]} ${y + half[1]}`} stroke={night ? "#d8c46a" : "#f3e27a"} strokeWidth="1.4" strokeDasharray="5 4" />}
+              {road === "both" && <polygon points={diamond([x, y], 0.55)} fill="none" stroke="#e9ebef" strokeWidth="1" strokeDasharray="2 2" opacity=".8" />}
+            </g>
+          );
+        })}
+
+        {things.map((t) => (
+          <g key={t.key}>{t.node}</g>
+        ))}
+
+        {layout.boat && <g transform={`translate(${halfW * 0.78} ${halfH * 1.05})`}><Boat x={0} y={0} /></g>}
+        {Array.from({ length: layout.birds }, (_, i) => (
+          <path key={i} d={`M${-halfW * 0.6 + i * 46} ${-halfH * 1.1 - (i % 2) * 24} q5 -5 10 0 q5 -5 10 0`} stroke={night ? "#c9d3f0" : "#ffffff"} strokeWidth="2" fill="none" />
+        ))}
+
+        {/* Fog that clears as you talk */}
+        {layout.fog > 0.02 && (
+          <g filter={`url(#${id("blur")})`} fill="#ffffff" opacity={layout.fog} pointerEvents="none">
+            <ellipse cx={-halfW * 0.6} cy={-halfH * 0.3} rx={halfW * 0.7} ry={halfH * 0.6} />
+            <ellipse cx={halfW * 0.6} cy={halfH * 0.3} rx={halfW * 0.7} ry={halfH * 0.6} />
+            <ellipse cx="0" cy={halfH * 0.9} rx={halfW} ry={halfH * 0.5} />
+            <ellipse cx="0" cy={-halfH * 0.9} rx={halfW} ry={halfH * 0.5} />
+          </g>
+        )}
+      </g>
     </svg>
   );
 });
 
-function IslandBase({ id, u, night }: { id: (s: string) => string; u: (s: string) => string; night: boolean }) {
-  const isl = `#${id("isl")}`;
+function Shrub({ x, y, night, big }: { x: number; y: number; night: boolean; big: boolean }) {
+  const k = big ? 1.3 : 1;
   return (
-    <g>
-      <use href={isl} transform="translate(195 482) scale(1.22 1.34) translate(-195 -482)" fill="#7fe6ee" opacity={night ? 0.16 : 0.42} />
-      <use href={isl} transform="translate(195 482) scale(1.13 1.21) translate(-195 -480)" fill="none" stroke="#ffffff" strokeWidth="3" strokeDasharray="18 10" opacity={night ? 0.4 : 0.8} />
-      <use href={isl} transform="translate(0 40) translate(195 476) scale(1.08 1.06) translate(-195 -476)" fill={night ? "#cfb487" : "#f5dca8"} />
-      <use href={isl} transform="translate(0 40) translate(195 476) scale(1.08 1.06) translate(-195 -476)" fill="none" stroke={night ? "#a99068" : "#ddbd82"} strokeWidth="3" />
-      <use href={isl} transform="translate(0 30)" fill={u("cliff")} />
-      <use href={isl} transform="translate(0 12)" fill="none" stroke="#7a4826" strokeWidth="2" opacity=".35" />
-      <use href={isl} transform="translate(0 22)" fill="none" stroke="#5e3920" strokeWidth="1.5" opacity=".3" strokeDasharray="22 14" />
-      <use href={isl} fill={u("grass")} />
-      <use href={isl} fill="none" stroke={night ? "#9fd07f" : "#d4fbb0"} strokeWidth="3" opacity=".7" />
-      <g fill={night ? "#3a6e36" : "#58a84d"} opacity=".45">
-        <ellipse cx="120" cy="440" rx="16" ry="5" />
-        <ellipse cx="250" cy="420" rx="12" ry="4" />
-        <ellipse cx="290" cy="500" rx="18" ry="5" />
-        <ellipse cx="90" cy="500" rx="12" ry="4" />
-        <ellipse cx="200" cy="530" rx="14" ry="4" />
-      </g>
-      <path d="M70 492 C120 476 160 500 210 486 C250 476 290 486 330 474" stroke={night ? "#b39a6c" : "#e9cf9a"} strokeWidth="9" fill="none" strokeLinecap="round" />
-      <path d="M70 492 C120 476 160 500 210 486 C250 476 290 486 330 474" stroke={night ? "#c8b085" : "#f6e3bd"} strokeWidth="3" fill="none" strokeLinecap="round" strokeDasharray="2 9" />
+    <g transform={`translate(${x} ${y}) scale(${k})`}>
+      <ellipse cx="0" cy="2" rx="9" ry="3" fill="#0b2a1a" opacity=".15" />
+      <circle cx="-4" cy="-3" r="5" fill={night ? "#2f6d3a" : "#3ea35a"} />
+      <circle cx="4" cy="-3" r="5" fill={night ? "#285f33" : "#33914d"} />
+      <circle cx="0" cy="-7" r="5.5" fill={night ? "#3b7f46" : "#52c070"} />
     </g>
   );
 }
@@ -676,7 +761,7 @@ function Boat({ x, y }: { x: number; y: number }) {
 function Signpost({ names, wood }: { names: [string, string]; wood: string }) {
   const text = `${names[0] || "You"} & ${names[1] || "them"}`;
   return (
-    <g transform="translate(195 600)">
+    <g>
       <ellipse cx="0" cy="2" rx="26" ry="6" fill="#0b2a1a" opacity=".18" />
       <rect x="-3.5" y="-50" width="7" height="52" rx="2" fill="#8a5a3c" />
       <path d="M-62 -70 H56 L66 -58 L56 -46 H-62 Z" fill={wood} stroke="#7a4a2e" strokeWidth="2.5" />
