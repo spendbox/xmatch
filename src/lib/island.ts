@@ -36,7 +36,7 @@ export type Piece = {
 };
 
 export type Road = { gx: number; gy: number; axis: "x" | "y" | "both" };
-export type Vehicle = Road & { color: string; type: "car" | "danfo" };
+export type Vehicle = Road & { color: string; type: "car" | "bus" };
 export type Spot = { gx: number; gy: number };
 
 export type IslandLayout = {
@@ -73,7 +73,7 @@ const NAMES: Record<PieceKind, [string, string, string]> = {
   house: ["a cottage", "a two-storey house", "a block of flats"],
   palm: ["a palm tree", "two palm trees", "a palm grove"],
   tree: ["a tree", "a big tree", "a shady spot"],
-  stall: ["a food stall", "a Mama Put", "a busy restaurant"],
+  stall: ["a food stall", "a diner", "a busy restaurant"],
   bus: ["a bus stop", "a filling station", "a bus terminal"],
   lamp: ["a street lamp", "a lamp and bench", "a little square"],
   flowers: ["flowers", "a garden", "a garden with a fountain"],
@@ -222,8 +222,8 @@ export function layoutIsland(d: IslandData): IslandLayout {
     .map((r, i): Vehicle => ({
       ...r,
       color: CARS[hash(`cc${r.gx},${r.gy}`) % CARS.length],
-      // Danfos on the road: more of them the more you talk about getting around
-      type: i % 3 === 0 || (transit > 0 && i % 2 === 0) ? "danfo" : "car",
+      // Little buses on the road: more of them the more you talk about getting around
+      type: i % 3 === 0 || (transit > 0 && i % 2 === 0) ? "bus" : "car",
     }));
 
   const days = d.since ? Math.max(1, Math.ceil((Date.now() - new Date(d.since).getTime()) / 86400000)) : 1;

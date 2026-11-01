@@ -182,12 +182,12 @@ export const IslandArt = forwardRef<
       node: (
         <g transform={`translate(${x + off[0]} ${y + off[1]})`}>
           <ellipse cx="0" cy="2" rx="10" ry="4" fill="#000" opacity=".2" />
-          {car.type === "danfo" ? (
+          {car.type === "bus" ? (
             <>
-              <Box a={ax === "x" ? 8 : 19} b={ax === "x" ? 19 : 8} h={9} left="#f7c614" right="#d4a10a" top="#ffe36b" />
-              <Box a={ax === "x" ? 8.2 : 19.2} b={ax === "x" ? 19.2 : 8.2} h={1.6} z={3} left="#1c1828" right="#1c1828" top="#1c1828" />
+              <Box a={ax === "x" ? 8 : 19} b={ax === "x" ? 19 : 8} h={9} left={busColour(car.color)} right={shade(busColour(car.color), 0.82)} top={shade(busColour(car.color), 1.08)} />
+              <Box a={ax === "x" ? 8.2 : 19.2} b={ax === "x" ? 19.2 : 8.2} h={1.6} z={3} left="#ffffff" right="#e6e9ee" top="#ffffff" />
               <Box a={ax === "x" ? 8.1 : 19.1} b={ax === "x" ? 19.1 : 8.1} h={2.6} z={5.4} left="#2b3a55" right="#22304a" top="#2b3a55" />
-              <Box a={ax === "x" ? 8 : 19} b={ax === "x" ? 19 : 8} h={0.1} z={9} left="#ffe36b" right="#ffe36b" top="#ffe36b" />
+              
             </>
           ) : (
             <>
@@ -323,6 +323,11 @@ export const IslandArt = forwardRef<
     </svg>
   );
 });
+
+/** Little buses come in a few colours */
+function busColour(seed: string) {
+  return ({ "#e5484d": "#2fb79c", "#2f80ed": "#ffffff", "#f7c614": "#f7c614", "#ffffff": "#2f80ed", "#1aa774": "#ff8a3d", "#3a3350": "#e5484d" } as Record<string, string>)[seed] ?? "#2fb79c";
+}
 
 function Shrub({ x, y, night, big }: { x: number; y: number; night: boolean; big: boolean }) {
   const k = big ? 1.3 : 1;
@@ -559,12 +564,10 @@ function PieceArt({ p, night, glow }: { p: Piece; night: boolean; glow: string }
             [0, 1, 2, 3].map((k) => <Win key={`u${k}`} side="r" a={22} b={28} u0={0.08 + k * 0.23} u1={0.24 + k * 0.23} v0={18} v1={24} fill={w} />)}
           <Win side="l" a={22} b={28} u0={0.5} u1={0.78} v0={0} v1={11} fill="#7a4a2e" />
           <Gable a={22} b={28} h={h} rise={10} color={["#c0392b", "#2f80ed", "#1aa774"][v]} wall="#ecd6a8" />
-          {/* A flag: green, white, green */}
+          {/* A school pennant */}
           <g transform="translate(-20 -6)">
             <path d="M0 0 V-34" stroke="#6b6f7a" strokeWidth="1.4" />
-            <rect x="0.5" y="-34" width="4" height="7" fill="#1aa774" />
-            <rect x="4.5" y="-34" width="4" height="7" fill="#fff" />
-            <rect x="8.5" y="-34" width="4" height="7" fill="#1aa774" />
+            <path d="M0.5 -34 L13 -30.5 L0.5 -27 Z" fill={["#e5484d", "#f7c614", "#6d4ff0"][v]} />
           </g>
         </g>
       );

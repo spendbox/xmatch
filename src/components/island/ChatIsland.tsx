@@ -148,8 +148,8 @@ function IslandIntro({ open, sky, onClose, onSee }: { open: boolean; sky: Sky; o
 /** How Your Island works (the guide, and the ⓘ on the island) */
 function HowItWorks({ compact }: { compact?: boolean }) {
   const rows: [string, string][] = [
-    ["Every message builds something", `"dinner" builds a food stall, "football" a pitch, "work" an office, "party" a stage, "coffee" a café, "traffic" a danfo. Voice notes bring birds.`],
-    ["It levels up as you talk", "Keep chatting and a cottage becomes a two-storey house, then a block of flats. A stall becomes a Mama Put, then a busy restaurant."],
+    ["Every message builds something", `"dinner" builds a food stall, "football" a pitch, "work" an office, "party" a stage, "coffee" a café, "traffic" a bus stop. Voice notes bring birds.`],
+    ["It levels up as you talk", "Keep chatting and a cottage becomes a two-storey house, then a block of flats. A stall becomes a diner, then a busy restaurant."],
     ["The land keeps growing", "Every building gets its own plot between proper roads, and the island gets bigger as you chat. Every 60 messages a footbridge goes up over a road. A boat arrives at 20 messages, a lighthouse at 100."],
     ["Explore it", "Pinch to zoom in, drag to move around, and turn it with the rotate button. Tap any building to see the message that made it."],
     ["Fog clears as you get to know each other", "Masked chats start in fog. Unmask together and the sun comes out, with your names on a signpost."],
