@@ -1121,7 +1121,7 @@ function ScreenBody({ screen }: { screen: string }) {
         "hi stranger", "I love flowers honestly", "omo I need food right now", "Mama Put tomorrow? my treat", "traffic on third mainland is wild",
         "beach on saturday?", "my mum keeps calling lol", "this song is a vibe", "work is stressing me", "football tonight?", "coffee date?",
         "you're so sweet", "home now", "suya later?", "haha stop", "ok ok", "danfo almost hit me", "the party was mad", "sleeping soon",
-        "good morning", "breakfast?", "tell me something", "I miss you already", "exam tomorrow", "arsenal won!", "night walk",
+        "good morning", "breakfast?", "tell me something", "I miss you already", "exam tomorrow", "arsenal won!", "night walk", "gym later", "netflix tonight?", "market run", "headache today", "swimming pool?", "basketball?", "fuel price is crazy", "new movie out",
       ];
       const n = screen === "island-new" ? 3 : screen === "island-full" ? 64 : 140;
       const items: [string, string][] = Array.from({ length: n }, (_, i) => (i % 9 === 4 ? ["audio", ""] : ["text", words[(i * 7) % words.length]]));

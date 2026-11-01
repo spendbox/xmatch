@@ -182,8 +182,19 @@ export const IslandArt = forwardRef<
       node: (
         <g transform={`translate(${x + off[0]} ${y + off[1]})`}>
           <ellipse cx="0" cy="2" rx="10" ry="4" fill="#000" opacity=".2" />
-          <Box a={ax === "x" ? 7 : 15} b={ax === "x" ? 15 : 7} h={5} left={shade(car.color, 0.9)} right={shade(car.color, 0.72)} top={car.color} />
-          <Box a={ax === "x" ? 6 : 8} b={ax === "x" ? 8 : 6} h={3} z={5} left="#2b3a55" right="#22304a" top={shade(car.color, 0.95)} />
+          {car.type === "danfo" ? (
+            <>
+              <Box a={ax === "x" ? 8 : 19} b={ax === "x" ? 19 : 8} h={9} left="#f7c614" right="#d4a10a" top="#ffe36b" />
+              <Box a={ax === "x" ? 8.2 : 19.2} b={ax === "x" ? 19.2 : 8.2} h={1.6} z={3} left="#1c1828" right="#1c1828" top="#1c1828" />
+              <Box a={ax === "x" ? 8.1 : 19.1} b={ax === "x" ? 19.1 : 8.1} h={2.6} z={5.4} left="#2b3a55" right="#22304a" top="#2b3a55" />
+              <Box a={ax === "x" ? 8 : 19} b={ax === "x" ? 19 : 8} h={0.1} z={9} left="#ffe36b" right="#ffe36b" top="#ffe36b" />
+            </>
+          ) : (
+            <>
+              <Box a={ax === "x" ? 7 : 15} b={ax === "x" ? 15 : 7} h={5} left={shade(car.color, 0.9)} right={shade(car.color, 0.72)} top={car.color} />
+              <Box a={ax === "x" ? 6 : 8} b={ax === "x" ? 8 : 6} h={3} z={5} left="#2b3a55" right="#22304a" top={shade(car.color, 0.95)} />
+            </>
+          )}
           {night && <circle cx={ax === "x" ? 8 : -8} cy="0" r="6" fill={u("glow")} />}
         </g>
       ),
@@ -342,20 +353,27 @@ function windowColour(night: boolean) {
 
 function PieceArt({ p, night, glow }: { p: Piece; night: boolean; glow: string }) {
   const w = windowColour(night);
+  const v = p.variant;
   switch (p.kind) {
     case "house":
       return <House p={p} night={night} glow={glow} w={w} />;
     case "office": {
       const h = p.level === 3 ? 78 : p.level === 2 ? 48 : 28;
       const floors = Math.floor((h - 4) / 9);
+      // Blue glass, green glass or brick
+      const [l, r, t, band] = [
+        ["#d5ecf9", "#a3cbe3", "#eef7fd", "#3d6f98"],
+        ["#d3f2e6", "#9fd6c0", "#ecfaf4", "#2f7a62"],
+        ["#e9b996", "#c98f69", "#f3d2bb", "#6b3a22"],
+      ][v];
       return (
         <g>
           <Shadow rx={26} />
-          <Box a={22} b={28} h={h} left="#d5ecf9" right="#a3cbe3" top="#eef7fd" />
+          <Box a={22} b={26} h={h} left={l} right={r} top={t} />
           {Array.from({ length: floors }, (_, k) => (
             <g key={k}>
-              <Win side="l" a={22} b={28} u0={0.08} u1={0.92} v0={k * 9 + 4} v1={k * 9 + 9} fill={night ? "#ffe08a" : "#3d6f98"} />
-              <Win side="r" a={22} b={28} u0={0.06} u1={0.94} v0={k * 9 + 4} v1={k * 9 + 9} fill={night ? "#f5cf6a" : "#2c5878"} />
+              <Win side="l" a={22} b={26} u0={0.08} u1={0.92} v0={k * 9 + 4} v1={k * 9 + 9} fill={night ? "#ffe08a" : band} />
+              <Win side="r" a={22} b={26} u0={0.06} u1={0.94} v0={k * 9 + 4} v1={k * 9 + 9} fill={night ? "#f5cf6a" : shade(band, 0.8)} />
             </g>
           ))}
           {p.level === 3 && (
@@ -368,49 +386,57 @@ function PieceArt({ p, night, glow }: { p: Piece; night: boolean; glow: string }
       );
     }
     case "stall":
-      if (p.level === 1) return <Stall night={night} />;
+      if (p.level === 1) {
+        if (v === 1) return <FruitStand />;
+        if (v === 2) return <DrinksKiosk night={night} />;
+        return <Stall night={night} />;
+      }
       return (
         <g>
           <Shadow rx={30} />
-          <Box a={24} b={32} h={20} left="#ffdcae" right="#f0b675" top="#e9a35f" />
-          <Win side="l" a={24} b={32} u0={0.55} u1={0.8} v0={0} v1={12} fill="#7a4a2e" />
+          <Box a={24} b={28} h={20} left="#ffdcae" right="#f0b675" top="#e9a35f" />
+          <Win side="l" a={24} b={28} u0={0.55} u1={0.8} v0={0} v1={12} fill="#7a4a2e" />
           {[0, 1, 2, 3, 4, 5].map((k) => (
-            <Win key={k} side="r" a={24} b={32} u0={k / 6} u1={(k + 1) / 6} v0={13} v1={20} fill={k % 2 ? "#ffffff" : "#e5484d"} />
+            <Win key={k} side="r" a={24} b={28} u0={k / 6} u1={(k + 1) / 6} v0={13} v1={20} fill={k % 2 ? "#ffffff" : ["#e5484d", "#2f80ed", "#1aa774"][v]} />
           ))}
-          <Win side="r" a={24} b={32} u0={0.12} u1={0.88} v0={4} v1={11} fill={night ? "#ffd36b" : "#5e3920"} />
-          <Box a={3} b={24} h={8} z={20} left="#e5484d" right="#b83236" top="#ff8a8d" />
+          <Win side="r" a={24} b={28} u0={0.12} u1={0.88} v0={4} v1={11} fill={night ? "#ffd36b" : "#5e3920"} />
+          <Box a={3} b={22} h={8} z={20} left="#e5484d" right="#b83236" top="#ff8a8d" />
           {p.level === 3 && (
             <>
-              <Umbrella x={22} y={10} c="#ef6a3a" />
-              <Umbrella x={-4} y={20} c="#2f80ed" />
+              <Umbrella x={18} y={10} c="#ef6a3a" />
+              <Umbrella x={-4} y={16} c="#2f80ed" />
             </>
           )}
         </g>
       );
     case "cafe": {
-      if (p.level === 1)
+      if (p.level === 1) {
+        if (v === 1) return <IceCreamCart />;
+        const [l, r, t] = v === 2 ? ["#ffd9b8", "#f5b685", "#ff9a52"] : ["#dff7ec", "#b4e4cd", "#7fd0aa"];
         return (
           <g>
             <Shadow rx={16} />
-            <Box a={14} b={16} h={16} left="#dff7ec" right="#b4e4cd" top="#7fd0aa" />
+            <Box a={14} b={16} h={16} left={l} right={r} top={t} />
             <Win side="r" a={14} b={16} u0={0.15} u1={0.85} v0={5} v1={12} fill={night ? "#ffd36b" : "#7a4a2e"} />
             <circle cx="0" cy="-24" r="6" fill="#fff" stroke="#7a4a2e" strokeWidth="1.5" />
-            <circle cx="0" cy="-24" r="3" fill="#7a4a2e" />
+            <circle cx="0" cy="-24" r="3" fill={v === 2 ? "#ff9a52" : "#7a4a2e"} />
           </g>
         );
+      }
+      const stripe = ["#1aa774", "#e0477e", "#ff9a52"][v];
       return (
         <g>
           <Shadow rx={26} />
           <Box a={22} b={26} h={20} left="#fff2e2" right="#f0d4b5" top="#e2b98e" />
           {[0, 1, 2, 3, 4].map((k) => (
-            <Win key={k} side="r" a={22} b={26} u0={k / 5} u1={(k + 1) / 5} v0={14} v1={20} fill={k % 2 ? "#ffffff" : "#1aa774"} />
+            <Win key={k} side="r" a={22} b={26} u0={k / 5} u1={(k + 1) / 5} v0={14} v1={20} fill={k % 2 ? "#ffffff" : stripe} />
           ))}
           <Win side="r" a={22} b={26} u0={0.15} u1={0.85} v0={3} v1={11} fill={w} />
           <Win side="l" a={22} b={26} u0={0.5} u1={0.75} v0={0} v1={11} fill="#5e3920" />
-          <Umbrella x={18} y={14} c="#1aa774" />
+          <Umbrella x={16} y={12} c={stripe} />
           {p.level === 3 && (
             <>
-              <Umbrella x={-8} y={22} c="#e0477e" />
+              <Umbrella x={-8} y={18} c="#2f80ed" />
               <path d="M-14 -24 Q2 -16 18 -26" stroke="#4a4458" strokeWidth="0.8" fill="none" />
               {[-10, -4, 2, 8, 14].map((x, k) => (
                 <circle key={k} cx={x} cy={-21 + (k % 2)} r="1.4" fill="#ffd36b" />
@@ -421,57 +447,49 @@ function PieceArt({ p, night, glow }: { p: Piece; night: boolean; glow: string }
       );
     }
     case "pitch":
-      return <Pitch level={p.level} night={night} glow={glow} />;
+      return v === 1 ? <Court level={p.level} night={night} glow={glow} /> : <Pitch level={p.level} night={night} glow={glow} />;
     case "stage":
-      return <Stage level={p.level} glow={glow} />;
+      return <Stage level={p.level} glow={glow} variant={v} />;
     case "palm":
       return (
-        <g>
+        <g transform={v === 1 ? "scale(-1 1)" : undefined}>
           {p.level >= 2 && <g transform="translate(-14 -6) scale(.85)"><Palm /></g>}
           {p.level === 3 && <g transform="translate(14 -4) scale(.9)"><Palm /></g>}
           <Palm />
           {p.level === 3 && <path d="M-12 -24 Q0 -14 12 -22" stroke="#e9d3a6" strokeWidth="2.5" fill="none" />}
         </g>
       );
-    case "tree":
+    case "tree": {
+      const T = v === 1 ? Pine : v === 2 ? FruitTree : Tree;
       return (
         <g>
-          {p.level === 3 && <g transform="translate(-14 -4) scale(.9)"><Tree /></g>}
-          <g transform={p.level >= 2 ? "scale(1.3)" : undefined}>
-            <Tree />
+          {p.level === 3 && <g transform="translate(-14 -4) scale(.9)"><T /></g>}
+          <g transform={p.level >= 2 ? "scale(1.25)" : undefined}>
+            <T />
           </g>
           {p.level === 3 && <g transform="translate(14 8)"><Box a={4} b={14} h={4} left="#a86b3c" right="#7a4a2e" top="#c98b55" /></g>}
         </g>
       );
+    }
     case "bus":
-      return (
-        <g>
-          {p.level >= 2 && (
-            <g transform="translate(-22 -12)">
-              <path d="M-8 0 V-20 M8 4 V-16" stroke="#4a4458" strokeWidth="1.8" />
-              <Box a={8} b={20} h={2} z={20} left="#2f80ed" right="#2364b8" top="#5aa0f5" />
-            </g>
-          )}
-          {p.level === 3 && <g transform="translate(16 -12) scale(.9)"><Danfo /></g>}
-          <Danfo />
-        </g>
-      );
+      return <Transit level={p.level} night={night} glow={glow} />;
     case "lamp":
       return (
         <g>
           {p.level >= 2 && <ellipse cx="4" cy="2" rx="22" ry="7" fill={night ? "#7a7f8c" : "#d9dbe0"} opacity=".85" />}
-          {p.level === 3 && <g transform="translate(18 -2)"><Lamp night={night} glow={glow} /></g>}
-          <Lamp night={night} glow={glow} />
+          {p.level === 3 && <g transform="translate(18 -2)"><Lamp night={night} glow={glow} tall={v === 1} /></g>}
+          <Lamp night={night} glow={glow} tall={v === 1} />
           {p.level >= 2 && <g transform="translate(6 6)"><Box a={4} b={14} h={4} left="#a86b3c" right="#7a4a2e" top="#c98b55" /></g>}
         </g>
       );
-    case "flowers":
-      if (p.level === 1) return <Flowers />;
+    case "flowers": {
+      const palette = [["#ff6fa1", "#ffd25a", "#fff", "#b18cff"], ["#ff8a3d", "#ffe066", "#ff5f6d", "#fff"], ["#9b7bff", "#6fc2ff", "#fff", "#ff8fc4"]][v];
+      if (p.level === 1) return <Flowers c={palette} />;
       return (
         <g>
           <ellipse cx="0" cy="1" rx="24" ry="8" fill="#4fa049" />
-          <g transform="translate(-10 -1)"><Flowers /></g>
-          <g transform="translate(10 1)"><Flowers /></g>
+          <g transform="translate(-10 -1)"><Flowers c={palette} /></g>
+          <g transform="translate(10 1)"><Flowers c={palette} /></g>
           {[-22, -14, -6, 2, 10, 18].map((x, k) => (
             <path key={k} d={`M${x} ${6 + (k % 2)} v-6`} stroke="#fff" strokeWidth="1.6" />
           ))}
@@ -484,6 +502,7 @@ function PieceArt({ p, night, glow }: { p: Piece; night: boolean; glow: string }
           )}
         </g>
       );
+    }
     case "rocks":
       if (p.level === 1) return <Rocks />;
       if (p.level === 2)
@@ -507,7 +526,283 @@ function PieceArt({ p, night, glow }: { p: Piece; night: boolean; glow: string }
           <ellipse cx="6" cy="-22" rx="3" ry="2" fill="#fff" />
         </g>
       );
+    case "gym": {
+      const h = p.level === 3 ? 34 : p.level === 2 ? 26 : 20;
+      const [l, r] = [["#d9dde6", "#aeb5c3"], ["#ffd7d7", "#f0a9a9"], ["#d7e9ff", "#a7c4ec"]][v];
+      return (
+        <g>
+          <Shadow rx={28} />
+          <Box a={24} b={28} h={h} left={l} right={r} top={shade(l, 0.92)} />
+          <Win side="r" a={24} b={28} u0={0.08} u1={0.92} v0={5} v1={h - 6} fill={night ? "#ffe08a" : "#3a4c6e"} />
+          <Win side="l" a={24} b={28} u0={0.55} u1={0.8} v0={0} v1={12} fill="#2b2638" />
+          {/* A dumbbell sign on the roof */}
+          <g transform={`translate(2 ${-h - 12})`}>
+            <rect x="-9" y="-1.2" width="18" height="2.4" fill="#1c1828" />
+            <rect x="-12" y="-5" width="4" height="10" rx="1" fill="#e5484d" />
+            <rect x="8" y="-5" width="4" height="10" rx="1" fill="#e5484d" />
+          </g>
+          {p.level === 3 && <path d="M-26 10 Q0 22 26 10" stroke="#e5484d" strokeWidth="3" fill="none" opacity=".8" />}
+        </g>
+      );
+    }
+    case "school": {
+      const h = p.level === 1 ? 18 : 30;
+      return (
+        <g>
+          <Shadow rx={30} />
+          {p.level === 3 && <g transform="translate(-16 -8)"><Box a={14} b={22} h={22} left="#fff3d6" right="#ecd6a8" top="#f7e7c3" /></g>}
+          <Box a={22} b={28} h={h} left="#fff3d6" right="#ecd6a8" top="#f7e7c3" />
+          {[0, 1, 2, 3].map((k) => (
+            <Win key={k} side="r" a={22} b={28} u0={0.08 + k * 0.23} u1={0.24 + k * 0.23} v0={5} v1={11} fill={w} />
+          ))}
+          {p.level >= 2 &&
+            [0, 1, 2, 3].map((k) => <Win key={`u${k}`} side="r" a={22} b={28} u0={0.08 + k * 0.23} u1={0.24 + k * 0.23} v0={18} v1={24} fill={w} />)}
+          <Win side="l" a={22} b={28} u0={0.5} u1={0.78} v0={0} v1={11} fill="#7a4a2e" />
+          <Gable a={22} b={28} h={h} rise={10} color={["#c0392b", "#2f80ed", "#1aa774"][v]} wall="#ecd6a8" />
+          {/* A flag: green, white, green */}
+          <g transform="translate(-20 -6)">
+            <path d="M0 0 V-34" stroke="#6b6f7a" strokeWidth="1.4" />
+            <rect x="0.5" y="-34" width="4" height="7" fill="#1aa774" />
+            <rect x="4.5" y="-34" width="4" height="7" fill="#fff" />
+            <rect x="8.5" y="-34" width="4" height="7" fill="#1aa774" />
+          </g>
+        </g>
+      );
+    }
+    case "clinic": {
+      const h = p.level === 3 ? 48 : p.level === 2 ? 32 : 20;
+      return (
+        <g>
+          <Shadow rx={28} />
+          <Box a={24} b={26} h={h} left="#ffffff" right="#dfe5ec" top="#f4f6f9" />
+          {Array.from({ length: Math.floor((h - 6) / 10) }, (_, k) => (
+            <Win key={k} side="r" a={24} b={26} u0={0.1} u1={0.9} v0={5 + k * 10} v1={10 + k * 10} fill={night ? "#ffe08a" : "#8ec9f2"} />
+          ))}
+          <Win side="l" a={24} b={26} u0={0.5} u1={0.8} v0={0} v1={11} fill="#2f80ed" />
+          {/* Red cross */}
+          <g transform={`translate(-12 ${-h + 4})`}>
+            <rect x="-2" y="-6" width="4" height="12" fill="#e5484d" />
+            <rect x="-6" y="-2" width="12" height="4" fill="#e5484d" />
+          </g>
+          {p.level === 3 && (
+            <g transform={`translate(0 ${-h})`}>
+              <ellipse cx="0" cy="0" rx="9" ry="4.5" fill="none" stroke="#f7c614" strokeWidth="1.4" />
+              <text x="0" y="2" textAnchor="middle" fontSize="6" fontWeight="800" fill="#f7c614">H</text>
+            </g>
+          )}
+        </g>
+      );
+    }
+    case "market":
+      if (p.level === 1)
+        return (
+          <g>
+            <Shadow rx={28} />
+            <g transform="translate(-10 -4)"><Umbrella x={0} y={0} c={["#ef6a3a", "#2f80ed", "#1aa774"][v]} /></g>
+            <g transform="translate(10 2)"><Umbrella x={0} y={0} c={["#f7c614", "#e0477e", "#6d4ff0"][v]} /></g>
+            <g transform="translate(-2 10)"><Box a={8} b={12} h={5} left="#a86b3c" right="#7a4a2e" top="#c98b55" /></g>
+            <circle cx="-4" cy="4" r="1.8" fill="#e5484d" />
+            <circle cx="0" cy="5" r="1.8" fill="#f7c614" />
+            <circle cx="3" cy="4" r="1.8" fill="#1aa774" />
+          </g>
+        );
+      return (
+        <g>
+          <Shadow rx={30} />
+          <Box a={26} b={28} h={p.level === 3 ? 30 : 18} left="#f2f4f7" right="#cfd5de" top="#e6e9ee" />
+          <Win side="r" a={26} b={28} u0={0.06} u1={0.94} v0={3} v1={p.level === 3 ? 24 : 12} fill={night ? "#ffe08a" : "#9fd3f2"} />
+          <Box a={3} b={24} h={6} z={p.level === 3 ? 30 : 18} left={["#e5484d", "#2f80ed", "#1aa774"][v]} right={shade(["#e5484d", "#2f80ed", "#1aa774"][v], 0.8)} top="#fff" />
+          {/* Trolleys out front */}
+          <path d="M-14 12 l6 3 M-12 10 l6 3" stroke="#9aa1ad" strokeWidth="1.4" />
+        </g>
+      );
+    case "cinema": {
+      const h = p.level === 3 ? 34 : p.level === 2 ? 26 : 20;
+      return (
+        <g>
+          <Shadow rx={28} />
+          <Box a={24} b={28} h={h} left="#5b3fd9" right="#4730b3" top="#6d55e6" />
+          <Win side="r" a={24} b={28} u0={0.1} u1={0.9} v0={h - 9} v1={h - 3} fill="#ffd36b" />
+          {[0.12, 0.42, 0.72].map((u0, k) => (
+            <Win key={k} side="r" a={24} b={28} u0={u0} u1={u0 + 0.18} v0={4} v1={13} fill={["#e0477e", "#ffb02e", "#2fb79c"][k]} />
+          ))}
+          <Win side="l" a={24} b={28} u0={0.5} u1={0.8} v0={0} v1={11} fill="#1c1828" />
+          {p.level === 3 && (
+            <g opacity={night ? 0.5 : 0.25}>
+              <path d={`M-6 ${-h} L-30 ${-h - 60} L-18 ${-h - 64} Z`} fill="#fff7c2" />
+              <path d={`M8 ${-h} L30 ${-h - 62} L18 ${-h - 64} Z`} fill="#fff7c2" />
+            </g>
+          )}
+        </g>
+      );
+    }
+    case "pool":
+      return <Pool level={p.level} />;
   }
+}
+
+/** A roof with a ridge (two slopes) */
+function Gable({ a, b, h, rise, color, wall }: { a: number; b: number; h: number; rise: number; color: string; wall: string }) {
+  const { F, B, L, R } = corners(a + 4, b + 4);
+  const top = (p: P): P => lift(p, h);
+  const m1: P = lift([(L[0] + B[0]) / 2, (L[1] + B[1]) / 2], h + rise);
+  const m2: P = lift([(F[0] + R[0]) / 2, (F[1] + R[1]) / 2], h + rise);
+  return (
+    <g>
+      <polygon points={pts(top(L), top(F), m2, m1)} fill={color} />
+      <polygon points={pts(top(F), top(R), m2)} fill={shade(wall, 0.92)} />
+      <polygon points={pts(top(B), top(R), m2, m1)} fill={shade(color, 0.72)} />
+      <path d={`M${m1[0]} ${m1[1]} L${m2[0]} ${m2[1]}`} stroke={shade(color, 0.6)} strokeWidth="1.2" />
+    </g>
+  );
+}
+
+function FruitStand() {
+  return (
+    <g>
+      <Shadow rx={22} />
+      <Box a={14} b={22} h={8} left="#b97a45" right="#8a5532" top="#d39a62" />
+      {[[-8, -10, "#e5484d"], [-2, -8, "#ff9a3d"], [4, -6, "#1aa774"], [-4, -12, "#f7c614"], [2, -10, "#e5484d"]].map(([x, y, c], k) => (
+        <circle key={k} cx={x as number} cy={y as number} r="2.6" fill={c as string} />
+      ))}
+      <Umbrella x={12} y={2} c="#1aa774" />
+    </g>
+  );
+}
+
+function DrinksKiosk({ night }: { night: boolean }) {
+  return (
+    <g>
+      <Shadow rx={18} />
+      <Box a={14} b={16} h={18} left="#d7ecff" right="#a8cdf2" top="#2f80ed" />
+      <Win side="r" a={14} b={16} u0={0.15} u1={0.85} v0={6} v1={13} fill={night ? "#ffd36b" : "#1c3d66"} />
+      <g transform="translate(14 6)"><Box a={6} b={6} h={8} left="#ffffff" right="#dfe5ec" top="#e5484d" /></g>
+    </g>
+  );
+}
+
+function IceCreamCart() {
+  return (
+    <g>
+      <Shadow rx={16} />
+      <Box a={10} b={16} h={10} z={2} left="#ffd0e4" right="#f5a6c8" top="#fff" />
+      <circle cx="-8" cy="3" r="2.6" fill="#3a3350" />
+      <circle cx="6" cy="6" r="2.6" fill="#3a3350" />
+      <path d="M0 -12 V-26" stroke="#4a4458" strokeWidth="1.4" />
+      <path d="M-11 -25 Q0 -34 11 -25 Z" fill="#e0477e" />
+      <path d="M-4 -25 Q0 -33 4 -25 Z" fill="#fff" />
+    </g>
+  );
+}
+
+function Pine() {
+  return (
+    <g>
+      <ellipse cx="0" cy="2" rx="12" ry="4" fill="#0b2a1a" opacity=".16" />
+      <rect x="-2" y="-8" width="4" height="9" fill="#7a4a2e" />
+      <polygon points="-12,-8 12,-8 0,-24" fill="#1f7a42" />
+      <polygon points="-10,-18 10,-18 0,-32" fill="#2c9a55" />
+      <polygon points="-7,-27 7,-27 0,-39" fill="#46c06e" />
+    </g>
+  );
+}
+
+function FruitTree() {
+  return (
+    <g>
+      <Tree />
+      <circle cx="-6" cy="-24" r="2" fill="#ff9a3d" />
+      <circle cx="5" cy="-28" r="2" fill="#ff9a3d" />
+      <circle cx="1" cy="-20" r="2" fill="#ff9a3d" />
+      <circle cx="-2" cy="-33" r="2" fill="#ff9a3d" />
+    </g>
+  );
+}
+
+/** Getting around: a bus stop, then a filling station, then a bus terminal */
+function Transit({ level, night, glow }: { level: 1 | 2 | 3; night: boolean; glow: string }) {
+  if (level === 1)
+    return (
+      <g>
+        <Shadow rx={20} />
+        <path d="M-12 2 V-18 M8 8 V-12 M-12 -18 L8 -12" stroke="#4a4458" strokeWidth="1.6" fill="none" />
+        <Box a={10} b={22} h={2} z={18} left="#2f80ed" right="#2364b8" top="#5aa0f5" />
+        <g transform="translate(-2 4)"><Box a={4} b={16} h={4} left="#a86b3c" right="#7a4a2e" top="#c98b55" /></g>
+        <path d="M16 6 V-20" stroke="#6b6f7a" strokeWidth="1.4" />
+        <rect x="11" y="-26" width="10" height="7" rx="1.5" fill="#2f80ed" />
+        <text x="16" y="-20.8" textAnchor="middle" fontSize="4.5" fontWeight="800" fill="#fff">BUS</text>
+      </g>
+    );
+  if (level === 2)
+    return (
+      <g>
+        <Shadow rx={28} />
+        <g transform="translate(-12 -4)"><Box a={10} b={12} h={14} left="#fff" right="#dfe5ec" top="#e5484d" /></g>
+        {[[-6, 6], [10, 10], [4, -2], [20, 2]].map(([x, y], k) => (
+          <path key={k} d={`M${x} ${y} V${y - 20}`} stroke="#9aa1ad" strokeWidth="1.6" />
+        ))}
+        <g transform="translate(7 4)"><Box a={18} b={24} h={3} z={20} left="#e5484d" right="#b83236" top="#ff6b6f" /></g>
+        <g transform="translate(5 6)"><Box a={4} b={4} h={8} left="#f7c614" right="#d4a10a" top="#ffe36b" /></g>
+        <g transform="translate(13 2)"><Box a={4} b={4} h={8} left="#f7c614" right="#d4a10a" top="#ffe36b" /></g>
+        {night && <circle cx="7" cy="-16" r="16" fill={glow} />}
+      </g>
+    );
+  return (
+    <g>
+      <Shadow rx={30} />
+      <Box a={14} b={28} h={16} left="#e8edf3" right="#c6cfdb" top="#f4f6f9" />
+      <Win side="r" a={14} b={28} u0={0.06} u1={0.94} v0={4} v1={11} fill={night ? "#ffe08a" : "#9fd3f2"} />
+      <g transform="translate(8 8)"><Box a={10} b={30} h={2} z={14} left="#2f80ed" right="#2364b8" top="#5aa0f5" /></g>
+      {[[-6, 18], [8, 14], [22, 10]].map(([x, y], k) => (
+        <path key={k} d={`M${x} ${y} V${y - 14}`} stroke="#4a4458" strokeWidth="1.4" />
+      ))}
+    </g>
+  );
+}
+
+function Pool({ level }: { level: 1 | 2 | 3 }) {
+  const a = 22;
+  const b = 26;
+  const { F, B, L, R } = corners(a, b);
+  const { F: f, B: bb, L: l, R: r } = corners(a - 6, b - 6);
+  return (
+    <g>
+      <polygon points={pts(L, F, R, B)} fill="#e9edf2" />
+      <polygon points={pts(l, f, r, bb)} fill="#3cc4e6" />
+      <polygon points={pts([l[0], l[1]], [f[0], f[1]], [(f[0] + r[0]) / 2, (f[1] + r[1]) / 2], [(l[0] + bb[0]) / 2, (l[1] + bb[1]) / 2])} fill="#6fdcf5" opacity=".6" />
+      <path d={`M${r[0] - 4} ${r[1] - 1} v-5 M${r[0] - 1} ${r[1]} v-5`} stroke="#9aa1ad" strokeWidth="1" />
+      {level >= 2 && (
+        <>
+          <g transform="translate(-16 2)"><Box a={4} b={9} h={2} left="#ffffff" right="#dfe5ec" top="#ff9a3d" /></g>
+          <g transform="translate(-10 6)"><Box a={4} b={9} h={2} left="#ffffff" right="#dfe5ec" top="#e0477e" /></g>
+          <Umbrella x={16} y={-2} c="#f7c614" />
+        </>
+      )}
+      {level === 3 && <path d="M-4 -16 C-16 -16 -16 -4 -6 -4 C2 -4 2 6 -8 8" stroke="#ff9a3d" strokeWidth="3.5" fill="none" strokeLinecap="round" />}
+    </g>
+  );
+}
+
+function Court({ level, night, glow }: { level: 1 | 2 | 3; night: boolean; glow: string }) {
+  const { F, B, L, R } = corners(24, 30);
+  return (
+    <g>
+      <Shadow rx={26} ry={10} />
+      <polygon points={pts(L, F, R, B)} fill="#d9733f" />
+      <polygon points={pts(L, F, R, B)} fill="none" stroke="#fff" strokeWidth="1.3" />
+      <ellipse cx="0" cy="0" rx="5" ry="2.5" fill="none" stroke="#fff" strokeWidth="1.1" />
+      {[L, R].map((c, k) => (
+        <g key={k} transform={`translate(${c[0] * 0.8} ${c[1] * 0.8})`}>
+          <path d="M0 0 V-16" stroke="#4a4458" strokeWidth="1.4" />
+          <rect x="-4" y="-20" width="8" height="5" fill="#fff" stroke="#4a4458" strokeWidth=".8" />
+          <circle cx="0" cy="-14" r="1.6" fill="none" stroke="#e5484d" strokeWidth="1" />
+        </g>
+      ))}
+      {level >= 2 && <g transform="translate(-16 -10)"><Box a={24} b={5} h={6} left="#2f80ed" right="#2364b8" top="#5aa0f5" /></g>}
+      {level === 3 && night &&
+        [B, F].map((c, k) => <circle key={k} cx={c[0]} cy={c[1] - 26} r="14" fill={glow} />)}
+    </g>
+  );
 }
 
 function House({ p, night, glow, w }: { p: Piece; night: boolean; glow: string; w: string }) {
@@ -542,7 +837,17 @@ function House({ p, night, glow, w }: { p: Piece; night: boolean; glow: string; 
               <Win side="l" a={a} b={b} u0={0.2} u1={0.45} v0={21} v1={28} fill={shade(w, 0.92)} />
             </>
           )}
-          <Roof a={a} b={b} h={h} rise={p.level === 2 ? 16 : 18} color={p.roof} />
+          {p.variant === 1 ? (
+            <Gable a={a} b={b} h={h} rise={12} color={p.roof} wall={p.wall} />
+          ) : p.variant === 2 ? (
+            <>
+              <Box a={a + 2} b={b + 2} h={3} z={h} left={shade(p.wall, 0.8)} right={shade(p.wall, 0.7)} top={shade(p.wall, 0.9)} />
+              <circle cx="6" cy={-h - 8} r="4" fill="#3ea35a" />
+              <circle cx="-6" cy={-h - 6} r="3" fill="#52c070" />
+            </>
+          ) : (
+            <Roof a={a} b={b} h={h} rise={p.level === 2 ? 16 : 18} color={p.roof} />
+          )}
         </>
       )}
     </g>
@@ -616,11 +921,11 @@ function Pitch({ level, night, glow }: { level: 1 | 2 | 3; night: boolean; glow:
   );
 }
 
-function Stage({ level, glow }: { level: 1 | 2 | 3; glow: string }) {
+function Stage({ level, glow, variant = 0 }: { level: 1 | 2 | 3; glow: string; variant?: number }) {
   return (
     <g>
       <Shadow rx={30} />
-      <Box a={22} b={32} h={7} left="#3a3350" right="#2a2438" top="#4f4670" />
+      <Box a={22} b={28} h={7} left={["#3a3350", "#6b2a3a", "#1f4d6b"][variant]} right={["#2a2438", "#4f1e2b", "#16384f"][variant]} top={["#4f4670", "#8a3a4e", "#2a6a91"][variant]} />
       <g transform="translate(-18 -8)"><Box a={5} b={5} h={13} z={7} left="#1c1828" right="#14111f" top="#3a3350" /></g>
       <g transform="translate(16 2)"><Box a={5} b={5} h={13} z={7} left="#1c1828" right="#14111f" top="#3a3350" /></g>
       <path d="M2 -9 V-22" stroke="#9aa1ad" strokeWidth="1.2" />
@@ -677,27 +982,15 @@ function Tree() {
   );
 }
 
-function Danfo() {
-  return (
-    <g>
-      <ellipse cx="-2" cy="5" rx="36" ry="9" fill="#0b2a1a" opacity=".18" />
-      <polygon points="-30,-8 6,10 6,-12 -30,-30" fill="#f7c614" />
-      <polygon points="6,10 22,2 22,-20 6,-12" fill="#d4a10a" />
-      <polygon points="-30,-30 6,-12 22,-20 -14,-38" fill="#ffe36b" />
-      <polygon points="-30,-15 6,3 6,0 -30,-18" fill="#1c1828" />
-      <polygon points="-26,-21 -18,-17 -18,-25 -26,-29" fill="#2b3a55" />
-      <polygon points="-15,-15.5 -7,-11.5 -7,-19.5 -15,-23.5" fill="#2b3a55" />
-      <polygon points="-4,-10 4,-6 4,-14 -4,-18" fill="#2b3a55" />
-      <polygon points="8,-4 20,-10 20,-18 8,-12" fill="#3a4c6e" />
-      <polygon points="-12,-34 -2,-29 4,-32 -6,-37" fill="#c9a25a" />
-      <ellipse cx="-21" cy="-5" rx="4" ry="5" fill="#1c1828" />
-      <ellipse cx="-1" cy="5" rx="4" ry="5" fill="#1c1828" />
-      <ellipse cx="17" cy="1" rx="3.4" ry="4.4" fill="#1c1828" />
-    </g>
-  );
-}
-
-function Lamp({ night, glow }: { night: boolean; glow: string }) {
+function Lamp({ night, glow, tall }: { night: boolean; glow: string; tall?: boolean }) {
+  if (tall)
+    return (
+      <g>
+        <circle cx="6" cy="-44" r={night ? 22 : 12} fill={glow} />
+        <path d="M0 0 V-44 Q0 -48 6 -46" stroke="#4a4458" strokeWidth="2.2" fill="none" />
+        <ellipse cx="7" cy="-45" rx="4" ry="1.8" fill="#ffe27a" />
+      </g>
+    );
   return (
     <g>
       <circle cx="0" cy="-34" r={night ? 22 : 12} fill={glow} />
@@ -708,14 +1001,14 @@ function Lamp({ night, glow }: { night: boolean; glow: string }) {
   );
 }
 
-function Flowers() {
+function Flowers({ c = ["#ff6fa1", "#ffd25a", "#fff", "#b18cff"] }: { c?: string[] }) {
   return (
     <g>
       <ellipse cx="0" cy="1" rx="13" ry="4.5" fill="#469a46" />
-      <circle cx="-7" cy="-2" r="3" fill="#ff6fa1" />
-      <circle cx="0" cy="-4" r="3" fill="#ffd25a" />
-      <circle cx="7" cy="-1" r="3" fill="#fff" />
-      <circle cx="-1" cy="1.5" r="2.6" fill="#b18cff" />
+      <circle cx="-7" cy="-2" r="3" fill={c[0]} />
+      <circle cx="0" cy="-4" r="3" fill={c[1]} />
+      <circle cx="7" cy="-1" r="3" fill={c[2]} />
+      <circle cx="-1" cy="1.5" r="2.6" fill={c[3]} />
     </g>
   );
 }

@@ -10,7 +10,7 @@
  * - Every 60 messages a pedestrian bridge goes up over a road.
  */
 
-export type PieceKind = "house" | "palm" | "tree" | "stall" | "bus" | "lamp" | "flowers" | "rocks" | "office" | "pitch" | "stage" | "cafe";
+export type PieceKind = "house" | "palm" | "tree" | "stall" | "bus" | "lamp" | "flowers" | "rocks" | "office" | "pitch" | "stage" | "cafe" | "gym" | "school" | "clinic" | "market" | "cinema" | "pool";
 
 /** What the database sends: how many messages, and the latest ones as [kind, first words] */
 export type IslandData = {
@@ -24,6 +24,8 @@ export type IslandData = {
 export type Piece = {
   kind: PieceKind;
   level: 1 | 2 | 3;
+  /** Which look it gets (each kind has a few) */
+  variant: number;
   gx: number;
   gy: number;
   scale: number;
@@ -34,6 +36,7 @@ export type Piece = {
 };
 
 export type Road = { gx: number; gy: number; axis: "x" | "y" | "both" };
+export type Vehicle = Road & { color: string; type: "car" | "danfo" };
 export type Spot = { gx: number; gy: number };
 
 export type IslandLayout = {
@@ -44,7 +47,7 @@ export type IslandLayout = {
   /** Empty plots with a little bush */
   shrubs: Spot[];
   footbridges: Road[];
-  cars: (Road & { color: string })[];
+  cars: Vehicle[];
   lighthouse: Spot | null;
   signpost: Spot | null;
   /** How far the land reaches from the middle, in tiles */
@@ -71,7 +74,7 @@ const NAMES: Record<PieceKind, [string, string, string]> = {
   palm: ["a palm tree", "two palm trees", "a palm grove"],
   tree: ["a tree", "a big tree", "a shady spot"],
   stall: ["a food stall", "a Mama Put", "a busy restaurant"],
-  bus: ["a danfo", "a bus stop", "a motor park"],
+  bus: ["a bus stop", "a filling station", "a bus terminal"],
   lamp: ["a street lamp", "a lamp and bench", "a little square"],
   flowers: ["flowers", "a garden", "a garden with a fountain"],
   rocks: ["some rocks", "a well", "a statue"],
@@ -79,23 +82,35 @@ const NAMES: Record<PieceKind, [string, string, string]> = {
   pitch: ["a football pitch", "a pitch with stands", "a stadium"],
   stage: ["a stage", "a stage with lights", "a party"],
   cafe: ["a kiosk", "a café", "a busy café"],
+  gym: ["a gym", "a sports centre", "a big gym"],
+  school: ["a school", "a college", "a university"],
+  clinic: ["a clinic", "a hospital", "a big hospital"],
+  market: ["market stalls", "a supermarket", "a mall"],
+  cinema: ["a little cinema", "a cinema", "a big cinema"],
+  pool: ["a pool", "a pool with loungers", "a water park"],
 };
 
 // Words that build something special (the first one found wins)
 const WORDS: [PieceKind, RegExp][] = [
-  ["stall", /\b(jollof|suya|rice|food|eat|eating|hungry|chop|amala|pizza|shawarma|bole|dinner|lunch|breakfast|cook|cooking|kitchen|snack|restaurant|mama put|meat)\b/i],
-  ["cafe", /\b(coffee|tea|cafe|café|date|brunch|cake|ice cream|smoothie|drinks?)\b/i],
-  ["pitch", /\b(football|match|arsenal|chelsea|united|madrid|barca|goal|fifa|ball|super eagles|league)\b/i],
-  ["office", /\b(work|working|office|school|class|exam|meeting|boss|job|study|studying|lecture|deadline)\b/i],
+  ["stall", /\b(jollof|suya|rice|food|eat|eating|hungry|chop|amala|pizza|shawarma|bole|dinner|lunch|breakfast|cook|cooking|kitchen|snack|restaurant|mama put|meat|chicken|burger)\b/i],
+  ["cafe", /\b(coffee|tea|cafe|café|date|brunch|cake|ice cream|smoothie|drinks?|juice)\b/i],
+  ["pitch", /\b(football|match|arsenal|chelsea|united|madrid|barca|goal|fifa|ball|super eagles|league|basketball|nba)\b/i],
+  ["school", /\b(school|class|exam|exams|lecture|study|studying|uni|university|campus|assignment|teacher)\b/i],
+  ["office", /\b(work|working|office|meeting|boss|job|deadline|business|client|salary)\b/i],
+  ["gym", /\b(gym|workout|work out|exercise|fitness|run|running|jog|jogging|training|abs)\b/i],
+  ["clinic", /\b(sick|doctor|hospital|ill|headache|malaria|medicine|nurse|clinic|fever)\b/i],
+  ["market", /\b(market|shopping|shop|buy|bought|mall|money|cash|sales?|price)\b/i],
+  ["cinema", /\b(movie|movies|film|netflix|cinema|series|show|episode|anime|nollywood)\b/i],
+  ["pool", /\b(swim|swimming|pool|splash)\b/i],
   ["stage", /\b(party|owambe|concert|music|song|songs|dance|dancing|club|dj|afrobeats|wizkid|burna|davido|tems|asake)\b/i],
-  ["bus", /\b(danfo|bus|traffic|car|drive|driving|road|okada|uber|bolt|keke|trip|travel|go-slow)\b/i],
-  ["palm", /\b(beach|sea|swim|swimming|ocean|island|vacation|holiday|sunny|chill|relax)\b/i],
+  ["bus", /\b(danfo|bus|traffic|car|drive|driving|road|okada|uber|bolt|keke|trip|travel|go-slow|fuel)\b/i],
+  ["palm", /\b(beach|sea|ocean|island|vacation|holiday|sunny|chill|relax)\b/i],
   ["house", /\b(home|house|room|bed|sleep|sleeping|family|mum|mom|dad|sister|brother)\b/i],
   ["lamp", /\b(night|vibe|vibes|photo|pic|selfie|walk|evening)\b/i],
   ["flowers", /(\blove\b|❤|💕|😍|🥰|\bheart\b|\bmiss you\b|\bcute\b|\bbeautiful\b|\bsweet\b)/i],
 ];
 
-const DEFAULTS: PieceKind[] = ["tree", "house", "flowers", "palm", "tree", "rocks", "house", "flowers", "cafe", "lamp", "house", "office"];
+const DEFAULTS: PieceKind[] = ["tree", "house", "flowers", "palm", "tree", "rocks", "house", "flowers", "cafe", "lamp", "house", "office", "market", "house", "tree"];
 const ROOFS = ["#6d4ff0", "#e0477e", "#1aa774", "#2f80ed", "#ef6a3a", "#b4532a"];
 const WALLS = ["#fff3e0", "#ffe3d6", "#e2f6ec", "#ece6ff", "#fff6c4", "#dcefff"];
 const CARS = ["#e5484d", "#2f80ed", "#f7c614", "#ffffff", "#1aa774", "#3a3350"];
@@ -171,6 +186,7 @@ export function layoutIsland(d: IslandData): IslandLayout {
     return {
       kind: p.kind,
       level,
+      variant: (h >>> 20) % 3,
       gx: plot.gx,
       gy: plot.gy,
       scale: p.kind === "pitch" ? 0.62 : 0.82 + ((h >>> 8) % 10) / 100,
@@ -195,6 +211,7 @@ export function layoutIsland(d: IslandData): IslandLayout {
   const taken = new Set([lighthouse, signpost].filter(Boolean).map((p) => key(p!.gx, p!.gy)));
   const shrubs = free.filter((p) => !taken.has(key(p.gx, p.gy)) && hash(`s${p.gx},${p.gy}`) % 5 < 2).map(({ gx, gy }) => ({ gx, gy }));
 
+  const transit = pieces.filter((p) => p.kind === "bus").length;
   // Straight road pieces (not crossings), nearest the middle first
   const straight = roads.filter((r) => r.axis !== "both").sort((a, b) => Math.hypot(a.gx, a.gy) - Math.hypot(b.gx, b.gy));
   const footbridges = straight.filter((_, i) => i % 5 === 2).slice(0, Math.floor(d.total / 60));
@@ -202,7 +219,12 @@ export function layoutIsland(d: IslandData): IslandLayout {
   const cars = straight
     .filter((r) => !bridged.has(key(r.gx, r.gy)) && hash(`car${r.gx},${r.gy}`) % 4 === 0)
     .slice(0, 6 + Math.floor(built.length / 6))
-    .map((r) => ({ ...r, color: CARS[hash(`cc${r.gx},${r.gy}`) % CARS.length] }));
+    .map((r, i): Vehicle => ({
+      ...r,
+      color: CARS[hash(`cc${r.gx},${r.gy}`) % CARS.length],
+      // Danfos on the road: more of them the more you talk about getting around
+      type: i % 3 === 0 || (transit > 0 && i % 2 === 0) ? "danfo" : "car",
+    }));
 
   const days = d.since ? Math.max(1, Math.ceil((Date.now() - new Date(d.since).getTime()) / 86400000)) : 1;
   return {
