@@ -2,164 +2,186 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, ChevronLeft, ChevronUp, Download, TreePalm } from "lucide-react";
+import { ChevronLeft, Download, Info, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { tapFeedback } from "@/components/ui/Button";
-import { layoutIsland, pieceLine, skyNow, type IslandData } from "@/lib/island";
+import { Sheet } from "@/components/ui/Sheet";
+import { Button, tapFeedback } from "@/components/ui/Button";
+import { layoutIsland, skyNow, PER_ISLAND, type IslandData } from "@/lib/island";
 import { IslandArt } from "./IslandArt";
 
-const OPEN_KEY = "dp_island_open";
+const INTRO_KEY = "dp_island_intro_v1";
+type Sky = "day" | "sunset" | "night";
+
+// A small island for the guide
+const SAMPLE: IslandData = {
+  total: 26,
+  since: null,
+  unmasked: false,
+  names: null,
+  items: [
+    ["text", "hi stranger"], ["text", "jollof or fried rice?"], ["text", "beach this weekend"], ["text", "work is stressing me"], ["text", "this song is a vibe"],
+    ["text", "home now"], ["text", "coffee date?"], ["text", "football tonight"], ["text", "traffic is wild"], ["text", "love that"], ["text", "ok"], ["text", "lol"],
+  ],
+};
 
 /**
- * Your Island at the top of a chat: it grows with every message you two send. Tap it to see the
- * whole island; the arrow folds it away (remembered on this phone).
+ * Your Island (beta) for one chat. It opens from + → More. The first time someone opens a chat on
+ * this phone, a short guide explains it.
  */
 export function ChatIsland({
   session,
   match,
+  open,
+  onOpen,
+  onClose,
   refresh,
-  latest,
   demo,
-  startFull,
+  noIntro,
+  forceSky,
 }: {
   session?: string | null;
   match?: string | null;
-  /** Changes when a message is sent or arrives (the number of messages), so the island updates */
+  open: boolean;
+  onOpen: () => void;
+  onClose: () => void;
+  /** Changes when a message is sent or arrives, so an open island updates */
   refresh: number;
-  /** The newest message, to say what it built */
-  latest?: { id?: number | string; kind?: string | null; body: string } | null;
   demo?: IslandData;
-  /** Design previews: open the full island straight away */
-  startFull?: boolean;
+  /** Design previews: don't show the guide */
+  noIntro?: boolean;
+  /** Design previews: a set time of day */
+  forceSky?: Sky;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const [data, setData] = useState<IslandData | null>(demo ?? null);
-  const [open, setOpen] = useState(true);
-  const [full, setFull] = useState(!!startFull);
-  const [toast, setToast] = useState<string | null>(null);
-  const first = useRef(true);
-  // The full view opens over the whole page, so only once the page is in the browser
+  const [intro, setIntro] = useState(false);
   const [mounted, setMounted] = useState(false);
   // Day, sunset or night from this phone's clock (worked out in the browser, not on the server)
-  const [sky, setSky] = useState<"day" | "sunset" | "night">("day");
-  useEffect(() => {
-    setMounted(true);
-    setSky(skyNow());
-  }, []);
+  const [sky, setSky] = useState<Sky>("day");
 
   useEffect(() => {
+    setMounted(true);
+    setSky(forceSky ?? skyNow());
+    if (noIntro) return;
+    let seen = true;
     try {
-      if (localStorage.getItem(OPEN_KEY) === "0") setOpen(false);
+      seen = localStorage.getItem(INTRO_KEY) === "1";
     } catch {
       /* private mode */
     }
-  }, []);
-
-  // Load the island, and again shortly after each new message
-  useEffect(() => {
-    if (demo || (!session && !match)) return;
-    let live = true;
-    const t = setTimeout(
-      () => {
-        supabase.rpc("chat_island", { p_session: session ?? null, p_match: match ?? null }).then(({ data: d }) => {
-          if (live && d) setData(d as IslandData);
-        });
-      },
-      first.current ? 0 : 1200,
-    );
-    return () => {
-      live = false;
-      clearTimeout(t);
-    };
-  }, [supabase, session, match, refresh, demo]);
-
-  // A new message: say what it built (not when older messages load further up)
-  const lastId = useRef(latest?.id);
-  useEffect(() => {
-    if (first.current) {
-      first.current = false;
-      return;
-    }
-    if (!latest || latest.kind === "system" || latest.id === lastId.current) return;
-    lastId.current = latest.id;
-    setToast(pieceLine(latest.kind ?? "text", latest.body ?? ""));
-    const t = setTimeout(() => setToast(null), 3500);
+    if (seen) return;
+    const t = setTimeout(() => setIntro(true), 900);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refresh]);
+  }, [noIntro, forceSky]);
 
-  const layout = useMemo(() => (data ? layoutIsland(data) : null), [data]);
-  if (!layout || !data) return null;
-
-  function toggle() {
-    tapFeedback();
-    const next = !open;
-    setOpen(next);
+  function closeIntro() {
+    setIntro(false);
     try {
-      localStorage.setItem(OPEN_KEY, next ? "1" : "0");
+      localStorage.setItem(INTRO_KEY, "1");
     } catch {
       /* private mode */
     }
   }
 
+  // Load the island when it's opened, and again shortly after each new message while it's open
+  useEffect(() => {
+    if (demo || !open || (!session && !match)) return;
+    let live = true;
+    const t = setTimeout(() => {
+      supabase.rpc("chat_island", { p_session: session ?? null, p_match: match ?? null }).then(({ data: d }) => {
+        if (live && d) setData(d as IslandData);
+      });
+    }, data ? 800 : 0);
+    return () => {
+      live = false;
+      clearTimeout(t);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supabase, session, match, refresh, demo, open]);
+
+  if (!mounted) return null;
   return (
     <>
-      {open ? (
-        <div className="relative mx-3 mt-2 h-[132px] shrink-0 overflow-hidden rounded-[20px] bg-[#3e9fc4] shadow-[0_10px_24px_-16px_rgba(28,24,40,0.6)] lg:mx-auto lg:w-full lg:max-w-xl">
-          <button
-            type="button"
-            onClick={() => {
-              tapFeedback();
-              setFull(true);
-            }}
-            className="absolute inset-0"
-            aria-label="Open your island"
-          >
-            <IslandArt layout={layout} sky={sky} names={data.names} mode="banner" />
-          </button>
-          <span className="pointer-events-none absolute top-2 left-2 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-bold text-ink">
-            Your Island · {layout.total} {layout.total === 1 ? "piece" : "pieces"}
-          </span>
-          <button type="button" onClick={toggle} aria-label="Hide your island" className="absolute top-1.5 right-1.5 grid h-8 w-8 place-items-center rounded-full bg-ink/55 text-white">
-            <ChevronUp size={17} />
-          </button>
-          {toast && (
-            <span className="pointer-events-none absolute bottom-2 left-1/2 max-w-[92%] -translate-x-1/2 animate-pop truncate rounded-full bg-ink px-3 py-1.5 text-[12px] font-semibold text-white shadow-lift">
-              {toast}
-            </span>
-          )}
-        </div>
-      ) : (
-        <div className="mx-3 mt-2 flex shrink-0 items-center gap-2 lg:mx-auto lg:w-full lg:max-w-xl">
-          <button
-            type="button"
-            onClick={() => {
-              tapFeedback();
-              setFull(true);
-            }}
-            className="inline-flex h-8 items-center gap-1.5 rounded-full bg-[#dff3fa] pr-3 pl-2 text-[12px] font-semibold text-[#155a7a]"
-          >
-            <TreePalm size={15} /> Your Island · {layout.total}
-          </button>
-          {toast && <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-muted">{toast}</span>}
-          <button type="button" onClick={toggle} aria-label="Show your island" className="ml-auto grid h-8 w-8 place-items-center rounded-full text-muted">
-            <ChevronDown size={17} />
-          </button>
-        </div>
-      )}
-      {full && mounted && <IslandFull data={data} sky={sky} onClose={() => setFull(false)} />}
+      <IslandIntro
+        open={intro}
+        sky={sky}
+        onClose={closeIntro}
+        onSee={() => {
+          closeIntro();
+          onOpen();
+        }}
+      />
+      {open && <IslandWorld data={data} sky={sky} onClose={onClose} />}
     </>
   );
 }
 
-/** The whole island, full screen: tap a piece to see the message that made it */
-function IslandFull({ data, sky, onClose }: { data: IslandData; sky: "day" | "sunset" | "night"; onClose: () => void }) {
-  const layout = useMemo(() => layoutIsland(data), [data]);
-  const [picked, setPicked] = useState<number | null>(null);
+/** The guide shown the first time: what it is and where to find it */
+function IslandIntro({ open, sky, onClose, onSee }: { open: boolean; sky: Sky; onClose: () => void; onSee: () => void }) {
+  const layout = useMemo(() => layoutIsland(SAMPLE), []);
+  return (
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title="New: Your Island"
+      subtitle="Every chat grows its own little island"
+      footer={
+        <div className="flex gap-2">
+          <Button variant="secondary" size="lg" onClick={onClose} className="flex-1">
+            Later
+          </Button>
+          <Button size="lg" onClick={onSee} className="flex-[2]">
+            See our island
+          </Button>
+        </div>
+      }
+    >
+      <div className="relative h-40 overflow-hidden rounded-3xl bg-[#3cc4d9]">
+        <IslandArt layout={layout} sky={sky} crop="20 360 350 210" className="block h-full w-full" />
+        <span className="absolute top-2.5 left-2.5 rounded-full bg-gold px-2 py-0.5 text-[11px] font-extrabold tracking-wide text-ink uppercase">Beta</span>
+      </div>
+      <HowItWorks compact />
+    </Sheet>
+  );
+}
+
+/** How Your Island works (the guide, and the ⓘ on the island) */
+function HowItWorks({ compact }: { compact?: boolean }) {
+  const rows: [string, string][] = [
+    ["Every message builds something", `"jollof" builds a food stall, "football" a pitch, "work" an office, "party" a stage, "coffee" a café, "traffic" a danfo. Voice notes bring birds.`],
+    ["It levels up as you talk", "Keep chatting and a cottage becomes a two-storey house, then a block of flats. A stall becomes a Mama Put, then a busy restaurant."],
+    ["It never stops growing", `Every ${PER_ISLAND} pieces a new island rises and joins the last with a bridge. A boat arrives at 20 messages, a lighthouse at 100.`],
+    ["Fog clears as you get to know each other", "Masked chats start in fog. Unmask together and the sun comes out, with your names on a signpost."],
+  ];
+  const shown = compact ? rows : [...rows, ["Just for you two", "You both see the same island, and only you two can see it. Tap any piece to see the message that made it."] as [string, string]];
+  return (
+    <div className="mt-4 space-y-3">
+      {shown.map(([t, d], i) => (
+        <div key={t} className="flex gap-3">
+          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand-soft text-[13px] font-bold text-brand-ink">{i + 1}</span>
+          <div className="min-w-0">
+            <p className="text-[14.5px] font-semibold">{t}</p>
+            <p className="text-[13px] leading-snug text-muted">{d}</p>
+          </div>
+        </div>
+      ))}
+      <p className="rounded-2xl bg-cream px-3.5 py-2.5 text-[12.5px] leading-snug text-ink-soft">
+        <b className="font-semibold">Beta:</b> we&apos;re still building it. Find it any time in <b className="font-semibold">+ → Your Island</b>.
+      </p>
+    </div>
+  );
+}
+
+/** The islands, full screen: swipe across them, tap a piece to see the message that made it */
+function IslandWorld({ data, sky, onClose }: { data: IslandData | null; sky: Sky; onClose: () => void }) {
+  const layout = useMemo(() => (data ? layoutIsland(data) : null), [data]);
+  const [picked, setPicked] = useState<string | null>(null);
+  const [how, setHow] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [at, setAt] = useState(0);
   const svg = useRef<SVGSVGElement>(null);
-  const p = picked != null ? layout.pieces[picked] : null;
-  const fogLeft = Math.round((layout.fog / 0.9) * 100);
+  const scroller = useRef<HTMLDivElement>(null);
+  const count = layout?.islands.length ?? 1;
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -172,10 +194,21 @@ function IslandFull({ data, sky, onClose }: { data: IslandData; sky: "day" | "su
     };
   }, [onClose]);
 
-  // Save (or share) a picture of the island
+  // Start at the newest island
+  useEffect(() => {
+    const el = scroller.current;
+    if (el && count > 1) el.scrollLeft = el.scrollWidth;
+  }, [count]);
+
+  const piece = useMemo(() => {
+    if (!picked || !layout) return null;
+    const [i, j] = picked.split("-").map(Number);
+    return layout.islands[i]?.pieces[j] ?? null;
+  }, [picked, layout]);
+
   async function save() {
     const el = svg.current;
-    if (!el || saving) return;
+    if (!el || saving || !layout) return;
     tapFeedback();
     setSaving(true);
     try {
@@ -188,9 +221,9 @@ function IslandFull({ data, sky, onClose }: { data: IslandData; sky: "day" | "su
         img.src = url;
       });
       const canvas = document.createElement("canvas");
-      canvas.width = 780;
+      canvas.width = Math.round(layout.width * 2);
       canvas.height = 1688;
-      canvas.getContext("2d")?.drawImage(img, 0, 0, 780, 1688);
+      canvas.getContext("2d")?.drawImage(img, 0, 0, canvas.width, canvas.height);
       URL.revokeObjectURL(url);
       const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/png"));
       if (!blob) return;
@@ -210,43 +243,101 @@ function IslandFull({ data, sky, onClose }: { data: IslandData; sky: "day" | "su
     }
   }
 
-  const next = !layout.boat ? `A boat at 20 messages` : !layout.lighthouse ? `A lighthouse at 100 messages` : null;
+  const fogLeft = layout ? Math.round((layout.fog / 0.9) * 100) : 100;
+  const next = !layout ? null : !layout.boat ? "a boat at 20 messages" : !layout.lighthouse ? "a lighthouse at 100 messages" : `island ${count + 1} after ${PER_ISLAND * count - layout.pieceCount} more`;
 
   return createPortal(
-    <div className="fixed inset-0 z-[85] bg-[#2f86ad] animate-fade-in" role="dialog" aria-modal="true" aria-label="Your island">
-      <div className="absolute inset-0" onClick={() => setPicked(null)}>
-        <IslandArt ref={svg} layout={layout} sky={sky} names={data.names} mode="full" picked={picked} onPick={(i) => setPicked(i)} />
-      </div>
+    <div className="fixed inset-0 z-[85] bg-[#136a9c] animate-fade-in" role="dialog" aria-modal="true" aria-label="Your island">
+      {layout ? (
+        <div
+          ref={scroller}
+          className="absolute inset-0 overflow-x-auto overflow-y-hidden overscroll-contain no-scrollbar"
+          onScroll={(e) => {
+            const el = e.currentTarget;
+            const max = el.scrollWidth - el.clientWidth;
+            setAt(max > 0 ? Math.round((el.scrollLeft / max) * (count - 1)) : 0);
+          }}
+          onClick={() => setPicked(null)}
+        >
+          <IslandArt
+            ref={svg}
+            layout={layout}
+            sky={sky}
+            names={data?.names}
+            picked={picked}
+            onPick={setPicked}
+            className="block h-full max-w-none"
+            style={{ aspectRatio: `${layout.width} / 844`, minWidth: "100%" }}
+          />
+        </div>
+      ) : (
+        <div className="grid h-full place-items-center text-[14px] font-semibold text-white/80">Loading your island…</div>
+      )}
 
-      <div className="pointer-events-none absolute inset-x-0 top-0 mx-auto flex max-w-md items-center justify-between px-4 pt-[max(14px,env(safe-area-inset-top))]">
-        <button type="button" onClick={onClose} aria-label="Back to chat" className="pointer-events-auto grid h-10 w-10 place-items-center rounded-full bg-white/90 text-ink">
+      <div className="pointer-events-none absolute inset-x-0 top-0 mx-auto flex max-w-md items-center gap-2 px-4 pt-[max(14px,env(safe-area-inset-top))]">
+        <button type="button" onClick={onClose} aria-label="Back to chat" className="pointer-events-auto grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/90 text-ink">
           <ChevronLeft size={20} />
         </button>
-        <span className="rounded-full bg-white/90 px-3 py-1.5 text-[12.5px] font-bold">
-          Day {layout.days} · {layout.total} {layout.total === 1 ? "piece" : "pieces"}
+        <span className="mx-auto inline-flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1.5 text-[12.5px] font-bold">
+          Your Island
+          <span className="rounded-full bg-gold px-1.5 py-px text-[10px] font-extrabold tracking-wide uppercase">Beta</span>
+          {layout && <span className="font-semibold text-muted">· day {layout.days}</span>}
         </span>
-        <button type="button" onClick={save} disabled={saving} aria-label="Save a picture of your island" className="pointer-events-auto grid h-10 w-10 place-items-center rounded-full bg-white/90 text-ink disabled:opacity-60">
+        <button type="button" onClick={() => setHow(true)} aria-label="How Your Island works" className="pointer-events-auto grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/90 text-ink">
+          <Info size={18} />
+        </button>
+        <button type="button" onClick={save} disabled={saving || !layout} aria-label="Save a picture of your island" className="pointer-events-auto grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/90 text-ink disabled:opacity-60">
           <Download size={18} />
         </button>
       </div>
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 mx-auto flex max-w-md flex-col gap-2 px-4 pb-[max(20px,env(safe-area-inset-bottom))]">
-        {p ? (
-          <div className="rounded-2xl bg-ink/90 px-4 py-3 text-white">
-            <p className="text-[12px] font-semibold text-white/70">{p.label.charAt(0).toUpperCase() + p.label.slice(1)} came from</p>
-            <p className="mt-0.5 line-clamp-3 text-[14px] leading-snug">{p.from ? `"${p.from}"` : "a message"}</p>
+      {layout && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 mx-auto flex max-w-md flex-col gap-2 px-4 pb-[max(20px,env(safe-area-inset-bottom))]">
+          {count > 1 && (
+            <div className="mx-auto flex items-center gap-1.5 rounded-full bg-ink/60 px-3 py-1.5 text-[12px] font-semibold text-white">
+              {Array.from({ length: Math.min(count, 12) }, (_, i) => (
+                <span key={i} className={i === Math.min(at, 11) ? "h-1.5 w-4 rounded-full bg-white" : "h-1.5 w-1.5 rounded-full bg-white/50"} />
+              ))}
+              <span className="ml-1">Island {at + 1} of {count} · swipe</span>
+            </div>
+          )}
+          {piece ? (
+            <div className="rounded-2xl bg-ink/90 px-4 py-3 text-white">
+              <p className="text-[12px] font-semibold text-white/70">
+                {piece.label.charAt(0).toUpperCase() + piece.label.slice(1)}
+                {piece.level > 1 ? ` (level ${piece.level})` : ""} came from
+              </p>
+              <p className="mt-0.5 line-clamp-3 text-[14px] leading-snug">{piece.from ? `"${piece.from}"` : "a message"}</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-2">
+              <Stat value={data?.unmasked ? "Clear" : `${100 - fogLeft}%`} label={data?.unmasked ? "you unmasked" : "fog cleared"} />
+              <Stat value={String(layout.pieceCount)} label={layout.pieceCount === 1 ? "piece" : "pieces"} />
+              <Stat value={String(count)} label={count === 1 ? "island" : "islands"} />
+            </div>
+          )}
+          <p className="rounded-2xl bg-ink/80 px-4 py-2.5 text-[12.5px] leading-snug text-white">
+            Every message adds something. {next ? `Next: ${next}.` : ""} Tap a piece to see what made it.
+          </p>
+        </div>
+      )}
+
+      {how && (
+        <div className="absolute inset-0 z-10 flex items-end bg-black/40" onClick={() => setHow(false)}>
+          <div className="mx-auto max-h-[85dvh] w-full max-w-md overflow-y-auto rounded-t-[28px] bg-surface px-5 pt-4 pb-[max(20px,env(safe-area-inset-bottom))]" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <p className="flex items-center gap-2 text-[18px] font-semibold">
+                How Your Island works
+                <span className="rounded-full bg-gold px-1.5 py-px text-[10px] font-extrabold tracking-wide uppercase">Beta</span>
+              </p>
+              <button type="button" onClick={() => setHow(false)} aria-label="Close" className="grid h-9 w-9 place-items-center rounded-full bg-ink/[0.06]">
+                <X size={18} />
+              </button>
+            </div>
+            <HowItWorks />
           </div>
-        ) : (
-          <div className="grid grid-cols-3 gap-2">
-            <Stat value={data.unmasked ? "Clear" : `${100 - fogLeft}%`} label={data.unmasked ? "you unmasked" : "fog cleared"} />
-            <Stat value={String(layout.pieces.length + (layout.lighthouse ? 1 : 0) + (layout.boat ? 1 : 0))} label="on the island" />
-            <Stat value={String(layout.days)} label={layout.days === 1 ? "day" : "days"} />
-          </div>
-        )}
-        <p className="rounded-2xl bg-ink/80 px-4 py-2.5 text-[12.5px] leading-snug text-white">
-          {next ? `Every message adds something. Next: ${next}.` : "Every message adds something. Tap a piece to see what made it."}
-        </p>
-      </div>
+        </div>
+      )}
     </div>,
     document.body,
   );

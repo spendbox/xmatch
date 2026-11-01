@@ -7,7 +7,7 @@
 -- needs to draw it, and only to the two people in the chat.
 --   total:    how many messages the chat has (masked part included)
 --   since:    when the chat started
---   items:    the latest 300 messages, oldest first, as [kind, first 160 characters]
+--   items:    the latest 1500 messages, oldest first, as [kind, first 100 characters]
 --   unmasked: you've both unmasked (a signpost with your names, and the fog is gone)
 --   names:    your first names, only once you've both unmasked
 
@@ -29,30 +29,30 @@ begin
     if not found then return null; end if;
     -- The masked chat you had first (kept as one card in this chat), then this chat's messages
     with all_msgs as (
-      select (e->>'t')::timestamptz as t, coalesce(e->>'k', 'text') as k, left(coalesce(e->>'b', ''), 160) as b, 0 as src, a.ord as o
+      select (e->>'t')::timestamptz as t, coalesce(e->>'k', 'text') as k, left(coalesce(e->>'b', ''), 100) as b, 0 as src, a.ord as o
       from messages x
       cross join lateral jsonb_array_elements(coalesce(x.media_meta->'messages', '[]'::jsonb)) with ordinality as a(e, ord)
       where x.match_id = p_match and x.kind = 'masked' and coalesce(e->>'k', 'text') <> 'system'
       union all
-      select x.created_at, coalesce(x.kind, 'text'), left(coalesce(x.body, ''), 160), 1, x.id
+      select x.created_at, coalesce(x.kind, 'text'), left(coalesce(x.body, ''), 100), 1, x.id
       from messages x
       where x.match_id = p_match and x.sender_id is not null and x.deleted_at is null
         and coalesce(x.kind, 'text') not in ('masked', 'system', 'call')
     )
     select count(*)::int, min(t) into n, first_at from all_msgs;
     with all_msgs as (
-      select (e->>'t')::timestamptz as t, coalesce(e->>'k', 'text') as k, left(coalesce(e->>'b', ''), 160) as b, 0 as src, a.ord as o
+      select (e->>'t')::timestamptz as t, coalesce(e->>'k', 'text') as k, left(coalesce(e->>'b', ''), 100) as b, 0 as src, a.ord as o
       from messages x
       cross join lateral jsonb_array_elements(coalesce(x.media_meta->'messages', '[]'::jsonb)) with ordinality as a(e, ord)
       where x.match_id = p_match and x.kind = 'masked' and coalesce(e->>'k', 'text') <> 'system'
       union all
-      select x.created_at, coalesce(x.kind, 'text'), left(coalesce(x.body, ''), 160), 1, x.id
+      select x.created_at, coalesce(x.kind, 'text'), left(coalesce(x.body, ''), 100), 1, x.id
       from messages x
       where x.match_id = p_match and x.sender_id is not null and x.deleted_at is null
         and coalesce(x.kind, 'text') not in ('masked', 'system', 'call')
     )
     select coalesce(jsonb_agg(jsonb_build_array(z.k, z.b) order by z.t, z.src, z.o), '[]'::jsonb) into list
-    from (select * from all_msgs order by t desc, src desc, o desc limit 300) z;
+    from (select * from all_msgs order by t desc, src desc, o desc limit 1500) z;
     return json_build_object(
       'total', n, 'since', first_at, 'items', list,
       'unmasked', m.session_id is not null,
@@ -69,9 +69,9 @@ begin
     from masquerade_messages where session_id = p_session and kind <> 'system';
     select coalesce(jsonb_agg(jsonb_build_array(z.kind, z.b) order by z.id), '[]'::jsonb) into list
     from (
-      select id, kind, left(body, 160) as b from masquerade_messages
+      select id, kind, left(body, 100) as b from masquerade_messages
       where session_id = p_session and kind <> 'system'
-      order by id desc limit 300
+      order by id desc limit 1500
     ) z;
     return json_build_object('total', n, 'since', first_at, 'items', list, 'unmasked', false, 'names', null);
   end if;

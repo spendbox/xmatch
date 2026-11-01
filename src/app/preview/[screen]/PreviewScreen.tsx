@@ -1115,29 +1115,35 @@ function ScreenBody({ screen }: { screen: string }) {
     case "island":
     case "island-full":
     case "island-unmasked":
-    case "island-new": {
-      const chat: [string, string][] = [
-        ["text", "hi stranger"], ["audio", ""], ["text", "I love flowers honestly"], ["text", "omo I need jollof right now"], ["text", "Mama Put tomorrow? my treat"],
-        ["text", "traffic on third mainland is wild"], ["text", "beach on saturday?"], ["text", "my mum keeps calling lol"], ["text", "this song is a vibe"], ["gift", "rose"],
-        ["text", "you're so sweet"], ["text", "what are you doing"], ["text", "home now"], ["text", "suya later?"], ["audio", ""], ["text", "haha stop"], ["text", "ok ok"],
-        ["sticker", "Hey"], ["text", "danfo almost hit me"], ["text", "the party was mad"], ["text", "sleeping soon"], ["text", "good morning"], ["text", "breakfast?"],
-        ["text", "tell me something"], ["text", "I miss you already"], ["text", "beach again"], ["text", "night night"], ["text", "lunch break"], ["text", "random thought"],
-        ["text", "family dinner tonight"], ["text", "this traffic again"], ["text", "chill weekend"], ["text", "music on repeat"], ["text", "more jollof"], ["text", "ok"],
+    case "island-new":
+    case "island-night": {
+      const words = [
+        "hi stranger", "I love flowers honestly", "omo I need jollof right now", "Mama Put tomorrow? my treat", "traffic on third mainland is wild",
+        "beach on saturday?", "my mum keeps calling lol", "this song is a vibe", "work is stressing me", "football tonight?", "coffee date?",
+        "you're so sweet", "home now", "suya later?", "haha stop", "ok ok", "danfo almost hit me", "the party was mad", "sleeping soon",
+        "good morning", "breakfast?", "tell me something", "I miss you already", "exam tomorrow", "arsenal won!", "night walk",
       ];
-      const items = screen === "island-new" ? chat.slice(0, 3) : chat;
+      const n = screen === "island-new" ? 3 : screen === "island-full" ? 64 : 140;
+      const items: [string, string][] = Array.from({ length: n }, (_, i) => (i % 9 === 4 ? ["audio", ""] : ["text", words[(i * 7) % words.length]]));
       const data = {
-        total: screen === "island-new" ? 3 : screen === "island-unmasked" ? 214 : 64,
-        since: new Date(Date.now() - (screen === "island-new" ? 1 : 7) * 86400000).toISOString(),
+        total: n,
+        since: "2026-10-20T10:00:00Z",
         items,
         unmasked: screen === "island-unmasked",
         names: screen === "island-unmasked" ? (["Tolu", "Kemi"] as [string, string]) : null,
       };
       return (
         <div className="min-h-dvh bg-cream pt-2">
-          <ChatIsland refresh={items.length} demo={data} startFull={screen !== "island"} />
+          <ChatIsland refresh={items.length} demo={data} open onOpen={() => {}} onClose={() => {}} noIntro forceSky={screen === "island-night" ? "night" : "day"} />
         </div>
       );
     }
+    case "island-intro":
+      return (
+        <div className="min-h-dvh bg-cream pt-2">
+          <ChatIsland refresh={0} open={false} onOpen={() => {}} onClose={() => {}} />
+        </div>
+      );
     case "things-deck":
       return <ThingsDeck open onClose={() => {}} things={me.things ?? []} onSaved={() => {}} demo />;
     case "pact-intro":
