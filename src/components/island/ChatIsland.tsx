@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Sheet } from "@/components/ui/Sheet";
 import { Button, tapFeedback } from "@/components/ui/Button";
 import { layoutIsland, skyNow, type IslandData, type IslandLayout, type Piece } from "@/lib/island";
+import { FEATURES } from "@/lib/features";
 import { IslandArt, PiecePicture, islandExtent, type IslandView } from "./IslandArt";
 
 const INTRO_KEY = "dp_island_intro_v1";
@@ -62,7 +63,7 @@ export function ChatIsland({
   useEffect(() => {
     setMounted(true);
     setSky(forceSky ?? skyNow());
-    if (noIntro) return;
+    if (noIntro || !FEATURES.islandIntro) return;
     let seen = true;
     try {
       seen = localStorage.getItem(INTRO_KEY) === "1";
