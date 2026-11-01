@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import clsx from "clsx";
-import { Eye, Gamepad2, Radar, UsersRound } from "lucide-react";
+import { Eye, Gamepad2, MessageCircle, Radar, UserRound, UsersRound } from "lucide-react";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { tapFeedback } from "@/components/ui/Button";
 
@@ -30,6 +30,12 @@ const STEPS: Step[] = [
     body: "Switch it on and you're paired the moment someone who fits is online. Once paired, tap the mic to send them a voice note. Tap your icons to change who you'd like to meet.",
   },
   {
+    target: "recent",
+    icon: <MessageCircle size={22} />,
+    title: "Recent chats and notes",
+    body: "Your latest chats, with the notes people have shared today. Tap Your note to share what's on your mind for 24 hours.",
+  },
+  {
     target: "views",
     icon: <Eye size={22} />,
     title: "Who viewed you",
@@ -39,12 +45,17 @@ const STEPS: Step[] = [
     target: "people",
     icon: <UsersRound size={22} />,
     title: "People for you",
-    body: "People who fit you, with how well you match. Swipe their photos, tap Hear me for their voice intro, or double-tap to wave. Break the ice to reply to a card, ask a This or That, send a voice hello or challenge them to a game.",
+    body: "People who fit you, with how well you match. Swipe their photos, tap Hear me for their voice intro, tap the photo for their profile, or double-tap to wave. Break the ice to reply to one of their cards, ask a This or That, send a voice hello or challenge them to a game.",
   },
   {
     icon: <Gamepad2 size={22} />,
-    title: "Games, gifts and voice notes",
-    body: "In any chat, tap + for games and gifts. In masked chats your voice notes are disguised, unless you pick Normal to use your real voice.",
+    title: "In your chats",
+    body: "Tap + for games, gifts, stickers, icebreakers and Your Island (beta): a little town that grows with every message you two send. In masked chats your voice notes are disguised, unless you pick Normal to use your real voice.",
+  },
+  {
+    icon: <UserRound size={22} />,
+    title: "Your profile",
+    body: "Add your Things about me cards and a short voice intro so people get a feel for you. Your photos stay masked until you both unmask, and you can hide your age too.",
   },
 ];
 
