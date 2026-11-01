@@ -8,8 +8,7 @@ import { PeopleForYou } from "./PeopleForYou";
 import { GettingStarted } from "./GettingStarted";
 import type { Thing } from "@/lib/things";
 import type { ExploreList, Viewers } from "@/lib/explore";
-import { ChevronRight } from "lucide-react";
-import { FeedbackButton } from "@/components/app/FeedbackButton";
+import { ChevronRight, UsersRound } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Wallet } from "@/lib/keys";
 import type { MasqueradeHour } from "@/lib/hourly";
@@ -165,7 +164,22 @@ export function HomeScreen({
           <p className="text-[13px] text-muted">{greeting}</p>
           <p className="truncate text-[19px] leading-tight font-semibold lg:font-display lg:text-[34px]">{profile.display_name}</p>
         </div>
-        {demoDaily ? <StreakChip n={demoDaily === "done" ? 13 : 12} /> : <FeedbackButton />}
+        {demoDaily ? (
+          <StreakChip n={demoDaily === "done" ? 13 : 12} />
+        ) : (
+          // Meet everyone: the full list, and a search by name (help and feedback is on Profile now)
+          <Link
+            href="/meet"
+            onClick={tapFeedback}
+            data-tour="meet"
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center gap-2 rounded-full border border-line-strong bg-surface text-brand transition active:scale-95 lg:w-auto lg:px-4"
+            aria-label="Meet everyone"
+            title="Meet everyone"
+          >
+            <UsersRound size={20} strokeWidth={2} />
+            <span className="hidden text-[14px] font-semibold text-ink lg:inline">Meet everyone</span>
+          </Link>
+        )}
         <Link
           href="/wallet"
           className="inline-flex h-11 items-center gap-2 rounded-full border border-gold/40 bg-gold-soft pr-4 pl-1.5 text-[15px] font-bold text-[#8a5a00] transition active:scale-95"

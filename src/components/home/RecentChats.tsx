@@ -133,7 +133,7 @@ export function RecentChats({
   // Room above the circles for note bubbles
   const notes = !!me || items.some((c) => c.note);
   return (
-    <section className="mt-4 lg:mt-8" aria-label="Recent chats">
+    <section data-tour="recent" className="mt-4 lg:mt-8" aria-label="Recent chats">
       <div className="mb-2 flex items-center justify-between">
         <h2 className="text-[13px] font-semibold tracking-wide text-muted uppercase">Recent chats</h2>
         <Link href="/matches" className="inline-flex items-center gap-0.5 text-[13px] font-semibold text-brand">
