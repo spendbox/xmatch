@@ -4,4 +4,6 @@ export const FEATURES = {
   meets: false,
   /** The daily prompts (Feed). Also switched off in the database (update 25). */
   feed: false,
+  /** Your Island: the guide that pops up the first time someone opens a chat */
+  islandIntro: false,
 };
