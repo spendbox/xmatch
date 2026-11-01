@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
-import { Bug, CheckCircle2, HelpCircle, Lightbulb, LifeBuoy, MessageSquareHeart } from "lucide-react";
+import { Bug, CheckCircle2, ChevronRight, HelpCircle, Lightbulb, LifeBuoy, MessageSquareHeart } from "lucide-react";
 import { Sheet } from "@/components/ui/Sheet";
 import { Button, tapFeedback } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Field";
@@ -17,7 +17,7 @@ const KINDS: { id: FeedbackKind; label: string; icon: typeof Bug; hint: string }
 ];
 
 /** The support button: opens a pop-up to send feedback, report a problem or ask for help */
-export function FeedbackButton({ variant = "icon" }: { variant?: "icon" | "row" }) {
+export function FeedbackButton({ variant = "icon" }: { variant?: "icon" | "row" | "card" }) {
   const path = usePathname();
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState<FeedbackKind>("feedback");
@@ -57,6 +57,22 @@ export function FeedbackButton({ variant = "icon" }: { variant?: "icon" | "row" 
           title="Help and feedback"
         >
           <LifeBuoy size={20} strokeWidth={2} />
+        </button>
+      ) : variant === "card" ? (
+        // On the profile page, like the rows around it
+        <button
+          type="button"
+          onClick={show}
+          className="mt-3 flex w-full items-center gap-3.5 rounded-3xl border border-line bg-surface p-4 text-left shadow-card transition hover:border-line-strong active:scale-[0.98]"
+        >
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-[14px] bg-gold-soft text-[#9a6a0c]">
+            <LifeBuoy size={20} strokeWidth={1.75} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[15px] font-semibold">Help and feedback</span>
+            <span className="block truncate text-[13px] text-muted">Report a problem, ask for help or share an idea</span>
+          </span>
+          <ChevronRight size={18} className="shrink-0 text-muted" />
         </button>
       ) : (
         <button type="button" onClick={show} className="flex h-11 w-full items-center gap-3 rounded-2xl px-3 text-[14px] font-semibold text-ink-soft transition hover:bg-ink/5 active:scale-[0.98] collapsed:justify-center collapsed:px-0" title="Help and feedback">

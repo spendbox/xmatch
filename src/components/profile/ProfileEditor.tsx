@@ -1,5 +1,6 @@
 "use client";
 
+import { FeedbackButton } from "@/components/app/FeedbackButton";
 import { Photo } from "@/components/ui/Photo";
 import { MaskFace } from "@/components/ui/MaskFace";
 import { useEffect, useMemo, useState } from "react";
@@ -387,6 +388,9 @@ export function ProfileEditor({
             </span>
             <ChevronRight size={18} className="shrink-0 text-muted" />
           </button>
+
+          {/* Help and feedback (it used to be a button on Home) */}
+          <FeedbackButton variant="card" />
 
           <SectionTitle>Account</SectionTitle>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
