@@ -19,6 +19,7 @@ import { tapFeedback } from "@/components/ui/Button";
 import { useMeetList } from "@/components/explore/useMeetList";
 import { isOnline, usePresence } from "@/lib/usePresence";
 import { ExploreProfileSheet } from "@/components/explore/ExploreProfileSheet";
+import { sexLabel } from "@/lib/eventSpace";
 
 /** How many show at first, and how many more each "See more people" adds */
 const PAGE = 6;
@@ -133,35 +134,36 @@ export function PeopleForYou({ userId, demo, demoBreak, demoBreakMode }: { userI
                     <>
                       {/* Top left, under the photo dots: their voice intro */}
                       {p.voice_intro && (
-                        <span className={clsx("absolute left-3", (p.photo_count ?? 1) > 1 ? "top-11" : "top-3")}>
-                          <HearMe id={`intro-${p.id}`} src={voiceUrl(p.voice_intro) ?? ""} seconds={p.voice_seconds} name={p.name.split(" ")[0]} />
+                        <span className={clsx("absolute left-3", (p.photo_count ?? 1) > 1 ? "top-10" : "top-3")}>
+                          <HearMe id={`intro-${p.id}`} src={voiceUrl(p.voice_intro) ?? ""} seconds={p.voice_seconds} name={p.name.split(" ")[0]} compact />
                         </span>
                       )}
                       {/* Top right: how well you match, and whether they're masked */}
                       <span className="absolute top-3 right-3 flex flex-col items-end gap-1.5">
-                        {p.match != null && <span className="rounded-full bg-white/90 px-2.5 py-1 text-[12px] font-bold text-brand-ink backdrop-blur">{p.match}% match</span>}
+                        {p.match != null && <span className="rounded-full bg-white/90 px-2 py-0.5 text-[11px] font-bold text-brand-ink backdrop-blur">{p.match}% match</span>}
                         {!p.unmasked && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-black/40 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-black/40 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur">
                             <MaskIcon className="w-3.5 text-white" eyes="rgba(0,0,0,0.4)" /> Masked
                           </span>
                         )}
                       </span>
 
                       {/* Bottom: who they are, what you share, and what to do */}
-                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/55 to-transparent px-3.5 pt-24 pb-3.5 text-left text-white">
+                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 via-black/35 to-transparent px-3 pt-14 pb-3 text-left text-white">
                         {/* Their note for today */}
-                        {p.note && <p className="mb-2.5 w-fit max-w-[90%] rounded-2xl rounded-bl-md bg-white/95 px-3 py-2 text-[13.5px] leading-snug font-medium text-ink">{p.note}</p>}
-                        <p className="flex items-center gap-2 text-[22px] leading-tight font-bold">
+                        {p.note && <p className="mb-2 w-fit max-w-[85%] rounded-2xl rounded-bl-md bg-white/95 px-2.5 py-1.5 text-[12px] leading-snug font-medium text-ink">{p.note}</p>}
+                        <p className="flex items-center gap-1.5 text-[17px] leading-tight font-bold">
                           <span className="truncate">
                             {p.name.split(" ")[0]}
                             {p.age != null && <span className="font-medium text-white/85">, {p.age}</span>}
                           </span>
-                          {p.online && <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#7dffb5] ring-2 ring-black/30" aria-label="Online now" />}
+                          {sexLabel(p.gender) && <span className="shrink-0 rounded-full bg-white/20 px-1.5 py-px text-[10.5px] font-semibold text-white backdrop-blur">{sexLabel(p.gender)}</span>}
+                          {p.online && <span className="h-2 w-2 shrink-0 rounded-full bg-[#7dffb5] ring-2 ring-black/30" aria-label="Online now" />}
                         </p>
-                        <p className="mt-0.5 truncate text-[13px] text-white/80">
+                        <p className="mt-0.5 truncate text-[11.5px] text-white/80">
                           {[p.place, p.km != null ? `${p.km} km away` : null, p.waved_me && !p.connected ? "👋 Waved at you" : null].filter(Boolean).join(" · ")}
                         </p>
-                        <p className="mt-1.5 truncate text-[13.5px] leading-snug">
+                        <p className="mt-1 truncate text-[12px] leading-snug">
                           {p.shared?.length ? (
                             <>
                               <b className="font-semibold">You both like</b> {listOf(p.shared)}
@@ -176,16 +178,16 @@ export function PeopleForYou({ userId, demo, demoBreak, demoBreakMode }: { userI
                         </p>
                         {/* Signs of life */}
                         {chipsFor(p).length > 0 && (
-                          <div className="mt-2 flex flex-wrap gap-1.5">
+                          <div className="mt-1.5 flex flex-wrap gap-1">
                             {chipsFor(p).map((c) => (
-                              <span key={c} className="rounded-full bg-white/15 px-2.5 py-1 text-[11.5px] font-semibold text-white backdrop-blur">
+                              <span key={c} className="rounded-full bg-white/15 px-2 py-0.5 text-[10.5px] font-semibold text-white backdrop-blur">
                                 {c}
                               </span>
                             ))}
                           </div>
                         )}
                         {/* What to do (the buttons take taps; the rest of the card still opens their profile) */}
-                        <div className="pointer-events-auto mt-3 flex items-center gap-2">
+                        <div className="pointer-events-auto mt-2.5 flex items-center gap-2">
                           <button
                             type="button"
                             onClick={(e) => {
@@ -194,16 +196,16 @@ export function PeopleForYou({ userId, demo, demoBreak, demoBreakMode }: { userI
                               if (p.connected) setOpen(p.id);
                               else setBreaking(p);
                             }}
-                            className="inline-flex h-11 flex-1 items-center justify-center gap-1.5 rounded-full bg-white text-[14.5px] font-bold text-ink transition active:scale-95"
+                            className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-full bg-white text-[13px] font-bold text-ink transition active:scale-95"
                           >
                             {/* Never met: break the ice. Already chatting: Message */}
                             {p.connected ? (
                               <>
-                                <MessageCircle size={17} /> Message
+                                <MessageCircle size={15} /> Message
                               </>
                             ) : (
                               <>
-                                <Snowflake size={17} className="text-brand" /> Break the ice
+                                <Snowflake size={15} className="text-brand" /> Break the ice
                               </>
                             )}
                           </button>
@@ -218,7 +220,7 @@ export function PeopleForYou({ userId, demo, demoBreak, demoBreakMode }: { userI
                               disabled={!!waved[p.id] || p.i_waved || waving === p.id}
                               aria-label={waved[p.id] || p.i_waved ? `You waved at ${p.name}` : p.waved_me ? `Wave back at ${p.name}` : `Wave at ${p.name}`}
                               className={clsx(
-                                "inline-flex h-11 shrink-0 items-center justify-center gap-1 rounded-full px-4 text-[14.5px] font-semibold backdrop-blur transition active:scale-95 disabled:active:scale-100",
+                                "inline-flex h-9 shrink-0 items-center justify-center gap-1 rounded-full px-3.5 text-[13px] font-semibold backdrop-blur transition active:scale-95 disabled:active:scale-100",
                                 p.waved_me && !(waved[p.id] || p.i_waved) ? "bg-gold text-ink" : "border border-white/30 bg-white/15 text-white",
                               )}
                             >
@@ -230,7 +232,7 @@ export function PeopleForYou({ userId, demo, demoBreak, demoBreakMode }: { userI
                                 </>
                               ) : (
                                 <>
-                                  <span aria-hidden className="text-[17px] leading-none">👋</span> {p.waved_me ? "Wave back" : "Wave"}
+                                  <span aria-hidden className="text-[15px] leading-none">👋</span> {p.waved_me ? "Wave back" : "Wave"}
                                 </>
                               )}
                             </button>
