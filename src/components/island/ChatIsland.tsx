@@ -2,12 +2,12 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ChevronLeft, Download, Info, Maximize, Minus, Plus, RotateCw, X } from "lucide-react";
+import { ChevronLeft, Download, Info, Maximize, MessageCircle, Minus, Plus, RotateCw, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Sheet } from "@/components/ui/Sheet";
 import { Button, tapFeedback } from "@/components/ui/Button";
-import { layoutIsland, skyNow, type IslandData, type IslandLayout } from "@/lib/island";
-import { IslandArt, islandExtent, type IslandView } from "./IslandArt";
+import { layoutIsland, skyNow, type IslandData, type IslandLayout, type Piece } from "@/lib/island";
+import { IslandArt, PiecePicture, islandExtent, type IslandView } from "./IslandArt";
 
 const INTRO_KEY = "dp_island_intro_v1";
 type Sky = "day" | "sunset" | "night";
@@ -420,13 +420,24 @@ function IslandWorld({ data, sky, onClose }: { data: IslandData | null; sky: Sky
       {layout && (
         <div className="pointer-events-none absolute inset-x-0 bottom-0 mx-auto flex max-w-md flex-col gap-2 px-4 pb-[max(20px,env(safe-area-inset-bottom))]">
           {piece ? (
-            <div className="rounded-2xl bg-ink/90 px-4 py-3 text-white">
-              <p className="text-[12px] font-semibold text-white/70">
-                {piece.label.charAt(0).toUpperCase() + piece.label.slice(1)}
-                {piece.level > 1 ? ` (level ${piece.level})` : ""} came from
-              </p>
-              <p className="mt-0.5 line-clamp-3 text-[14px] leading-snug">{piece.from ? `"${piece.from}"` : "a message"}</p>
-            </div>
+            <BuildingCard
+              piece={piece}
+              them={data?.them ?? null}
+              since={data?.since ?? null}
+              same={layout.pieces.filter((x) => x.kind === piece.kind).length}
+              onClose={() => setPicked(null)}
+              onJump={() => {
+                if (!piece.msgId) return false;
+                const el = document.querySelector<HTMLElement>(`[data-msg="${piece.msgId}"]`);
+                if (!el) return false;
+                onClose();
+                setTimeout(() => {
+                  el.scrollIntoView({ behavior: "smooth", block: "center" });
+                  el.animate([{ backgroundColor: "rgba(242,179,61,0.45)" }, { backgroundColor: "rgba(242,179,61,0)" }], { duration: 1800, easing: "ease-out" });
+                }, 250);
+                return true;
+              }}
+            />
           ) : (
             <div className="grid grid-cols-3 gap-2">
               <Stat value={data?.unmasked ? "Clear" : `${100 - fogLeft}%`} label={data?.unmasked ? "you unmasked" : "fog cleared"} />
@@ -434,9 +445,11 @@ function IslandWorld({ data, sky, onClose }: { data: IslandData | null; sky: Sky
               <Stat value={String(layout.footbridges.length)} label={layout.footbridges.length === 1 ? "footbridge" : "footbridges"} />
             </div>
           )}
-          <p className="rounded-2xl bg-ink/80 px-4 py-2.5 text-[12.5px] leading-snug text-white">
-            {next ? `Next: ${next}. ` : ""}Pinch to zoom, drag to explore, tap a building to see what made it.
-          </p>
+          {!piece && (
+            <p className="rounded-2xl bg-ink/80 px-4 py-2.5 text-[12.5px] leading-snug text-white">
+              {next ? `Next: ${next}. ` : ""}Pinch to zoom, drag to explore, tap a building to see what made it.
+            </p>
+          )}
         </div>
       )}
 
@@ -458,6 +471,106 @@ function IslandWorld({ data, sky, onClose }: { data: IslandData | null; sky: Sky
       )}
     </div>,
     document.body,
+  );
+}
+
+/** "3 days ago" */
+function ago(ms: number) {
+  const m = Math.max(0, Math.round((Date.now() - ms) / 60000));
+  if (m < 1) return "just now";
+  if (m < 60) return `${m} min ago`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h} ${h === 1 ? "hour" : "hours"} ago`;
+  const d = Math.round(h / 24);
+  return `${d} ${d === 1 ? "day" : "days"} ago`;
+}
+
+/** What you see when you tap a building */
+function BuildingCard({
+  piece,
+  them,
+  since,
+  same,
+  onClose,
+  onJump,
+}: {
+  piece: Piece;
+  them: string | null;
+  since: string | null;
+  same: number;
+  onClose: () => void;
+  /** Close the island and go to the message; false if it isn't on screen */
+  onJump: () => boolean;
+}) {
+  const [far, setFar] = useState(false);
+  const name = piece.label.charAt(0).toUpperCase() + piece.label.slice(1);
+  const day = piece.at && since ? Math.max(1, Math.ceil((piece.at - new Date(since).getTime()) / 86400000) + 1) : null;
+  const step = piece.level === 1 ? 40 : 80;
+  const done = piece.next ? Math.round(((step - piece.toGo) / step) * 100) : 100;
+  return (
+    <div className="pointer-events-auto -mx-4 -mb-[max(20px,env(safe-area-inset-bottom))] animate-sheet-up rounded-t-[28px] bg-surface px-4 pt-2.5 pb-[max(20px,env(safe-area-inset-bottom))] text-ink shadow-[0_-16px_40px_-20px_rgba(0,0,0,0.5)]" onClick={(e) => e.stopPropagation()}>
+      <span className="mx-auto mb-3 block h-1.5 w-10 rounded-full bg-line" />
+      <div className="flex items-center gap-3.5">
+        <div className="grid h-24 w-24 shrink-0 place-items-center rounded-[22px] bg-gradient-to-br from-[#e2f6ec] to-[#bfe9d5]">
+          <PiecePicture p={piece} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="flex flex-wrap items-center gap-1.5 text-[18px] leading-tight font-extrabold">
+            {name}
+            <span className="rounded-full bg-brand-soft px-2 py-0.5 text-[11px] font-extrabold text-brand-ink">Level {piece.level}</span>
+          </p>
+          <p className="mt-1 text-[13px] text-muted">
+            Built by {piece.mine ? "you" : them || "them"}
+            {piece.at ? ` · ${ago(piece.at)}` : ""}
+          </p>
+          {piece.next ? (
+            <div className="mt-2.5">
+              <div className="flex justify-between gap-2 text-[11.5px] text-muted">
+                <span className="truncate">Next: {piece.next}</span>
+                <span className="shrink-0">
+                  {piece.toGo} {piece.toGo === 1 ? "message" : "messages"} to go
+                </span>
+              </div>
+              <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-brand-soft">
+                <span className="block h-full rounded-full bg-brand" style={{ width: `${done}%` }} />
+              </div>
+            </div>
+          ) : (
+            <p className="mt-2 text-[12px] font-semibold text-brand">Fully grown</p>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-3.5 rounded-[18px] rounded-bl-md bg-brand-soft/60 px-3.5 py-3">
+        <p className="text-[11.5px] font-bold text-muted">The message that built it</p>
+        <p className="mt-1 line-clamp-4 text-[15px] leading-snug">{piece.from ? `"${piece.from}"` : "A message"}</p>
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        <span className="rounded-full border border-line bg-cream px-2.5 py-1 text-[12px] font-semibold">{same} like this on your island</span>
+        {day && <span className="rounded-full border border-line bg-cream px-2.5 py-1 text-[12px] font-semibold">Built on day {day}</span>}
+        {!piece.msgId && <span className="rounded-full border border-line bg-cream px-2.5 py-1 text-[12px] font-semibold">From your masked chat</span>}
+      </div>
+      {far && <p className="mt-2.5 text-[12.5px] text-muted">It&apos;s further up the chat. Scroll up and tap Show earlier messages to find it.</p>}
+
+      <div className="mt-4 flex gap-2">
+        <button type="button" onClick={onClose} className="h-12 rounded-full border border-line px-5 text-[14.5px] font-semibold">
+          Close
+        </button>
+        {piece.msgId && (
+          <button
+            type="button"
+            onClick={() => {
+              tapFeedback();
+              if (!onJump()) setFar(true);
+            }}
+            className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-brand text-[14.5px] font-extrabold text-white"
+          >
+            <MessageCircle size={17} /> See it in the chat
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
 

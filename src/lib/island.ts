@@ -16,9 +16,12 @@ export type PieceKind = "house" | "palm" | "tree" | "stall" | "bus" | "lamp" | "
 export type IslandData = {
   total: number;
   since: string | null;
-  items: [string, string][];
+  /** [kind, first words, 1 if you sent it, when (seconds), message id] (the last three from update 112) */
+  items: [string, string, number?, number?, (number | null)?][];
   unmasked: boolean;
   names: [string, string] | null;
+  /** What to call the other person ("Built by Velvet Owl") */
+  them?: string | null;
 };
 
 export type Piece = {
@@ -33,6 +36,14 @@ export type Piece = {
   wall: string;
   from: string;
   label: string;
+  /** You sent the message that built it */
+  mine: boolean;
+  /** When it was built (ms), and the message it came from */
+  at: number | null;
+  msgId: number | null;
+  /** What it becomes next, and how many messages until then (none once it's at the top level) */
+  next: string | null;
+  toGo: number;
 };
 
 export type Road = { gx: number; gy: number; axis: "x" | "y" | "both" };
@@ -176,7 +187,7 @@ export function layoutIsland(d: IslandData): IslandLayout {
       }
     }
 
-  const pieces: Piece[] = built.map(([kind, body], i) => {
+  const pieces: Piece[] = built.map(([kind, body, mine, at, msgId], i) => {
     const p = pieceFor(kind, body, String(i));
     const h = hash(`${i}:${body}`);
     // Older pieces level up as you keep talking
@@ -194,6 +205,11 @@ export function layoutIsland(d: IslandData): IslandLayout {
       wall: WALLS[(h >>> 16) % WALLS.length],
       from: body,
       label: NAMES[p.kind][level - 1],
+      mine: mine === 1,
+      at: at ? at * 1000 : null,
+      msgId: msgId ?? null,
+      next: level === 1 ? NAMES[p.kind][1] : level === 2 ? NAMES[p.kind][2] : null,
+      toGo: level === 1 ? 40 - age : level === 2 ? 120 - age : 0,
     };
   });
 

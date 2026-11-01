@@ -329,6 +329,21 @@ function busColour(seed: string) {
   return ({ "#e5484d": "#2fb79c", "#2f80ed": "#ffffff", "#f7c614": "#f7c614", "#ffffff": "#2f80ed", "#1aa774": "#ff8a3d", "#3a3350": "#e5484d" } as Record<string, string>)[seed] ?? "#2fb79c";
 }
 
+/** One building on its own (for the card you see when you tap it) */
+export function PiecePicture({ p, size = 88 }: { p: Piece; size?: number }) {
+  const raw = useId();
+  const g = `pp${raw.replace(/[^a-zA-Z0-9]/g, "")}`;
+  return (
+    <svg width={size} height={size} viewBox="-48 -86 96 100" aria-hidden="true">
+      <defs>
+        <radialGradient id={g}><stop offset="0" stopColor="#ffe9a8" stopOpacity=".95" /><stop offset="1" stopColor="#ffe9a8" stopOpacity="0" /></radialGradient>
+      </defs>
+      <polygon points={diamond([0, 2], 1.25)} fill="#8fd36b" />
+      <PieceArt p={{ ...p, scale: 1 }} night={false} glow={`url(#${g})`} />
+    </svg>
+  );
+}
+
 function Shrub({ x, y, night, big }: { x: number; y: number; night: boolean; big: boolean }) {
   const k = big ? 1.3 : 1;
   return (

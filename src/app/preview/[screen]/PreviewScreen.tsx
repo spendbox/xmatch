@@ -1124,13 +1124,20 @@ function ScreenBody({ screen }: { screen: string }) {
         "good morning", "breakfast?", "tell me something", "I miss you already", "exam tomorrow", "arsenal won!", "night walk", "gym later", "netflix tonight?", "market run", "headache today", "swimming pool?", "basketball?", "fuel price is crazy", "new movie out",
       ];
       const n = screen === "island-new" ? 3 : screen === "island-full" ? 64 : 140;
-      const items: [string, string][] = Array.from({ length: n }, (_, i) => (i % 9 === 4 ? ["audio", ""] : ["text", words[(i * 7) % words.length]]));
+      const items: [string, string, number, number, number][] = Array.from({ length: n }, (_, i) => [
+        i % 9 === 4 ? "audio" : "text",
+        i % 9 === 4 ? "" : words[(i * 7) % words.length],
+        i % 2,
+        Math.floor(Date.now() / 1000) - (n - i) * 5400,
+        5000 + i,
+      ]);
       const data = {
         total: n,
         since: "2026-10-20T10:00:00Z",
         items,
         unmasked: screen === "island-unmasked",
         names: screen === "island-unmasked" ? (["Tolu", "Kemi"] as [string, string]) : null,
+        them: screen === "island-unmasked" ? "Kemi" : "Velvet Owl",
       };
       return (
         <div className="min-h-dvh bg-cream pt-2">
