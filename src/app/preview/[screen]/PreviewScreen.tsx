@@ -1,5 +1,6 @@
 "use client";
 
+import { ChatIsland } from "@/components/island/ChatIsland";
 import { DailyMock } from "./DailyMocks";
 import { BigMomentPop, CoreMock } from "./CoreMocks";
 import { AuraMock } from "./AuraMocks";
@@ -1110,6 +1111,45 @@ function ScreenBody({ screen }: { screen: string }) {
           sharedWords={["jollof", "suya", "scrabble"]}
           onClose={() => {}}
         />
+      );
+    case "island":
+    case "island-full":
+    case "island-unmasked":
+    case "island-new":
+    case "island-night": {
+      const words = [
+        "hi stranger", "I love flowers honestly", "omo I need food right now", "Mama Put tomorrow? my treat", "traffic on third mainland is wild",
+        "beach on saturday?", "my mum keeps calling lol", "this song is a vibe", "work is stressing me", "football tonight?", "coffee date?",
+        "you're so sweet", "home now", "suya later?", "haha stop", "ok ok", "danfo almost hit me", "the party was mad", "sleeping soon",
+        "good morning", "breakfast?", "tell me something", "I miss you already", "exam tomorrow", "arsenal won!", "night walk", "gym later", "netflix tonight?", "market run", "headache today", "swimming pool?", "basketball?", "fuel price is crazy", "new movie out",
+      ];
+      const n = screen === "island-new" ? 3 : screen === "island-full" ? 64 : 140;
+      const items: [string, string, number, number, number][] = Array.from({ length: n }, (_, i) => [
+        i % 9 === 4 ? "audio" : "text",
+        i % 9 === 4 ? "" : words[(i * 7) % words.length],
+        i % 2,
+        Math.floor(Date.now() / 1000) - (n - i) * 5400,
+        5000 + i,
+      ]);
+      const data = {
+        total: n,
+        since: "2026-10-20T10:00:00Z",
+        items,
+        unmasked: screen === "island-unmasked",
+        names: screen === "island-unmasked" ? (["Tolu", "Kemi"] as [string, string]) : null,
+        them: screen === "island-unmasked" ? "Kemi" : "Velvet Owl",
+      };
+      return (
+        <div className="min-h-dvh bg-cream pt-2">
+          <ChatIsland refresh={items.length} demo={data} open onOpen={() => {}} onClose={() => {}} noIntro forceSky={screen === "island-night" ? "night" : "day"} />
+        </div>
+      );
+    }
+    case "island-intro":
+      return (
+        <div className="min-h-dvh bg-cream pt-2">
+          <ChatIsland refresh={0} open={false} onOpen={() => {}} onClose={() => {}} />
+        </div>
       );
     case "things-deck":
       return <ThingsDeck open onClose={() => {}} things={me.things ?? []} onSaved={() => {}} demo />;
