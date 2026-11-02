@@ -56,7 +56,7 @@ const STEPS: Step[] = [
   {
     icon: <Gamepad2 size={22} />,
     title: "In your chats",
-    body: "Tap + for games, gifts, stickers, icebreakers and Your Island (beta): a little town that grows with every message you two send. In masked chats your voice notes are disguised, unless you pick Normal to use your real voice.",
+    body: "Tap + for games, gifts, stickers, icebreakers and Your World (beta): a little world that grows with every message you two send. In masked chats your voice notes are disguised, unless you pick Normal to use your real voice.",
   },
   {
     icon: <UserRound size={22} />,

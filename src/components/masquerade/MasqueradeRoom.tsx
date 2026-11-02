@@ -8,7 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Flag, Layers, Gamepad2, Gift, Handshake, LogOut, MoreVertical, Dices, Palette, RotateCcw, ShieldCheck, Timer, X, TreePalm } from "lucide-react";
+import { ArrowLeft, Flag, Layers, Gamepad2, Gift, Handshake, LogOut, MoreVertical, Dices, Palette, RotateCcw, ShieldCheck, Timer, X, Earth } from "lucide-react";
 import { Button, Spinner } from "@/components/ui/Button";
 import { Sheet } from "@/components/ui/Sheet";
 import { KeyCoin } from "@/components/keys/KeyIcon";
@@ -103,7 +103,7 @@ export function MasqueradeRoom({
     </>
   );
   const [messages, setMessages] = useState(initialMessages);
-  // Your Island (beta): opens from + → More
+  // Your World (beta): opens from + → More
   const [islandOpen, setIslandOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [voiceOpen, setVoiceOpen] = useState(false);
@@ -630,7 +630,7 @@ export function MasqueradeRoom({
         )}
       </header>
 
-      {/* Your Island: grows with every message you two send (the fog clears as you talk) */}
+      {/* Your World: grows with every message you two send (the fog clears as you talk) */}
       <ChatIsland
         session={demo ? null : state.id}
         refresh={messages.length}
@@ -798,7 +798,7 @@ export function MasqueradeRoom({
           onCancelReply={() => setReplyTo(null)}
           plusDot={games.live}
           actions={[
-            { key: "island", label: "Your Island", icon: <TreePalm size={24} strokeWidth={1.75} />, tone: "bg-[#dff3fa] text-[#155a7a]", badge: "Beta", onClick: () => setIslandOpen(true) },
+            { key: "island", label: "Your World", icon: <Earth size={24} strokeWidth={1.75} />, tone: "bg-[#dff3fa] text-[#155a7a]", badge: "Beta", onClick: () => setIslandOpen(true) },
             ...(games.canPlay
               ? [{ key: "game", label: games.live ? "Back to game" : "Play a game", icon: <Gamepad2 size={24} strokeWidth={1.75} />, tone: "bg-brand-soft text-brand", onClick: games.play }]
               : []),

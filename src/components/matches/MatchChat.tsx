@@ -9,7 +9,7 @@ import clsx from "clsx";
 import { useEffect, useMemo, useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Dices, Flag, Gamepad2, Palette, UserX, MoreVertical, Phone, Video, X, TreePalm } from "lucide-react";
+import { ArrowLeft, Dices, Flag, Gamepad2, Palette, UserX, MoreVertical, Phone, Video, X, Earth } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { ChatMessage, Intent, Profile } from "@/lib/types";
 import { INTENT_ICONS, InterestIcon } from "@/components/ui/icons";
@@ -99,7 +99,7 @@ export function MatchChat({
     setMessages((l) => [...older.filter((o) => !l.some((x) => x.id === o.id)), ...l]);
   }
   const [messages, setMessages] = useState(initialMessages);
-  // Your Island (beta): opens from + → More
+  // Your World (beta): opens from + → More
   const [islandOpen, setIslandOpen] = useState(false);
   const [hasOlder, setHasOlder] = useState(startsWithOlder);
   const [menu, setMenu] = useState(false);
@@ -386,7 +386,7 @@ export function MatchChat({
         </div>
       </header>
 
-      {/* Your Island: grows with every message you two send */}
+      {/* Your World: grows with every message you two send */}
       <ChatIsland match={matchId} refresh={messages.length} open={islandOpen} onOpen={() => setIslandOpen(true)} onClose={() => setIslandOpen(false)} />
 
       <div className="relative flex min-h-0 flex-1 flex-col" data-bg={bg !== "classic" ? "" : undefined} data-bg-dark={chatBgInfo(bg).dark ? "" : undefined}>
@@ -428,7 +428,7 @@ export function MatchChat({
         saveKey={`m-${matchId}`}
         plusDot={games.live}
         actions={[
-          { key: "island", label: "Your Island", icon: <TreePalm size={24} strokeWidth={1.75} />, tone: "bg-[#dff3fa] text-[#155a7a]", badge: "Beta", onClick: () => setIslandOpen(true) },
+          { key: "island", label: "Your World", icon: <Earth size={24} strokeWidth={1.75} />, tone: "bg-[#dff3fa] text-[#155a7a]", badge: "Beta", onClick: () => setIslandOpen(true) },
           ...(games.canPlay ? [{ key: "game", label: games.live ? "Back to game" : "Play a game", icon: <Gamepad2 size={24} strokeWidth={1.75} />, tone: "bg-brand-soft text-brand", onClick: games.play }] : []),
           // Icebreakers are written for dating, so friendship chats don't get them
           ...(intent !== "friends"

@@ -1116,14 +1116,16 @@ function ScreenBody({ screen }: { screen: string }) {
     case "island-full":
     case "island-unmasked":
     case "island-new":
-    case "island-night": {
+    case "island-night":
+    case "island-big": {
       const words = [
-        "hi stranger", "I love flowers honestly", "omo I need food right now", "Mama Put tomorrow? my treat", "traffic on third mainland is wild",
+        "hi stranger", "I love flowers honestly", "I need food right now", "dinner tomorrow? my treat", "traffic is wild today",
         "beach on saturday?", "my mum keeps calling lol", "this song is a vibe", "work is stressing me", "football tonight?", "coffee date?",
-        "you're so sweet", "home now", "suya later?", "haha stop", "ok ok", "danfo almost hit me", "the party was mad", "sleeping soon",
-        "good morning", "breakfast?", "tell me something", "I miss you already", "exam tomorrow", "arsenal won!", "night walk", "gym later", "netflix tonight?", "market run", "headache today", "swimming pool?", "basketball?", "fuel price is crazy", "new movie out",
+        "you're so sweet", "home now", "pizza later?", "haha stop", "ok ok", "the bus was so late", "the party was mad", "sleeping soon",
+        "good morning", "breakfast?", "tell me something", "I miss you already", "exam tomorrow", "we won!", "night walk", "gym later", "netflix tonight?", "market run", "headache today", "swimming pool?", "basketball?", "fuel price is crazy", "new movie out",
+        "my dog is so silly", "can't sleep, look at the stars", "reading a new book", "ice cream?", "my hometown is so calm", "playing games all night", "went to an art museum", "childhood memories hit", "fun day out?",
       ];
-      const n = screen === "island-new" ? 3 : screen === "island-full" ? 64 : 140;
+      const n = screen === "island-new" ? 3 : screen === "island-full" ? 64 : screen === "island-big" ? 520 : 140;
       const items: [string, string, number, number, number][] = Array.from({ length: n }, (_, i) => [
         i % 9 === 4 ? "audio" : "text",
         i % 9 === 4 ? "" : words[(i * 7) % words.length],

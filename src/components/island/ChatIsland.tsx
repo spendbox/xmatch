@@ -6,14 +6,15 @@ import { ChevronLeft, Download, Info, Maximize, MessageCircle, Minus, Plus, Rota
 import { createClient } from "@/lib/supabase/client";
 import { Sheet } from "@/components/ui/Sheet";
 import { Button, tapFeedback } from "@/components/ui/Button";
-import { layoutIsland, skyNow, type IslandData, type IslandLayout, type Piece } from "@/lib/island";
+import { skyNow, type IslandData } from "@/lib/island";
+import { layoutWorld, type Piece, type WorldLayout } from "@/lib/world";
 import { FEATURES } from "@/lib/features";
-import { IslandArt, PiecePicture, islandExtent, type IslandView } from "./IslandArt";
+import { WorldArt, PiecePicture, worldExtent, type WorldView } from "./WorldArt";
 
-const INTRO_KEY = "dp_island_intro_v1";
+const INTRO_KEY = "dp_world_intro_v1";
 type Sky = "day" | "sunset" | "night";
 
-// A small island for the guide
+// A small world for the guide
 const SAMPLE: IslandData = {
   total: 26,
   since: null,
@@ -26,7 +27,7 @@ const SAMPLE: IslandData = {
 };
 
 /**
- * Your Island (beta) for one chat. It opens from + → More. The first time someone opens a chat on
+ * Your World (beta) for one chat. It opens from + → More. The first time someone opens a chat on
  * this phone, a short guide explains it.
  */
 export function ChatIsland({
@@ -119,26 +120,26 @@ export function ChatIsland({
 
 /** The guide shown the first time: what it is and where to find it */
 function IslandIntro({ open, sky, onClose, onSee }: { open: boolean; sky: Sky; onClose: () => void; onSee: () => void }) {
-  const layout = useMemo(() => layoutIsland(SAMPLE), []);
+  const layout = useMemo(() => layoutWorld(SAMPLE), []);
   return (
     <Sheet
       open={open}
       onClose={onClose}
-      title="New: Your Island"
-      subtitle="Every chat grows its own little island"
+      title="New: Your World"
+      subtitle="Every chat grows its own little world"
       footer={
         <div className="flex gap-2">
           <Button variant="secondary" size="lg" onClick={onClose} className="flex-1">
             Later
           </Button>
           <Button size="lg" onClick={onSee} className="flex-[2]">
-            See our island
+            See our world
           </Button>
         </div>
       }
     >
       <div className="relative h-40 overflow-hidden rounded-3xl bg-[#3cc4d9]">
-        <IslandArt layout={layout} sky={sky} view={fitView(layout, 350, 160, 0)} width={350} height={160} className="block h-full w-full" />
+        <WorldArt layout={layout} sky={sky} view={fitView(layout, 350, 160, 0)} width={350} height={160} className="block h-full w-full" />
         <span className="absolute top-2.5 left-2.5 rounded-full bg-gold px-2 py-0.5 text-[11px] font-extrabold tracking-wide text-ink uppercase">Beta</span>
       </div>
       <HowItWorks compact />
@@ -146,16 +147,17 @@ function IslandIntro({ open, sky, onClose, onSee }: { open: boolean; sky: Sky; o
   );
 }
 
-/** How Your Island works (the guide, and the ⓘ on the island) */
+/** How Your World works (the guide, and the ⓘ on the world) */
 function HowItWorks({ compact }: { compact?: boolean }) {
   const rows: [string, string][] = [
-    ["Every message builds something", `"dinner" builds a food stall, "football" a pitch, "work" an office, "party" a stage, "coffee" a café, "traffic" a bus stop. Voice notes bring birds.`],
-    ["It levels up as you talk", "Keep chatting and a cottage becomes a two-storey house, then a block of flats. A stall becomes a diner, then a busy restaurant."],
-    ["The land keeps growing", "Every building gets its own plot between proper roads, and the island gets bigger as you chat. Every 60 messages a footbridge goes up over a road. A boat arrives at 20 messages, a lighthouse at 100."],
+    ["Every message builds something", `"dinner" builds a food stall, "football" a pitch, "work" an office, "music" a concert hall, "coffee" a café, "dog" a pet house, "stars" a telescope. Voice notes bring birds.`],
+    ["It levels up as you talk", "Keep chatting and a cottage becomes a family house, then a block of flats. A pitch gets floodlights, then becomes a stadium."],
+    ["The land keeps growing", "Every building gets its own plot between proper roads, so nothing overlaps. As the land grows it gets snowy peaks, a forest with a lake, a desert, and a river that runs to the sea."],
+    ["New lands at milestones", "A boat at 20 messages, Beach Isle at 50, Lighthouse Isle with a pier and ferry at 100, a railway at 150, Fire Isle at 250, planes and an airport at 300, and Dream Isle floating in the sky at 500."],
     ["Explore it", "Pinch to zoom in, drag to move around, and turn it with the rotate button. Tap any building to see the message that made it."],
     ["Fog clears as you get to know each other", "Masked chats start in fog. Unmask together and the sun comes out, with your names on a signpost."],
   ];
-  const shown = compact ? rows : [...rows, ["Just for you two", "You both see the same island, and only you two can see it. Tap any piece to see the message that made it."] as [string, string]];
+  const shown = compact ? rows.slice(0, 4) : [...rows, ["Just for you two", "You both see the same world, and only you two can see it."] as [string, string]];
   return (
     <div className="mt-4 space-y-3">
       {shown.map(([t, d], i) => (
@@ -168,42 +170,45 @@ function HowItWorks({ compact }: { compact?: boolean }) {
         </div>
       ))}
       <p className="rounded-2xl bg-cream px-3.5 py-2.5 text-[12.5px] leading-snug text-ink-soft">
-        <b className="font-semibold">Beta:</b> we&apos;re still building it. Find it any time in <b className="font-semibold">+ → Your Island</b>.
+        <b className="font-semibold">Beta:</b> we&apos;re still building it. Find it any time in <b className="font-semibold">+ → Your World</b>.
       </p>
     </div>
   );
 }
 
-/** Fit the whole island on a screen of this size */
-function fitView(layout: IslandLayout, w: number, h: number, room = 270): IslandView {
-  const { halfW, halfH } = islandExtent(layout);
-  // Room above the island for tall buildings, and for the buttons and cards on the screen
+/** Fit the whole world on a screen of this size */
+function fitView(layout: WorldLayout, w: number, h: number, room = 270, rot = 0): WorldView {
+  const e = worldExtent(layout, rot);
+  // Room above for the sky, and for the buttons and cards on the screen
   const top = room ? 70 : 0;
-  const s = Math.min((w - 16) / (halfW * 2.05), (h - room) / (halfH * 2.2 + 70), 2.2);
-  return { x: w / 2, y: top + (h - room) / 2 + 30 * s, s };
+  const ww = e.maxX - e.minX + 40;
+  const hh = e.maxY - e.minY + 140;
+  const s = Math.min((w - 16) / ww, (h - room) / hh, 2.2);
+  return { x: w / 2 - ((e.minX + e.maxX) / 2) * s, y: top + (h - room) / 2 - ((e.minY - 100 + e.maxY) / 2) * s, s };
 }
 
 /**
- * The island, full screen. Drag to move around, pinch (or the buttons) to zoom, turn it with the
+ * The world, full screen. Drag to move around, pinch (or the buttons) to zoom, turn it with the
  * rotate button, and tap a building to see the message that made it.
  */
 function IslandWorld({ data, sky, onClose }: { data: IslandData | null; sky: Sky; onClose: () => void }) {
-  const layout = useMemo(() => (data ? layoutIsland(data) : null), [data]);
+  const layout = useMemo(() => (data ? layoutWorld(data) : null), [data]);
   const [picked, setPicked] = useState<number | null>(null);
   const [how, setHow] = useState(false);
   const [saving, setSaving] = useState(false);
   const [rot, setRot] = useState(0);
   const [size, setSize] = useState<{ w: number; h: number } | null>(null);
-  const [view, setView] = useState<IslandView | null>(null);
+  const [view, setView] = useState<WorldView | null>(null);
   const svg = useRef<SVGSVGElement>(null);
   const world = useRef<SVGGElement>(null);
   const box = useRef<HTMLDivElement>(null);
   // Gestures: the live view while a finger moves (drawn straight onto the picture, saved when it stops)
-  const live = useRef<IslandView | null>(null);
+  const live = useRef<WorldView | null>(null);
   const fingers = useRef(new Map<number, { x: number; y: number }>());
-  const pinch = useRef<{ dist: number; mid: { x: number; y: number }; view: IslandView } | null>(null);
+  const pinch = useRef<{ dist: number; mid: { x: number; y: number }; view: WorldView } | null>(null);
   const moved = useRef(false);
-  const fit = useRef<IslandView | null>(null);
+  const fit = useRef<WorldView | null>(null);
+  const lastRot = useRef(0);
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -228,19 +233,21 @@ function IslandWorld({ data, sky, onClose }: { data: IslandData | null; sky: Sky
   }, []);
   useEffect(() => {
     if (!layout || !size) return;
-    const f = fitView(layout, size.w, size.h);
+    const f = fitView(layout, size.w, size.h, 270, rot);
     fit.current = f;
-    // Start a little closer in (the whole island is one tap away on the ⛶ button)
+    // Start a little closer in (the whole world is one tap away on the ⛶ button)
     const k = layout.radius > 5 ? 1.45 : 1.15;
-    setView((v) => v ?? { s: f.s * k, x: size.w / 2 - (size.w / 2 - f.x) * k, y: size.h * 0.46 - (size.h * 0.46 - f.y) * k });
-  }, [layout, size]);
+    const turned = lastRot.current !== rot;
+    lastRot.current = rot;
+    setView((v) => (v && !turned ? v : null) ?? { s: f.s * k, x: size.w / 2 - (size.w / 2 - f.x) * k, y: size.h * 0.46 - (size.h * 0.46 - f.y) * k });
+  }, [layout, size, rot]);
 
-  const apply = (v: IslandView) => {
+  const apply = (v: WorldView) => {
     live.current = v;
     world.current?.setAttribute("transform", `translate(${v.x} ${v.y}) scale(${v.s})`);
   };
   const clampS = (s: number) => Math.max((fit.current?.s ?? 0.3) * 0.6, Math.min(4, s));
-  const zoomAt = (v: IslandView, k: number, at: { x: number; y: number }): IslandView => {
+  const zoomAt = (v: WorldView, k: number, at: { x: number; y: number }): WorldView => {
     const s = clampS(v.s * k);
     const r = s / v.s;
     return { s, x: at.x - (at.x - v.x) * r, y: at.y - (at.y - v.y) * r };
@@ -329,13 +336,13 @@ function IslandWorld({ data, sky, onClose }: { data: IslandData | null; sky: Sky
       URL.revokeObjectURL(url);
       const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/png"));
       if (!blob) return;
-      const file = new File([blob], "our-island.png", { type: "image/png" });
+      const file = new File([blob], "our-world.png", { type: "image/png" });
       if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], title: "Our island on Dashpad" }).catch(() => {});
+        await navigator.share({ files: [file], title: "Our world on Dashpad" }).catch(() => {});
       } else {
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = "our-island.png";
+        a.download = "our-world.png";
         a.click();
       }
     } catch {
@@ -347,16 +354,10 @@ function IslandWorld({ data, sky, onClose }: { data: IslandData | null; sky: Sky
 
   const piece = picked != null && layout ? layout.pieces[picked] ?? null : null;
   const fogLeft = layout ? Math.round((layout.fog / 0.9) * 100) : 100;
-  const next = !layout
-    ? null
-    : !layout.boat
-      ? "a boat at 20 messages"
-      : layout.total < 100
-        ? "a lighthouse at 100 messages"
-        : `another footbridge at ${(Math.floor(layout.total / 60) + 1) * 60} messages`;
+  const next = layout?.next ?? null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[85] bg-[#136a9c] animate-fade-in" role="dialog" aria-modal="true" aria-label="Your island">
+    <div className="fixed inset-0 z-[85] bg-[#136a9c] animate-fade-in" role="dialog" aria-modal="true" aria-label="Your world">
       <div
         ref={box}
         className="absolute inset-0 touch-none select-none"
@@ -370,7 +371,7 @@ function IslandWorld({ data, sky, onClose }: { data: IslandData | null; sky: Sky
         }}
       >
         {layout && size && view ? (
-          <IslandArt
+          <WorldArt
             ref={svg}
             worldRef={world}
             layout={layout}
@@ -387,7 +388,7 @@ function IslandWorld({ data, sky, onClose }: { data: IslandData | null; sky: Sky
             className="block"
           />
         ) : (
-          <div className="grid h-full place-items-center text-[14px] font-semibold text-white/80">Loading your island…</div>
+          <div className="grid h-full place-items-center text-[14px] font-semibold text-white/80">Loading your world…</div>
         )}
       </div>
 
@@ -396,14 +397,14 @@ function IslandWorld({ data, sky, onClose }: { data: IslandData | null; sky: Sky
           <ChevronLeft size={20} />
         </button>
         <span className="mx-auto inline-flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1.5 text-[12.5px] font-bold">
-          Your Island
+          Your World
           <span className="rounded-full bg-gold px-1.5 py-px text-[10px] font-extrabold tracking-wide uppercase">Beta</span>
           {layout && <span className="font-semibold text-muted">· day {layout.days}</span>}
         </span>
-        <button type="button" onClick={() => setHow(true)} aria-label="How Your Island works" className="pointer-events-auto grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/90 text-ink">
+        <button type="button" onClick={() => setHow(true)} aria-label="How Your World works" className="pointer-events-auto grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/90 text-ink">
           <Info size={18} />
         </button>
-        <button type="button" onClick={save} disabled={saving || !layout} aria-label="Save a picture of your island" className="pointer-events-auto grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/90 text-ink disabled:opacity-60">
+        <button type="button" onClick={save} disabled={saving || !layout} aria-label="Save a picture of your world" className="pointer-events-auto grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/90 text-ink disabled:opacity-60">
           <Download size={18} />
         </button>
       </div>
@@ -413,8 +414,8 @@ function IslandWorld({ data, sky, onClose }: { data: IslandData | null; sky: Sky
         <div className="pointer-events-none absolute top-[max(74px,calc(env(safe-area-inset-top)+64px))] right-3 flex flex-col gap-2">
           <MapButton label="Zoom in" onClick={() => zoomButton(1.35)}><Plus size={19} /></MapButton>
           <MapButton label="Zoom out" onClick={() => zoomButton(1 / 1.35)}><Minus size={19} /></MapButton>
-          <MapButton label="Turn the island" onClick={() => { tapFeedback(); setRot((r) => (r + 1) % 4); }}><RotateCw size={18} /></MapButton>
-          <MapButton label="See the whole island" onClick={recentre}><Maximize size={17} /></MapButton>
+          <MapButton label="Turn the world" onClick={() => { tapFeedback(); setRot((r) => (r + 1) % 4); }}><RotateCw size={18} /></MapButton>
+          <MapButton label="See the whole world" onClick={recentre}><Maximize size={17} /></MapButton>
         </div>
       )}
 
@@ -443,7 +444,7 @@ function IslandWorld({ data, sky, onClose }: { data: IslandData | null; sky: Sky
             <div className="grid grid-cols-3 gap-2">
               <Stat value={data?.unmasked ? "Clear" : `${100 - fogLeft}%`} label={data?.unmasked ? "you unmasked" : "fog cleared"} />
               <Stat value={String(layout.pieceCount)} label={layout.pieceCount === 1 ? "building" : "buildings"} />
-              <Stat value={String(layout.footbridges.length)} label={layout.footbridges.length === 1 ? "footbridge" : "footbridges"} />
+              <Stat value={String(layout.lands)} label={layout.lands === 1 ? "land" : "lands"} />
             </div>
           )}
           {!piece && (
@@ -459,7 +460,7 @@ function IslandWorld({ data, sky, onClose }: { data: IslandData | null; sky: Sky
           <div className="mx-auto max-h-[85dvh] w-full max-w-md overflow-y-auto rounded-t-[28px] bg-surface px-5 pt-4 pb-[max(20px,env(safe-area-inset-bottom))]" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <p className="flex items-center gap-2 text-[18px] font-semibold">
-                How Your Island works
+                How Your World works
                 <span className="rounded-full bg-gold px-1.5 py-px text-[10px] font-extrabold tracking-wide uppercase">Beta</span>
               </p>
               <button type="button" onClick={() => setHow(false)} aria-label="Close" className="grid h-9 w-9 place-items-center rounded-full bg-ink/[0.06]">
@@ -548,7 +549,7 @@ function BuildingCard({
       </div>
 
       <div className="mt-3 flex flex-wrap gap-1.5">
-        <span className="rounded-full border border-line bg-cream px-2.5 py-1 text-[12px] font-semibold">{same} like this on your island</span>
+        <span className="rounded-full border border-line bg-cream px-2.5 py-1 text-[12px] font-semibold">{same} like this in your world</span>
         {day && <span className="rounded-full border border-line bg-cream px-2.5 py-1 text-[12px] font-semibold">Built on day {day}</span>}
         {!piece.msgId && <span className="rounded-full border border-line bg-cream px-2.5 py-1 text-[12px] font-semibold">From your masked chat</span>}
       </div>
