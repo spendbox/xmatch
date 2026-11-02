@@ -1155,6 +1155,13 @@ function ScreenBody({ screen }: { screen: string }) {
       );
     case "things-deck":
       return <ThingsDeck open onClose={() => {}} things={me.things ?? []} onSaved={() => {}} demo />;
+    case "things-deck-9":
+    case "things-deck-12":
+    case "things-deck-19": {
+      const ids = ["food", "weekend", "music", "team", "work", "spot", "trip", "drink", "love", "green", "kids", "marriage", "faith", "politics", "feminism", "family", "culture", "firstdate", "phone"];
+      const k = Number(screen.split("-").pop());
+      return <ThingsDeck open onClose={() => {}} things={ids.slice(0, k).map((p) => ({ p, a: "Someday" }))} onSaved={() => {}} demo />;
+    }
     case "pact-intro":
     case "pact-q1":
     case "pact-artists":

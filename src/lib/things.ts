@@ -17,12 +17,17 @@ export type ThingPrompt = {
   repeatable?: boolean;
   /** Hidden by Admin: not offered any more (answers already given still show) */
   active?: boolean;
+  /** Its icon (a name from THING_ICONS) */
+  icon?: string;
 };
 
 /** A card as Admin keeps it (thing_prompts) */
-export type ThingPromptRow = { id: string; text: string; ideas: string[]; tone: string; sort: number; repeatable: boolean; active: boolean };
+export type ThingPromptRow = { id: string; text: string; ideas: string[]; tone: string; sort: number; repeatable: boolean; active: boolean; icon?: string | null };
 
-export const NEEDED = 20;
+/** Cards to finish your profile (and earn the welcome Keys) */
+export const NEEDED = 10;
+/** Cards for the bonus round: 10 more, with the bigger questions, for extra Keys */
+export const BONUS_NEEDED = 20;
 export const MAX_THINGS = 40;
 // Room for a few picks from the ideas ("Jollof rice, Suya, Shawarma") or a proper sentence
 export const MAX_ANSWER = 140;
@@ -59,46 +64,46 @@ export const TONES = {
 };
 
 export const PROMPTS: ThingPrompt[] = [
-  { id: "food", text: "My comfort food is…", ideas: ["Jollof rice", "Suya", "Amala and ewedu", "Pounded yam and egusi", "Shawarma", "Pizza"], tone: TONES.ember },
-  { id: "kids", text: "Kids, for me…", ideas: ["Can't wait to be a parent", "Someday", "Not sure yet", "Not for me"], tone: TONES.rose },
-  { id: "weekend", text: "My perfect weekend…", ideas: ["Owambe till late", "Beach day", "Netflix and chill", "Church, then brunch", "Out with the squad", "Sleeping in"], tone: TONES.violet },
-  { id: "marriage", text: "Marriage, for me…", ideas: ["Can't wait", "Someday, with the right person", "Not for me"], tone: TONES.violet },
-  { id: "music", text: "On repeat right now…", ideas: ["Burna Boy", "Wizkid", "Asake", "Tems", "Rema", "Amapiano"], tone: TONES.rose },
-  { id: "feminism", text: "On feminism…", ideas: ["Proud feminist", "Equality, not the label", "Not for me"], tone: TONES.ember },
-  { id: "team", text: "My football team…", ideas: ["Arsenal", "Chelsea", "Man United", "Man City", "Liverpool", "Super Eagles"], tone: TONES.mint },
-  { id: "firstdate", text: "On a first date, the bill…", ideas: ["Whoever asked pays", "We split it", "The man pays", "I'll fight you for it"], tone: TONES.gold },
-  { id: "work", text: "What I do…", ideas: ["Tech", "Banking", "Medicine", "Law", "Fashion", "Still a student"], tone: TONES.sky },
-  { id: "faith", text: "Faith, for me…", ideas: ["A big part of my life", "Personal and private", "Not religious"], tone: TONES.violet },
-  { id: "spot", text: "You'll usually find me…", ideas: ["At the gym", "In the kitchen", "At church", "Gaming", "With a book", "At a lounge"], tone: TONES.gold },
-  { id: "family", text: "My family’s say in who I date…", ideas: ["They have the final say", "Their opinion matters", "My life, my choice"], tone: TONES.mint },
-  { id: "trip", text: "My dream trip…", ideas: ["Zanzibar", "Dubai", "Paris", "Cape Town", "Bali", "Obudu"], tone: TONES.sky },
-  { id: "culture", text: "Marrying outside my tribe or culture…", ideas: ["Yes, love is love", "I'd prefer not to", "My family would decide"], tone: TONES.sky },
-  { id: "drink", text: "My go-to drink…", ideas: ["Chapman", "Zobo", "Palm wine", "Coffee", "Malt", "Water, honestly"], tone: TONES.rose },
-  { id: "phone", text: "My partner’s phone…", ideas: ["Open phones, no secrets", "Privacy is respect"], tone: TONES.rose },
-  { id: "love", text: "My love language…", ideas: ["Quality time", "Words of affirmation", "Gifts", "Acts of service", "Physical touch"], tone: TONES.rose },
-  { id: "ex", text: "Staying friends with an ex is…", ideas: ["Totally fine", "A red flag", "Depends on the ex"], tone: TONES.ember },
-  { id: "green", text: "A green flag for me…", ideas: ["Good listener", "Makes me laugh", "Ambitious", "Kind to waiters", "Texts back"], tone: TONES.mint },
-  { id: "bills", text: "In a relationship, bills should…", ideas: ["Be split 50/50", "Be shared by income", "Be on the man"], tone: TONES.gold },
-  { id: "red", text: "An instant red flag…", ideas: ["Rude to waiters", "Always late", "No ambition", "Bad hygiene", "Never texts back"], tone: TONES.ember },
-  { id: "housework", text: "Housework should be…", ideas: ["Shared equally", "Done by whoever has time", "Traditional roles"], tone: TONES.mint },
-  { id: "skill", text: "I'm secretly good at…", ideas: ["Cooking", "Dancing", "Singing", "Drawing", "Fixing things", "Making people laugh"], tone: TONES.gold },
-  { id: "politics", text: "Politics, for me…", ideas: ["I vote and care a lot", "I follow it quietly", "Not my thing"], tone: TONES.sky },
-  { id: "show", text: "Best show ever…", ideas: ["Game of Thrones", "Money Heist", "Squid Game", "Big Brother Naija", "Anime", "The Office"], tone: TONES.violet },
-  { id: "therapy", text: "Therapy is…", ideas: ["For everyone", "Something I'd try", "Not for me"], tone: TONES.violet },
-  { id: "game", text: "My favourite game…", ideas: ["FIFA", "Ludo", "Whot", "Chess", "Call of Duty", "Scrabble"], tone: TONES.mint },
-  { id: "dealbreaker", text: "My biggest dealbreaker…", ideas: ["Smoking", "Doesn't want kids", "Wants kids", "Different values", "Dishonesty"], tone: TONES.ember },
-  { id: "lang", text: "Languages I speak…", ideas: ["English", "Yoruba", "Igbo", "Hausa", "Pidgin", "French"], tone: TONES.sky },
-  { id: "together", text: "Living together before marriage…", ideas: ["Yes, test the waters", "Not before the wedding"], tone: TONES.rose },
-  { id: "clock", text: "I'm more of a…", ideas: ["Morning person", "Night owl", "Afternoon napper"], tone: TONES.gold },
-  { id: "unpopular", text: "An opinion that gets me in trouble…", ideas: [], tone: TONES.gold },
-  { id: "pet", text: "My pet peeve…", ideas: ["Loud chewing", "Lateness", "Dry replies", "Traffic", "Noise"], tone: TONES.ember },
-  { id: "dream", text: "Someday I want to…", ideas: ["Start a business", "Travel the world", "Write a book", "Buy a house", "Retire early"], tone: TONES.violet },
-  { id: "kid", text: "Growing up I wanted to be…", ideas: ["A doctor", "A pilot", "A footballer", "A musician", "A lawyer"], tone: TONES.sky },
-  { id: "need", text: "I can't live without…", ideas: ["Music", "My phone", "Pepper", "My family", "Coffee"], tone: TONES.gold },
-  { id: "take", text: "My hot take…", ideas: ["Fried rice beats jollof", "Pineapple belongs on pizza", "Calls beat texts", "Breakfast is overrated"], tone: TONES.ember },
-  { id: "place", text: "My favourite spot in town…", ideas: ["Lekki Conservation Centre", "Nike Art Gallery", "The beach", "A quiet cafe"], tone: TONES.mint },
-  { id: "fact", text: "A fun fact about me…", ideas: [], tone: TONES.violet },
-  { id: "else", text: "Something else about me…", ideas: [], tone: TONES.rose },
+  { id: "food", text: "My comfort food is…", ideas: ["Jollof rice", "Suya", "Amala and ewedu", "Pounded yam and egusi", "Shawarma", "Pizza"], tone: TONES.ember, icon: "utensils" },
+  { id: "weekend", text: "My perfect weekend…", ideas: ["Owambe till late", "Beach day", "Netflix and chill", "Church, then brunch", "Out with the squad", "Sleeping in"], tone: TONES.violet, icon: "calendar-heart" },
+  { id: "music", text: "On repeat right now…", ideas: ["Burna Boy", "Wizkid", "Asake", "Tems", "Rema", "Amapiano"], tone: TONES.rose, icon: "music" },
+  { id: "team", text: "My football team…", ideas: ["Arsenal", "Chelsea", "Man United", "Man City", "Liverpool", "Super Eagles"], tone: TONES.mint, icon: "trophy" },
+  { id: "work", text: "What I do…", ideas: ["Tech", "Banking", "Medicine", "Law", "Fashion", "Still a student"], tone: TONES.sky, icon: "briefcase" },
+  { id: "spot", text: "You'll usually find me…", ideas: ["At the gym", "In the kitchen", "At church", "Gaming", "With a book", "At a lounge"], tone: TONES.gold, icon: "map-pin" },
+  { id: "trip", text: "My dream trip…", ideas: ["Zanzibar", "Dubai", "Paris", "Cape Town", "Bali", "Obudu"], tone: TONES.sky, icon: "plane" },
+  { id: "drink", text: "My go-to drink…", ideas: ["Chapman", "Zobo", "Palm wine", "Coffee", "Malt", "Water, honestly"], tone: TONES.rose, icon: "cup-soda" },
+  { id: "love", text: "My love language…", ideas: ["Quality time", "Words of affirmation", "Gifts", "Acts of service", "Physical touch"], tone: TONES.rose, icon: "heart" },
+  { id: "green", text: "A green flag for me…", ideas: ["Good listener", "Makes me laugh", "Ambitious", "Kind to waiters", "Texts back"], tone: TONES.mint, icon: "thumbs-up" },
+  { id: "kids", text: "Kids, for me…", ideas: ["Can't wait to be a parent", "Someday", "Not sure yet", "Not for me"], tone: TONES.rose, icon: "baby" },
+  { id: "marriage", text: "Marriage, for me…", ideas: ["Can't wait", "Someday, with the right person", "Not for me"], tone: TONES.violet, icon: "gem" },
+  { id: "faith", text: "Faith, for me…", ideas: ["A big part of my life", "Personal and private", "Not religious"], tone: TONES.violet, icon: "hand-heart" },
+  { id: "politics", text: "Politics, for me…", ideas: ["I vote and care a lot", "I follow it quietly", "Not my thing"], tone: TONES.sky, icon: "vote" },
+  { id: "feminism", text: "On feminism…", ideas: ["Proud feminist", "Equality, not the label", "Not for me"], tone: TONES.ember, icon: "scale" },
+  { id: "family", text: "My family’s say in who I date…", ideas: ["They have the final say", "Their opinion matters", "My life, my choice"], tone: TONES.mint, icon: "users" },
+  { id: "culture", text: "Marrying outside my tribe or culture…", ideas: ["Yes, love is love", "I'd prefer not to", "My family would decide"], tone: TONES.sky, icon: "globe" },
+  { id: "firstdate", text: "On a first date, the bill…", ideas: ["Whoever asked pays", "We split it", "The man pays", "I'll fight you for it"], tone: TONES.gold, icon: "receipt" },
+  { id: "phone", text: "My partner’s phone…", ideas: ["Open phones, no secrets", "Privacy is respect"], tone: TONES.rose, icon: "smartphone" },
+  { id: "red", text: "An instant red flag…", ideas: ["Rude to waiters", "Always late", "No ambition", "Bad hygiene", "Never texts back"], tone: TONES.ember, icon: "flag" },
+  { id: "ex", text: "Staying friends with an ex is…", ideas: ["Totally fine", "A red flag", "Depends on the ex"], tone: TONES.ember, icon: "heart-crack" },
+  { id: "bills", text: "In a relationship, bills should…", ideas: ["Be split 50/50", "Be shared by income", "Be on the man"], tone: TONES.gold, icon: "wallet" },
+  { id: "housework", text: "Housework should be…", ideas: ["Shared equally", "Done by whoever has time", "Traditional roles"], tone: TONES.mint, icon: "house" },
+  { id: "therapy", text: "Therapy is…", ideas: ["For everyone", "Something I'd try", "Not for me"], tone: TONES.violet, icon: "brain" },
+  { id: "dealbreaker", text: "My biggest dealbreaker…", ideas: ["Smoking", "Doesn't want kids", "Wants kids", "Different values", "Dishonesty"], tone: TONES.ember, icon: "ban" },
+  { id: "together", text: "Living together before marriage…", ideas: ["Yes, test the waters", "Not before the wedding"], tone: TONES.rose, icon: "key" },
+  { id: "unpopular", text: "An opinion that gets me in trouble…", ideas: [], tone: TONES.gold, icon: "megaphone" },
+  { id: "skill", text: "I'm secretly good at…", ideas: ["Cooking", "Dancing", "Singing", "Drawing", "Fixing things", "Making people laugh"], tone: TONES.gold, icon: "star" },
+  { id: "show", text: "Best show ever…", ideas: ["Game of Thrones", "Money Heist", "Squid Game", "Big Brother Naija", "Anime", "The Office"], tone: TONES.violet, icon: "tv" },
+  { id: "game", text: "My favourite game…", ideas: ["FIFA", "Ludo", "Whot", "Chess", "Call of Duty", "Scrabble"], tone: TONES.mint, icon: "gamepad" },
+  { id: "lang", text: "Languages I speak…", ideas: ["English", "Yoruba", "Igbo", "Hausa", "Pidgin", "French"], tone: TONES.sky, icon: "languages" },
+  { id: "clock", text: "I'm more of a…", ideas: ["Morning person", "Night owl", "Afternoon napper"], tone: TONES.gold, icon: "clock" },
+  { id: "pet", text: "My pet peeve…", ideas: ["Loud chewing", "Lateness", "Dry replies", "Traffic", "Noise"], tone: TONES.ember, icon: "angry" },
+  { id: "dream", text: "Someday I want to…", ideas: ["Start a business", "Travel the world", "Write a book", "Buy a house", "Retire early"], tone: TONES.violet, icon: "rocket" },
+  { id: "kid", text: "Growing up I wanted to be…", ideas: ["A doctor", "A pilot", "A footballer", "A musician", "A lawyer"], tone: TONES.sky, icon: "backpack" },
+  { id: "need", text: "I can't live without…", ideas: ["Music", "My phone", "Pepper", "My family", "Coffee"], tone: TONES.gold, icon: "infinity" },
+  { id: "take", text: "My hot take…", ideas: ["Fried rice beats jollof", "Pineapple belongs on pizza", "Calls beat texts", "Breakfast is overrated"], tone: TONES.ember, icon: "flame" },
+  { id: "place", text: "My favourite spot in town…", ideas: ["Lekki Conservation Centre", "Nike Art Gallery", "The beach", "A quiet cafe"], tone: TONES.mint, icon: "landmark" },
+  { id: "fact", text: "A fun fact about me…", ideas: [], tone: TONES.violet, icon: "lightbulb" },
+  { id: "else", text: "Something else about me…", ideas: [], tone: TONES.rose, icon: "message-circle" },
 ];
 
 // Until the cards from the database arrive (and if they can't load), the built-in ones are used
@@ -112,7 +117,7 @@ export function setThingPrompts(rows: ThingPromptRow[] | null | undefined) {
   if (!rows?.length) return;
   current = [...rows]
     .sort((a, b) => a.sort - b.sort)
-    .map((r) => ({ id: r.id, text: r.text, ideas: r.ideas ?? [], tone: toneOf(r.tone), repeatable: r.repeatable, active: r.active }));
+    .map((r) => ({ id: r.id, text: r.text, ideas: r.ideas ?? [], tone: toneOf(r.tone), repeatable: r.repeatable, active: r.active, icon: r.icon || BUILT_IN.find((b) => b.id === r.id)?.icon }));
 }
 
 const fallback = (): ThingPrompt => current.find((p) => p.id === "else") ?? BUILT_IN[BUILT_IN.length - 1];

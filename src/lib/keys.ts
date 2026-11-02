@@ -76,6 +76,7 @@ export const KEY_REASONS: Record<string, string> = {
   ghost: "Ghost mode (30 days)",
   wave: "Waved at someone",
   setup: "Getting set up",
+  things_bonus: "Bonus round: 20 things about you",
   signup: "Welcome gift for joining",
   invite: "Invited a friend",
   slow_reveal: "Saw a slow reveal early",

@@ -5,6 +5,7 @@ import { APP_CONFIG_TAG } from "@/lib/appConfig";
 import { requireAdmin } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/server";
 import { TONES } from "@/lib/things";
+import { THING_ICONS } from "@/components/profile/ThingIcon";
 
 const clean = (s: string) => s.replace(/\s+/g, " ").trim();
 const cleanIdeas = (ideas: string[]) =>
@@ -17,6 +18,7 @@ export async function saveThingPrompt(input: {
   tone: string;
   repeatable: boolean;
   active: boolean;
+  icon?: string;
 }): Promise<{ error?: string }> {
   await requireAdmin();
   let text = clean(input.text);
@@ -30,6 +32,7 @@ export async function saveThingPrompt(input: {
     repeatable: !!input.repeatable,
     active: !!input.active,
     updated_at: new Date().toISOString(),
+    ...(input.icon && input.icon in THING_ICONS ? { icon: input.icon } : {}),
   };
   const db = createAdminClient();
   if (input.id) {

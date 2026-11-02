@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Plus } from "lucide-react";
-import { MAX_THINGS, NEEDED, type Thing } from "@/lib/things";
+import { createClient } from "@/lib/supabase/client";
+import { BONUS_NEEDED, MAX_THINGS, NEEDED, type Thing } from "@/lib/things";
+import { KeyCoin } from "@/components/keys/KeyIcon";
 import { tapFeedback } from "@/components/ui/Button";
 import { ThingsDeck } from "./ThingsDeck";
 import { ThingsStack } from "./ThingsStack";
@@ -12,6 +14,13 @@ export function ThingsAboutMe({ initial }: { initial: Thing[] }) {
   const [things, setThings] = useState<Thing[]>(initial);
   const [deck, setDeck] = useState<{ edit: number | null } | null>(null);
   const left = NEEDED - things.length;
+  const supabase = useMemo(() => createClient(), []);
+  // The bonus round: 10 more things for extra Keys (whether you've had them, and how many)
+  const [bonus, setBonus] = useState<{ reward: number; claimed: boolean } | null>(null);
+  useEffect(() => {
+    supabase.rpc("things_bonus_status").then(({ data }) => data && setBonus(data as { reward: number; claimed: boolean }));
+  }, [supabase, deck]);
+  const bonusLeft = BONUS_NEEDED - things.length;
   const canAdd = things.length < MAX_THINGS;
   const add = () => {
     tapFeedback();
@@ -26,6 +35,12 @@ export function ThingsAboutMe({ initial }: { initial: Thing[] }) {
           <p className="text-[13px] text-muted">
             {left > 0 ? `Add ${left} more to finish your ${NEEDED}` : `${things.length} · we use these to find your people`}
           </p>
+          {left <= 0 && bonus && !bonus.claimed && bonus.reward > 0 && (
+            <button type="button" onClick={add} className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-gold-soft px-3 py-1.5 text-[12.5px] font-bold text-[#8a5a00]">
+              <KeyCoin size={15} />
+              {bonusLeft > 0 ? `Bonus round: ${bonusLeft} more for ${bonus.reward} Keys` : `Claim your ${bonus.reward} bonus Keys`}
+            </button>
+          )}
         </div>
         {canAdd && (
           <button type="button" onClick={add} className="inline-flex h-9 shrink-0 items-center gap-1 rounded-full bg-brand-soft px-3.5 text-[13px] font-semibold text-brand">

@@ -4,12 +4,14 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { ArrowDown, ArrowUp, Pencil, Plus } from "lucide-react";
-import { NEEDED, TONES, type ThingPromptRow } from "@/lib/things";
+import { BONUS_NEEDED, NEEDED, PROMPTS, TONES, type ThingPromptRow } from "@/lib/things";
+import { THING_ICONS, ThingIcon } from "@/components/profile/ThingIcon";
 import { moveThingPrompt, saveThingPrompt } from "@/app/admin/(panel)/things/actions";
 import { AdminTitle } from "./AdminShell";
 
 const TONE_NAMES = Object.keys(TONES) as (keyof typeof TONES)[];
-type Draft = { id?: string; text: string; ideas: string; tone: string; repeatable: boolean; active: boolean };
+type Draft = { id?: string; text: string; ideas: string; tone: string; repeatable: boolean; active: boolean; icon: string };
+const iconOf = (r: { id: string; icon?: string | null }) => r.icon || PROMPTS.find((p) => p.id === r.id)?.icon || "message-circle";
 
 /** Admin: the "Things about you" cards people answer to set up their profile */
 export function ThingsManager({ rows, counts, missing }: { rows: ThingPromptRow[]; counts: Record<string, number>; missing?: boolean }) {
@@ -19,6 +21,8 @@ export function ThingsManager({ rows, counts, missing }: { rows: ThingPromptRow[
   const [note, setNote] = useState<string | null>(null);
   const live = rows.filter((r) => r.active);
   const short = live.filter((r) => !r.repeatable).length < NEEDED;
+  // Where each shown card falls: the first 10 finish a profile, the next 10 are the bonus round
+  const rank = new Map(live.filter((r) => !r.repeatable).map((r, k) => [r.id, k]));
 
   async function move(id: string, dir: -1 | 1) {
     const r = await moveThingPrompt(id, dir);
@@ -30,7 +34,7 @@ export function ThingsManager({ rows, counts, missing }: { rows: ThingPromptRow[
     <>
       <AdminTitle
         title="Profile questions"
-        subtitle={`The "Things about you" cards. People answer ${NEEDED} to finish their profile, in this order. Changes apply right away.`}
+        subtitle={`The "Things about you" cards. People answer the first ${NEEDED} to finish their profile, then ${BONUS_NEEDED - NEEDED} more in the bonus round for extra Keys (set in Prices). Changes apply right away.`}
         action={
           !missing && (
             <button
@@ -58,7 +62,7 @@ export function ThingsManager({ rows, counts, missing }: { rows: ThingPromptRow[
           {note && <p className="mb-4 text-[13px] font-semibold text-chili">{note}</p>}
           {editing === "new" && (
             <Editor
-              draft={{ text: "", ideas: "", tone: "violet", repeatable: false, active: true }}
+              draft={{ text: "", ideas: "", tone: "violet", repeatable: false, active: true, icon: "message-circle" }}
               onDone={() => {
                 setEditing(null);
                 start(() => router.refresh());
@@ -70,7 +74,7 @@ export function ThingsManager({ rows, counts, missing }: { rows: ThingPromptRow[
               editing === r.id ? (
                 <li key={r.id}>
                   <Editor
-                    draft={{ id: r.id, text: r.text, ideas: (r.ideas ?? []).join("\n"), tone: r.tone, repeatable: r.repeatable, active: r.active }}
+                    draft={{ id: r.id, text: r.text, ideas: (r.ideas ?? []).join("\n"), tone: r.tone, repeatable: r.repeatable, active: r.active, icon: iconOf(r) }}
                     onDone={() => {
                       setEditing(null);
                       start(() => router.refresh());
@@ -83,13 +87,21 @@ export function ThingsManager({ rows, counts, missing }: { rows: ThingPromptRow[
                   className={clsx("flex items-center gap-3 rounded-3xl border border-line bg-surface p-3 shadow-card", !r.active && "opacity-55")}
                 >
                   <span
-                    className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl text-[13px] font-extrabold text-white"
+                    className="relative grid h-12 w-12 shrink-0 place-items-center rounded-2xl text-white"
                     style={{ background: TONES[r.tone as keyof typeof TONES] ?? TONES.violet }}
                   >
-                    {i + 1}
+                    <ThingIcon name={iconOf(r)} size={22} />
+                    <span className="absolute -top-1.5 -left-1.5 grid h-5 min-w-5 place-items-center rounded-full bg-ink px-1 text-[10.5px] font-extrabold text-white">{i + 1}</span>
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[15px] font-bold">{r.text}</p>
+                    <p className="flex items-center gap-2 truncate text-[15px] font-bold">
+                      {r.text}
+                      {rank.has(r.id) && (
+                        <span className={clsx("shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-extrabold uppercase", rank.get(r.id)! < NEEDED ? "bg-brand-soft text-brand" : rank.get(r.id)! < BONUS_NEEDED ? "bg-gold-soft text-[#8a5a00]" : "bg-cream text-muted")}>
+                          {rank.get(r.id)! < NEEDED ? "Profile" : rank.get(r.id)! < BONUS_NEEDED ? "Bonus" : "Extra"}
+                        </span>
+                      )}
+                    </p>
                     <p className="truncate text-[12.5px] text-muted">
                       {!r.active ? "Hidden · " : ""}
                       {r.repeatable ? "Can answer more than once · " : ""}
@@ -151,7 +163,20 @@ function Editor({ draft, onDone }: { draft: Draft; onDone: () => void }) {
   return (
     <div className="mb-2.5 rounded-3xl border-2 border-brand/30 bg-surface p-4 shadow-card">
       <div className="rounded-2xl p-4 text-white" style={{ background: TONES[d.tone as keyof typeof TONES] ?? TONES.violet }}>
-        <p className="text-[18px] font-bold">{d.text || "My comfort food is…"}</p>
+        <span className="grid h-10 w-10 place-items-center rounded-xl bg-white/20">
+          <ThingIcon name={d.icon} size={20} />
+        </span>
+        <p className="mt-2 text-[18px] font-bold">{d.text || "My comfort food is…"}</p>
+        <div className="mt-2.5 flex flex-wrap gap-1.5">
+          {d.ideas
+            .split("\n")
+            .map((x) => x.trim())
+            .filter(Boolean)
+            .slice(0, 12)
+            .map((x) => (
+              <span key={x} className="rounded-xl bg-white/15 px-2.5 py-1.5 text-[12.5px] font-semibold">{x}</span>
+            ))}
+        </div>
       </div>
       <label className="mt-4 block text-[13px] font-semibold text-muted">
         Question
@@ -164,7 +189,7 @@ function Editor({ draft, onDone }: { draft: Draft; onDone: () => void }) {
         />
       </label>
       <label className="mt-3 block text-[13px] font-semibold text-muted">
-        Tap-to-fill ideas (one per line)
+        Answers people tap (one per line, up to 12)
         <textarea
           value={d.ideas}
           onChange={(e) => set({ ideas: e.target.value })}
@@ -173,6 +198,21 @@ function Editor({ draft, onDone }: { draft: Draft; onDone: () => void }) {
           className="mt-1 w-full rounded-2xl border border-line bg-cream px-3.5 py-2.5 text-[15px] text-ink outline-none focus:border-brand"
         />
       </label>
+      <p className="mt-3 text-[13px] font-semibold text-muted">Icon</p>
+      <div className="mt-1.5 flex flex-wrap gap-1.5">
+        {Object.keys(THING_ICONS).map((k) => (
+          <button
+            key={k}
+            type="button"
+            aria-label={k}
+            title={k}
+            onClick={() => set({ icon: k })}
+            className={clsx("grid h-10 w-10 place-items-center rounded-xl border transition", d.icon === k ? "border-brand bg-brand-soft text-brand" : "border-line bg-cream text-ink-soft")}
+          >
+            <ThingIcon name={k} size={18} />
+          </button>
+        ))}
+      </div>
       <p className="mt-3 text-[13px] font-semibold text-muted">Colour</p>
       <div className="mt-1.5 flex flex-wrap gap-2">
         {TONE_NAMES.map((t) => (

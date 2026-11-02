@@ -15,11 +15,13 @@ export const getAppConfig = unstable_cache(
     const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
-    const [prompts, settings, gifts] = await Promise.all([
-      db.from("thing_prompts").select("id, text, ideas, tone, sort, repeatable, active"),
+    let [prompts, settings, gifts] = await Promise.all([
+      db.from("thing_prompts").select("id, text, ideas, tone, sort, repeatable, active, icon"),
       db.from("app_settings").select("key, value"),
       db.from("gifts").select("id, name, emoji, price, sort, retired").order("sort"),
     ]);
+    // Before update 114 the cards have no icons: load them without
+    if (prompts.error) prompts = await db.from("thing_prompts").select("id, text, ideas, tone, sort, repeatable, active");
     // Don't keep a failure: the next page tries again
     if (settings.error || gifts.error) throw new Error("Couldn't load app settings");
     return { prompts: prompts.data ?? null, settings: settings.data ?? null, gifts: gifts.data ?? null };
