@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import clsx from "clsx";
-import { Eye, Gamepad2, MessageCircle, Radar, Search, UserRound, UsersRound } from "lucide-react";
+import { Earth, Eye, Gamepad2, MessageCircle, Radar, Search, UserRound, UsersRound } from "lucide-react";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { tapFeedback } from "@/components/ui/Button";
 
@@ -56,7 +56,12 @@ const STEPS: Step[] = [
   {
     icon: <Gamepad2 size={22} />,
     title: "In your chats",
-    body: "Tap + for games, gifts, stickers, icebreakers and Your World (beta): a little world that grows with every message you two send. In masked chats your voice notes are disguised, unless you pick Normal to use your real voice.",
+    body: "Tap + for games, gifts, stickers and icebreakers. In masked chats your voice notes are disguised, unless you pick Normal to use your real voice.",
+  },
+  {
+    icon: <Earth size={22} />,
+    title: "Your World (beta)",
+    body: "Every chat grows its own little world. Each message builds something: talk about food and a restaurant goes up, football builds a pitch, music a concert hall. Keep chatting and you'll get snowy peaks, a river, new islands, a railway and an airport. Open it from + → More → Your World, and tap any building to see the message that built it.",
   },
   {
     icon: <UserRound size={22} />,
