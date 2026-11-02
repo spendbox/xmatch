@@ -467,7 +467,10 @@ export function MasqueradeRoom({
   // Games: every masked chat, while it's open.
   // In a game meet the first game comes from the line, so the game button waits for it.
   const meet = state.meet ?? null;
-  const lastFromThem = [...messages].reverse().find((m) => m.sender_id && m.sender_id !== state.me.id && m.kind === "text");
+  // Their latest message shows over a game only while it's still waiting for an answer (see MatchChat)
+  const lastSaid = [...messages].reverse().find((m) => m.sender_id && m.kind !== "system" && m.kind !== "game");
+  const lastFromThem =
+    lastSaid && lastSaid.sender_id !== state.me.id && lastSaid.kind === "text" && Date.now() - new Date(lastSaid.created_at).getTime() < 15 * 60_000 ? lastSaid : null;
   const games = useGameHost({
     sessionId: state.id,
     names: { me: state.me.alias, them: theirName },
