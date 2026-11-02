@@ -17,7 +17,7 @@ type Status = { place: boolean; push: boolean; things: number; claimed: boolean;
 
 /**
  * The setup checklist on Home, on its own card: where you are, notifications and
- * 10 things about you. Finishing earns Keys once (set in admin), then it goes away.
+ * 20 things about you. Finishing earns Keys once (set in admin), then it goes away.
  */
 export function GettingStarted({
   hasPlace,

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/server";
-import { INTENTS, MAX_QUESTIONS, SEED_QUESTIONS, type PactIntent, type PactQuestion, type QuestionKind, type Weight } from "@/lib/pacts";
+import { INTENTS, MAX_QUESTIONS, STARTER_QUESTIONS, type PactIntent, type PactQuestion, type QuestionKind, type Weight } from "@/lib/pacts";
 import { runReveal } from "@/lib/pactsServer";
 
 const clean = (s: unknown, max: number) => (typeof s === "string" ? s.replace(/\s+/g, " ").trim().slice(0, max) : "");
@@ -23,7 +23,7 @@ export async function createPact(name: string, slug: string): Promise<{ id?: str
   const reveal = new Date(Date.now() + 14 * 86400_000);
   const { data, error } = await db.from("pacts").insert({ name: n, slug: s, areas: [], closes_at: closes.toISOString(), reveal_at: reveal.toISOString() }).select("id").single();
   if (error || !data) return { error: "Couldn't create the Link-Up. Please try again." };
-  await db.from("pact_questions").insert(SEED_QUESTIONS.map((q, i) => ({ ...q, pact_id: data.id, position: i })));
+  await db.from("pact_questions").insert(STARTER_QUESTIONS.map((q, i) => ({ ...q, pact_id: data.id, position: i })));
   revalidatePath("/admin/link-ups");
   return { id: data.id as string };
 }

@@ -42,6 +42,7 @@ type Settings = {
   pair_gap_minutes: number;
   pair_minutes: number;
   setup_reward: number;
+  things_bonus?: number;
   signup_keys: number;
 };
 export type InviteStats = { joined: number; joined_7d: number; buyers: number; keys_paid: number; top: { name: string | null; joined: number; earned: number }[] };
@@ -122,11 +123,12 @@ export function PricesManager({ settings, gifts, packs, invites = null }: { sett
       <section className="mt-6 rounded-3xl border border-line bg-surface p-5 shadow-card">
         <h2 className="text-[16px] font-semibold">Getting set up</h2>
         <p className="mt-1 text-[13px] text-muted">
-          Welcome Keys are given once when someone signs up. The checklist on Home: add where you are, turn on notifications and add 10 things about you. Paid once per member. Set it to 0 to stop paying it.
+          Welcome Keys are given once when someone signs up. The checklist on Home: add where you are, turn on notifications and add 10 things about you. The bonus round is 10 more things (the bigger questions) for extra Keys. Each is paid once per member. Set one to 0 to stop paying it.
         </p>
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
           <SettingField k="signup_keys" label="Welcome Keys" hint="Free Keys for signing up (once per email). 0 = none" value={settings.signup_keys} />
           <SettingField k="setup_reward" label="Setup reward" hint="Keys for finishing the Home checklist" value={settings.setup_reward} />
+          <SettingField k="things_bonus" label="Bonus round" hint="Keys for answering 10 more things about you (20 in all)" value={settings.things_bonus ?? 10} />
         </div>
       </section>
 

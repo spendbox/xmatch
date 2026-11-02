@@ -3,10 +3,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import clsx from "clsx";
-import { Check, ChevronLeft, Dices, PartyPopper, Trash2, X } from "lucide-react";
+import { Check, ChevronLeft, Dices, PartyPopper, PenLine, Trash2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { MAX_ANSWER, MAX_QUESTION, MAX_THINGS, NEEDED, ideasIn, joinOwn, nextPrompt, promptOf, splitOwn, toggleIdea, type Thing } from "@/lib/things";
+import { BONUS_NEEDED, MAX_ANSWER, MAX_QUESTION, MAX_THINGS, NEEDED, ideasIn, joinOwn, nextPrompt, promptOf, splitOwn, toggleIdea, type Thing } from "@/lib/things";
 import { tapFeedback, Spinner } from "@/components/ui/Button";
+import { KeyCoin } from "@/components/keys/KeyIcon";
+import { ThingIcon } from "./ThingIcon";
 
 /**
  * "Tell us things about you", one card at a time. Each card is a prompt you finish
@@ -38,7 +40,13 @@ export function ThingsDeck({
   const [question, setQuestion] = useState(edit !== null && initial[edit] ? (splitOwn(initial[edit]).q ?? "") : "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [celebrate, setCelebrate] = useState(false);
+  // "ten": your profile's done; "bonus": the bonus round's done
+  const [celebrate, setCelebrate] = useState<false | "ten" | "bonus">(false);
+  // The bonus round's Keys: how many, and whether you've had them
+  const [bonus, setBonus] = useState<{ reward: number; claimed: boolean } | null>(demo ? { reward: 10, claimed: false } : null);
+  const [got, setGot] = useState<number | null>(null);
+  // Writing your own answer (the answers to tap come first)
+  const [own, setOwn] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [n, setN] = useState(0);
   const input = useRef<HTMLTextAreaElement>(null);
@@ -61,6 +69,16 @@ export function ThingsDeck({
     setPromptId(edit !== null ? (initial[edit]?.p ?? "else") : nextPrompt(initial).id);
     setAnswer(edit !== null && initial[edit] ? splitOwn(initial[edit]).a : "");
     setQuestion(edit !== null && initial[edit] ? (splitOwn(initial[edit]).q ?? "") : "");
+    setOwn(false);
+    setGot(null);
+    if (!demo)
+      supabase.rpc("things_bonus_status").then(({ data }) => {
+        if (!data) return;
+        const b = data as { reward: number; claimed: boolean };
+        setBonus(b);
+        // Already have 20 or more, but not the Keys yet: claim them first
+        if (edit === null && initial.length >= BONUS_NEEDED && !b.claimed && b.reward > 0) setCelebrate("bonus");
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, edit]);
 
@@ -70,6 +88,7 @@ export function ThingsDeck({
     setPromptId(list[i].p);
     setAnswer(splitOwn(list[i]).a);
     setQuestion(splitOwn(list[i]).q ?? "");
+    setOwn(false);
     setError(null);
     setN((x) => x + 1);
   }
@@ -79,6 +98,7 @@ export function ThingsDeck({
     setPromptId(nextPrompt(list, skipped).id);
     setAnswer("");
     setQuestion("");
+    setOwn(false);
     setError(null);
     setN((x) => x + 1);
   }
@@ -94,6 +114,13 @@ export function ThingsDeck({
   const prompt = promptOf(promptId);
   const picked = ideasIn(answer, prompt.ideas);
   const count = things.length;
+  // Anything typed that isn't one of the answers to tap
+  const extra = picked.reduce((a, i) => toggleIdea(a, i), answer).trim();
+  const writing = prompt.ideas.length === 0 || own || !!extra;
+  // Which round you're on: the first 10, then the bonus round of 10 more
+  const target = count < NEEDED ? NEEDED : BONUS_NEEDED;
+  const bonusOn = !!bonus && !bonus.claimed && bonus.reward > 0;
+  const inBonus = count >= NEEDED && count < BONUS_NEEDED && bonusOn;
 
   async function save(list: Thing[]) {
     if (demo) return list;
@@ -123,8 +150,10 @@ export function ThingsDeck({
       if (editing) return cursor! + 1 < saved.length ? go(cursor! + 1, saved) : fresh(saved);
       setAnswer("");
       setQuestion("");
+      setOwn(false);
       setN((x) => x + 1);
-      if (saved.length === NEEDED) setCelebrate(true);
+      if (saved.length === NEEDED) setCelebrate("ten");
+      else if (saved.length === BONUS_NEEDED && bonus && !bonus.claimed && bonus.reward > 0) setCelebrate("bonus");
       else if (saved.length >= MAX_THINGS) onClose();
       else setPromptId(nextPrompt(saved, skipped).id);
     } catch (e) {
@@ -158,11 +187,26 @@ export function ThingsDeck({
     setSkipped(p.id === "else" && promptId === "else" ? [] : skip);
     setPromptId(p.id === promptId ? nextPrompt(things, []).id : p.id);
     setAnswer("");
+    setOwn(false);
     setN((x) => x + 1);
   }
 
+  async function claim() {
+    if (busy) return;
+    tapFeedback();
+    if (demo) return setGot(bonus?.reward ?? 10);
+    setBusy(true);
+    setError(null);
+    const { data, error: err } = await supabase.rpc("claim_things_bonus");
+    setBusy(false);
+    if (err) return setError(err.message.includes("Already") ? "You've already had these Keys." : "Couldn't add your Keys. Try again.");
+    const r = (data as { reward: number }).reward;
+    setGot(r);
+    setBonus((b) => (b ? { ...b, claimed: true } : b));
+  }
+
   if (!open || !mounted) return null;
-  const left = Math.max(0, NEEDED - count);
+  const left = Math.max(0, target - count);
 
   return createPortal(
     <div className="fixed inset-0 z-[70] flex items-end justify-center bg-ink/55 p-3 backdrop-blur-sm animate-fade-in sm:items-center" role="dialog" aria-modal="true" aria-label="Things about you">
@@ -200,52 +244,89 @@ export function ThingsDeck({
               </button>
             )}
             <p className="flex-1 text-[12px] font-bold tracking-[0.14em] text-white/80 uppercase">
-              {single
+              {celebrate
+                ? celebrate === "ten" ? "Profile done" : "Bonus round"
+                : single
                 ? "Edit"
                 : editing
                   ? `${cursor! + 1} of ${Math.max(NEEDED, count)} · editing`
                   : count < NEEDED
                     ? `${count + 1} of ${NEEDED}`
-                    : `Thing ${count + 1}`}
+                    : inBonus
+                      ? `Bonus · ${count - NEEDED + 1} of ${BONUS_NEEDED - NEEDED}`
+                      : `Thing ${count + 1}`}
             </p>
+            {inBonus && !single && !editing && !celebrate && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2.5 py-1 text-[12px] font-bold">
+                <KeyCoin size={14} /> {bonus?.reward ?? 10} Keys
+              </span>
+            )}
             <button type="button" onClick={onClose} aria-label="Close" className="grid h-9 w-9 place-items-center rounded-full bg-white/15">
               <X size={18} />
             </button>
           </div>
-          {!single && count < NEEDED && (
+          {!single && !celebrate && (count < NEEDED || inBonus) && (
             <div className="relative mt-2.5 flex gap-1" aria-hidden>
-              {Array.from({ length: NEEDED }, (_, i) => (
-                <span
-                  key={i}
-                  className={clsx("h-1.5 flex-1 rounded-full transition", i === (cursor ?? count) ? "bg-white" : i < count ? "bg-white/60" : "bg-white/25")}
-                />
-              ))}
+              {Array.from({ length: NEEDED }, (_, j) => {
+                const i = j + (count < NEEDED ? 0 : NEEDED);
+                return <span key={j} className={clsx("h-1.5 flex-1 rounded-full transition", i === (cursor ?? count) ? "bg-white" : i < count ? "bg-white/60" : "bg-white/25")} />;
+              })}
             </div>
           )}
 
-          {celebrate ? (
+          {celebrate === "ten" ? (
             <div className="relative py-6 text-center">
               <span className="mx-auto grid h-16 w-16 animate-pop place-items-center rounded-2xl bg-white/20">
                 <PartyPopper size={30} />
               </span>
               <p className="mt-4 font-display text-[30px] leading-tight font-semibold">That&apos;s {NEEDED}!</p>
-              <p className="mx-auto mt-2 max-w-[260px] text-[14px] leading-relaxed text-white/85">
-                We&apos;ll use these to pair you with people you click with. Add as many more as you like.
+              <p className="mx-auto mt-2 max-w-[270px] text-[14px] leading-relaxed text-white/85">
+                We&apos;ll use these to pair you with people you click with.
               </p>
-              <div className="mt-6 grid grid-cols-2 gap-2.5">
+              {bonusOn && (
+                <div className="mt-5 rounded-2xl bg-white/15 px-4 py-3.5 text-left">
+                  <p className="flex items-center gap-1.5 text-[15px] font-bold">
+                    <KeyCoin size={17} /> Bonus round: {bonus?.reward ?? 10} Keys
+                  </p>
+                  <p className="mt-1 text-[13px] leading-snug text-white/85">Answer {BONUS_NEEDED - NEEDED} bigger questions (kids, marriage, faith, politics and more) and the Keys are yours.</p>
+                </div>
+              )}
+              <div className="mt-5 grid grid-cols-2 gap-2.5">
+                <button type="button" onClick={onClose} className="h-12 rounded-2xl bg-white/15 text-[15px] font-semibold">
+                  Later
+                </button>
                 <button
                   type="button"
                   onClick={() => {
                     setCelebrate(false);
                     setPromptId(nextPrompt(things, skipped).id);
                   }}
-                  className="h-12 rounded-2xl bg-white/15 text-[15px] font-semibold"
+                  className="h-12 rounded-2xl bg-white text-[15px] font-bold text-ink"
                 >
-                  Add more
+                  {bonusOn ? "Start bonus" : "Add more"}
                 </button>
-                <button type="button" onClick={onClose} className="h-12 rounded-2xl bg-white text-[15px] font-bold text-ink">
-                  Done
-                </button>
+              </div>
+            </div>
+          ) : celebrate === "bonus" ? (
+            <div className="relative py-6 text-center">
+              <span className="mx-auto grid h-16 w-16 animate-pop place-items-center rounded-2xl bg-white/20">
+                <KeyCoin size={34} />
+              </span>
+              <p className="mt-4 font-display text-[30px] leading-tight font-semibold">{got ? `+${got} Keys` : "Bonus round done!"}</p>
+              <p className="mx-auto mt-2 max-w-[270px] text-[14px] leading-relaxed text-white/85">
+                {got ? "They're in your wallet. People can see more of who you really are now." : `That's ${BONUS_NEEDED} things about you. Your ${bonus?.reward ?? 10} Keys are ready.`}
+              </p>
+              {error && <p className="mt-3 rounded-xl bg-black/20 px-3 py-2 text-[13px] font-medium">{error}</p>}
+              <div className="mt-6">
+                {got ? (
+                  <button type="button" onClick={onClose} className="h-12 w-full rounded-2xl bg-white text-[15px] font-bold text-ink">
+                    Done
+                  </button>
+                ) : (
+                  <button type="button" onClick={claim} disabled={busy} className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-white text-[15px] font-bold text-ink disabled:opacity-60">
+                    {busy ? <Spinner className="h-4 w-4" /> : <KeyCoin size={18} />} Claim {bonus?.reward ?? 10} Keys
+                  </button>
+                )}
               </div>
             </div>
           ) : (
@@ -256,7 +337,10 @@ export function ThingsDeck({
                 void next();
               }}
             >
-              <p className="mt-6 font-display text-[30px] leading-[1.1] font-semibold">{prompt.text}</p>
+              <span className="mt-5 grid h-12 w-12 place-items-center rounded-2xl bg-white/20">
+                <ThingIcon name={prompt.icon} size={24} />
+              </span>
+              <p className="mt-3 font-display text-[29px] leading-[1.1] font-semibold">{prompt.text}</p>
               {/* Something else about me: ask your own question, then answer it */}
               {promptId === "else" && (
                 <input
@@ -268,26 +352,11 @@ export function ThingsDeck({
                   className="mt-4 h-12 w-full rounded-2xl bg-black/15 px-4 text-[15px] font-semibold text-white outline-none placeholder:font-normal placeholder:text-white/55 focus:bg-black/20"
                 />
               )}
-              <textarea
-                ref={input}
-                value={answer}
-                onChange={(e) => setAnswer(e.target.value.replace(/\n/g, " "))}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    void next();
-                  }
-                }}
-                maxLength={MAX_ANSWER}
-                rows={2}
-                placeholder="Type your answer"
-                autoFocus
-                className="mt-4 w-full resize-none rounded-2xl bg-white/15 px-4 py-3 text-[18px] font-semibold text-white outline-none placeholder:font-normal placeholder:text-white/55 focus:bg-white/20"
-              />
+              {/* The answers to tap come first: most people pick these */}
               {prompt.ideas.length > 0 && (
                 <>
-                  <p className="mt-3 text-[12px] font-semibold text-white/70">Pick as many as you like, or type your own</p>
-                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  <p className="mt-4 text-[12.5px] font-semibold text-white/75">Tap all that fit you</p>
+                  <div className="mt-2 grid grid-cols-2 gap-2">
                     {prompt.ideas.map((idea) => {
                       const on = picked.includes(idea);
                       return (
@@ -303,17 +372,49 @@ export function ThingsDeck({
                             setAnswer(next);
                           }}
                           className={clsx(
-                            "inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[13px] font-semibold transition active:scale-95",
-                            on ? "bg-white text-ink" : "bg-white/15 text-white",
+                            "flex min-h-[48px] items-center gap-2 rounded-2xl px-3.5 py-2.5 text-left text-[14.5px] leading-snug font-semibold transition active:scale-[0.97]",
+                            on ? "bg-white text-ink shadow-[0_8px_20px_-10px_rgba(0,0,0,0.5)]" : "bg-white/15 text-white",
                           )}
                         >
-                          {on && <Check size={13} strokeWidth={3} />}
+                          <span className={clsx("grid h-5 w-5 shrink-0 place-items-center rounded-full border-2", on ? "border-transparent bg-ink text-white" : "border-white/50")}>
+                            {on && <Check size={12} strokeWidth={3.5} />}
+                          </span>
                           {idea}
                         </button>
                       );
                     })}
                   </div>
+                  {!writing && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOwn(true);
+                        setTimeout(() => input.current?.focus(), 30);
+                      }}
+                      className="mt-2.5 inline-flex h-10 items-center gap-1.5 rounded-full px-1 text-[13.5px] font-semibold text-white/85"
+                    >
+                      <PenLine size={15} /> Write your own
+                    </button>
+                  )}
                 </>
+              )}
+              {writing && (
+                <textarea
+                  ref={input}
+                  value={answer}
+                  onChange={(e) => setAnswer(e.target.value.replace(/\n/g, " "))}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      void next();
+                    }
+                  }}
+                  maxLength={MAX_ANSWER}
+                  rows={2}
+                  placeholder={prompt.ideas.length ? "Or say it your way" : "Type your answer"}
+                  autoFocus={prompt.ideas.length === 0}
+                  className="mt-3 w-full resize-none rounded-2xl bg-white/15 px-4 py-3 text-[16px] font-semibold text-white outline-none placeholder:font-normal placeholder:text-white/55 focus:bg-white/20"
+                />
               )}
               {error && <p className="mt-3 rounded-xl bg-black/20 px-3 py-2 text-[13px] font-medium">{error}</p>}
 

@@ -80,7 +80,7 @@ const opts = (...labels: string[]): PactOption[] => labels.map((label, i) => ({ 
 export const ART_LIBRARY: { name: string; label: string }[] = [
   { name: "owambe", label: "Party" }, { name: "movie-suya", label: "Movie night" }, { name: "save", label: "Saving" }, { name: "spend", label: "Memories" },
   { name: "own-thing", label: "Rocket" }, { name: "company", label: "Office" }, { name: "talk-now", label: "Talking" }, { name: "cool-off", label: "Sleep on it" },
-  { name: "lagos", label: "Lagos" }, { name: "abroad", label: "Abroad" }, { name: "faith-big", label: "Glowing heart" }, { name: "faith-private", label: "Candle" },
+  { name: "lagos", label: "Lagos" }, { name: "abroad", label: "Abroad" }, { name: "faith-big", label: "Glowing heart" }, { name: "faith-private", label: "Candle" }, { name: "no-faith", label: "Open sky" },
   { name: "party-jollof", label: "Party jollof" }, { name: "home-jollof", label: "Home jollof" }, { name: "worship", label: "Worship" }, { name: "brunch", label: "Brunch" },
   { name: "asleep", label: "Asleep" }, { name: "side-hustle", label: "Side hustle" }, { name: "beach", label: "Beach" }, { name: "coffee", label: "Coffee" },
   { name: "tea", label: "Tea" }, { name: "dog", label: "Dog" }, { name: "cat", label: "Cat" }, { name: "early-bird", label: "Early bird" },
@@ -98,7 +98,7 @@ const SEED_ART: Record<string, string> = {
   "Building my own thing": "own-thing", "Rising in a great company": "company",
   "Talk it out right now": "talk-now", "Cool off, talk tomorrow": "cool-off",
   "Still in Lagos": "lagos", "Living abroad": "abroad",
-  "A big part of my life": "faith-big", "Personal and private": "faith-private",
+  "A big part of my life": "faith-big", "Personal and private": "faith-private", "Not religious": "no-faith",
   "Party jollof, smoky": "party-jollof", "Home jollof, mama's way": "home-jollof",
   "Anime marathon": "anime", "A good movie": "movie-suya",
   "Early bird": "early-bird", "Night owl": "night-owl",
@@ -119,7 +119,7 @@ export const SEED_QUESTIONS: Omit<PactQuestion, "id" | "position">[] = [
   { kind: "choose_many", title: "Your top artists", subtitle: "Pick up to 5", options: opts("Burna Boy", "Wizkid", "Davido", "Tems", "Asake", "Rema", "Ayra Starr", "Olamide", "Tiwa Savage", "Fireboy DML", "Omah Lay", "Seyi Vibez", "Kizz Daniel", "Adekunle Gold", "Simi", "Shallipopi"), min_pick: 1, max_pick: 5, weight: "normal" },
   { kind: "choose_one", title: "Sunday afternoon, you're…", subtitle: "", options: opts("At church or the mosque", "At brunch with friends", "Asleep, recovering", "Working on my side hustle", "At the beach"), min_pick: 1, max_pick: 1, weight: "normal" },
   { kind: "scale", title: "How social are you?", subtitle: "", options: opts("Homebody", "Life of the party"), min_pick: 1, max_pick: 1, weight: "normal" },
-  { kind: "this_or_that", title: "Faith", subtitle: "", options: opts("A big part of my life", "Personal and private"), min_pick: 1, max_pick: 1, weight: "dealbreaker" },
+  { kind: "choose_one", title: "Faith", subtitle: "", options: opts("A big part of my life", "Personal and private", "Not religious"), min_pick: 1, max_pick: 1, weight: "normal" },
   { kind: "this_or_that", title: "Jollof", subtitle: "", options: opts("Party jollof, smoky", "Home jollof, mama's way"), min_pick: 1, max_pick: 1, weight: "normal" },
   { kind: "this_or_that", title: "Anime or movies?", subtitle: "", options: opts("Anime marathon", "A good movie"), min_pick: 1, max_pick: 1, weight: "normal" },
   { kind: "choose_many", title: "Games you love", subtitle: "Pick up to 4", options: opts("EA FC (FIFA)", "Call of Duty", "PUBG or Free Fire", "Fortnite", "GTA", "Mortal Kombat", "Minecraft", "Chess", "Ludo", "Whot", "Scrabble", "Card games", "Board games with friends", "I don't really play games"), min_pick: 1, max_pick: 4, weight: "normal" },
@@ -131,7 +131,33 @@ export const SEED_QUESTIONS: Omit<PactQuestion, "id" | "position">[] = [
   { kind: "this_or_that", title: "Your free evening", subtitle: "", options: opts("Hitting the gym", "Chilling on the couch"), min_pick: 1, max_pick: 1, weight: "normal" },
   { kind: "this_or_that", title: "Dream holiday", subtitle: "", options: opts("A beach resort", "Exploring a new city"), min_pick: 1, max_pick: 1, weight: "normal" },
   { kind: "scale", title: "How competitive are you?", subtitle: "", options: opts("Just for fun", "I play to win"), min_pick: 1, max_pick: 1, weight: "normal" },
+  // The big questions: daring ones that show who someone really is
+  { kind: "choose_one", title: "Do you want children?", subtitle: "", options: opts("Yes, soon", "Yes, someday", "Not sure yet", "No, never"), min_pick: 1, max_pick: 1, weight: "strong" },
+  { kind: "choose_one", title: "Marriage", subtitle: "", options: opts("Can't wait", "Someday, with the right person", "Not for me"), min_pick: 1, max_pick: 1, weight: "strong" },
+  { kind: "choose_one", title: "Are you a feminist?", subtitle: "", options: opts("Yes, proudly", "I believe in equality, not the label", "No"), min_pick: 1, max_pick: 1, weight: "normal" },
+  { kind: "choose_one", title: "Who pays on the first date?", subtitle: "", options: opts("Whoever asked", "We split it", "The man", "Whoever earns more"), min_pick: 1, max_pick: 1, weight: "normal" },
+  { kind: "choose_one", title: "Bills in a relationship", subtitle: "", options: opts("Split 50/50", "Whoever earns more pays more", "The man provides"), min_pick: 1, max_pick: 1, weight: "normal" },
+  { kind: "choose_one", title: "Housework", subtitle: "", options: opts("Shared equally", "Whoever has the time", "Traditional roles"), min_pick: 1, max_pick: 1, weight: "normal" },
+  { kind: "choose_one", title: "After marriage, careers…", subtitle: "", options: opts("Both keep building", "One can stay home if they want", "We decide together"), min_pick: 1, max_pick: 1, weight: "normal" },
+  { kind: "choose_one", title: "Would you marry outside your culture or tribe?", subtitle: "", options: opts("Yes, love is love", "I'd prefer not to", "My family would decide"), min_pick: 1, max_pick: 1, weight: "normal" },
+  { kind: "choose_one", title: "Your family's say in who you date", subtitle: "", options: opts("They have the final say", "Their opinion matters, my choice", "My life, my choice"), min_pick: 1, max_pick: 1, weight: "normal" },
+  { kind: "this_or_that", title: "Your partner's phone", subtitle: "", options: opts("Open phones, no secrets", "Privacy is respect"), min_pick: 1, max_pick: 1, weight: "normal" },
+  { kind: "this_or_that", title: "Staying friends with an ex", subtitle: "", options: opts("Totally fine", "Red flag"), min_pick: 1, max_pick: 1, weight: "normal" },
+  { kind: "choose_one", title: "Dating someone who earns more than you", subtitle: "", options: opts("Love it", "Doesn't matter", "It would bother me"), min_pick: 1, max_pick: 1, weight: "normal" },
+  { kind: "this_or_that", title: "Living together before marriage", subtitle: "", options: opts("Yes, test the waters", "Not before the wedding"), min_pick: 1, max_pick: 1, weight: "normal" },
+  { kind: "choose_one", title: "Your partner's past relationships", subtitle: "", options: opts("The past is the past", "I'd like to know a little", "It matters a lot to me"), min_pick: 1, max_pick: 1, weight: "normal" },
+  { kind: "this_or_that", title: "Therapy", subtitle: "", options: opts("Everyone should try it", "Not for me"), min_pick: 1, max_pick: 1, weight: "normal" },
+  { kind: "choose_one", title: "Politics", subtitle: "", options: opts("I vote and care a lot", "I follow it quietly", "Not my thing"), min_pick: 1, max_pick: 1, weight: "normal" },
+  { kind: "this_or_that", title: "Long distance", subtitle: "", options: opts("It can work", "Never again"), min_pick: 1, max_pick: 1, weight: "normal" },
 ];
+
+/** What a new Link-Up starts with: a mix of light questions and big ones. The rest are ready-made for admins to add. */
+export const STARTER_TITLES = [
+  "Your ideal Friday night", "Do you want children?", "Money", "Are you a feminist?", "Who pays on the first date?", "When you disagree",
+  "Marriage", "Your partner's phone", "Five years from now", "Would you marry outside your culture or tribe?", "Faith", "Bills in a relationship",
+  "Staying friends with an ex", "How social are you?", "Your family's say in who you date", "Sunday afternoon, you're…",
+];
+export const STARTER_QUESTIONS = STARTER_TITLES.map((t) => SEED_QUESTIONS.find((q) => q.title === t)!);
 
 export const MAX_QUESTIONS = 25;
 

@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import clsx from "clsx";
 import { ChevronRight, Pencil, Plus, X } from "lucide-react";
 import { promptOf, splitOwn, type Thing } from "@/lib/things";
+import { ThingIcon } from "./ThingIcon";
 import { tapFeedback } from "@/components/ui/Button";
 
 /** A card's two colours, from its prompt: a bright one for the tint, a deep one for the words */
@@ -83,7 +84,8 @@ export function ThingCard({
       <span aria-hidden className={clsx("pointer-events-none absolute font-display leading-none font-bold", big ? "-top-2 right-4 text-[96px]" : "-top-1 right-3 text-[72px]")} style={{ color: `${light}33` }}>
         &rdquo;
       </span>
-      <p className={clsx("relative pr-10 font-semibold", big ? "text-[14px]" : "text-[13px]")} style={{ color: deep }}>
+      <p className={clsx("relative flex items-center gap-1.5 pr-10 font-semibold", big ? "text-[14px]" : "text-[13px]")} style={{ color: deep }}>
+        <ThingIcon name={own.q ? "message-circle" : p.icon} size={big ? 16 : 14} className="shrink-0" />
         {own.q ?? p.text}
       </p>
       <p
