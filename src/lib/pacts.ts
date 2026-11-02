@@ -131,7 +131,33 @@ export const SEED_QUESTIONS: Omit<PactQuestion, "id" | "position">[] = [
   { kind: "this_or_that", title: "Your free evening", subtitle: "", options: opts("Hitting the gym", "Chilling on the couch"), min_pick: 1, max_pick: 1, weight: "normal" },
   { kind: "this_or_that", title: "Dream holiday", subtitle: "", options: opts("A beach resort", "Exploring a new city"), min_pick: 1, max_pick: 1, weight: "normal" },
   { kind: "scale", title: "How competitive are you?", subtitle: "", options: opts("Just for fun", "I play to win"), min_pick: 1, max_pick: 1, weight: "normal" },
+  // The big questions: daring ones that show who someone really is
+  { kind: "choose_one", title: "Do you want children?", subtitle: "", options: opts("Yes, soon", "Yes, someday", "Not sure yet", "No, never"), min_pick: 1, max_pick: 1, weight: "strong" },
+  { kind: "choose_one", title: "Marriage", subtitle: "", options: opts("Can't wait", "Someday, with the right person", "Not for me"), min_pick: 1, max_pick: 1, weight: "strong" },
+  { kind: "choose_one", title: "Are you a feminist?", subtitle: "", options: opts("Yes, proudly", "I believe in equality, not the label", "No"), min_pick: 1, max_pick: 1, weight: "normal" },
+  { kind: "choose_one", title: "Who pays on the first date?", subtitle: "", options: opts("Whoever asked", "We split it", "The man", "Whoever earns more"), min_pick: 1, max_pick: 1, weight: "normal" },
+  { kind: "choose_one", title: "Bills in a relationship", subtitle: "", options: opts("Split 50/50", "Whoever earns more pays more", "The man provides"), min_pick: 1, max_pick: 1, weight: "normal" },
+  { kind: "choose_one", title: "Housework", subtitle: "", options: opts("Shared equally", "Whoever has the time", "Traditional roles"), min_pick: 1, max_pick: 1, weight: "normal" },
+  { kind: "choose_one", title: "After marriage, careers…", subtitle: "", options: opts("Both keep building", "One can stay home if they want", "We decide together"), min_pick: 1, max_pick: 1, weight: "normal" },
+  { kind: "choose_one", title: "Would you marry outside your culture or tribe?", subtitle: "", options: opts("Yes, love is love", "I'd prefer not to", "My family would decide"), min_pick: 1, max_pick: 1, weight: "normal" },
+  { kind: "choose_one", title: "Your family's say in who you date", subtitle: "", options: opts("They have the final say", "Their opinion matters, my choice", "My life, my choice"), min_pick: 1, max_pick: 1, weight: "normal" },
+  { kind: "this_or_that", title: "Your partner's phone", subtitle: "", options: opts("Open phones, no secrets", "Privacy is respect"), min_pick: 1, max_pick: 1, weight: "normal" },
+  { kind: "this_or_that", title: "Staying friends with an ex", subtitle: "", options: opts("Totally fine", "Red flag"), min_pick: 1, max_pick: 1, weight: "normal" },
+  { kind: "choose_one", title: "Dating someone who earns more than you", subtitle: "", options: opts("Love it", "Doesn't matter", "It would bother me"), min_pick: 1, max_pick: 1, weight: "normal" },
+  { kind: "this_or_that", title: "Living together before marriage", subtitle: "", options: opts("Yes, test the waters", "Not before the wedding"), min_pick: 1, max_pick: 1, weight: "normal" },
+  { kind: "choose_one", title: "Your partner's past relationships", subtitle: "", options: opts("The past is the past", "I'd like to know a little", "It matters a lot to me"), min_pick: 1, max_pick: 1, weight: "normal" },
+  { kind: "this_or_that", title: "Therapy", subtitle: "", options: opts("Everyone should try it", "Not for me"), min_pick: 1, max_pick: 1, weight: "normal" },
+  { kind: "choose_one", title: "Politics", subtitle: "", options: opts("I vote and care a lot", "I follow it quietly", "Not my thing"), min_pick: 1, max_pick: 1, weight: "normal" },
+  { kind: "this_or_that", title: "Long distance", subtitle: "", options: opts("It can work", "Never again"), min_pick: 1, max_pick: 1, weight: "normal" },
 ];
+
+/** What a new Link-Up starts with: a mix of light questions and big ones. The rest are ready-made for admins to add. */
+export const STARTER_TITLES = [
+  "Your ideal Friday night", "Do you want children?", "Money", "Are you a feminist?", "Who pays on the first date?", "When you disagree",
+  "Marriage", "Your partner's phone", "Five years from now", "Would you marry outside your culture or tribe?", "Faith", "Bills in a relationship",
+  "Staying friends with an ex", "How social are you?", "Your family's say in who you date", "Sunday afternoon, you're…",
+];
+export const STARTER_QUESTIONS = STARTER_TITLES.map((t) => SEED_QUESTIONS.find((q) => q.title === t)!);
 
 export const MAX_QUESTIONS = 25;
 

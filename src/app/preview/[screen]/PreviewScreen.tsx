@@ -104,7 +104,7 @@ import type { Meet, MeetChat, MeetList } from "@/lib/meets";
 import { MeetScreen } from "@/components/meets/MeetScreen";
 import { ExploreScreen } from "@/components/explore/ExploreScreen";
 import { MediaHelp } from "@/components/app/MediaHelp";
-import { SEED_QUESTIONS, type Pact, type PactQuestion } from "@/lib/pacts";
+import { STARTER_QUESTIONS, type Pact, type PactQuestion } from "@/lib/pacts";
 import { YouBoth } from "@/components/matches/YouBoth";
 import { PactFlow } from "@/components/pacts/PactFlow";
 import { PactCard } from "@/components/pacts/PactCard";
@@ -163,7 +163,7 @@ const demoPact: Pact = {
   logo_url: null, header_url: null, accent: "#f2c45a", intents: ["business", "friendship", "love", "spicy"], areas: ["Island", "Mainland"], email_domain: null,
   closes_at: new Date(now + 4 * 86400_000 + 5 * 3600_000).toISOString(), reveal_at: new Date(now + 6 * 86400_000).toISOString(), status: "live", matched_at: null,
 };
-const demoQs: PactQuestion[] = SEED_QUESTIONS.map((q, i) => ({ ...q, id: `q${i}`, position: i }));
+const demoQs: PactQuestion[] = STARTER_QUESTIONS.map((q, i) => ({ ...q, id: `q${i}`, position: i }));
 const pactWrap = (el: React.ReactNode) => <div className="min-h-dvh bg-[#140d24] text-white">{el}</div>;
 
 const session = (over: Partial<MasqueradeState> = {}): MasqueradeState => ({
