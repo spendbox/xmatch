@@ -170,6 +170,48 @@ export function MasqueradeRoom({
   const [askUnmask, setAskUnmask] = useState(false);
   const [unmasked, setUnmasked] = useState(initial.me.vote === true);
   const [voteError, setVoteError] = useState<string | null>(null);
+  // Opened from "X unmasked in your chat": ask you to unmask straight away (one tap to connect)
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has("unmask")) return;
+    url.searchParams.delete("unmask");
+    window.history.replaceState(null, "", url.pathname + url.search);
+    const canUnmask = initial.status === "lapsed" || (initial.status === "active" && initial.hourly);
+    if (canUnmask && initial.me.vote !== true) setAskUnmask(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  // They've unmasked (the chat notes it), so unmasking now connects you
+  const theyUnmasked = useMemo(
+    () => messages.some((m) => m.kind === "system" && !!m.body && m.body.startsWith(`${state.them.alias} unmasked`)),
+    [messages, state.them.alias],
+  );
+  // A nudge once you've both been chatting a while (dismiss it and it comes back after 30 more messages)
+  const nudgeKey = `dp_unmask_nudge_${initial.id}`;
+  const said = useMemo(() => {
+    let me = 0;
+    let them = 0;
+    for (const m of messages) {
+      if (!m.sender_id) continue;
+      if (m.sender_id === state.me.id) me++;
+      else them++;
+    }
+    return { me, them, total: me + them };
+  }, [messages, state.me.id]);
+  const [nudgeOff, setNudgeOff] = useState<number | null>(() => {
+    try {
+      const v = localStorage.getItem(nudgeKey);
+      return v ? Number(v) : null;
+    } catch {
+      return null;
+    }
+  });
+  const nudgeNow = said.me >= 5 && said.them >= 5 && (nudgeOff == null || said.total >= nudgeOff + 30);
+  const hideNudge = () => {
+    setNudgeOff(said.total);
+    try {
+      localStorage.setItem(nudgeKey, String(said.total));
+    } catch {}
+  };
   const prices = usePrices();
   const { wallet, refresh: refreshWallet } = useWallet(demo ? null : initial.me.id);
 
@@ -644,8 +686,33 @@ export function MasqueradeRoom({
         demo={demo ? { total: messages.length + 40, since: null, items: messages.map((m) => [m.kind ?? "text", m.body] as [string, string]), unmasked: false, names: null } : undefined}
       />
 
-      {/* After someone chooses to unmask: a small note (the button itself is in the header) */}
-      {state.hourly && !lapsed && (iUnmasked || them.has_voted) && (
+      {/* Unmasking: they unmasked (one tap to connect), you've chatted a while (a nudge), or you chose to */}
+      {state.hourly && !lapsed && !iUnmasked && theyUnmasked ? (
+        <div className="flex items-center gap-2.5 border-b border-gold/40 bg-gold-soft px-4 py-2.5">
+          <Handshake size={18} className="shrink-0 text-[#8a5a00]" />
+          <p className="min-w-0 flex-1 text-[13.5px] leading-snug">
+            <span className="block font-bold text-ink">{theirName} unmasked!</span>
+            <span className="block text-ink-soft">Unmask too and you&apos;re connected.</span>
+          </p>
+          <button type="button" onClick={() => setAskUnmask(true)} className="h-10 shrink-0 rounded-full bg-ink px-4 text-[13.5px] font-bold text-white">
+            Unmask too
+          </button>
+        </div>
+      ) : state.hourly && !lapsed && !iUnmasked && chatting && nudgeNow ? (
+        <div className="flex items-center gap-2.5 border-b border-line bg-brand-soft/70 px-4 py-2.5">
+          <Handshake size={18} className="shrink-0 text-brand" />
+          <p className="min-w-0 flex-1 text-[13.5px] leading-snug">
+            <span className="block font-bold text-ink">You two are getting on.</span>
+            <span className="block text-muted">Ready to see who {theirName} is? Unmask, and if they do too, you&apos;re connected.</span>
+          </p>
+          <button type="button" onClick={() => setAskUnmask(true)} className="h-10 shrink-0 rounded-full bg-brand px-4 text-[13.5px] font-bold text-white">
+            {mood.unmask}
+          </button>
+          <button type="button" onClick={hideNudge} aria-label="Not now" className="-mr-1 grid h-9 w-8 shrink-0 place-items-center text-muted">
+            <X size={16} />
+          </button>
+        </div>
+      ) : state.hourly && !lapsed && (iUnmasked || them.has_voted) ? (
         <div className="flex items-center gap-2.5 border-b border-line bg-brand-soft/60 px-4 py-2">
           <Handshake size={16} className="shrink-0 text-brand" />
           <p className="min-w-0 flex-1 text-[13px] leading-snug">
@@ -662,7 +729,7 @@ export function MasqueradeRoom({
             )}
           </p>
         </div>
-      )}
+      ) : null}
 
       {/* Messages */}
       <div className="relative flex min-h-0 flex-1 flex-col" data-bg={bg !== "classic" ? "" : undefined} data-bg-dark={chatBgInfo(bg).dark ? "" : undefined}>
@@ -821,7 +888,11 @@ export function MasqueradeRoom({
         open={askUnmask}
         onClose={() => setAskUnmask(false)}
         title={`Unmask to ${theirName}?`}
-        subtitle={`If ${theirName} unmasks too, you'll both see each other's name and photos, and the chat moves to Chats.`}
+        subtitle={
+          theyUnmasked
+            ? `${theirName} has already unmasked. Unmask too and you're connected straight away: you'll both see each other's name and photos.`
+            : `If ${theirName} unmasks too, you'll both see each other's name and photos, and the chat moves to Chats.`
+        }
         icon={<MaskIcon className="w-6" eyes="#5b3fd9" />}
         footer={
           <div className="space-y-2">

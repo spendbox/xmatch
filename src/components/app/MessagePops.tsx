@@ -155,7 +155,10 @@ export function MessagePops({ userId, demo }: { userId: string; demo?: { banner?
     const known = p.kind === "masked" ? paid[p.id] : undefined;
     return known?.name ? { ...p, name: known.name, photo: known.photo, personId: known.id } : p;
   };
+  // "Coral Heron unmasked. Unmask too to connect": open the chat with "Unmask?" up, like the notification
+  const unmaskPop = (p: Pop) => p.kind === "masked" && /unmasked\. Unmask too/i.test(p.text);
   const read = (p: Pop) => {
+    if (unmaskPop(p)) return go(p);
     setBanner(null);
     setBubbles((list) => list.filter((b) => b.key !== p.key));
     setOpen(p);
@@ -163,7 +166,7 @@ export function MessagePops({ userId, demo }: { userId: string; demo?: { banner?
   const go = (p: Pop) => {
     setBanner(null);
     setBubbles((list) => list.filter((b) => b.key !== p.key));
-    router.push(p.href);
+    router.push(unmaskPop(p) ? `${p.href}?unmask=1` : p.href);
   };
 
   // The chat open in the pop-up: the same object until a different chat opens, so typing and
