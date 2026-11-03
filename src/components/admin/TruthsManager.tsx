@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { Eye, EyeOff, Mic, Pause, Pencil, Play, Plus, Search, Trash2 } from "lucide-react";
 import { TRUTH_KINDS, type TruthRow, type TruthStats } from "@/lib/truths";
-import { deleteTruth, hideTruthVoice, saveTruth, setTruthHour, truthVoices, type TruthVoiceRow } from "@/app/admin/(panel)/truths/actions";
+import { deleteTruth, hideTruthVoice, saveTruth, setTruthHour, setTruthPush, truthVoices, type TruthVoiceRow } from "@/app/admin/(panel)/truths/actions";
 import { voiceUrl } from "@/lib/voiceDisguise";
 import { playIntro, usePlayingIntro } from "@/lib/voiceIntro";
 import { AdminTitle } from "./AdminShell";
@@ -25,7 +25,7 @@ const fmtDay = (d: string) => new Date(d + "T12:00:00Z").toLocaleDateString("en-
 const pct = (n: number, total: number) => (total ? Math.round((n / total) * 100) : 0);
 
 /** Admin: the daily Truths. See what's coming, what people said, and change any of them */
-export function TruthsManager({ rows, stats, today, hour, missing }: { rows: TruthRow[]; stats: TruthStats; today: string; hour: number; missing?: boolean }) {
+export function TruthsManager({ rows, stats, today, hour, push, missing }: { rows: TruthRow[]; stats: TruthStats; today: string; hour: number; push?: boolean | null; missing?: boolean }) {
   const router = useRouter();
   const [, start] = useTransition();
   const [tab, setTab] = useState<Tab>("upcoming");
@@ -90,6 +90,7 @@ export function TruthsManager({ rows, stats, today, hour, missing }: { rows: Tru
           <p className={clsx("text-[28px] font-extrabold", daysLeft < 30 ? "text-chili" : "text-ink")}>{daysLeft}</p>
           <p className="text-[12.5px] text-muted">{daysLeft < 30 ? "Add more soon, they're running out." : "That's about " + Math.floor(daysLeft / 30) + " months."}</p>
           <HourPicker hour={hour} onSaved={refresh} />
+          <PushToggle on={push ?? null} onSaved={refresh} />
         </div>
       </div>
 
@@ -252,6 +253,29 @@ function Voices({ truth }: { truth: TruthRow }) {
       })}
       {!list.length && <li className="text-[13px] text-muted">No voice answers.</li>}
     </ul>
+  );
+}
+
+/** The "Today's Truth is up" notification, sent when each new Truth starts */
+function PushToggle({ on, onSaved }: { on: boolean | null; onSaved: () => void }) {
+  const [v, setV] = useState(on);
+  if (v === null) return <p className="mt-2 text-[12px] text-muted">Run update 116 to send a notification when each Truth goes up.</p>;
+  return (
+    <label className="mt-2 flex items-center gap-2 text-[12.5px] font-semibold text-muted">
+      <input
+        type="checkbox"
+        checked={v}
+        onChange={async (e) => {
+          const next = e.target.checked;
+          setV(next);
+          const r = await setTruthPush(next);
+          if (r.error) setV(!next);
+          else onSaved();
+        }}
+        className="h-5 w-5 accent-brand"
+      />
+      Send a notification when it goes up
+    </label>
   );
 }
 

@@ -101,6 +101,15 @@ export function HomeScreen({
   const [meetOpen, setMeetOpen] = useState(demoSheet === "meet");
   const { truth, setTruth } = useTruth(demoTruth ? DEMO_TRUTH(demoTruth === "done" || demoTruth === "results") : demoPeople ? null : undefined);
   const [truthOpen, setTruthOpen] = useState(demoTruth === "open" || demoTruth === "results");
+  // Opened from the "Today's Truth is up" notification: show it straight away
+  useEffect(() => {
+    if (demoTruth || !truth) return;
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has("truth")) return;
+    url.searchParams.delete("truth");
+    window.history.replaceState(null, "", url.pathname + url.search);
+    setTruthOpen(true);
+  }, [demoTruth, truth]);
   const backToPlay = useRef(false);
   // Opened from Play's "Change": go straight to your Masquerade settings
   useEffect(() => {

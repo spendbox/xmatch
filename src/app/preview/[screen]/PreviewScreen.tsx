@@ -453,7 +453,7 @@ function ScreenBody({ screen }: { screen: string }) {
       ];
       return (
         <AdminShell>
-          <TruthsManager rows={rows} today="2026-11-03" hour={20} stats={{ "1": { total: 2890, voices: 140, counts: { a: 1850, b: 1040 } }, "2": { total: 3412, voices: 212, counts: { a: 2184, b: 1228 } } }} />
+          <TruthsManager rows={rows} today="2026-11-03" hour={20} push stats={{ "1": { total: 2890, voices: 140, counts: { a: 1850, b: 1040 } }, "2": { total: 3412, voices: 212, counts: { a: 2184, b: 1228 } } }} />
         </AdminShell>
       );
     }

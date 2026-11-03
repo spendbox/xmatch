@@ -101,3 +101,12 @@ export async function setTruthHour(hour: number): Promise<{ error?: string }> {
   revalidatePath("/admin/truths");
   return {};
 }
+
+/** Turn the "Today's Truth is up" notification on or off */
+export async function setTruthPush(on: boolean): Promise<{ error?: string }> {
+  await requireAdmin();
+  const { error } = await createAdminClient().from("app_settings").upsert({ key: "truths_push", value: on ? 1 : 0, updated_at: new Date().toISOString() });
+  if (error) return { error: "Couldn't save." };
+  revalidatePath("/admin/truths");
+  return {};
+}
