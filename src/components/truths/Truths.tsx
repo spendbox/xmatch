@@ -21,6 +21,7 @@ const STYLES: { id: VoiceStyle; label: string }[] = [
   { id: "deep", label: "Deep" },
   { id: "light", label: "Light" },
   { id: "robot", label: "Robot" },
+  { id: "normal", label: "Real voice" },
 ];
 
 /** Today's Truth: loads it, and keeps it fresh when it changes over */
@@ -212,8 +213,8 @@ function VoiceAnswer({ onClip, clip }: { onClip: (c: { blob: Blob; seconds: numb
           </button>
         )}
         <div className="min-w-0 flex-1">
-          <p className="text-[15px] font-bold">{voice.recording ? `Recording… ${formatDuration(voice.seconds)}` : clip ? `Your voice answer · ${formatDuration(clip.seconds)}` : "Say why, in your masked voice"}</p>
-          <p className="text-[12.5px] text-white/65">{voice.recording ? `Tap to stop (up to ${MAX} seconds)` : "Optional. Your voice is disguised before it leaves your phone."}</p>
+          <p className="text-[15px] font-bold">{voice.recording ? `Recording… ${formatDuration(voice.seconds)}` : clip ? `Your voice answer · ${formatDuration(clip.seconds)}` : style === "normal" ? "Say why, in your own voice" : "Say why, in your masked voice"}</p>
+          <p className="text-[12.5px] text-white/65">{voice.recording ? `Tap to stop (up to ${MAX} seconds)` : style === "normal" ? "Optional. People will hear your real voice, but still not your name or face." : "Optional. Your voice is disguised before it leaves your phone."}</p>
         </div>
         {clip && !voice.recording && (
           <button
@@ -232,7 +233,7 @@ function VoiceAnswer({ onClip, clip }: { onClip: (c: { blob: Blob; seconds: numb
           </button>
         )}
       </div>
-      <div className="mt-3 flex gap-2">
+      <div className="mt-3 flex flex-wrap gap-2">
         {STYLES.map((s) => (
           <button
             key={s.id}
