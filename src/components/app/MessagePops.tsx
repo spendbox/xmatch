@@ -361,6 +361,9 @@ function MiniChat({ p, myId, demo, onClose, onOpenChat }: { p: Pop | null; myId:
   const panel = useKeyboardSafe<HTMLDivElement>();
   const chatKey = p?.key ?? null;
   const ask = useRef(0);
+  // The newest message we've marked as read (marking it changes the chat, which would reload this
+  // pop-up, which would mark it again: only mark when something new has come in)
+  const marked = useRef<number | string | null>(null);
 
   const load = useCallback(async () => {
     if (!p || demo) return;
@@ -372,15 +375,24 @@ function MiniChat({ p, myId, demo, onClose, onOpenChat }: { p: Pop | null; myId:
     const { data } = await q.order("id", { ascending: false }).limit(20);
     // A newer load (or a different chat) has already answered
     if (n !== ask.current) return;
-    if (data) {
-      const fresh = (data as ChatMessage[]).reverse();
-      // Keep anything you've just sent that the server hasn't shown yet
-      setMessages((l) => [...fresh, ...l.filter((m) => m.pending && !fresh.some((f) => f.sender_id === myId && f.body === m.body))]);
+    const fresh = data ? (data as ChatMessage[]).reverse() : null;
+    if (fresh) {
+      // Keep anything you've just sent that the server hasn't shown yet; leave the list alone when
+      // nothing changed, so it doesn't redraw or jump
+      setMessages((l) => {
+        const next = [...fresh, ...l.filter((m) => m.pending && !fresh.some((f) => f.sender_id === myId && f.body === m.body))];
+        const sig = (x: ChatMessage[]) => x.map((m) => `${m.id}:${m.pending ? 1 : 0}:${m.body}`).join("|");
+        return sig(next) === sig(l) ? l : next;
+      });
     }
     setLoaded(true);
-    // Reading it here counts as reading it
-    await (p.kind === "match" ? supabase.rpc("mark_chat_read", { p_match: p.id }) : supabase.rpc("mark_masked_read", { p_session: p.id }));
-    refreshMenuBadges();
+    // Reading it here counts as reading it: once per new message from them
+    const theirs = fresh?.filter((m) => m.sender_id && m.sender_id !== myId).at(-1)?.id ?? null;
+    if (theirs != null && theirs !== marked.current) {
+      marked.current = theirs;
+      await (p.kind === "match" ? supabase.rpc("mark_chat_read", { p_match: p.id }) : supabase.rpc("mark_masked_read", { p_session: p.id }));
+      refreshMenuBadges();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase, chatKey, demo, myId]);
 
@@ -388,6 +400,7 @@ function MiniChat({ p, myId, demo, onClose, onOpenChat }: { p: Pop | null; myId:
   useEffect(() => {
     setText("");
     setError(null);
+    marked.current = null;
     if (!demo) {
       setMessages([]);
       setLoaded(false);
@@ -411,11 +424,12 @@ function MiniChat({ p, myId, demo, onClose, onOpenChat }: { p: Pop | null; myId:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatKey, demo]);
 
-  // Keep the newest message in view
+  // Keep the newest message in view (only when a new one arrives, not on every refresh)
+  const newest = messages.at(-1)?.id ?? null;
   useEffect(() => {
     const el = list.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [messages]);
+  }, [newest, loaded]);
 
   // Close with Escape
   useEffect(() => {

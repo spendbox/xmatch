@@ -4,15 +4,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { Check, ChevronRight, Flame, Hand, Lock, Mic, Pause, Play, RotateCcw, Square, X } from "lucide-react";
+import { Check, ChevronRight, Flame, Hand, Lock, Mic, Pause, Play, RotateCcw, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { tapFeedback, Spinner } from "@/components/ui/Button";
 import { MaskIcon } from "@/components/ui/MaskIcon";
+import { MaskedVoiceSheet } from "@/components/chat/MaskedVoiceSheet";
 import { nameColor } from "@/lib/eventSpace";
 import { notify } from "@/lib/pushClient";
 import { formatDuration } from "@/lib/chatMedia";
-import { useVoiceRecorder } from "@/components/chat/useVoiceRecorder";
-import { decodeRecording, disguise, voiceUrl, type VoiceStyle } from "@/lib/voiceDisguise";
+import { voiceUrl, type VoiceStyle } from "@/lib/voiceDisguise";
 import { playIntro, stopIntro, usePlayingIntro, usePlayProgress } from "@/lib/voiceIntro";
 import { shares, timeLeft, type Truth, type TruthVoice } from "@/lib/truths";
 
@@ -152,111 +152,7 @@ export function TruthBubble({ truth, onOpen }: { truth: Truth; onOpen: () => voi
   );
 }
 
-/** Record a voice answer, disguised on the phone */
-function VoiceAnswer({ onClip, clip, onBusy }: { onClip: (c: { blob: Blob; seconds: number; url: string; style: VoiceStyle } | null) => void; clip: { url: string; seconds: number; style: VoiceStyle } | null; onBusy?: (busy: boolean) => void }) {
-  const [raw, setRaw] = useState<AudioBuffer | null>(null);
-  const [style, setStyle] = useState<VoiceStyle>(clip?.style ?? "deep");
-  const [error, setError] = useState<string | null>(null);
-  const [working, setWorking] = useState(false);
-
-  async function took(r: { blob: Blob; seconds: number } | null) {
-    if (!r || r.seconds < 1) return setError("That was too short. Try again.");
-    setWorking(true);
-    try {
-      setRaw(await decodeRecording(r.blob));
-    } catch {
-      setWorking(false);
-      setError("Couldn't read that recording. Try again.");
-    }
-  }
-  // Stops by itself at exactly 30 seconds and keeps what you said
-  const voice = useVoiceRecorder({ maxSeconds: MAX, onLimit: (r) => void took(r) });
-  const stop = async () => took(await voice.stop());
-
-  // Apply the voice you picked (again when you switch voices)
-  useEffect(() => {
-    if (!raw) return;
-    let live = true;
-    stopIntro();
-    setWorking(true);
-    disguise(raw, style, MAX)
-      .then((r) => {
-        if (!live) return;
-        // Length is how long you talked (a deep voice plays a little slower)
-        onClip({ blob: r.blob, seconds: Math.max(1, Math.min(MAX, Math.round(raw.duration))), url: URL.createObjectURL(r.blob), style });
-      })
-      .catch(() => live && setError("Couldn't change your voice. Try another one."))
-      .finally(() => live && setWorking(false));
-    return () => {
-      live = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [raw, style]);
-
-  const left = MAX - voice.seconds;
-  // The Spill button waits while you're recording or your voice is being got ready
-  const busyNow = voice.recording || working;
-  useEffect(() => onBusy?.(busyNow), [busyNow, onBusy]);
-  useEffect(() => () => onBusy?.(false), [onBusy]);
-
-  return (
-    <div className="rounded-[22px] border border-dashed border-white/25 bg-white/[0.06] p-4">
-      <div className="flex items-center gap-3">
-        {(
-          <button
-            type="button"
-            onClick={() => {
-              tapFeedback();
-              setError(null);
-              stopIntro();
-              if (voice.recording) void stop();
-              else {
-                setRaw(null);
-                onClip(null);
-                void voice.start();
-              }
-            }}
-            className={clsx("relative grid h-12 w-12 shrink-0 place-items-center rounded-full text-white", voice.recording ? "bg-chili" : "bg-[#ff6b8a]")}
-            aria-label={voice.recording ? "Stop recording" : clip ? "Record again" : "Record a voice answer"}
-          >
-            {voice.recording && <span aria-hidden className="absolute inset-0 animate-ping rounded-full bg-chili/40" />}
-            {voice.recording ? <Square size={18} fill="currentColor" /> : clip ? <RotateCcw size={19} /> : <Mic size={22} />}
-          </button>
-        )}
-        <div className="min-w-0 flex-1">
-          <p className="text-[15px] font-bold">{voice.recording ? `Recording… ${formatDuration(voice.seconds)} / ${formatDuration(MAX)}` : working ? "Getting your voice ready…" : clip ? `Your voice answer · ${formatDuration(clip.seconds)}` : style === "normal" ? "Say why, in your own voice" : "Say why, in your masked voice"}</p>
-          <p className="text-[12.5px] text-white/65">{voice.recording ? (left <= 5 ? `Stops in ${left}…` : `Tap to stop. It stops by itself at ${MAX} seconds.`) : clip && !working ? "Listen to it below. Tap to record again." : style === "normal" ? "Optional. People will hear your real voice, but still not your name or face." : "Optional. Your voice is disguised before it leaves your phone."}</p>
-        </div>
-      </div>
-      {clip && !voice.recording && !working && (
-        <div className="mt-3 rounded-2xl bg-white/[0.07] px-2.5 py-2">
-          <VoicePlayer id="truth-mine" src={clip.url} seconds={clip.seconds} seed={3} />
-        </div>
-      )}
-      {voice.recording && (
-        // Fills up over the 30 seconds
-        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/15" aria-hidden>
-          <div className="h-full rounded-full bg-[#ff6b8a]" style={{ width: "100%", transformOrigin: "left", animation: `dp-voice-fill ${MAX}s linear forwards` }} />
-          <style>{`@keyframes dp-voice-fill{from{transform:scaleX(0)}to{transform:scaleX(1)}}`}</style>
-        </div>
-      )}
-      <div className="mt-3 flex flex-wrap gap-2">
-        {STYLES.map((s) => (
-          <button
-            key={s.id}
-            type="button"
-            onClick={() => setStyle(s.id)}
-            aria-pressed={style === s.id}
-            className={clsx("h-9 rounded-full px-3.5 text-[12.5px] font-bold transition", style === s.id ? "bg-white text-[#1a1233]" : "bg-white/10 text-white")}
-          >
-            {s.label}
-          </button>
-        ))}
-      </div>
-      {(error || voice.error) && <p className="mt-2 text-[12.5px] font-semibold text-[#ffb4b4]">{error ?? voice.error}</p>}
-    </div>
-  );
-}
+type Clip = { blob: Blob; seconds: number; url: string; style: VoiceStyle };
 
 /** Upload a voice answer; returns its key */
 async function upload(blob: Blob) {
@@ -354,14 +250,15 @@ export function TruthSheet({ truth, open, onClose, onChange, demo }: { truth: Tr
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [pick, setPick] = useState<string | null>(null);
-  const [clip, setClip] = useState<{ blob: Blob; seconds: number; url: string; style: VoiceStyle } | null>(null);
+  const [clip, setClip] = useState<Clip | null>(null);
+  // The voice recorder (the same one as voice notes in chats): to attach before spilling, or to
+  // add / replace your voice after
+  const [recorder, setRecorder] = useState<"attach" | "replace" | null>(null);
   const [busy, setBusy] = useState(false);
-  const [voiceBusy, setVoiceBusy] = useState(false);
   // Your voice as you just posted it, so it plays straight away (before the upload is everywhere)
   const [posted, setPosted] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<"same" | "other">("same");
-  const [adding, setAdding] = useState(false);
   const [waving, setWaving] = useState<number | null>(null);
   const [mutual, setMutual] = useState<{ alias: string; href: string } | null>(null);
 
@@ -370,9 +267,8 @@ export function TruthSheet({ truth, open, onClose, onChange, demo }: { truth: Tr
     if (!open) return;
     setPick(null);
     setClip(null);
-    setVoiceBusy(false);
     setError(null);
-    setAdding(false);
+    setRecorder(null);
     setMutual(null);
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -382,29 +278,32 @@ export function TruthSheet({ truth, open, onClose, onChange, demo }: { truth: Tr
     };
   }, [open]);
 
-  async function send(choice: string, withVoice: boolean) {
-    if (busy) return;
+  /** Save your answer (and voice, if any). Returns what went wrong, or null */
+  async function send(choice: string, voice: Clip | null): Promise<string | null> {
+    if (busy) return null;
     tapFeedback();
     setBusy(true);
     setError(null);
     try {
       if (demo) {
-        const next = { ...truth, mine: { choice, alias: "Golden Fox", key: withVoice && clip ? "demo" : truth.mine?.key ?? null, seconds: clip?.seconds ?? truth.mine?.seconds ?? null, listens: 0 } };
+        const next = { ...truth, mine: { choice, alias: "Golden Fox", key: voice ? "demo" : truth.mine?.key ?? null, seconds: voice?.seconds ?? truth.mine?.seconds ?? null, listens: 0 } };
         onChange({ ...next, streak: truth.streak + (truth.mine ? 0 : 1), results: next.results ?? { counts: { a: 2184, b: 1228 }, women: { a: 1120, b: 460 }, men: { a: 1064, b: 768 }, waves: 0, voices: [] } });
-        if (withVoice && clip) setPosted(clip.url);
-        setAdding(false);
-        return;
+        if (voice) setPosted(voice.url);
+        setClip(null);
+        return null;
       }
-      const key = withVoice && clip ? await upload(clip.blob) : null;
-      const { data, error: err } = await supabase.rpc("answer_truth", { p_truth: truth.id, p_choice: choice, p_key: key, p_seconds: clip ? Math.min(MAX, clip.seconds) : null, p_style: clip?.style ?? null });
+      const key = voice ? await upload(voice.blob) : null;
+      const { data, error: err } = await supabase.rpc("answer_truth", { p_truth: truth.id, p_choice: choice, p_key: key, p_seconds: voice ? Math.min(MAX, voice.seconds) : null, p_style: voice?.style ?? null });
       if (err) throw new Error(err.message.replace(/^.*?: /, "").replace(/\bTruth\b/g, "Spill") || "Couldn't save your answer. Try again.");
       onChange(data as Truth);
       // Only once it's saved: play what you just posted straight away
-      if (withVoice && clip) setPosted(clip.url);
+      if (voice) setPosted(voice.url);
       setClip(null);
-      setAdding(false);
+      return null;
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't save your answer. Try again.");
+      const msg = e instanceof Error ? e.message : "Couldn't save your answer. Try again.";
+      setError(msg);
+      return msg;
     } finally {
       setBusy(false);
     }
@@ -502,11 +401,39 @@ export function TruthSheet({ truth, open, onClose, onChange, demo }: { truth: Tr
               })}
             </div>
             <div className="mt-5">
-              <VoiceAnswer clip={clip} onClip={setClip} onBusy={setVoiceBusy} />
+              {clip ? (
+                <div className="rounded-[20px] bg-white/[0.08] p-3.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[14px] font-extrabold">Your voice answer</p>
+                    <div className="flex gap-1.5">
+                      <button type="button" onClick={() => { stopIntro(); setRecorder("attach"); }} className="inline-flex h-8 items-center gap-1 rounded-full bg-white/10 px-3 text-[12.5px] font-bold">
+                        <RotateCcw size={13} /> Redo
+                      </button>
+                      <button type="button" onClick={() => { stopIntro(); setClip(null); }} aria-label="Remove your voice" className="grid h-8 w-8 place-items-center rounded-full bg-white/10">
+                        <X size={14} />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="mt-2">
+                    <VoicePlayer id="truth-mine" src={clip.url} seconds={clip.seconds} seed={3} />
+                  </div>
+                </div>
+              ) : (
+                <button type="button" onClick={() => { tapFeedback(); setRecorder("attach"); }} className="flex w-full items-center gap-3 rounded-[20px] border border-dashed border-white/25 bg-white/[0.06] p-3.5 text-left">
+                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#ff6b8a]">
+                    <Mic size={20} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[15px] font-bold">Say why, in your voice</span>
+                    <span className="block text-[12.5px] text-white/65">Optional. Up to {MAX} seconds, disguised on your phone if you like.</span>
+                  </span>
+                  <ChevronRight size={17} className="shrink-0 text-white/60" />
+                </button>
+              )}
             </div>
             {error && <p className="mt-3 rounded-xl bg-black/25 px-3 py-2 text-[13px] font-medium text-[#ffd0d0]">{error}</p>}
             <div className="mt-auto pt-6">
-              <button type="button" onClick={() => pick && void send(pick, !!clip)} disabled={!pick || busy || voiceBusy} className="inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gold text-[16.5px] font-extrabold text-[#1a1233] transition active:scale-[0.99] disabled:opacity-50">
+              <button type="button" onClick={() => pick && void send(pick, clip)} disabled={!pick || busy} className="inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gold text-[16.5px] font-extrabold text-[#1a1233] transition active:scale-[0.99] disabled:opacity-50">
                 {busy ? <Spinner className="h-4 w-4" /> : null} Spill it and see everyone
               </button>
               <p className="mt-2.5 text-center text-[12.5px] text-white/55">Only you can see your answers, in My Spills on your Profile.</p>
@@ -540,27 +467,7 @@ export function TruthSheet({ truth, open, onClose, onChange, demo }: { truth: Tr
             </div>
 
             {/* Your voice answer: hear it, see how it's doing, record it again; or add one */}
-            {adding ? (
-              <div className="mt-3">
-                <VoiceAnswer clip={clip} onClip={setClip} onBusy={setVoiceBusy} />
-                <div className="mt-2.5 flex gap-2">
-                  <button type="button" onClick={() => void send(mine.choice, true)} disabled={!clip || busy || voiceBusy} className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-gold text-[15px] font-extrabold text-[#1a1233] disabled:opacity-50">
-                    {busy ? <Spinner className="h-4 w-4" /> : null} {mine.key ? "Replace my voice answer" : "Share my voice answer"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      stopIntro();
-                      setClip(null);
-                      setAdding(false);
-                    }}
-                    className="h-12 rounded-2xl bg-white/10 px-4 text-[14px] font-bold"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            ) : mine.key ? (
+            {mine.key ? (
               <div className="mt-3 rounded-[20px] border border-gold/40 bg-gold/[0.12] p-3.5">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-[14px] font-extrabold text-[#ffe2a8]">Your voice answer</p>
@@ -569,7 +476,7 @@ export function TruthSheet({ truth, open, onClose, onChange, demo }: { truth: Tr
                     onClick={() => {
                       tapFeedback();
                       stopIntro();
-                      setAdding(true);
+                      setRecorder("replace");
                     }}
                     className="inline-flex h-8 items-center gap-1 rounded-full bg-white/10 px-3 text-[12.5px] font-bold"
                   >
@@ -586,7 +493,7 @@ export function TruthSheet({ truth, open, onClose, onChange, demo }: { truth: Tr
                 </p>
               </div>
             ) : (
-              <button type="button" onClick={() => setAdding(true)} className="mt-3 flex w-full items-center gap-3 rounded-[18px] bg-white/[0.08] px-3.5 py-3 text-left">
+              <button type="button" onClick={() => setRecorder("replace")} className="mt-3 flex w-full items-center gap-3 rounded-[18px] bg-white/[0.08] px-3.5 py-3 text-left">
                 <span className="grid h-9 w-9 place-items-center rounded-full bg-[#ff6b8a]">
                   <Mic size={17} />
                 </span>
@@ -618,6 +525,26 @@ export function TruthSheet({ truth, open, onClose, onChange, demo }: { truth: Tr
           </>
         )}
       </div>
+      {/* Record first, then pick a voice and listen: the same recorder as voice notes in chats */}
+      <MaskedVoiceSheet
+        open={!!recorder}
+        onClose={() => setRecorder(null)}
+        sessionId=""
+        layer="z-[90]"
+        maxSeconds={MAX}
+        wavOnly
+        title="Your voice answer"
+        subtitle={`Say why you picked it, up to ${MAX} seconds. Disguise your voice, or pick Normal to use your own. People only see a mask name.`}
+        sendLabel={recorder === "replace" ? (mine?.key ? "Replace" : "Share") : "Use this"}
+        onSendBlob={async (blob, seconds, style) => {
+          const c: Clip = { blob, seconds: Math.max(1, Math.min(MAX, seconds)), url: URL.createObjectURL(blob), style };
+          if (recorder === "attach") {
+            setClip(c);
+            return null;
+          }
+          return mine ? await send(mine.choice, c) : null;
+        }}
+      />
     </div>,
     document.body,
   );
