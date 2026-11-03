@@ -44,13 +44,17 @@ export async function decodeRecording(blob: Blob): Promise<AudioBuffer> {
   }
 }
 
-/** The disguised voice, as a WAV file, and how long it is */
-export async function disguise(src: AudioBuffer, style: VoiceStyle): Promise<{ blob: Blob; seconds: number }> {
+/**
+ * The disguised voice, as a WAV file, and how long it is.
+ * limit: keep only the first this-many seconds of what was said.
+ */
+export async function disguise(src: AudioBuffer, style: VoiceStyle, limit?: number): Promise<{ blob: Blob; seconds: number }> {
+  const said = limit ? Math.min(src.duration, limit) : src.duration;
   const rate = style === "deep" ? 0.78 : style === "light" ? 1.28 : style === "robot" ? 0.96 : 1;
   const tail = 0;
   // 16 kHz is plenty for a voice and keeps files small (a minute is about 2 MB)
   const outRate = LONG_RATE;
-  const length = Math.ceil((src.duration / rate + tail) * outRate);
+  const length = Math.ceil((said / rate + tail) * outRate);
   const ctx = new (offlineCtx())(1, Math.max(1, length), outRate);
 
   const s = ctx.createBufferSource();
@@ -83,7 +87,7 @@ export async function disguise(src: AudioBuffer, style: VoiceStyle): Promise<{ b
   gain.gain.value = 0.95;
   out.connect(gain);
   gain.connect(ctx.destination);
-  s.start();
+  s.start(0, 0, said);
 
   const rendered = await ctx.startRendering();
   return { blob: toWav(rendered), seconds: Math.max(1, Math.round(rendered.duration - tail)) };
