@@ -23,6 +23,21 @@ export type TruthVoice = {
   can_wave: boolean;
 };
 
+/** Someone who waved at you after you spilled: their answer and voice, by their mask name */
+export type TruthWaver = {
+  id: number;
+  alias: string;
+  choice: string;
+  key: string | null;
+  seconds: number | null;
+  at: string;
+  person: string;
+  age: number | null;
+  gender: string | null;
+  /** You've waved back */
+  waved: boolean;
+};
+
 export type Truth = {
   none?: boolean;
   id: number;
@@ -39,6 +54,8 @@ export type Truth = {
     men: Record<string, number>;
     voices: TruthVoice[];
     waves: number;
+    /** People who waved at you after you spilled (by their mask name here); before update 119 it's missing */
+    wavers?: TruthWaver[];
   } | null;
 };
 
@@ -76,6 +93,10 @@ export const DEMO_TRUTH = (answered: boolean): Truth => ({
         women: { a: 1120, b: 460 },
         men: { a: 1064, b: 768 },
         waves: 2,
+        wavers: [
+          { id: 21, alias: "Coral Heron", choice: "a", key: "", seconds: 13, at: "", person: "p6", age: 27, gender: "woman", waved: false },
+          { id: 12, alias: "Quiet Storm", choice: "a", key: "", seconds: 11, at: "", person: "p2", age: 24, gender: "man", waved: true },
+        ],
         voices: [
           { id: 11, alias: "Velvet Owl", choice: "a", key: "", seconds: 18, listens: 42, at: "", person: "p1", same: true, age: 26, gender: "woman", waved: false, can_wave: true },
           { id: 12, alias: "Quiet Storm", choice: "a", key: "", seconds: 11, listens: 30, at: "", person: "p2", same: true, age: 24, gender: "man", waved: true, can_wave: true },

@@ -113,9 +113,10 @@ export function MatchesList({
       supabase.removeChannel(ch);
     };
   }, [supabase, myId, loadIce, demoIce, initialFilter]);
+  // Past pairs show in All too, so load them straight away
   useEffect(() => {
-    if (filter === "past" && past === null) loadPast();
-  }, [filter, past, loadPast]);
+    if (past === null) loadPast();
+  }, [past, loadPast]);
   const term = q.trim().toLowerCase();
   // Masked chats sit in the same list as everyone else, by their latest message
   const masked = useMaskedChats(maskedDemo);
@@ -133,6 +134,7 @@ export function MatchesList({
         ? maskedMatches(i.masked, paid[i.masked.id], term)
         : !term || i.match!.display_name.toLowerCase().includes(term) || (i.match!.last_message ?? "").toLowerCase().includes(term)),
   );
+  const pastShown = (past ?? []).filter((p) => !term || p.their_alias.toLowerCase().includes(term) || (p.last_message ?? "").toLowerCase().includes(term));
   // "No chats yet" only once we know there are no masked chats either
   const none = matches.length === 0 && masked !== null && masked.length === 0;
 
@@ -155,7 +157,7 @@ export function MatchesList({
         <>
           <LiveEventChats compact={side} userId={myId} />
           {FEATURES.feed && <LiveFeedChats compact={side} userId={myId} />}
-          {side ? <p className="mt-6 rounded-2xl bg-surface p-4 text-[14px] text-muted">Your chats will appear here.</p> : <Empty />}
+          {past?.length ? <PastPairs pairs={past} balance={null} onChanged={loadPast} /> : side ? <p className="mt-6 rounded-2xl bg-surface p-4 text-[14px] text-muted">Your chats will appear here.</p> : <Empty />}
         </>
       ) : (
         <>
@@ -225,7 +227,7 @@ export function MatchesList({
           {FEATURES.feed && <LiveFeedChats divided userId={myId} />}
 
           <section className="mt-3">
-            {shown.length === 0 && (
+            {shown.length === 0 && !(filter === "all" && pastShown.length > 0) && (
               <p className="rounded-2xl bg-surface p-4 text-center text-[14px] text-muted">
                 {term ? `No chats match “${q.trim()}”.` : filter === "unread" ? "No unread chats. You're all caught up." : "Your chats will appear here."}
               </p>
@@ -240,6 +242,12 @@ export function MatchesList({
               )}
             </ul>
           </section>
+          {/* Past pairs: in All as well as their own filter */}
+          {filter === "all" && !!pastShown.length && (
+            <div className="mt-2">
+              <PastPairs pairs={pastShown} balance={null} onChanged={loadPast} />
+            </div>
+          )}
           </>)}
         </>
       )}

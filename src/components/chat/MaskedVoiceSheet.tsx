@@ -30,6 +30,12 @@ export function MaskedVoiceSheet({
   demo,
   onSendBlob,
   allowNormal,
+  maxSeconds = MAX,
+  title,
+  subtitle,
+  sendLabel = "Send",
+  layer,
+  wavOnly,
 }: {
   open: boolean;
   onClose: () => void;
@@ -41,9 +47,20 @@ export function MaskedVoiceSheet({
   /** Chats where you've unmasked: send it your own way (your normal voice is an option there) */
   onSendBlob?: (blob: Blob, seconds: number, style: VoiceStyle) => Promise<string | null>;
   allowNormal?: boolean;
+  /** Longest recording (5 minutes in chats); it stops by itself right on time */
+  maxSeconds?: number;
+  title?: string;
+  subtitle?: string;
+  /** The last button ("Send" in chats) */
+  sendLabel?: string;
+  /** Stacking, when it opens over something that's already on top */
+  layer?: string;
+  /** Always hand over the WAV (even for your normal voice), for places that only take WAV */
+  wavOnly?: boolean;
 }) {
   const supabase = useMemo(() => createClient(), []);
-  const voice = useVoiceRecorder();
+  // Stops by itself at the limit and keeps what you said
+  const voice = useVoiceRecorder({ maxSeconds, onLimit: (r) => void took(r) });
   const [raw, setRaw] = useState<AudioBuffer | null>(null);
   // The recording as the phone made it (small and compressed): sent as is for your normal voice
   const original = useRef<{ blob: Blob; seconds: number } | null>(null);
@@ -74,18 +91,12 @@ export function MaskedVoiceSheet({
     setPlaying(false);
   }, [open]);
 
-  // Up to 5 minutes
-  useEffect(() => {
-    if (voice.recording && voice.seconds >= MAX) void stop();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [voice.recording, voice.seconds]);
-
   // A new voice picked: disguise it again
   useEffect(() => {
     if (!raw) return;
     let live = true;
     setBusy("disguise");
-    disguise(raw, style)
+    disguise(raw, style, maxSeconds)
       .then((r) => {
         if (!live) return;
         setOut((o) => {
@@ -112,7 +123,10 @@ export function MaskedVoiceSheet({
   }
 
   async function stop() {
-    const r = await voice.stop();
+    await took(await voice.stop());
+  }
+
+  async function took(r: { blob: Blob; seconds: number } | null) {
     original.current = r ?? null;
     if (!r || r.seconds < 1) return setError("That was too short. Hold on a little longer.");
     try {
@@ -140,7 +154,7 @@ export function MaskedVoiceSheet({
     setError(null);
     if (onSendBlob) {
       // Your own voice: the phone's compressed recording, about a tenth of the size of a disguised one
-      const plain = style === "normal" && original.current ? original.current : null;
+      const plain = style === "normal" && original.current && !wavOnly ? original.current : null;
       const e = await onSendBlob(plain ? plain.blob : out.blob, plain ? Math.max(1, plain.seconds) : out.seconds, style);
       setBusy(null);
       if (e) return setError(e);
@@ -175,11 +189,13 @@ export function MaskedVoiceSheet({
     <Sheet
       open={open}
       onClose={close}
-      title={allowNormal ? "Voice note" : "Masked voice note"}
+      layer={layer}
+      title={title ?? (allowNormal ? "Voice note" : "Masked voice note")}
       subtitle={
-        allowNormal
+        subtitle ??
+        (allowNormal
           ? "Send your own voice, or disguise it for fun. Disguises happen on your phone."
-          : "Disguise your voice, or pick Normal to send your own. Disguises happen on your phone."
+          : "Disguise your voice, or pick Normal to send your own. Disguises happen on your phone.")
       }
       icon={allowNormal ? <VoiceIcon style="normal" size={24} className="text-brand" /> : <MaskIcon className="w-6" />}
     >
@@ -200,10 +216,20 @@ export function MaskedVoiceSheet({
               {step === "recording" ? <Square size={30} fill="currentColor" /> : <Mic size={36} />}
             </button>
             <p className="text-[15px] font-semibold tabular-nums">
-              {step === "recording" ? `${formatDuration(voice.seconds)} / ${formatDuration(MAX)}` : "Tap to record"}
+              {step === "recording" ? `${formatDuration(voice.seconds)} / ${formatDuration(maxSeconds)}` : busy === "disguise" ? "Getting it ready…" : "Tap to record"}
             </p>
+            {step === "recording" && (
+              // Fills up to the limit
+              <div className="h-1.5 w-full max-w-[260px] overflow-hidden rounded-full bg-line" aria-hidden>
+                <div className="h-full rounded-full bg-chili transition-[width] duration-300 ease-linear" style={{ width: `${Math.min(100, (voice.seconds / maxSeconds) * 100)}%` }} />
+              </div>
+            )}
             <p className="max-w-[260px] text-center text-[12.5px] text-muted">
-              {step === "recording" ? "Tap again to stop" : "Dashpad only listens while you're recording. Up to 5 minutes."}
+              {step === "recording"
+                ? maxSeconds - voice.seconds <= 5
+                  ? `Stops in ${maxSeconds - voice.seconds}…`
+                  : "Tap again to stop"
+                : `Dashpad only listens while you're recording. Up to ${maxSeconds >= 60 ? `${Math.round(maxSeconds / 60)} minutes` : `${maxSeconds} seconds`}.`}
             </p>
           </div>
         )}
@@ -262,7 +288,7 @@ export function MaskedVoiceSheet({
                 <RotateCcw size={18} /> Redo
               </Button>
               <Button size="lg" onClick={send} loading={busy === "send"} loadingText="Sending…" disabled={!out || !!busy} className="min-w-0 flex-1">
-                <Send size={18} /> Send
+                <Send size={18} /> {sendLabel}
               </Button>
             </div>
           </>

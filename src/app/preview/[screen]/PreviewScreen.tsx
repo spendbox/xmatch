@@ -585,10 +585,12 @@ function ScreenBody({ screen }: { screen: string }) {
     case "room-hourly":
     case "room-lapsed":
     case "room-pact":
+    case "room-unmasked":
+    case "room-nudge":
       return (
         <MasqueradeRoom
           initial={{ ...session(), hourly: true, status: screen === "room-lapsed" ? "lapsed" : "active", ends_at: new Date(now + 41 * 60_000).toISOString() }}
-          initialMessages={msgs}
+          initialMessages={screen === "room-nudge" ? [...msgs, ...["Haha true", "So what do you do?", "I design apps", "No way, me too", "Small world", "Lagos or Abuja?", "Lagos all the way", "Same!"].map((body, i) => ({ id: 500 + i, sender_id: i % 2 ? "me" : "ada", body, created_at: iso(60 - i * 5) }) as never)] : screen === "room-unmasked" ? [...msgs, { id: 999, sender_id: null, kind: "system", body: `${session().them.alias} unmasked. Unmask too to connect`, created_at: iso(1) } as never] : msgs}
           demo={{ remaining: screen === "room-lapsed" ? 0 : 41 * 60 + 12 }}
           pact={screen === "room-pact" ? "The Lagos Pact" : null}
         />

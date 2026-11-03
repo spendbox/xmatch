@@ -132,8 +132,9 @@ export async function POST(req: Request) {
     const who = await senderLabel(db, s, uid, (iAmA ? s.alias_a : s.alias_b) as string);
     await pushToUsers([(iAmA ? s.user_b : s.user_a) as string], {
       title: `${who} unmasked in your chat`,
-      body: "If you unmask too, you'll match and see each other's profiles.",
-      url: `/masquerade/${s.id}`,
+      body: "Tap to unmask too and you're connected.",
+      // Opens the chat with "Unmask?" already up: one tap to connect
+      url: `/masquerade/${s.id}?unmask=1`,
       tag: `unmask-${s.id}`,
     });
     return ok;
