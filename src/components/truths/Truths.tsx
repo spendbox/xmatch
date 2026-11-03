@@ -73,7 +73,6 @@ export function TruthCard({ truth, onOpen }: { truth: Truth; onOpen: () => void 
         </span>
         <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold">
           {pct != null ? `${pct}% agree with you` : "You spilled"}
-          {truth.results?.waves ? <span className="text-brand"> · {truth.results.waves} {truth.results.waves === 1 ? "wave" : "waves"}</span> : null}
         </span>
         <Streak n={truth.streak} className="text-[12px] text-[#b5530c]" />
         <ChevronRight size={16} className="shrink-0 text-muted" />
@@ -497,7 +496,6 @@ export function TruthSheet({ truth, open, onClose, onChange, demo }: { truth: Tr
                 </div>
                 <p className="mt-2 text-[12.5px] font-semibold text-white/70">
                   {mine.listens} {mine.listens === 1 ? "listen" : "listens"}
-                  {truth.results?.waves ? ` · ${truth.results.waves} ${truth.results.waves === 1 ? "wave" : "waves"}` : ""}
                   {" · "}people hear it as {mine.alias}
                 </p>
               </div>
@@ -509,52 +507,6 @@ export function TruthSheet({ truth, open, onClose, onChange, demo }: { truth: Tr
                 <span className="flex-1 text-[14px] font-bold">Add your voice answer</span>
                 <ChevronRight size={17} className="text-white/60" />
               </button>
-            )}
-
-            {/* People who waved at you: who they are here, and wave back */}
-            {!!truth.results?.wavers?.length && (
-              <div id="spill-wavers" className="mt-4 rounded-[20px] border border-[#8b78f0]/50 bg-[#8b78f0]/15 p-3.5">
-                <p className="flex items-center gap-1.5 text-[15px] font-extrabold">
-                  <Hand size={16} className="text-gold" /> Waved at you · {truth.results.wavers.length}
-                </p>
-                <p className="mt-0.5 text-[12.5px] text-white/65">Wave back and a free masked chat opens.</p>
-                <div className="mt-3 flex flex-col gap-2.5">
-                  {truth.results.wavers.map((w) => (
-                    <div key={w.id} className="flex items-center gap-2.5 rounded-[16px] bg-white/[0.08] p-2.5">
-                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full" style={{ background: nameColor(w.alias) }}>
-                        <MaskIcon className="w-6 text-white" eyes={nameColor(w.alias)} />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[14px] font-bold">
-                          {w.alias}
-                          {w.age ? `, ${w.age}` : ""} <span className="font-semibold text-white/60">· {labelOf(w.choice)}</span>
-                        </p>
-                        {w.key ? (
-                          <div className="mt-1">
-                            <VoicePlayer id={`truth-waver-${w.id}`} src={voiceUrl(w.key)} seconds={w.seconds} seed={w.id} />
-                          </div>
-                        ) : (
-                          <p className="text-[12px] text-white/55">{w.choice === mine.choice ? "Picked the same as you" : "Picked differently"}</p>
-                        )}
-                      </div>
-                      {w.waved ? (
-                        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-mint text-white" aria-label="You waved back">
-                          <Check size={18} strokeWidth={3} />
-                        </span>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => void wave(w)}
-                          disabled={waving === w.id}
-                          className="inline-flex h-10 shrink-0 items-center gap-1 rounded-full bg-gold px-3 text-[13px] font-extrabold text-[#1a1233] disabled:opacity-60"
-                        >
-                          {waving === w.id ? <Spinner className="h-4 w-4" /> : <Hand size={15} />} Wave back
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
             )}
 
             {/* Voice answers */}
