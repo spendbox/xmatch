@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { Check, ChevronRight, Flame, Hand, Mic, Pause, Play, RotateCcw, Square, X } from "lucide-react";
+import { Check, ChevronRight, Flame, Hand, Lock, Mic, Pause, Play, RotateCcw, Square, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { tapFeedback, Spinner } from "@/components/ui/Button";
 import { MaskIcon } from "@/components/ui/MaskIcon";
@@ -442,7 +442,7 @@ export function TruthSheet({ truth, open, onClose, onChange, demo }: { truth: Tr
           </div>
         ) : !mine ? (
           <>
-            <p className="mt-2 px-1 text-[14px] font-medium text-white/70">Be honest. Nobody sees your face or name.</p>
+            <p className="mt-2 flex items-start gap-1.5 px-1 text-[14px] font-medium text-white/75"><Lock size={15} className="mt-0.5 shrink-0 text-gold" aria-hidden /> Be honest, your answer is private. Others only see a mask name, never your profile.</p>
             <div className="mt-5 flex flex-col gap-2.5">
               {truth.options.map((o) => {
                 const on = pick === o.id;
@@ -471,7 +471,7 @@ export function TruthSheet({ truth, open, onClose, onChange, demo }: { truth: Tr
               <button type="button" onClick={() => pick && void send(pick, !!clip)} disabled={!pick || busy} className="inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gold text-[16.5px] font-extrabold text-[#1a1233] transition active:scale-[0.99] disabled:opacity-50">
                 {busy ? <Spinner className="h-4 w-4" /> : null} Spill it and see everyone
               </button>
-              <p className="mt-2.5 text-center text-[12.5px] text-white/55">You&apos;ll see how everyone answered once you answer.</p>
+              <p className="mt-2.5 text-center text-[12.5px] text-white/55">Only you can see your answers, in My Spills on your Profile.</p>
             </div>
           </>
         ) : (

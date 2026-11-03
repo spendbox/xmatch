@@ -99,3 +99,25 @@ export const TRUTH_KINDS: Record<string, string> = {
 /** A Truth as Admin sees it */
 export type TruthRow = { id: number; day: string | null; body: string; options: TruthOption[]; kind: string; active: boolean };
 export type TruthStats = Record<string, { total: number; voices: number; counts: Record<string, number> }>;
+
+/** One of your past Spills (only you can see these) */
+export type MySpill = {
+  id: number;
+  day: string;
+  body: string;
+  options: TruthOption[];
+  choice: string;
+  key: string | null;
+  seconds: number | null;
+  style: string | null;
+  listens: number;
+  hidden: boolean;
+  total: number;
+  same: number;
+};
+
+export const DEMO_SPILLS: MySpill[] = [
+  { id: 3, day: "2026-11-03", body: "Would you date someone who earns less than you?", options: [{ id: "a", label: "Yes" }, { id: "b", label: "No" }], choice: "a", key: "demo", seconds: 14, style: "normal", listens: 14, hidden: false, total: 3412, same: 2184 },
+  { id: 2, day: "2026-11-02", body: "Would you rather text or call?", options: [{ id: "a", label: "Text" }, { id: "b", label: "Call" }], choice: "b", key: null, seconds: null, style: null, listens: 0, hidden: false, total: 2890, same: 1040 },
+  { id: 1, day: "2026-11-01", body: "Is a kiss on the first date too soon?", options: [{ id: "a", label: "Yes" }, { id: "b", label: "No" }], choice: "b", key: "demo", seconds: 9, style: "deep", listens: 31, hidden: false, total: 3105, same: 1987 },
+];
