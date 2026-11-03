@@ -14,12 +14,12 @@ import type { ChatMessage, MatchSummary } from "@/lib/types";
 import { Avatar } from "@/components/ui/Avatar";
 import { MaskIcon } from "@/components/ui/MaskIcon";
 import { Photo } from "@/components/ui/Photo";
-import { Sheet } from "@/components/ui/Sheet";
 import { snippet } from "@/components/chat/MessageList";
 import { usePaidChatPeople, type PaidChatPerson } from "@/components/masquerade/usePaidChatPeople";
 import { chatPreview } from "@/lib/chatPreview";
 import type { MaskedChat } from "@/components/matches/MaskedChats";
 import { CHATS_EVENT, refreshMenuBadges } from "./useMenuBadges";
+import { useKeyboardSafe } from "@/lib/useKeyboardSafe";
 
 /** A chat with a new message from them */
 export type Pop = {
@@ -59,8 +59,7 @@ export function MessagePops({ userId, demo }: { userId: string; demo?: { banner?
   const [open, setOpen] = useState<Pop | null>(demo?.open ?? null);
   // When each chat's latest message was, the last time we looked. Nothing from before this page
   // opened pops, so there's nothing to load until a chat actually changes.
-  const seen = useRef<Map<string, number>>(new Map());
-  const since = useRef(Date.now());
+  const seen = useRef<Map<string, number> | null>(null);
   const until = useRef<Map<string, number>>(new Map());
   const here = useRef({ path, open: null as string | null, playing });
   here.current = { path, open: open?.key ?? null, playing };
@@ -68,13 +67,17 @@ export function MessagePops({ userId, demo }: { userId: string; demo?: { banner?
   const check = useCallback(async () => {
     const [m, s] = await Promise.all([supabase.rpc("get_matches"), supabase.rpc("my_masked_chats")]);
     if (m.error && s.error) return;
+    // The first look only notes where every chat is up to (so nothing old pops). Going by the
+    // chats themselves, not this phone's clock, means a phone whose clock is ahead misses nothing.
+    const first = seen.current === null;
+    const before = seen.current ?? new Map<string, number>();
     const fresh: Pop[] = [];
     const next = new Map<string, number>();
     for (const c of (Array.isArray(m.data) ? m.data : []) as MatchSummary[]) {
       const key = `m:${c.id}`;
       const at = new Date(c.last_message_at).getTime();
       next.set(key, at);
-      if (at > (seen.current.get(key) ?? since.current) && c.last_sender === c.other_id && c.last_message != null) {
+      if (!first && at > (before.get(key) ?? 0) && c.last_sender === c.other_id && c.last_message != null) {
         fresh.push({ key, kind: "match", id: c.id, href: `/matches/${c.id}`, name: c.display_name, photo: c.photos?.[0], personId: c.other_id, text: chatPreview(c.last_kind, c.last_message, c.last_deleted), count: 1 });
       }
     }
@@ -82,7 +85,7 @@ export function MessagePops({ userId, demo }: { userId: string; demo?: { banner?
       const key = `s:${c.id}`;
       const at = new Date(c.last_at).getTime();
       next.set(key, at);
-      if (at > (seen.current.get(key) ?? since.current) && c.last_mine === false && c.last_message != null && !(c.pact && !c.pact_seen)) {
+      if (!first && at > (before.get(key) ?? 0) && c.last_mine === false && c.last_message != null && !(c.pact && !c.pact_seen)) {
         fresh.push({ key, kind: "masked", id: c.id, href: `/masquerade/${c.id}`, name: c.alias, alias: c.alias, text: chatPreview(c.last_kind, c.last_message), count: 1 });
       }
     }
@@ -113,6 +116,7 @@ export function MessagePops({ userId, demo }: { userId: string; demo?: { banner?
 
   useEffect(() => {
     if (demo) return;
+    void check();
     let t: ReturnType<typeof setTimeout> | null = null;
     const soon = () => {
       if (t) clearTimeout(t);
@@ -162,6 +166,15 @@ export function MessagePops({ userId, demo }: { userId: string; demo?: { banner?
     router.push(p.href);
   };
 
+  // The chat open in the pop-up: the same object until a different chat opens, so typing and
+  // messages aren't reset every time something else on the page updates
+  const reading = useMemo(() => {
+    if (!open) return null;
+    const known = open.kind === "masked" ? paid[open.id] : undefined;
+    return known?.name ? { ...open, name: known.name, photo: known.photo, personId: known.id } : open;
+  }, [open, paid]);
+  const closeChat = useCallback(() => setOpen(null), []);
+
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   if (!mounted) return null;
@@ -169,7 +182,7 @@ export function MessagePops({ userId, demo }: { userId: string; demo?: { banner?
     <>
       {banner && <Banner p={named(banner)} onOpen={() => go(banner)} onReply={() => read(banner)} onClose={() => setBanner(null)} />}
       {bubbles.length > 0 && <Bubbles list={bubbles.map(named)} quiet={playing} onTap={read} onClose={() => setBubbles([])} />}
-      <MiniChat p={open ? named(open) : null} myId={userId} demo={demo?.messages} onClose={() => setOpen(null)} onOpenChat={go} />
+      <MiniChat p={reading} myId={userId} demo={demo?.messages} onClose={closeChat} onOpenChat={go} />
     </>,
     document.body,
   );
@@ -336,46 +349,89 @@ function Bubbles({ list, quiet, onTap, onClose }: { list: Pop[]; quiet: boolean;
   );
 }
 
-/** Read and reply over whatever you're doing: the last few messages and a box to answer */
+/** Read and reply over whatever you're doing: the latest messages and a box to answer */
 function MiniChat({ p, myId, demo, onClose, onOpenChat }: { p: Pop | null; myId: string; demo?: ChatMessage[]; onClose: () => void; onOpenChat: (p: Pop) => void }) {
   const supabase = useMemo(() => createClient(), []);
   const [messages, setMessages] = useState<ChatMessage[]>(demo ?? []);
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const end = useRef<HTMLDivElement>(null);
+  const [loaded, setLoaded] = useState(!!demo);
+  const list = useRef<HTMLDivElement>(null);
+  const input = useRef<HTMLInputElement>(null);
+  const panel = useKeyboardSafe<HTMLDivElement>();
+  const chatKey = p?.key ?? null;
+  const ask = useRef(0);
 
   const load = useCallback(async () => {
     if (!p || demo) return;
+    const n = ++ask.current;
     const q =
       p.kind === "match"
         ? supabase.from("messages").select("id, sender_id, kind, body, created_at, media_meta, deleted_at").eq("match_id", p.id)
         : supabase.from("masquerade_messages").select("id, sender_id, kind, body, created_at, media_meta").eq("session_id", p.id);
-    const { data } = await q.order("id", { ascending: false }).limit(8);
-    if (data) setMessages((data as ChatMessage[]).reverse());
+    const { data } = await q.order("id", { ascending: false }).limit(20);
+    // A newer load (or a different chat) has already answered
+    if (n !== ask.current) return;
+    if (data) {
+      const fresh = (data as ChatMessage[]).reverse();
+      // Keep anything you've just sent that the server hasn't shown yet
+      setMessages((l) => [...fresh, ...l.filter((m) => m.pending && !fresh.some((f) => f.sender_id === myId && f.body === m.body))]);
+    }
+    setLoaded(true);
     // Reading it here counts as reading it
     await (p.kind === "match" ? supabase.rpc("mark_chat_read", { p_match: p.id }) : supabase.rpc("mark_masked_read", { p_session: p.id }));
     refreshMenuBadges();
-  }, [supabase, p, demo]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supabase, chatKey, demo, myId]);
 
+  // A different chat: start fresh. The same chat updating: just refresh the messages
   useEffect(() => {
     setText("");
     setError(null);
-    if (!demo) setMessages([]);
+    if (!demo) {
+      setMessages([]);
+      setLoaded(false);
+    }
+    if (!chatKey) return;
+    // Open to reply: the keyboard comes up
+    const f = setTimeout(() => input.current?.focus({ preventScroll: true }), 350);
+    if (demo) return () => clearTimeout(f);
     void load();
-    if (!p || demo) return;
-    window.addEventListener(CHATS_EVENT, load);
-    return () => window.removeEventListener(CHATS_EVENT, load);
-  }, [p, load, demo]);
+    let t: ReturnType<typeof setTimeout> | null = null;
+    const soon = () => {
+      if (t) clearTimeout(t);
+      t = setTimeout(() => void load(), 250);
+    };
+    window.addEventListener(CHATS_EVENT, soon);
+    return () => {
+      window.removeEventListener(CHATS_EVENT, soon);
+      if (t) clearTimeout(t);
+      clearTimeout(f);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatKey, demo]);
+
+  // Keep the newest message in view
   useEffect(() => {
-    // (Newer browsers return a promise here, which an effect mustn't)
-    void end.current?.scrollIntoView({ block: "end" });
-  }, [messages.length]);
+    const el = list.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [messages]);
+
+  // Close with Escape
+  useEffect(() => {
+    if (!chatKey) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [chatKey, onClose]);
 
   async function send() {
     const body = text.trim();
     if (!p || !body) return;
     setText("");
     setError(null);
+    // Keep the keyboard up for the next message
+    input.current?.focus({ preventScroll: true });
     const temp: ChatMessage = { id: -Date.now(), sender_id: myId, kind: "text", body, created_at: new Date().toISOString(), pending: true };
     setMessages((l) => [...l, temp]);
     if (demo) return;
@@ -386,24 +442,52 @@ function MiniChat({ p, myId, demo, onClose, onOpenChat }: { p: Pop | null; myId:
     if (err) {
       setMessages((l) => l.filter((m) => m.id !== temp.id));
       setText(body);
-      setError("Message not sent. Check your connection and try again.");
+      setError(/ended|closed|not allowed|row-level/i.test(err.message) ? "This chat has ended. Open it to see more." : "Message not sent. Check your connection and try again.");
       return;
     }
     notify(p.kind === "match" ? { kind: "message", matchId: p.id } : { kind: "masked_message", sessionId: p.id });
     void load();
   }
 
+  if (!p) return null;
   return (
-    <Sheet
-      open={!!p}
-      onClose={onClose}
-      title={p?.name ?? ""}
-      subtitle={p?.kind === "masked" ? "Masked chat" : undefined}
-      icon={p ? <Face p={p} size={48} /> : undefined}
-      layer="z-[80]"
-      footer={
-        <div className="space-y-2">
-          {error && <p className="text-center text-[13px] font-medium text-chili">{error}</p>}
+    <div ref={panel} className="fixed inset-x-0 top-0 bottom-0 z-[80] flex flex-col justify-end sm:items-center sm:justify-center sm:p-6" role="dialog" aria-modal="true" aria-label={`Chat with ${p.name}`}>
+      <button type="button" className="absolute inset-0 animate-fade-in bg-ink/40" aria-label="Close" onClick={onClose} />
+      <div className="relative flex max-h-full w-full max-w-md animate-sheet-up flex-col rounded-t-[28px] bg-surface shadow-lift sm:max-h-[80dvh] sm:animate-pop sm:rounded-[28px]">
+        {/* Who it is */}
+        <div className="flex items-center gap-3 border-b border-line px-4 pt-3 pb-3">
+          <Face p={p} size={40} />
+          <button type="button" onClick={() => onOpenChat(p)} className="min-w-0 flex-1 text-left">
+            <span className="block truncate text-[16px] font-semibold">{p.name}</span>
+            <span className="block text-[12.5px] font-semibold text-brand">{p.kind === "masked" ? "Masked chat · " : ""}Open the full chat ›</span>
+          </button>
+          <button type="button" onClick={onClose} className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-muted hover:bg-ink/5" aria-label="Close">
+            <X size={20} />
+          </button>
+        </div>
+        {/* The latest messages */}
+        <div ref={list} className="flex min-h-[120px] flex-1 flex-col gap-2 overflow-y-auto overscroll-contain px-4 py-3" style={{ maxHeight: "46dvh" }}>
+          {!loaded && <p className="self-center py-6 text-[13.5px] text-muted">Loading…</p>}
+          {messages.map((m) =>
+            !m.sender_id ? (
+              <p key={m.id} className="self-center rounded-full bg-cream px-3 py-1 text-center text-[12.5px] text-muted">{m.body.replace(/^💬 /, "")}</p>
+            ) : (
+              <p
+                key={m.id}
+                className={clsx(
+                  "max-w-[82%] rounded-2xl px-3.5 py-2 text-[15px] break-words whitespace-pre-wrap",
+                  m.sender_id === myId ? "self-end rounded-br-md bg-brand text-white" : "self-start rounded-bl-md bg-cream text-ink",
+                  m.pending && "opacity-60",
+                )}
+              >
+                {m.kind === "text" ? m.body : snippet(m)}
+              </p>
+            ),
+          )}
+        </div>
+        {/* Reply */}
+        <div className="border-t border-line px-3 pt-2.5 pb-[max(10px,env(safe-area-inset-bottom))]">
+          {error && <p className="mb-2 text-center text-[13px] font-medium text-chili">{error}</p>}
           <form
             className="flex items-center gap-2"
             onSubmit={(e) => {
@@ -412,48 +496,32 @@ function MiniChat({ p, myId, demo, onClose, onOpenChat }: { p: Pop | null; myId:
             }}
           >
             <label className="min-w-0 flex-1">
-              <span className="sr-only">Reply to {p?.name}</span>
+              <span className="sr-only">Reply to {p.name}</span>
               <input
+                ref={input}
                 id="pop-reply"
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 placeholder="Reply"
                 autoComplete="off"
+                enterKeyHint="send"
                 maxLength={2000}
-                className="h-12 w-full rounded-full border border-line-strong bg-cream px-4 text-[15px] outline-none focus:border-brand"
+                className="h-12 w-full rounded-full border border-line-strong bg-cream px-4 text-[16px] outline-none focus:border-brand"
               />
             </label>
-            <button type="submit" disabled={!text.trim()} aria-label="Send" className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-brand text-white disabled:opacity-40">
+            <button
+              type="submit"
+              disabled={!text.trim()}
+              // Keep the keyboard open when tapping send
+              onPointerDown={(e) => e.preventDefault()}
+              aria-label="Send"
+              className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-brand text-white disabled:opacity-40"
+            >
               <ArrowUp size={21} />
             </button>
           </form>
-          {p && (
-            <button type="button" onClick={() => onOpenChat(p)} className="mx-auto block py-1 text-[13.5px] font-semibold text-brand">
-              Open the full chat
-            </button>
-          )}
         </div>
-      }
-    >
-      <div className="flex max-h-[42dvh] flex-col gap-2 overflow-y-auto">
-        {messages.map((m) =>
-          !m.sender_id ? (
-            <p key={m.id} className="self-center rounded-full bg-cream px-3 py-1 text-center text-[12.5px] text-muted">{m.body.replace(/^💬 /, "")}</p>
-          ) : (
-            <p
-              key={m.id}
-              className={clsx(
-                "max-w-[82%] rounded-2xl px-3.5 py-2 text-[15px] break-words",
-                m.sender_id === myId ? "self-end rounded-br-md bg-brand text-white" : "self-start rounded-bl-md bg-cream text-ink",
-                m.pending && "opacity-60",
-              )}
-            >
-              {m.kind === "text" ? m.body : snippet(m)}
-            </p>
-          ),
-        )}
-        <div ref={end} />
       </div>
-    </Sheet>
+    </div>
   );
 }
