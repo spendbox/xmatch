@@ -13,7 +13,7 @@ import { notify } from "@/lib/pushClient";
 import { formatDuration } from "@/lib/chatMedia";
 import { useVoiceRecorder } from "@/components/chat/useVoiceRecorder";
 import { decodeRecording, disguise, voiceUrl, type VoiceStyle } from "@/lib/voiceDisguise";
-import { playIntro, stopIntro, usePlayingIntro } from "@/lib/voiceIntro";
+import { playIntro, stopIntro, usePlayingIntro, usePlayProgress } from "@/lib/voiceIntro";
 import { shares, timeLeft, type Truth, type TruthVoice } from "@/lib/truths";
 
 const MAX = 30;
@@ -158,7 +158,6 @@ function VoiceAnswer({ onClip, clip, onBusy }: { onClip: (c: { blob: Blob; secon
   const [style, setStyle] = useState<VoiceStyle>(clip?.style ?? "deep");
   const [error, setError] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
-  const playing = usePlayingIntro() === "truth-mine";
 
   async function took(r: { blob: Blob; seconds: number } | null) {
     if (!r || r.seconds < 1) return setError("That was too short. Try again.");
@@ -178,6 +177,7 @@ function VoiceAnswer({ onClip, clip, onBusy }: { onClip: (c: { blob: Blob; secon
   useEffect(() => {
     if (!raw) return;
     let live = true;
+    stopIntro();
     setWorking(true);
     disguise(raw, style, MAX)
       .then((r) => {
@@ -202,11 +202,7 @@ function VoiceAnswer({ onClip, clip, onBusy }: { onClip: (c: { blob: Blob; secon
   return (
     <div className="rounded-[22px] border border-dashed border-white/25 bg-white/[0.06] p-4">
       <div className="flex items-center gap-3">
-        {clip && !voice.recording ? (
-          <button type="button" onClick={() => playIntro("truth-mine", clip.url)} className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white text-[#1a1233]" aria-label={playing ? "Pause" : "Listen to your answer"}>
-            {playing ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" className="ml-0.5" />}
-          </button>
-        ) : (
+        {(
           <button
             type="button"
             onClick={() => {
@@ -221,33 +217,22 @@ function VoiceAnswer({ onClip, clip, onBusy }: { onClip: (c: { blob: Blob; secon
               }
             }}
             className={clsx("relative grid h-12 w-12 shrink-0 place-items-center rounded-full text-white", voice.recording ? "bg-chili" : "bg-[#ff6b8a]")}
-            aria-label={voice.recording ? "Stop recording" : "Record a voice answer"}
+            aria-label={voice.recording ? "Stop recording" : clip ? "Record again" : "Record a voice answer"}
           >
             {voice.recording && <span aria-hidden className="absolute inset-0 animate-ping rounded-full bg-chili/40" />}
-            {voice.recording ? <Square size={18} fill="currentColor" /> : <Mic size={22} />}
+            {voice.recording ? <Square size={18} fill="currentColor" /> : clip ? <RotateCcw size={19} /> : <Mic size={22} />}
           </button>
         )}
         <div className="min-w-0 flex-1">
           <p className="text-[15px] font-bold">{voice.recording ? `Recording… ${formatDuration(voice.seconds)} / ${formatDuration(MAX)}` : working ? "Getting your voice ready…" : clip ? `Your voice answer · ${formatDuration(clip.seconds)}` : style === "normal" ? "Say why, in your own voice" : "Say why, in your masked voice"}</p>
-          <p className="text-[12.5px] text-white/65">{voice.recording ? (left <= 5 ? `Stops in ${left}…` : `Tap to stop. It stops by itself at ${MAX} seconds.`) : style === "normal" ? "Optional. People will hear your real voice, but still not your name or face." : "Optional. Your voice is disguised before it leaves your phone."}</p>
+          <p className="text-[12.5px] text-white/65">{voice.recording ? (left <= 5 ? `Stops in ${left}…` : `Tap to stop. It stops by itself at ${MAX} seconds.`) : clip && !working ? "Listen to it below. Tap to record again." : style === "normal" ? "Optional. People will hear your real voice, but still not your name or face." : "Optional. Your voice is disguised before it leaves your phone."}</p>
         </div>
-        {clip && !voice.recording && (
-          <button
-            type="button"
-            onClick={() => {
-              tapFeedback();
-              stopIntro();
-              setRaw(null);
-              onClip(null);
-              void voice.start();
-            }}
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/10"
-            aria-label="Record again"
-          >
-            <RotateCcw size={16} />
-          </button>
-        )}
       </div>
+      {clip && !voice.recording && !working && (
+        <div className="mt-3 rounded-2xl bg-white/[0.07] px-2.5 py-2">
+          <VoicePlayer id="truth-mine" src={clip.url} seconds={clip.seconds} seed={3} />
+        </div>
+      )}
       {voice.recording && (
         // Fills up over the 30 seconds
         <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/15" aria-hidden>
@@ -283,13 +268,46 @@ async function upload(blob: Blob) {
   return link.key;
 }
 
+/** Play button, a waveform that fills as it plays, and the time */
+function VoicePlayer({ id, src, seconds, seed, onPlay, tone = "dark" }: { id: string; src: string | null; seconds: number | null; seed: number; onPlay?: () => void; tone?: "dark" | "gold" }) {
+  const playing = usePlayingIntro() === id;
+  const { at, length, loading } = usePlayProgress(id);
+  const bars = useMemo(() => Array.from({ length: 24 }, (_, i) => 5 + ((seed * 7 + i * 13) % 14)), [seed]);
+  const total = length || seconds || 0;
+  const lit = Math.round(at * bars.length);
+  return (
+    <div className="flex min-w-0 items-center gap-2">
+      <button
+        type="button"
+        disabled={!src}
+        onClick={() => {
+          tapFeedback();
+          if (!src) return;
+          playIntro(id, src);
+          onPlay?.();
+        }}
+        className={clsx("grid h-9 w-9 shrink-0 place-items-center rounded-full disabled:opacity-40", tone === "gold" ? "bg-gold text-[#1a1233]" : "bg-white text-[#1a1233]")}
+        aria-label={playing ? "Pause" : "Play"}
+      >
+        {playing && loading ? <Spinner className="h-3.5 w-3.5" /> : playing ? <Pause size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" className="ml-0.5" />}
+      </button>
+      <span className="flex h-6 min-w-0 flex-1 items-center gap-[3px] overflow-hidden" aria-hidden>
+        {bars.map((h, i) => (
+          <span key={i} className={clsx("w-[3px] shrink-0 rounded-full transition-colors", playing && i < lit ? "bg-gold" : "bg-white/35")} style={{ height: h }} />
+        ))}
+      </span>
+      <span className="shrink-0 text-[11.5px] font-semibold text-white/65 tabular-nums">
+        {playing ? `${formatDuration(Math.floor(at * total))} / ${formatDuration(Math.round(total))}` : formatDuration(Math.round(total))}
+      </span>
+    </div>
+  );
+}
+
 /** One voice answer: play it, and wave */
 function VoiceRow({ v, label, onWave, waving }: { v: TruthVoice; label: string; onWave: () => void; waving: boolean }) {
   const supabase = useMemo(() => createClient(), []);
   const id = `truth-${v.id}`;
-  const playing = usePlayingIntro() === id;
   const counted = useRef(false);
-  const bars = useMemo(() => Array.from({ length: 22 }, (_, i) => 4 + ((v.id * 7 + i * 13) % 14)), [v.id]);
   return (
     <div className="flex items-center gap-2.5 rounded-[20px] bg-white/[0.08] p-3">
       <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full" style={{ background: nameColor(v.alias) }}>
@@ -300,28 +318,19 @@ function VoiceRow({ v, label, onWave, waving }: { v: TruthVoice; label: string; 
           {v.alias}
           {v.age ? `, ${v.age}` : ""} <span className="font-semibold text-white/60">· {label}</span>
         </p>
-        <div className="mt-1.5 flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              tapFeedback();
-              if (v.key) playIntro(id, voiceUrl(v.key) ?? undefined);
+        <div className="mt-1.5">
+          <VoicePlayer
+            id={id}
+            src={voiceUrl(v.key)}
+            seconds={v.seconds}
+            seed={v.id}
+            onPlay={() => {
               if (!counted.current && v.key) {
                 counted.current = true;
                 void supabase.rpc("truth_listen", { p_answer: v.id });
               }
             }}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white text-[#1a1233]"
-            aria-label={playing ? `Pause ${v.alias}'s answer` : `Play ${v.alias}'s answer`}
-          >
-            {playing ? <Pause size={13} fill="currentColor" /> : <Play size={13} fill="currentColor" className="ml-0.5" />}
-          </button>
-          <span className="flex h-5 items-center gap-[3px]" aria-hidden>
-            {bars.map((h, i) => (
-              <span key={i} className={clsx("w-[3px] rounded-full", playing && i < 8 ? "bg-gold" : "bg-white/35")} style={{ height: h }} />
-            ))}
-          </span>
-          <span className="text-[11.5px] font-semibold text-white/60">{formatDuration(v.seconds)}</span>
+          />
         </div>
       </div>
       {v.can_wave && (
@@ -348,6 +357,8 @@ export function TruthSheet({ truth, open, onClose, onChange, demo }: { truth: Tr
   const [clip, setClip] = useState<{ blob: Blob; seconds: number; url: string; style: VoiceStyle } | null>(null);
   const [busy, setBusy] = useState(false);
   const [voiceBusy, setVoiceBusy] = useState(false);
+  // Your voice as you just posted it, so it plays straight away (before the upload is everywhere)
+  const [posted, setPosted] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<"same" | "other">("same");
   const [adding, setAdding] = useState(false);
@@ -380,6 +391,7 @@ export function TruthSheet({ truth, open, onClose, onChange, demo }: { truth: Tr
       if (demo) {
         const next = { ...truth, mine: { choice, alias: "Golden Fox", key: withVoice && clip ? "demo" : truth.mine?.key ?? null, seconds: clip?.seconds ?? truth.mine?.seconds ?? null, listens: 0 } };
         onChange({ ...next, streak: truth.streak + (truth.mine ? 0 : 1), results: next.results ?? { counts: { a: 2184, b: 1228 }, women: { a: 1120, b: 460 }, men: { a: 1064, b: 768 }, waves: 0, voices: [] } });
+        if (withVoice && clip) setPosted(clip.url);
         setAdding(false);
         return;
       }
@@ -387,6 +399,8 @@ export function TruthSheet({ truth, open, onClose, onChange, demo }: { truth: Tr
       const { data, error: err } = await supabase.rpc("answer_truth", { p_truth: truth.id, p_choice: choice, p_key: key, p_seconds: clip ? Math.min(MAX, clip.seconds) : null, p_style: clip?.style ?? null });
       if (err) throw new Error(err.message.replace(/^.*?: /, "").replace(/\bTruth\b/g, "Spill") || "Couldn't save your answer. Try again.");
       onChange(data as Truth);
+      // Only once it's saved: play what you just posted straight away
+      if (withVoice && clip) setPosted(clip.url);
       setClip(null);
       setAdding(false);
     } catch (e) {
@@ -525,18 +539,51 @@ export function TruthSheet({ truth, open, onClose, onChange, demo }: { truth: Tr
               </p>
             </div>
 
-            {/* Your voice answer, or add one */}
-            {mine.key ? (
-              <p className="mt-3 rounded-[18px] border border-gold/40 bg-gold/15 px-3.5 py-3 text-[13.5px] font-bold text-[#ffe2a8]">
-                Your voice answer: {mine.listens} {mine.listens === 1 ? "listen" : "listens"}
-                {truth.results?.waves ? `, ${truth.results.waves} ${truth.results.waves === 1 ? "wave" : "waves"}` : ""}
-              </p>
-            ) : adding ? (
+            {/* Your voice answer: hear it, see how it's doing, record it again; or add one */}
+            {adding ? (
               <div className="mt-3">
                 <VoiceAnswer clip={clip} onClip={setClip} onBusy={setVoiceBusy} />
-                <button type="button" onClick={() => void send(mine.choice, true)} disabled={!clip || busy || voiceBusy} className="mt-2.5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gold text-[15px] font-extrabold text-[#1a1233] disabled:opacity-50">
-                  {busy ? <Spinner className="h-4 w-4" /> : null} Share my voice answer
-                </button>
+                <div className="mt-2.5 flex gap-2">
+                  <button type="button" onClick={() => void send(mine.choice, true)} disabled={!clip || busy || voiceBusy} className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-gold text-[15px] font-extrabold text-[#1a1233] disabled:opacity-50">
+                    {busy ? <Spinner className="h-4 w-4" /> : null} {mine.key ? "Replace my voice answer" : "Share my voice answer"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      stopIntro();
+                      setClip(null);
+                      setAdding(false);
+                    }}
+                    className="h-12 rounded-2xl bg-white/10 px-4 text-[14px] font-bold"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : mine.key ? (
+              <div className="mt-3 rounded-[20px] border border-gold/40 bg-gold/[0.12] p-3.5">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[14px] font-extrabold text-[#ffe2a8]">Your voice answer</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      tapFeedback();
+                      stopIntro();
+                      setAdding(true);
+                    }}
+                    className="inline-flex h-8 items-center gap-1 rounded-full bg-white/10 px-3 text-[12.5px] font-bold"
+                  >
+                    <RotateCcw size={13} /> Record again
+                  </button>
+                </div>
+                <div className="mt-2">
+                  <VoicePlayer id="truth-posted" src={posted ?? voiceUrl(mine.key)} seconds={mine.seconds} seed={11} tone="gold" />
+                </div>
+                <p className="mt-2 text-[12.5px] font-semibold text-white/70">
+                  {mine.listens} {mine.listens === 1 ? "listen" : "listens"}
+                  {truth.results?.waves ? ` · ${truth.results.waves} ${truth.results.waves === 1 ? "wave" : "waves"}` : ""}
+                  {" · "}people hear it as {mine.alias}
+                </p>
               </div>
             ) : (
               <button type="button" onClick={() => setAdding(true)} className="mt-3 flex w-full items-center gap-3 rounded-[18px] bg-white/[0.08] px-3.5 py-3 text-left">
