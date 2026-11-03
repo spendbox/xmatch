@@ -25,6 +25,7 @@ import { EventSpace } from "@/components/events/space/EventSpace";
 import { EventLobby } from "@/components/events/EventLobby";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { TruthsManager } from "@/components/admin/TruthsManager";
+import { MySpillsPage } from "@/components/truths/MySpills";
 import { AdminOverview } from "@/components/admin/AdminOverview";
 import { NightsList, type AdminNight } from "@/components/admin/NightsList";
 import { NightEditor } from "@/components/admin/NightEditor";
@@ -198,7 +199,7 @@ const recent = [
   { id: "m3", created_at: iso(3000), last_message_at: iso(200), intent: "spicy" as const, other_id: "z", display_name: "Zara", photos: [photo("#5b3fd9", "#e5484d", "Z")], age: 29, last_message: null, last_sender: null },
 ];
 
-const APP_SCREENS = ["events-empty", "event-spotlight", "event-spotlight-live", "events", "event-upcoming", "event-live", "event-waiting", "event-ended", "home", "home-truth", "home-truth-done", "home-truth-open", "home-truth-results", "matches", "wallet", "profile", "rich-chat", "extend", "chat", "desktop-matches", "gifts", "home-next", "home-wait", "voice-chat", "voice-sheet", "voice-sheet-normal", "voice-record", "home-off", "home-clicked", "people", "feed", "feed-locked", "feed-chat", "feed-gifts", "meet", "meet-events", "meet-post", "explore", "chats-ice", "chats-past"];
+const APP_SCREENS = ["events-empty", "event-spotlight", "event-spotlight-live", "events", "event-upcoming", "event-live", "event-waiting", "event-ended", "home", "home-truth", "home-truth-done", "home-truth-open", "home-truth-results", "my-spills", "matches", "wallet", "profile", "rich-chat", "extend", "chat", "desktop-matches", "gifts", "home-next", "home-wait", "voice-chat", "voice-sheet", "voice-sheet-normal", "voice-record", "home-off", "home-clicked", "people", "feed", "feed-locked", "feed-chat", "feed-gifts", "meet", "meet-events", "meet-post", "explore", "chats-ice", "chats-past"];
 
 function ev(over: Partial<DashpadEvent> = {}): DashpadEvent {
   return {
@@ -440,6 +441,13 @@ function ScreenBody({ screen }: { screen: string }) {
           ]}
           demo={{ remaining: 41 * 60 + 12 }}
         />
+      );
+    case "my-spills":
+      return (
+        <div className="pb-24">
+          <MySpillsPage demo />
+          <BottomNav />
+        </div>
       );
     case "admin-truths": {
       const yn = [{ id: "a", label: "Yes" }, { id: "b", label: "No" }];

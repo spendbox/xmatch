@@ -113,11 +113,64 @@ export type MySpill = {
   listens: number;
   hidden: boolean;
   total: number;
+  /** How many picked what you picked */
   same: number;
+  /** How many picked the most popular answer */
+  top?: number;
 };
 
-export const DEMO_SPILLS: MySpill[] = [
-  { id: 3, day: "2026-11-03", body: "Would you date someone who earns less than you?", options: [{ id: "a", label: "Yes" }, { id: "b", label: "No" }], choice: "a", key: "demo", seconds: 14, style: "normal", listens: 14, hidden: false, total: 3412, same: 2184 },
-  { id: 2, day: "2026-11-02", body: "Would you rather text or call?", options: [{ id: "a", label: "Text" }, { id: "b", label: "Call" }], choice: "b", key: null, seconds: null, style: null, listens: 0, hidden: false, total: 2890, same: 1040 },
-  { id: 1, day: "2026-11-01", body: "Is a kiss on the first date too soon?", options: [{ id: "a", label: "Yes" }, { id: "b", label: "No" }], choice: "b", key: "demo", seconds: 9, style: "deep", listens: 31, hidden: false, total: 3105, same: 1987 },
+export type SpillStats = {
+  total: number;
+  voices?: number;
+  streak?: number;
+  longest?: number;
+  /** How often you picked what most people picked (%) */
+  majority?: number;
+  latest?: { day: string; body: string; answer: string | null } | null;
+};
+
+export type SpillFilter = "" | "voice" | "minority";
+
+const DEMO_QS: [string, string[]][] = [
+  ["Would you date someone who earns less than you?", ["Yes", "No"]],
+  ["Would you rather text or call?", ["Text", "Call"]],
+  ["Is a kiss on the first date too soon?", ["Yes", "No"]],
+  ["Should couples share one bank account?", ["Yes, all of it", "Some of it", "No"]],
+  ["Can men and women be just friends?", ["Yes", "No"]],
+  ["Would you move abroad for love?", ["Yes", "No"]],
+  ["Is it okay to check your partner's phone?", ["Yes", "No"]],
+  ["Would you date someone with kids?", ["Yes", "No", "Maybe"]],
 ];
+
+/** Previews: a few months of Spills */
+export const DEMO_SPILLS: MySpill[] = Array.from({ length: 40 }, (_, i) => {
+  const [body, labels] = DEMO_QS[i % DEMO_QS.length];
+  const day = new Date(Date.UTC(2026, 10, 3) - i * 86400_000 * (i > 12 ? 2 : 1)).toISOString().slice(0, 10);
+  const total = 2800 + ((i * 137) % 900);
+  const top = Math.round(total * 0.64);
+  const minority = i % 4 === 1;
+  return {
+    id: 100 - i,
+    day,
+    body,
+    options: labels.map((label, k) => ({ id: "abcd"[k], label })),
+    choice: minority ? "b" : "a",
+    key: i % 3 === 0 ? "demo" : null,
+    seconds: i % 3 === 0 ? 9 + (i % 14) : null,
+    style: i % 3 === 0 ? (i % 2 ? "deep" : "normal") : null,
+    listens: i % 3 === 0 ? 4 + ((i * 7) % 40) : 0,
+    hidden: false,
+    total,
+    same: minority ? total - top : top,
+    top,
+  };
+});
+
+export const DEMO_SPILL_STATS: SpillStats = {
+  total: 142,
+  voices: 37,
+  streak: 13,
+  longest: 41,
+  majority: 72,
+  latest: { day: "2026-11-03", body: "Would you date someone who earns less than you?", answer: "Yes" },
+};
