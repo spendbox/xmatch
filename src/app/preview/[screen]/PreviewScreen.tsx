@@ -24,6 +24,7 @@ import { MemberDetail } from "@/components/admin/MemberDetail";
 import { EventSpace } from "@/components/events/space/EventSpace";
 import { EventLobby } from "@/components/events/EventLobby";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { TruthsManager } from "@/components/admin/TruthsManager";
 import { AdminOverview } from "@/components/admin/AdminOverview";
 import { NightsList, type AdminNight } from "@/components/admin/NightsList";
 import { NightEditor } from "@/components/admin/NightEditor";
@@ -197,7 +198,7 @@ const recent = [
   { id: "m3", created_at: iso(3000), last_message_at: iso(200), intent: "spicy" as const, other_id: "z", display_name: "Zara", photos: [photo("#5b3fd9", "#e5484d", "Z")], age: 29, last_message: null, last_sender: null },
 ];
 
-const APP_SCREENS = ["events-empty", "event-spotlight", "event-spotlight-live", "events", "event-upcoming", "event-live", "event-waiting", "event-ended", "home", "matches", "wallet", "profile", "rich-chat", "extend", "chat", "desktop-matches", "gifts", "home-next", "home-wait", "voice-chat", "voice-sheet", "voice-sheet-normal", "voice-record", "home-off", "home-clicked", "people", "feed", "feed-locked", "feed-chat", "feed-gifts", "meet", "meet-events", "meet-post", "explore", "chats-ice", "chats-past"];
+const APP_SCREENS = ["events-empty", "event-spotlight", "event-spotlight-live", "events", "event-upcoming", "event-live", "event-waiting", "event-ended", "home", "home-truth", "home-truth-done", "home-truth-open", "home-truth-results", "matches", "wallet", "profile", "rich-chat", "extend", "chat", "desktop-matches", "gifts", "home-next", "home-wait", "voice-chat", "voice-sheet", "voice-sheet-normal", "voice-record", "home-off", "home-clicked", "people", "feed", "feed-locked", "feed-chat", "feed-gifts", "meet", "meet-events", "meet-post", "explore", "chats-ice", "chats-past"];
 
 function ev(over: Partial<DashpadEvent> = {}): DashpadEvent {
   return {
@@ -440,6 +441,22 @@ function ScreenBody({ screen }: { screen: string }) {
           demo={{ remaining: 41 * 60 + 12 }}
         />
       );
+    case "admin-truths": {
+      const yn = [{ id: "a", label: "Yes" }, { id: "b", label: "No" }];
+      const rows = [
+        { id: 1, day: "2026-11-02", body: "Would you rather text or call?", options: [{ id: "a", label: "Text" }, { id: "b", label: "Call" }], kind: "light", active: true },
+        { id: 2, day: "2026-11-03", body: "Would you date someone who earns less than you?", options: yn, kind: "real", active: true },
+        { id: 3, day: "2026-11-04", body: "Is a kiss on the first date too soon?", options: yn, kind: "spicy", active: true },
+        { id: 4, day: "2026-11-05", body: "Should couples share one bank account?", options: [{ id: "a", label: "Yes, all of it" }, { id: "b", label: "Some of it" }, { id: "c", label: "No" }], kind: "real", active: true },
+        { id: 5, day: "2026-11-06", body: "Is kindness a weakness?", options: yn, kind: "deep", active: false },
+        { id: 6, day: "2026-11-07", body: "Should the bride price be scrapped?", options: yn, kind: "society", active: true },
+      ];
+      return (
+        <AdminShell>
+          <TruthsManager rows={rows} today="2026-11-03" hour={20} push stats={{ "1": { total: 2890, voices: 140, counts: { a: 1850, b: 1040 } }, "2": { total: 3412, voices: 212, counts: { a: 2184, b: 1228 } } }} />
+        </AdminShell>
+      );
+    }
     case "admin-things":
       return (
         <AdminShell>
@@ -622,12 +639,16 @@ function ScreenBody({ screen }: { screen: string }) {
     case "home-pact":
     case "home-daily":
     case "home-daily-done":
+    case "home-truth":
+    case "home-truth-done":
+    case "home-truth-open":
+    case "home-truth-results":
     case "home-pop-pair":
     case "home-pop-match":
       return (
         <div className="pb-24">
           {screen.startsWith("home-pop-") && <BigMomentPop kind={screen === "home-pop-pair" ? "pair" : "match"} />}
-          <HomeScreen demoDaily={screen === "home-daily" ? "todo" : screen === "home-daily-done" ? "done" : undefined} demoPeople={homePeople} demoSetup={{ place: true, push: false, things: 4, claimed: false, reward: 5 }} meets={demoMeets} hour={demoHour()} profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} stats={{ online: 214, week_chats: 12, week_unmasks: 5, gifts_received: 3 }} matches={recent} pact={screen === "home-pact" ? { ...demoPact, count: 1 } : null} />
+          <HomeScreen demoDaily={screen === "home-daily" ? "todo" : screen === "home-daily-done" ? "done" : undefined} demoTruth={screen === "home-truth" ? "todo" : screen === "home-truth-done" ? "done" : screen === "home-truth-open" ? "open" : screen === "home-truth-results" ? "results" : undefined} demoMasked={screen.startsWith("home-truth") ? homeMasked : undefined} demoPeople={homePeople} demoSetup={{ place: true, push: false, things: 4, claimed: false, reward: 5 }} meets={demoMeets} hour={demoHour()} profile={me} wallet={{ balance: 120, passes: 0, free_left: 3, next_free_at: null }} stats={{ online: 214, week_chats: 12, week_unmasks: 5, gifts_received: 3 }} matches={recent} pact={screen === "home-pact" ? { ...demoPact, count: 1 } : null} />
           <BottomNav />
         </div>
       );

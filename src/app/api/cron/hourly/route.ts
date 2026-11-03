@@ -121,6 +121,20 @@ async function handle(req: Request) {
       }),
     ),
   );
+  // A new Truth just went up: tell everyone with notifications on (once each; skipped if they've answered)
+  let truthTold = 0;
+  try {
+    while (Date.now() - started < 45_000) {
+      const { data, error } = await db.rpc("truth_push_batch", { p_limit: 500 });
+      if (error || !data) break;
+      const t = data as { id: number; body: string; users: string[] };
+      if (!t.users?.length) break;
+      truthTold += t.users.length;
+      await pushToUsers(t.users, { title: "Today's Truth is up", body: t.body, url: "/home?truth=1", tag: "truth" });
+    }
+  } catch (e) {
+    console.error("truth push failed", e);
+  }
   // Pacts whose reveal night has come (the every-minute pacts job does this too, if it's set up)
   let pacts: unknown[] = [];
   try {
@@ -128,7 +142,7 @@ async function handle(req: Request) {
   } catch (e) {
     console.error("pact reveal failed", e);
   }
-  return NextResponse.json({ ok: true, pairingError, made, left, told, sent, nudged: nudges.length, refunds: refunds.length, voiceDeleted, pacts });
+  return NextResponse.json({ ok: true, pairingError, made, left, told, sent, nudged: nudges.length, refunds: refunds.length, voiceDeleted, truthTold, pacts });
 }
 
 export const GET = handle;

@@ -34,6 +34,8 @@ import { useMeets } from "@/components/meets/useMeets";
 import { FEATURES } from "@/lib/features";
 import { ProfileViews } from "./ProfileViews";
 import { RecentChats, type RecentMasked } from "./RecentChats";
+import { TruthBubble, TruthCard, TruthSheet, useTruth } from "@/components/truths/Truths";
+import { DEMO_TRUTH } from "@/lib/truths";
 
 // Pop-ups that only open when tapped: downloaded then, not with the page
 const WelcomeTour = dynamic(() => import("./WelcomeTour").then((m) => m.WelcomeTour), { ssr: false });
@@ -60,6 +62,7 @@ export function HomeScreen({
   demoBreak,
   demoBreakMode,
   demoDaily,
+  demoTruth,
 }: {
   profile: Profile;
   wallet: Wallet | null;
@@ -86,6 +89,8 @@ export function HomeScreen({
   demoBreakMode?: "card" | "this" | "voice" | "game";
   /** Design preview of the Daily Word Hunt card */
   demoDaily?: "todo" | "done";
+  /** Preview: today's Truth, waiting, answered or open */
+  demoTruth?: "todo" | "done" | "open" | "results";
 }) {
   const supabase = useMemo(() => createClient(), []);
   const { wallet, refresh: refreshWallet } = useWallet(profile.id, initialWallet);
@@ -94,6 +99,17 @@ export function HomeScreen({
   const now = useNow(30_000);
   const [prefs, setPrefs] = useState<SetupPrefs>(() => prefsFromProfile(profile));
   const [meetOpen, setMeetOpen] = useState(demoSheet === "meet");
+  const { truth, setTruth } = useTruth(demoTruth ? DEMO_TRUTH(demoTruth === "done" || demoTruth === "results") : demoPeople ? null : undefined);
+  const [truthOpen, setTruthOpen] = useState(demoTruth === "open" || demoTruth === "results");
+  // Opened from the "Today's Truth is up" notification: show it straight away
+  useEffect(() => {
+    if (demoTruth || !truth) return;
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has("truth")) return;
+    url.searchParams.delete("truth");
+    window.history.replaceState(null, "", url.pathname + url.search);
+    setTruthOpen(true);
+  }, [demoTruth, truth]);
   const backToPlay = useRef(false);
   // Opened from Play's "Change": go straight to your Masquerade settings
   useEffect(() => {
@@ -198,7 +214,10 @@ export function HomeScreen({
         myId={profile.id}
         demoMasked={demoMasked}
         me={{ photo: profile.real_photos?.[0] ?? profile.photos?.[0], note: profile.note, noteAt: profile.note_at, intent: prefs.intent, demo: !!demoPeople }}
+        truthCard={truth ? <TruthCard truth={truth} onOpen={() => setTruthOpen(true)} /> : undefined}
+        truthBubble={truth ? <TruthBubble truth={truth} onOpen={() => setTruthOpen(true)} /> : undefined}
       />
+      {truth && <TruthSheet truth={truth} open={truthOpen} onClose={() => setTruthOpen(false)} onChange={setTruth} demo={!!demoTruth} />}
       <ProfileViews demo={demoViews} onKeys={refreshWallet} />
 
       <div className="lg:mt-8 lg:grid lg:grid-cols-12 lg:items-start lg:gap-8">
