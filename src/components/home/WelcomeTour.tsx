@@ -32,8 +32,8 @@ const STEPS: Step[] = [
   {
     target: "recent",
     icon: <MessageCircle size={22} />,
-    title: "Truths, chats and notes",
-    body: "The glowing bubble is today's Truth: answer one question, then see how everyone answered and hear their masked voices. Next to it are your latest chats and the notes people shared today.",
+    title: "Spill, chats and notes",
+    body: "The glowing bubble is today's Spill: one bold question a day. Spill your answer, then see how everyone answered and hear their masked voices. Next to it are your latest chats and the notes people shared today.",
   },
   {
     target: "views",

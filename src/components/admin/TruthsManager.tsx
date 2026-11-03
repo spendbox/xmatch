@@ -60,8 +60,8 @@ export function TruthsManager({ rows, stats, today, hour, push, missing }: { row
   if (missing) {
     return (
       <>
-        <AdminTitle title="Truths" />
-        <p className="rounded-3xl border border-line bg-surface p-5 text-[15px] shadow-card">Run update 115 in Supabase first. It adds the Truths and the first 365 questions.</p>
+        <AdminTitle title="Spill" />
+        <p className="rounded-3xl border border-line bg-surface p-5 text-[15px] shadow-card">Run update 115 in Supabase first. It adds the Spill and the first 365 questions.</p>
       </>
     );
   }
@@ -69,11 +69,11 @@ export function TruthsManager({ rows, stats, today, hour, push, missing }: { row
   return (
     <>
       <AdminTitle
-        title="Truths"
+        title="Spill"
         subtitle="One question a day for everyone. People answer, can add a masked voice, then see how everyone answered and wave at voices they like."
         action={
           <button type="button" onClick={() => setEditing("new")} className="inline-flex h-11 items-center gap-2 rounded-2xl bg-brand px-4 text-[14px] font-bold text-white">
-            <Plus size={18} /> Add a Truth
+            <Plus size={18} /> Add a question
           </button>
         }
       />
@@ -81,7 +81,7 @@ export function TruthsManager({ rows, stats, today, hour, push, missing }: { row
       {/* Today, and how long the list lasts */}
       <div className="mb-5 grid gap-3 sm:grid-cols-3">
         <div className="rounded-3xl bg-[#1a1233] p-4 text-white sm:col-span-2">
-          <p className="text-[11px] font-extrabold tracking-wide text-gold">TODAY&apos;S TRUTH</p>
+          <p className="text-[11px] font-extrabold tracking-wide text-gold">TODAY&apos;S SPILL</p>
           <p className="mt-1 font-display text-[19px] leading-snug font-semibold">{todays?.body ?? "Nothing set for today. The next one without a date goes out."}</p>
           {todays && <Split row={todays} stats={stats} dark />}
         </div>
@@ -129,7 +129,7 @@ export function TruthsManager({ rows, stats, today, hour, push, missing }: { row
         ))}
         <label className="flex h-10 w-full items-center sm:ml-auto sm:w-auto sm:min-w-[220px] gap-2 rounded-full border border-line bg-surface px-3.5 text-muted">
           <Search size={16} />
-          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search all Truths" className="w-full bg-transparent text-[14px] text-ink outline-none" />
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search all questions" className="w-full bg-transparent text-[14px] text-ink outline-none" />
         </label>
       </div>
 
@@ -191,7 +191,7 @@ export function TruthsManager({ rows, stats, today, hour, push, missing }: { row
           ),
         )}
       </ul>
-      {!shown.length && <p className="py-10 text-center text-[14px] text-muted">{query ? "No Truths match that." : "Nothing here."}</p>}
+      {!shown.length && <p className="py-10 text-center text-[14px] text-muted">{query ? "No questions match that." : "Nothing here."}</p>}
     </>
   );
 }
@@ -259,7 +259,7 @@ function Voices({ truth }: { truth: TruthRow }) {
 /** The "Today's Truth is up" notification, sent when each new Truth starts */
 function PushToggle({ on, onSaved }: { on: boolean | null; onSaved: () => void }) {
   const [v, setV] = useState(on);
-  if (v === null) return <p className="mt-2 text-[12px] text-muted">Run update 116 to send a notification when each Truth goes up.</p>;
+  if (v === null) return <p className="mt-2 text-[12px] text-muted">Run update 116 to send a notification when each Spill goes up.</p>;
   return (
     <label className="mt-2 flex items-center gap-2 text-[12.5px] font-semibold text-muted">
       <input
@@ -284,7 +284,7 @@ function HourPicker({ hour, onSaved }: { hour: number; onSaved: () => void }) {
   const label = (n: number) => (n === 0 ? "12am" : n < 12 ? `${n}am` : n === 12 ? "12pm" : `${n - 12}pm`);
   return (
     <label className="mt-3 flex items-center gap-2 text-[12.5px] font-semibold text-muted">
-      New Truth at
+      New Spill at
       <select
         value={h}
         onChange={async (e) => {
@@ -335,7 +335,7 @@ function Editor({ draft, answered, onDone }: { draft: Draft; answered: number; o
     <div className="mb-2.5 rounded-3xl border-2 border-brand/30 bg-surface p-4 shadow-card">
       {/* How it looks on Home */}
       <div className="rounded-[22px] bg-[#1a1233] p-4 text-white">
-        <span className="rounded-full bg-gold px-2 py-0.5 text-[10.5px] font-extrabold tracking-wide text-[#1a1233]">TODAY&apos;S TRUTH</span>
+        <span className="rounded-full bg-gold px-2 py-0.5 text-[10.5px] font-extrabold tracking-wide text-[#1a1233]">TODAY&apos;S SPILL</span>
         <p className="mt-2 font-display text-[19px] leading-snug font-semibold">{d.body || "Would you date someone who earns less than you?"}</p>
         <div className="mt-3 flex flex-wrap gap-1.5">
           {options.slice(0, 4).map((o) => (
@@ -376,7 +376,7 @@ function Editor({ draft, answered, onDone }: { draft: Draft; answered: number; o
       {err && <p className="mt-3 text-[13px] font-semibold text-chili">{err}</p>}
       <div className="mt-4 flex gap-2">
         <button type="button" onClick={() => void save()} disabled={busy} className="h-11 rounded-2xl bg-brand px-5 text-[14px] font-bold text-white disabled:opacity-50">
-          {busy ? "Saving…" : d.id ? "Save" : "Add Truth"}
+          {busy ? "Saving…" : d.id ? "Save" : "Add question"}
         </button>
         <button type="button" onClick={onDone} className="h-11 rounded-2xl border border-line px-5 text-[14px] font-bold text-ink-soft">
           Cancel
