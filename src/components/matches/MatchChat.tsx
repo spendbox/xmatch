@@ -126,7 +126,12 @@ export function MatchChat({
   const [giftOpen, setGiftOpen] = useState(false);
   const { wallet, refresh: refreshWallet } = useWallet(myId);
   const nameOf = (id: string | null) => (id === myId ? "You" : other.display_name ?? "Them");
-  const lastFromThem = [...messages].reverse().find((m) => m.sender_id === other.id && m.kind === "text" && !m.deleted_at);
+  // Their latest message shows over a game only while it's still waiting for an answer: the last
+  // thing said in the chat, and sent in the last 15 minutes. Once either of you sends anything
+  // after it, it goes away.
+  const lastSaid = [...messages].reverse().find((m) => m.sender_id && !m.deleted_at && m.kind !== "system" && m.kind !== "game");
+  const lastFromThem =
+    lastSaid && lastSaid.sender_id === other.id && lastSaid.kind === "text" && Date.now() - new Date(lastSaid.created_at).getTime() < 15 * 60_000 ? lastSaid : null;
   const games = useGameHost({
     matchId,
     names: { me: "You", them: (other.display_name ?? "Them").split(" ")[0] },

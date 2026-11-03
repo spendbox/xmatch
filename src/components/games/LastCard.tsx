@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import { buzz, sfx, type Game, type GameActions } from "@/lib/games";
 import {
@@ -76,6 +76,8 @@ export function LastCard({
   const seen = useRef(st.moves);
   const mine = useRef<string | null>(null);
   const n = useRef(0);
+  // Cards you've just drawn, already shown flying to your hand (so they don't fly twice)
+  const drawing = useRef(0);
 
   const rect = (el: Element | null | undefined) =>
     el?.getBoundingClientRect() ?? new DOMRect();
@@ -124,7 +126,9 @@ export function LastCard({
     // Cards drawn: face down, to whoever drew them (a catch makes the caught one draw)
     if (l.drew) {
       const toMe = l.caught ? !byMe : byMe;
-      for (let k = 0; k < Math.min(l.drew, 6); k++)
+      const already = toMe && byMe && !l.caught ? Math.min(drawing.current, l.drew) : 0;
+      drawing.current = 0;
+      for (let k = already; k < Math.min(l.drew, 6); k++)
         fly({
           card: null,
           from: rect(deckRef.current),
@@ -204,6 +208,15 @@ export function LastCard({
     }
   }
 
+  // Draw: the card starts flying to you straight away, while the server deals it
+  async function draw() {
+    if (!myTurn || busy || drawn) return;
+    const count = Math.min(st.pending || 1, 6);
+    drawing.current = count;
+    for (let k = 0; k < count; k++) fly({ card: null, from: rect(deckRef.current), to: rect(myHand.current), delay: k * 110 });
+    if (!(await send({ type: "draw" }))) drawing.current = 0;
+  }
+
   async function tapCard(card: string) {
     if (!myTurn || busy || !canPlay(st, card)) return;
     if (drawn && card !== drawn) return;
@@ -212,6 +225,10 @@ export function LastCard({
   }
 
   const owed = st.pending;
+  // A steady function for the hand, so it doesn't redraw every time the clock ticks
+  const tapRef = useRef(tapCard);
+  tapRef.current = tapCard;
+  const onTap = useCallback((c: string) => void tapRef.current(c), []);
   const status =
     note ??
     (!started
@@ -235,7 +252,7 @@ export function LastCard({
             : "");
 
   const theirShown = Math.min(theirCount, 12);
-  const mineShown = hand.filter((c) => c !== hidden);
+  const mineShown = useMemo(() => hand.filter((c) => c !== hidden), [hand, hidden]);
   const colour = LC_COLOURS[st.colour];
 
   return (
@@ -303,7 +320,7 @@ export function LastCard({
           <button
             ref={deckRef}
             type="button"
-            onClick={() => send({ type: "draw" })}
+            onClick={() => void draw()}
             disabled={!myTurn || busy || !!drawn}
             className={clsx(
               "relative transition active:scale-95",
@@ -461,42 +478,7 @@ export function LastCard({
           ref={myHand}
           className="no-scrollbar -mx-3 touch-pan-x overflow-x-auto overscroll-x-contain px-6 pt-4 pb-2"
         >
-          <div className="mx-auto flex w-max pr-3 pl-3">
-            {mineShown.map((c, k) => {
-              const ok = myTurn && canPlay(st, c) && (!drawn || c === drawn);
-              const mid = (mineShown.length - 1) / 2;
-              const many = mineShown.length;
-              const spread = many > 12 ? 1 : many > 7 ? 2 : 4;
-              return (
-                <button
-                  key={`${c}-${k}`}
-                  ref={(el) => {
-                    if (el) cardEls.current.set(c, el);
-                    else cardEls.current.delete(c);
-                  }}
-                  type="button"
-                  onClick={() => tapCard(c)}
-                  disabled={!myTurn || busy}
-                  aria-label={`${cardName(c)}${ok ? ", playable" : ""}`}
-                  className={clsx(
-                    "relative shrink-0 origin-bottom transition-transform duration-200",
-                    many > 10
-                      ? "-mx-[16px]"
-                      : many > 5
-                        ? "-mx-[13px]"
-                        : "mx-0.5",
-                    !ok && myTurn && "brightness-75 saturate-50",
-                  )}
-                  style={{
-                    transform: `rotate(${(k - mid) * spread}deg) translateY(${ok ? -14 : Math.min(Math.abs(k - mid) * 2, many > 10 ? 4 : 99)}px)`,
-                    zIndex: k,
-                  }}
-                >
-                  <Card card={c} glow={ok} />
-                </button>
-              );
-            })}
-          </div>
+          <MyHand cards={mineShown} st={st} myTurn={myTurn} busy={busy} drawn={drawn} cardEls={cardEls.current} onTap={onTap} />
         </div>
       </div>
 
@@ -548,6 +530,61 @@ export function LastCard({
   );
 }
 
+/** Your hand, fanned out. Kept apart so it only redraws when your cards or your turn change. */
+const MyHand = memo(function MyHand({
+  cards,
+  st,
+  myTurn,
+  busy,
+  drawn,
+  cardEls,
+  onTap,
+}: {
+  cards: string[];
+  st: LastCardState;
+  myTurn: boolean;
+  busy: boolean;
+  drawn: string | null;
+  cardEls: Map<string, HTMLElement>;
+  onTap: (card: string) => void;
+}) {
+  const mid = (cards.length - 1) / 2;
+  const many = cards.length;
+  const spread = many > 12 ? 1 : many > 7 ? 2 : 4;
+  return (
+    <div className="mx-auto flex w-max pr-3 pl-3">
+      {cards.map((c, k) => {
+        const ok = myTurn && canPlay(st, c) && (!drawn || c === drawn);
+        return (
+          <button
+            key={`${c}-${k}`}
+            ref={(el) => {
+              if (el) cardEls.set(c, el);
+              else cardEls.delete(c);
+            }}
+            type="button"
+            onClick={() => onTap(c)}
+            disabled={!myTurn || busy}
+            aria-label={`${cardName(c)}${ok ? ", playable" : ""}`}
+            className={clsx(
+              "relative shrink-0 origin-bottom transition-transform duration-200",
+              many > 10 ? "-mx-[16px]" : many > 5 ? "-mx-[13px]" : "mx-0.5",
+            )}
+            style={{
+              transform: `rotate(${(k - mid) * spread}deg) translateY(${ok ? -14 : Math.min(Math.abs(k - mid) * 2, many > 10 ? 4 : 99)}px)`,
+              zIndex: k,
+            }}
+          >
+            <Card card={c} glow={ok} />
+            {/* Cards you can't play now are dimmed with a shade (lighter work for phones than a filter) */}
+            {!ok && myTurn && <span aria-hidden className="pointer-events-none absolute inset-0 rounded-[12px] bg-black/35" />}
+          </button>
+        );
+      })}
+    </div>
+  );
+});
+
 function FlyingCard({ f, onDone }: { f: Fly; onDone: () => void }) {
   const el = useRef<HTMLSpanElement>(null);
   useLayoutEffect(() => {
@@ -585,8 +622,8 @@ function FlyingCard({ f, onDone }: { f: Fly; onDone: () => void }) {
   return (
     <span
       ref={el}
-      className="absolute top-0 left-0 will-change-transform"
-      style={{ filter: "drop-shadow(0 12px 14px rgba(0,0,0,0.45))" }}
+      className="absolute top-0 left-0 block rounded-[12px] will-change-transform"
+      style={{ width: W, height: H, boxShadow: "0 14px 22px rgba(0,0,0,0.4)" }}
     >
       {f.card ? <Card card={f.card} /> : <CardBack />}
     </span>
