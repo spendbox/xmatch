@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { showMediaHelp } from "@/lib/mediaPermission";
 import { GhostMode } from "./GhostMode";
 import { ThingsAboutMe } from "./ThingsAboutMe";
+import { MySpills } from "@/components/truths/MySpills";
 import { VoiceIntroCard } from "./VoiceIntroCard";
 import { YourPacts, type MyPact } from "@/components/pacts/YourPacts";
 import clsx from "clsx";
@@ -310,6 +311,7 @@ export function ProfileEditor({
           <ThingsAboutMe initial={profile.things ?? []} />
           <VoiceIntroCard initial={{ key: profile.voice_intro_key ?? null, seconds: profile.voice_intro_seconds ?? null, style: profile.voice_intro_style ?? null }} demo={!!demoPacts} />
           <YourPacts demo={demoPacts} />
+          <MySpills demo={!!demoPacts} />
 
           <SectionTitle>Masquerade</SectionTitle>
           <div className="grid gap-3 sm:grid-cols-2">

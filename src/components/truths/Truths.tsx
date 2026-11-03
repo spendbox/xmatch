@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { Check, ChevronRight, Flame, Hand, Mic, Pause, Play, RotateCcw, Square, X } from "lucide-react";
+import { Check, ChevronRight, Flame, Hand, Lock, Mic, Pause, Play, RotateCcw, Square, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { tapFeedback, Spinner } from "@/components/ui/Button";
 import { MaskIcon } from "@/components/ui/MaskIcon";
@@ -21,6 +21,7 @@ const STYLES: { id: VoiceStyle; label: string }[] = [
   { id: "deep", label: "Deep" },
   { id: "light", label: "Light" },
   { id: "robot", label: "Robot" },
+  { id: "normal", label: "Real voice" },
 ];
 
 /** Today's Truth: loads it, and keeps it fresh when it changes over */
@@ -212,8 +213,8 @@ function VoiceAnswer({ onClip, clip }: { onClip: (c: { blob: Blob; seconds: numb
           </button>
         )}
         <div className="min-w-0 flex-1">
-          <p className="text-[15px] font-bold">{voice.recording ? `Recording… ${formatDuration(voice.seconds)}` : clip ? `Your voice answer · ${formatDuration(clip.seconds)}` : "Say why, in your masked voice"}</p>
-          <p className="text-[12.5px] text-white/65">{voice.recording ? `Tap to stop (up to ${MAX} seconds)` : "Optional. Your voice is disguised before it leaves your phone."}</p>
+          <p className="text-[15px] font-bold">{voice.recording ? `Recording… ${formatDuration(voice.seconds)}` : clip ? `Your voice answer · ${formatDuration(clip.seconds)}` : style === "normal" ? "Say why, in your own voice" : "Say why, in your masked voice"}</p>
+          <p className="text-[12.5px] text-white/65">{voice.recording ? `Tap to stop (up to ${MAX} seconds)` : style === "normal" ? "Optional. People will hear your real voice, but still not your name or face." : "Optional. Your voice is disguised before it leaves your phone."}</p>
         </div>
         {clip && !voice.recording && (
           <button
@@ -232,7 +233,7 @@ function VoiceAnswer({ onClip, clip }: { onClip: (c: { blob: Blob; seconds: numb
           </button>
         )}
       </div>
-      <div className="mt-3 flex gap-2">
+      <div className="mt-3 flex flex-wrap gap-2">
         {STYLES.map((s) => (
           <button
             key={s.id}
@@ -441,7 +442,7 @@ export function TruthSheet({ truth, open, onClose, onChange, demo }: { truth: Tr
           </div>
         ) : !mine ? (
           <>
-            <p className="mt-2 px-1 text-[14px] font-medium text-white/70">Be honest. Nobody sees your face or name.</p>
+            <p className="mt-2 flex items-start gap-1.5 px-1 text-[14px] font-medium text-white/75"><Lock size={15} className="mt-0.5 shrink-0 text-gold" aria-hidden /> Be honest, your answer is private. Others only see a mask name, never your profile.</p>
             <div className="mt-5 flex flex-col gap-2.5">
               {truth.options.map((o) => {
                 const on = pick === o.id;
@@ -470,7 +471,7 @@ export function TruthSheet({ truth, open, onClose, onChange, demo }: { truth: Tr
               <button type="button" onClick={() => pick && void send(pick, !!clip)} disabled={!pick || busy} className="inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gold text-[16.5px] font-extrabold text-[#1a1233] transition active:scale-[0.99] disabled:opacity-50">
                 {busy ? <Spinner className="h-4 w-4" /> : null} Spill it and see everyone
               </button>
-              <p className="mt-2.5 text-center text-[12.5px] text-white/55">You&apos;ll see how everyone answered once you answer.</p>
+              <p className="mt-2.5 text-center text-[12.5px] text-white/55">Only you can see your answers, in My Spills on your Profile.</p>
             </div>
           </>
         ) : (
