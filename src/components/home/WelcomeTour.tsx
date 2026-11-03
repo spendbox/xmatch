@@ -32,8 +32,8 @@ const STEPS: Step[] = [
   {
     target: "recent",
     icon: <MessageCircle size={22} />,
-    title: "Recent chats and notes",
-    body: "Your latest chats, with the notes people have shared today. Tap Your note to share what's on your mind for 24 hours.",
+    title: "Truths, chats and notes",
+    body: "The glowing bubble is today's Truth: answer one question, then see how everyone answered and hear their masked voices. Next to it are your latest chats and the notes people shared today.",
   },
   {
     target: "views",

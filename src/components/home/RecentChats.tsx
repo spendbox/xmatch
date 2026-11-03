@@ -56,6 +56,8 @@ export function RecentChats({
   demoMasked,
   lead,
   me,
+  truthCard,
+  truthBubble,
 }: {
   matches: MatchSummary[];
   myId: string;
@@ -64,6 +66,10 @@ export function RecentChats({
   lead?: React.ReactNode;
   /** You: your photo and note (first in the row; tap to write a note) */
   me?: { photo?: string | null; note?: string | null; noteAt?: string | null; intent: Intent; demo?: boolean };
+  /** Today's Truth: the question, above the row */
+  truthCard?: React.ReactNode;
+  /** Today's Truth: its bubble, first in the row */
+  truthBubble?: React.ReactNode;
 }) {
   const [myNote, setMyNote] = useState<{ note: string | null; at: string | null }>({ note: me?.note ?? null, at: me?.noteAt ?? null });
   const [noteOpen, setNoteOpen] = useState(false);
@@ -128,7 +134,7 @@ export function RecentChats({
     .sort((a, b) => b.at.localeCompare(a.at))
     .slice(0, 12);
 
-  if (!items.length && !lead && !me) return null;
+  if (!items.length && !lead && !me && !truthBubble) return null;
   const mine = fresh(myNote.at) ? myNote.note : null;
   // Room above the circles for note bubbles
   const notes = !!me || items.some((c) => c.note);
@@ -140,7 +146,9 @@ export function RecentChats({
           All <ChevronRight size={15} />
         </Link>
       </div>
+      {truthCard}
       <ul className={clsx("-mx-5 flex overflow-x-auto px-5 no-scrollbar lg:mx-0 lg:px-1", notes ? "gap-3 pt-[46px] pb-1" : "gap-2.5 py-1")}>
+        {truthBubble && <li className="shrink-0">{truthBubble}</li>}
         {lead && <li className="shrink-0">{lead}</li>}
         {/* You: your note (tap to write one) */}
         {me && (
