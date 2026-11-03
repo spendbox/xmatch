@@ -30,7 +30,7 @@ export const MOODS: Record<Intent, Mood> = {
     looking: "Looking for your next buddy",
     unmask: "Be friends",
     gifts: ["thumbsup", "jollof", "gg", "clap", "coffee", "fire"],
-    chatBg: "mint",
+    chatBg: "ocean",
   },
   dating: {
     gradient: "linear-gradient(135deg, #5b3fd9 0%, #8f3fd9 55%, #d0458a 100%)",
