@@ -30,7 +30,7 @@ export async function saveTruth(input: {
   let oldDay: string | null = null;
   if (input.id) {
     const { data: was } = await db.from("truths").select("day, options").eq("id", input.id).maybeSingle();
-    if (!was) return { error: "That Truth is gone. Refresh the page." };
+    if (!was) return { error: "That question is gone. Refresh the page." };
     oldDay = (was.day as string | null) ?? null;
     const prev = (was.options as { id: string; label: string }[]) ?? [];
     const { count } = await db.from("truth_answers").select("id", { count: "exact", head: true }).eq("truth_id", input.id);
@@ -45,7 +45,7 @@ export async function saveTruth(input: {
     if (other) {
       swapped = other.id as number;
       const { error } = await db.from("truths").update({ day: null }).eq("id", swapped);
-      if (error) return { error: "Couldn't move the other Truth off that date." };
+      if (error) return { error: "Couldn't move the other question off that date." };
     }
   }
 

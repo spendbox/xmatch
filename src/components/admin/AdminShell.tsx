@@ -20,7 +20,7 @@ const NAV = [
   { href: "/admin/nights", label: "Events", icon: CalendarDays },
   { href: "/admin/link-ups", label: "Link-Ups", icon: Stamp },
   ...(FEATURES.feed ? [{ href: "/admin/prompts", label: "Daily prompts", icon: MessageSquareText }] : []),
-  { href: "/admin/truths", label: "Truths", icon: Flame },
+  { href: "/admin/truths", label: "Spill", icon: Flame },
   { href: "/admin/icebreakers", label: "Icebreakers", icon: MessageCircleQuestion },
   { href: "/admin/things", label: "Profile questions", icon: ListChecks },
   { href: "/admin/prices", label: "Prices", icon: Tag },

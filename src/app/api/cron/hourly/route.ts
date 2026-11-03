@@ -130,7 +130,7 @@ async function handle(req: Request) {
       const t = data as { id: number; body: string; users: string[] };
       if (!t.users?.length) break;
       truthTold += t.users.length;
-      await pushToUsers(t.users, { title: "Today's Truth is up", body: t.body, url: "/home?truth=1", tag: "truth" });
+      await pushToUsers(t.users, { title: "Today's Spill is up 👀", body: t.body, url: "/home?truth=1", tag: "truth" });
     }
   } catch (e) {
     console.error("truth push failed", e);

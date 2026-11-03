@@ -71,7 +71,7 @@ export function TruthCard({ truth, onOpen }: { truth: Truth; onOpen: () => void 
           <Check size={13} strokeWidth={3.5} />
         </span>
         <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold">
-          {pct != null ? `${pct}% agree with you` : "Truth answered"}
+          {pct != null ? `${pct}% agree with you` : "You spilled"}
           {truth.results?.waves ? <span className="text-brand"> · {truth.results.waves} {truth.results.waves === 1 ? "wave" : "waves"}</span> : null}
         </span>
         <Streak n={truth.streak} className="text-[12px] text-[#b5530c]" />
@@ -84,20 +84,20 @@ export function TruthCard({ truth, onOpen }: { truth: Truth; onOpen: () => void 
       type="button"
       onClick={open}
       className="relative mb-1 block w-full rounded-[22px] bg-[#1a1233] px-4 pt-3 pb-3.5 text-left text-white shadow-[0_16px_30px_-18px_rgba(26,18,51,0.9)] transition active:scale-[0.99]"
-      aria-label={`Today's Truth: ${truth.body} Tap to answer`}
+      aria-label={`Today's Spill: ${truth.body} Tap to spill`}
     >
       <span aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden rounded-[22px]">
         <span className="absolute -top-16 -right-10 h-40 w-40 rounded-full bg-brand/60 blur-2xl" />
       </span>
       <span className="relative flex items-center gap-2">
-        <span className="rounded-full bg-gold px-2 py-0.5 text-[10.5px] font-extrabold tracking-wide text-[#1a1233]">TODAY&apos;S TRUTH</span>
+        <span className="rounded-full bg-gold px-2 py-0.5 text-[10.5px] font-extrabold tracking-wide text-[#1a1233]">TODAY&apos;S SPILL</span>
         <Streak n={truth.streak} className="text-[12px] text-[#ffcf7a]" />
         <span className="ml-auto text-[11.5px] font-semibold text-white/70">{timeLeft(truth.ends_at)} left</span>
       </span>
       <span className="relative mt-2 block font-display text-[19px] leading-[1.2] font-semibold">{truth.body}</span>
       <span className="relative mt-2 flex items-center gap-1 text-[12.5px] font-bold text-gold">
-        Answer it <ChevronRight size={14} />
-        <span className="ml-auto font-semibold text-white/60">{truth.total.toLocaleString()} answered</span>
+        Spill it <ChevronRight size={14} />
+        <span className="ml-auto font-semibold text-white/60">{truth.total.toLocaleString()} spilled</span>
       </span>
       {/* Points down at the Truth bubble */}
       <span aria-hidden className="absolute -bottom-1.5 left-[30px] h-3.5 w-3.5 rotate-45 rounded-[3px] bg-[#1a1233]" />
@@ -119,7 +119,7 @@ export function TruthBubble({ truth, onOpen }: { truth: Truth; onOpen: () => voi
         }}
         className="relative block h-12 w-12 rounded-full active:scale-95"
         style={live ? { animation: "dp-truth-glow 1.8s ease-in-out infinite" } : undefined}
-        aria-label={live ? "Today's Truth: answer it" : "Today's Truth: see how everyone answered"}
+        aria-label={live ? "Today's Spill: spill it" : "Today's Spill: see how everyone answered"}
       >
         <span
           aria-hidden
@@ -146,7 +146,7 @@ export function TruthBubble({ truth, onOpen }: { truth: Truth; onOpen: () => voi
           </span>
         )}
       </button>
-      <span className={clsx("w-full truncate text-center text-[11px] leading-[16.5px]", live ? "font-extrabold text-ink" : "font-medium text-muted")}>Truth</span>
+      <span className={clsx("w-full truncate text-center text-[11px] leading-[16.5px]", live ? "font-extrabold text-ink" : "font-medium text-muted")}>Spill</span>
     </div>
   );
 }
@@ -360,7 +360,7 @@ export function TruthSheet({ truth, open, onClose, onChange, demo }: { truth: Tr
       }
       const key = withVoice && clip ? await upload(clip.blob) : null;
       const { data, error: err } = await supabase.rpc("answer_truth", { p_truth: truth.id, p_choice: choice, p_key: key, p_seconds: clip?.seconds ?? null, p_style: clip?.style ?? null });
-      if (err) throw new Error(err.message.replace(/^.*?: /, "") || "Couldn't save your answer. Try again.");
+      if (err) throw new Error(err.message.replace(/^.*?: /, "").replace(/\bTruth\b/g, "Spill") || "Couldn't save your answer. Try again.");
       onChange(data as Truth);
       setClip(null);
       setAdding(false);
@@ -407,14 +407,14 @@ export function TruthSheet({ truth, open, onClose, onChange, demo }: { truth: Tr
   const shown = tab === "same" ? same : other;
 
   return createPortal(
-    <div className="fixed inset-0 z-[80] overflow-y-auto bg-[#1a1233] text-white animate-fade-in" role="dialog" aria-modal="true" aria-label="Today's Truth">
+    <div className="fixed inset-0 z-[80] overflow-y-auto bg-[#1a1233] text-white animate-fade-in" role="dialog" aria-modal="true" aria-label="Today's Spill">
       <div aria-hidden className="pointer-events-none fixed inset-x-0 top-0 h-[60vh] bg-[radial-gradient(ellipse_at_50%_0%,rgba(91,63,217,0.75),transparent_70%)]" />
       <div className="relative mx-auto flex min-h-full max-w-md flex-col px-4 pt-[max(14px,env(safe-area-inset-top))] pb-[max(20px,env(safe-area-inset-bottom))]">
         <div className="flex items-center gap-2">
           <button type="button" onClick={onClose} aria-label="Close" className="grid h-11 w-11 place-items-center rounded-full bg-white/10">
             <X size={19} />
           </button>
-          <p className="flex-1 text-center text-[12.5px] font-extrabold tracking-[0.14em] text-gold">TODAY&apos;S TRUTH</p>
+          <p className="flex-1 text-center text-[12.5px] font-extrabold tracking-[0.14em] text-gold">TODAY&apos;S SPILL</p>
           <span className="grid h-11 min-w-11 place-items-center rounded-full bg-white/10 px-3 text-[13px]">
             {truth.streak ? <Streak n={truth.streak} className="text-white" /> : <span className="font-bold text-white/70">{timeLeft(truth.ends_at)}</span>}
           </span>
@@ -468,7 +468,7 @@ export function TruthSheet({ truth, open, onClose, onChange, demo }: { truth: Tr
             {error && <p className="mt-3 rounded-xl bg-black/25 px-3 py-2 text-[13px] font-medium text-[#ffd0d0]">{error}</p>}
             <div className="mt-auto pt-6">
               <button type="button" onClick={() => pick && void send(pick, !!clip)} disabled={!pick || busy} className="inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gold text-[16.5px] font-extrabold text-[#1a1233] transition active:scale-[0.99] disabled:opacity-50">
-                {busy ? <Spinner className="h-4 w-4" /> : null} Lock it in and see everyone
+                {busy ? <Spinner className="h-4 w-4" /> : null} Spill it and see everyone
               </button>
               <p className="mt-2.5 text-center text-[12.5px] text-white/55">You&apos;ll see how everyone answered once you answer.</p>
             </div>
@@ -542,7 +542,7 @@ export function TruthSheet({ truth, open, onClose, onChange, demo }: { truth: Tr
               )}
             </div>
             {error && <p className="mt-3 rounded-xl bg-black/25 px-3 py-2 text-[13px] font-medium text-[#ffd0d0]">{error}</p>}
-            <p className="mt-5 text-center text-[12.5px] text-white/55">The next Truth is up in {timeLeft(truth.ends_at)}. Keep your streak going.</p>
+            <p className="mt-5 text-center text-[12.5px] text-white/55">The next Spill is up in {timeLeft(truth.ends_at)}. Keep your streak going.</p>
           </>
         )}
       </div>
