@@ -40,6 +40,7 @@ import dynamic from "next/dynamic";
 
 // The shared drawing board loads only when it's opened
 import { CHAT_PAGE } from "@/lib/chatPage";
+import { useMounted } from "@/lib/useMounted";
 
 const TogetherBoard = dynamic(() => import("@/components/stickers/TogetherBoard").then((m) => m.TogetherBoard), { ssr: false });
 import { LiveScribblePreview } from "@/components/stickers/ScribbleView";
@@ -76,6 +77,7 @@ export function MatchChat({
   chatBg?: string | null;
 }) {
   const shell = useKeyboardSafe<HTMLDivElement>();
+  const mounted = useMounted();
   const { seen, now } = usePresence([other.id]);
   const theyreOnline = isOnline(seen[other.id], now);
   const activeNow = () => !!seen[other.id] && Date.now() - new Date(seen[other.id]).getTime() < 45_000;
@@ -409,7 +411,7 @@ export function MatchChat({
           <p className="mt-3 text-[16px] font-semibold">{source === "play" ? "You met over a game" : "You unmasked each other"}</p>
           <p className="mt-0.5 inline-flex items-center gap-1.5 text-[13px] text-muted">
             {INTENT_ICONS[intent]({ size: 14 })} {intentLabel(intent)}
-            {matchedAt && <> · {new Date(matchedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</>}
+            {matchedAt && mounted && <> · {new Date(matchedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</>}
           </p>
           {shared.length > 0 && (
             <div className="mt-3 flex flex-wrap justify-center gap-1.5">

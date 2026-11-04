@@ -49,7 +49,8 @@ export function keyFromUrl(url: string) {
 
 /** Saves a file from the server (e.g. a masked photo made in Admin) */
 export async function putObject(key: string, body: Blob, type = "image/jpeg") {
-  const res = await r2().fetch(objectUrl(key), { method: "PUT", body, headers: { "Content-Type": type, "Cache-Control": "public, max-age=31536000, immutable" } });
+  // As bytes, so the upload says how big it is (R2 refuses uploads without a size: "411")
+  const res = await r2().fetch(objectUrl(key), { method: "PUT", body: await body.arrayBuffer(), headers: { "Content-Type": type, "Cache-Control": "public, max-age=31536000, immutable" } });
   if (!res.ok) throw new Error(`R2 refused the upload (${res.status})`);
 }
 

@@ -3,13 +3,31 @@
 import Link from "next/link";
 import { useActionState, useState, useTransition } from "react";
 import { ArrowLeft, Mail } from "lucide-react";
-import { checkEmail, logIn, signUp } from "./actions";
+import { checkEmail, logIn, signUp, type AuthState } from "./actions";
 import { PasswordField } from "./PasswordField";
 import { Button } from "@/components/ui/Button";
 import { CheckRow, FormError, IconInput, Label } from "@/components/ui/Field";
 import { Turnstile } from "@/components/ui/Turnstile";
 
 type Step = "email" | "login" | "signup";
+
+const NO_CONNECTION = "Couldn't connect. Check your internet and try again.";
+// The phone couldn't reach Dashpad at all (no signal, Wi-Fi dropped): not a real error, just try again
+const isOffline = (e: unknown) => e instanceof TypeError && /fetch|network|load failed/i.test(e.message);
+
+/** A sign-in step that says "couldn't connect" when the phone is offline, instead of crashing the page */
+function offlineSafe(action: (prev: AuthState, form: FormData) => Promise<AuthState>) {
+  return async (prev: AuthState, form: FormData): Promise<AuthState> => {
+    try {
+      return await action(prev, form);
+    } catch (e) {
+      if (!isOffline(e)) throw e;
+      return { error: NO_CONNECTION, values: { email: String(form.get("email") ?? "") }, at: Date.now() };
+    }
+  };
+}
+const safeLogIn = offlineSafe(logIn);
+const safeSignUp = offlineSafe(signUp);
 
 /**
  * One way in: type your email first. If there's an account, ask for the password;
@@ -20,14 +38,20 @@ export function AuthFlow({ demo }: { demo?: { step: Step; email: string } } = {}
   const [email, setEmail] = useState(demo?.email ?? "");
   const [error, setError] = useState<string | null>(null);
   const [checking, startCheck] = useTransition();
-  const [loginState, loginAction, loggingIn] = useActionState(logIn, undefined);
-  const [signupState, signupAction, signingUp] = useActionState(signUp, undefined);
+  const [loginState, loginAction, loggingIn] = useActionState(safeLogIn, undefined);
+  const [signupState, signupAction, signingUp] = useActionState(safeSignUp, undefined);
 
   function next(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     startCheck(async () => {
-      const res = await checkEmail(email);
+      let res: Awaited<ReturnType<typeof checkEmail>>;
+      try {
+        res = await checkEmail(email);
+      } catch (e) {
+        if (!isOffline(e)) throw e;
+        return setError(NO_CONNECTION);
+      }
       if (res.error) return setError(res.error);
       setStep(res.exists ? "login" : "signup");
     });

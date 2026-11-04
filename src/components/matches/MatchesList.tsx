@@ -7,6 +7,7 @@ import clsx from "clsx";
 import { CHATS_EVENT } from "@/components/app/useMenuBadges";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useMounted } from "@/lib/useMounted";
 import { IcebreakersReceived, type MyIcebreakers } from "./IcebreakersReceived";
 import { PastPairs } from "@/components/home/PastPairs";
 import type { PastPair } from "@/lib/hourly";
@@ -260,6 +261,7 @@ type Item = { key: string; at: string; unread: boolean; masked?: MaskedChat; mat
 /** One chat with someone you're connected with */
 function MatchRow({ m, myId, unread, online, active }: { m: MatchSummary; myId: string; unread: boolean; online: boolean; active: boolean }) {
   const theirTurn = m.last_message != null && m.last_sender === myId;
+  const mounted = useMounted();
   return (
     <li className="animate-fade-up">
       <Link
@@ -286,7 +288,7 @@ function MatchRow({ m, myId, unread, online, active }: { m: MatchSummary; myId: 
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-2">
             <p className="truncate text-[16px] font-semibold">{m.display_name}</p>
-            <span className={clsx("shrink-0 text-[12px]", unread ? "font-semibold text-brand" : "text-muted")}>{timeAgo(m.last_message_at)}</span>
+            <span className={clsx("shrink-0 text-[12px]", unread ? "font-semibold text-brand" : "text-muted")}>{mounted ? timeAgo(m.last_message_at) : null}</span>
           </div>
           <div className="mt-0.5 flex items-center gap-2">
             <p className={clsx("min-w-0 flex-1 truncate text-[14px]", unread ? "font-medium text-ink" : "text-muted")}>

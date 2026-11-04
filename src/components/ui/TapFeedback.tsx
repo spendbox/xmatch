@@ -2,7 +2,20 @@
 
 import { useEffect } from "react";
 
-const PRESSABLE = 'button, [role="button"], a[href], summary, label:has(> input[type="file"])';
+const PRESSABLE_BASE = 'button, [role="button"], a[href], summary';
+const FILE_LABEL = 'label:has(> input[type="file"])';
+// Older phones (e.g. Chrome before 105) don't know ":has" and would throw on every tap
+let PRESSABLE: string | null = null;
+function pressableSelector() {
+  if (PRESSABLE === null) {
+    let has = false;
+    try {
+      has = CSS.supports(`selector(${FILE_LABEL})`);
+    } catch {}
+    PRESSABLE = has ? `${PRESSABLE_BASE}, ${FILE_LABEL}` : PRESSABLE_BASE;
+  }
+  return PRESSABLE;
+}
 // Games and drag handles have their own feel
 const SKIP = "[data-no-press], .gm-btn, .gm-board";
 const MIN_PRESS = 110; // ms; a quick tap still shows
@@ -10,7 +23,13 @@ const BUSY_AFTER = 120; // ms; fast replies don't flicker
 const TAP_WINDOW = 1500; // ms; requests started this soon after a tap belong to it
 
 function pressable(target: EventTarget | null) {
-  const el = (target as Element | null)?.closest?.(PRESSABLE) as HTMLElement | null;
+  const t = target as Element | null;
+  let el = t?.closest?.(pressableSelector()) as HTMLElement | null;
+  if (!el && PRESSABLE === PRESSABLE_BASE) {
+    // Same as label:has(> input[type="file"]), done by hand
+    const label = t?.closest?.("label") as HTMLElement | null;
+    if (label && [...label.children].some((c) => c instanceof HTMLInputElement && c.type === "file")) el = label;
+  }
   if (!el || el.closest(SKIP) || (el as HTMLButtonElement).disabled || el.getAttribute("aria-disabled") === "true") return null;
   return el;
 }
