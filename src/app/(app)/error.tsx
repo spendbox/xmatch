@@ -2,10 +2,15 @@
 
 import { useEffect } from "react";
 import { reportError } from "@/lib/reportError";
+import { isOldVersionError, reloadForNewVersion } from "@/lib/newVersion";
 
 /** Instead of a blank "Application error" page: say so, report it, and let them carry on */
 export default function AppError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
-  useEffect(() => reportError(error, "page"), [error]);
+  useEffect(() => {
+    // The app was updated while this was open: load the new version instead of showing an error
+    if (isOldVersionError(error) && reloadForNewVersion()) return;
+    reportError(error, "page");
+  }, [error]);
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center bg-cream px-8 text-center">
       <p className="font-display text-[28px] leading-tight font-semibold text-ink">Something went wrong</p>

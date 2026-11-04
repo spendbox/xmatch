@@ -16,6 +16,11 @@ const OVAL = { cx: 100, cy: 112, rx: 48, ry: 54 };
 export const STARTER_MASKS = ["venetian", "emo-cool", "lagbaja", "fox", "volto-gold", "hearteyes", "eyo-laba", "an-corgi", "flowers", "emo-partying", "gelede", "kitsune", "an-redpanda", "dama-roses", "unicorn", "calavera-rosa"];
 export { PLACEHOLDER } from "./photoSet";
 
+// Some phones' graphics chips can't run the face finder ("Failed to link vertex and fragment shaders").
+// Then it switches to the phone's main processor: slower, but it works everywhere.
+const GPU_FAILED = /shader|webgl|WebGL|context lost|GL_|texture/i;
+type Backends = { setBackend: (name: string) => Promise<boolean>; ready: () => Promise<void>; getBackend: () => string };
+
 type FaceApi = typeof import("@vladmandic/face-api");
 let finder: Promise<FaceApi> | null = null;
 
@@ -25,6 +30,18 @@ function getFinder() {
     const fa = await import("@vladmandic/face-api");
     await fa.nets.tinyFaceDetector.loadFromUri("/models");
     await fa.nets.faceLandmark68TinyNet.loadFromUri("/models").catch(() => null);
+    // A quick trial run: if this phone's graphics chip can't run it, use the main processor from the start
+    try {
+      const probe = document.createElement("canvas");
+      probe.width = probe.height = 64;
+      await fa.detectAllFaces(probe, new fa.TinyFaceDetectorOptions({ inputSize: 416 }));
+    } catch (e) {
+      const tf = fa.tf as unknown as Backends;
+      if (GPU_FAILED.test(e instanceof Error ? e.message : String(e)) && tf.getBackend() !== "cpu") {
+        await tf.setBackend("cpu");
+        await tf.ready();
+      }
+    }
     return fa;
   })();
   finder.catch(() => (finder = null));
@@ -35,6 +52,19 @@ type Found = { box: { x: number; y: number; w: number; h: number }; yaw: number;
 
 /** Faces in a picture: their outline (eyes, nose, jaw, brows plus the forehead), which way they look, and their tilt */
 async function findFaces(img: HTMLCanvasElement): Promise<Found[]> {
+  try {
+    return await findFacesNow(img);
+  } catch (e) {
+    const fa = await getFinder();
+    const tf = fa.tf as unknown as Backends;
+    if (!GPU_FAILED.test(e instanceof Error ? e.message : String(e)) || tf.getBackend() === "cpu") throw e;
+    await tf.setBackend("cpu");
+    await tf.ready();
+    return findFacesNow(img);
+  }
+}
+
+async function findFacesNow(img: HTMLCanvasElement): Promise<Found[]> {
   const fa = await getFinder();
   for (const [inputSize, scoreThreshold] of [
     [416, 0.5],
