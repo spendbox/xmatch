@@ -8,12 +8,49 @@ export type ErrorRow = { id: number; message: string; stack: string | null; url:
 
 const when = (t: string) => new Date(t).toLocaleString("en-GB", { timeZone: "Africa/Lagos", dateStyle: "medium", timeStyle: "short" });
 
+/** One problem written out as plain text, ready to paste to Claude */
+function describe(message: string, list: ErrorRow[]) {
+  const last = list[0];
+  const people = [...new Set(list.map((r) => r.name).filter(Boolean))];
+  const urls = [...new Set(list.map((r) => r.url).filter(Boolean))];
+  return [
+    `Error: ${message}`,
+    `Seen ${list.length}× · last ${when(last.created_at)}${people.length ? ` · ${people.join(", ")}` : ""}`,
+    urls.length ? `Page: ${urls.slice(0, 5).join(", ")}` : "",
+    last.agent ? `Device: ${last.agent}` : "",
+    last.stack ? `Details:\n${last.stack}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+async function copyText(text: string) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    // Older phones: copy through a hidden box
+    const box = document.createElement("textarea");
+    box.value = text;
+    box.setAttribute("readonly", "");
+    box.style.position = "fixed";
+    box.style.opacity = "0";
+    document.body.appendChild(box);
+    box.select();
+    box.setSelectionRange(0, text.length);
+    const ok = document.execCommand("copy");
+    box.remove();
+    return ok;
+  }
+}
+
 /** Admin: app errors, the same error grouped together, newest first */
 export function ErrorsList({ rows }: { rows: ErrorRow[] }) {
   const router = useRouter();
   const [, start] = useTransition();
   const [busy, setBusy] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
 
   const groups = new Map<string, ErrorRow[]>();
   for (const r of rows) groups.set(r.message, [...(groups.get(r.message) ?? []), r]);
@@ -27,6 +64,18 @@ export function ErrorsList({ rows }: { rows: ErrorRow[] }) {
     start(() => router.refresh());
   }
 
+  async function copy(key: string, text: string) {
+    const ok = await copyText(text);
+    if (!ok) return setNote("Couldn't copy. Try again.");
+    setCopied(key);
+    setTimeout(() => setCopied((c) => (c === key ? null : c)), 2000);
+  }
+
+  function copyAll() {
+    const text = [...groups.entries()].map(([m, list], i) => `#${i + 1}\n${describe(m, list)}`).join("\n\n---\n\n");
+    void copy("all", `App errors from Dashpad (${groups.size} problems, ${rows.length} reports):\n\n${text}`);
+  }
+
   if (!rows.length) return <p className="rounded-3xl border border-line bg-surface p-5 text-[15px] text-muted shadow-card">No errors. All good.</p>;
 
   return (
@@ -35,9 +84,14 @@ export function ErrorsList({ rows }: { rows: ErrorRow[] }) {
         <p className="text-[13px] text-muted">
           {groups.size} {groups.size === 1 ? "problem" : "problems"} · {rows.length} {rows.length === 1 ? "report" : "reports"}
         </p>
-        <button type="button" onClick={() => void clear()} disabled={!!busy} className="h-9 rounded-full border border-line px-3.5 text-[13px] font-semibold disabled:opacity-50">
-          Clear all
-        </button>
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={copyAll} className="h-9 rounded-full bg-brand px-3.5 text-[13px] font-semibold text-white">
+            {copied === "all" ? "Copied ✓" : "Copy all"}
+          </button>
+          <button type="button" onClick={() => void clear()} disabled={!!busy} className="h-9 rounded-full border border-line px-3.5 text-[13px] font-semibold disabled:opacity-50">
+            Clear all
+          </button>
+        </div>
       </div>
       {note && <p className="mb-3 text-[13px] font-semibold text-chili">{note}</p>}
       <ul className="flex flex-col gap-2.5">
@@ -67,9 +121,16 @@ export function ErrorsList({ rows }: { rows: ErrorRow[] }) {
                 )}
                 <button
                   type="button"
+                  onClick={() => void copy(message, describe(message, list))}
+                  className="ml-auto h-9 shrink-0 self-start rounded-full border border-line px-3.5 text-[13px] font-semibold"
+                >
+                  {copied === message ? "Copied ✓" : "Copy"}
+                </button>
+                <button
+                  type="button"
                   onClick={() => void clear(message)}
                   disabled={!!busy}
-                  className="ml-auto h-9 shrink-0 self-start rounded-full bg-mint-soft px-3.5 text-[13px] font-semibold text-mint disabled:opacity-50"
+                  className="h-9 shrink-0 self-start rounded-full bg-mint-soft px-3.5 text-[13px] font-semibold text-mint disabled:opacity-50"
                 >
                   {busy === message ? "Clearing…" : "Fixed · clear"}
                 </button>

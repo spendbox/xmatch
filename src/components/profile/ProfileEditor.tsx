@@ -519,7 +519,7 @@ export function ProfileEditor({
           </div>
           <div>
             <Label htmlFor="bio">Bio</Label>
-            <Textarea id="bio" rows={5} maxLength={500} value={draftBio} onChange={(e) => setDraftBio(e.target.value)}
+            <Textarea id="bio" rows={5} autoGrow maxLength={500} value={draftBio} onChange={(e) => setDraftBio(e.target.value)}
               placeholder="What makes you laugh? What are you up to lately?" />
             <p className="mt-1 text-right text-xs text-muted">{draftBio.length}/500</p>
           </div>
