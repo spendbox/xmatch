@@ -4,7 +4,8 @@ import { useEffect } from "react";
 import { reportError } from "@/lib/reportError";
 
 // Noise from browsers and extensions, not from Dashpad
-const IGNORE = /ResizeObserver loop|Script error\.?$|extension:\/\/|Load failed|Failed to fetch|NetworkError|AbortError|The operation was aborted|Non-Error promise rejection|ChunkLoadError|Loading chunk/i;
+const IGNORE = /ResizeObserver loop|Script error\.?$|extension:\/\/|Load failed|Failed to fetch|NetworkError|AbortError|The operation was aborted|Non-Error promise rejection|ChunkLoadError|Loading chunk|Failed to link vertex and fragment shaders/i;
+// (That last one: a phone's graphics chip can't run the face finder. The face finder notices and switches to the main processor itself.)
 
 /** Catches errors that don't crash a screen (a broken button, a failed background job) */
 export function ErrorListener() {

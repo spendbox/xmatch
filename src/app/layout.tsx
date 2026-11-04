@@ -22,6 +22,9 @@ export const metadata: Metadata = {
   twitter: { card: "summary", site: "@dashpad_connect", creator: "@dashpad_connect" },
   appleWebApp: { capable: true, title: "Dashpad", statusBarStyle: "default" },
   icons: { apple: "/apple-touch-icon.png" },
+  // iPhones turn phone numbers, dates and addresses into links before the app starts, which
+  // changes the page under React ("Hydration failed", error #418) — e.g. a number sent in a chat
+  formatDetection: { telephone: false, date: false, address: false, email: false },
 };
 
 export const viewport: Viewport = {
