@@ -14,6 +14,7 @@ import { Sheet } from "@/components/ui/Sheet";
 import { KeyCoin } from "@/components/keys/KeyIcon";
 import { GiftSheet, keysError } from "@/components/keys/GiftSheet";
 import { reportError } from "@/lib/reportError";
+import { listenMessages } from "@/lib/liveMessages";
 import { Photo } from "@/components/ui/Photo";
 import { useWallet } from "@/components/keys/useWallet";
 import { EXTEND_COST } from "@/lib/keys";
@@ -260,25 +261,14 @@ export function MasqueradeRoom({
   // Live messages and status changes
   useEffect(() => {
     if (demo) return;
+    // New messages, and reactions and edits
+    const stopMessages = listenMessages<ChatMessage>(supabase, "masquerade_messages", initial.id, ["INSERT", "UPDATE"], (p) => {
+      const m = p.new;
+      if (p.eventType === "INSERT") setMessages((list) => (list.some((x) => x.id === m.id) ? list : [...list, m]));
+      else setMessages((list) => list.map((x) => (x.id === m.id ? { ...x, ...m } : x)));
+    });
     const channel = supabase
       .channel(`room-${initial.id}`)
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "masquerade_messages", filter: `session_id=eq.${initial.id}` },
-        (p) => {
-          const m = p.new as ChatMessage;
-          setMessages((list) => (list.some((x) => x.id === m.id) ? list : [...list, m]));
-        },
-      )
-      // Reactions and edits
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "masquerade_messages", filter: `session_id=eq.${initial.id}` },
-        (p) => {
-          const m = p.new as ChatMessage;
-          setMessages((list) => list.map((x) => (x.id === m.id ? { ...x, ...m } : x)));
-        },
-      )
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "masquerade_sessions", filter: `id=eq.${initial.id}` },
@@ -298,6 +288,7 @@ export function MasqueradeRoom({
       .maybeSingle()
       .then(({ data }) => setSharedBg(((data as { chat_bg?: string | null } | null)?.chat_bg ?? null)));
     return () => {
+      stopMessages();
       supabase.removeChannel(channel);
     };
   }, [supabase, initial.id, refresh, demo]);

@@ -22,6 +22,7 @@ import { useNow } from "../EventCard";
 import { useEventMedia } from "../media/EventMediaProvider";
 import { MiniPlayer } from "../media/MiniPlayer";
 import { BlurPhoto, PersonSheet, revealPrice } from "./common";
+import { listenMessages } from "@/lib/liveMessages";
 
 const toMsg = (m: EventChatMessage): ChatMessage => ({ id: m.id, sender_id: m.sender_id, body: m.body, created_at: m.created_at, kind: "text" });
 
@@ -72,18 +73,18 @@ export function EventChat({ chat, myId, myInterests }: { chat: EventChatDetail; 
   }, []);
 
   useEffect(() => {
+    const stopMessages = listenMessages<EventChatMessage>(supabase, "event_chat_messages", chat.id, ["INSERT"], (p) => {
+      const m = toMsg(p.new);
+      setMessages((l) => {
+        if (l.some((x) => x.id === m.id)) return l;
+        // Swap my draft for the saved copy
+        const i = m.sender_id === myId ? l.findIndex((x) => x.pending && x.body === m.body) : -1;
+        if (i >= 0) return [...l.slice(0, i), m, ...l.slice(i + 1)];
+        return [...l, m];
+      });
+    });
     const ch = supabase
       .channel(`event-chat-${chat.id}-${Math.random().toString(36).slice(2)}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "event_chat_messages", filter: `chat_id=eq.${chat.id}` }, (p) => {
-        const m = toMsg(p.new as EventChatMessage);
-        setMessages((l) => {
-          if (l.some((x) => x.id === m.id)) return l;
-          // Swap my draft for the saved copy
-          const i = m.sender_id === myId ? l.findIndex((x) => x.pending && x.body === m.body) : -1;
-          if (i >= 0) return [...l.slice(0, i), m, ...l.slice(i + 1)];
-          return [...l, m];
-        });
-      })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "event_chats", filter: `id=eq.${chat.id}` }, (p) => {
         const row = p.new as { status: string; match_id: string | null };
         if (row.status === "matched") matched(row.match_id);
@@ -93,6 +94,7 @@ export function EventChat({ chat, myId, myInterests }: { chat: EventChatDetail; 
       })
       .subscribe();
     return () => {
+      stopMessages();
       supabase.removeChannel(ch);
     };
   }, [supabase, chat.id, myId, matched]);

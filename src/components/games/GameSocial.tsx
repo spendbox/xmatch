@@ -17,6 +17,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { KeyCoin } from "@/components/keys/KeyIcon";
 import { GiftArt } from "@/components/keys/GiftArt";
 import { InterestIcon } from "@/components/ui/icons";
+import { listenMessages } from "@/lib/liveMessages";
 
 type Msg = { id: number; sender_id: string | null; kind: string; body: string; created_at: string };
 
@@ -65,21 +66,18 @@ export function useGameChat(matchId: string | null, myId: string, panelOpen: boo
       .order("id", { ascending: false })
       .limit(40)
       .then(({ data }) => live && data && setMessages((data as Msg[]).reverse()));
-    const c = supabase
-      .channel(`game-chat:${matchId}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: `match_id=eq.${matchId}` }, (p) => {
-        const m = p.new as Msg;
-        setMessages((l) => (l.some((x) => x.id === m.id) ? l : [...l, m]));
-        if (m.sender_id && m.sender_id !== myId) {
-          chime();
-          buzz([15, 40, 15]);
-          if (!openRef.current) setUnread((n) => n + 1);
-        }
-      })
-      .subscribe();
+    const stop = listenMessages<Msg>(supabase, "messages", matchId, ["INSERT"], (p) => {
+      const m = p.new;
+      setMessages((l) => (l.some((x) => x.id === m.id) ? l : [...l, m]));
+      if (m.sender_id && m.sender_id !== myId) {
+        chime();
+        buzz([15, 40, 15]);
+        if (!openRef.current) setUnread((n) => n + 1);
+      }
+    });
     return () => {
       live = false;
-      supabase.removeChannel(c);
+      stop();
     };
   }, [matchId, myId, supabase]);
 

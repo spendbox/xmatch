@@ -41,6 +41,7 @@ import dynamic from "next/dynamic";
 // The shared drawing board loads only when it's opened
 import { CHAT_PAGE } from "@/lib/chatPage";
 import { useMounted } from "@/lib/useMounted";
+import { listenMessages } from "@/lib/liveMessages";
 
 const TogetherBoard = dynamic(() => import("@/components/stickers/TogetherBoard").then((m) => m.TogetherBoard), { ssr: false });
 import { LiveScribblePreview } from "@/components/stickers/ScribbleView";
@@ -147,16 +148,14 @@ export function MatchChat({
   }, [supabase, matchId, messages.length]);
 
   useEffect(() => {
+    // New messages, and reactions and edits
+    const stopMessages = listenMessages<ChatMessage>(supabase, "messages", matchId, ["INSERT", "UPDATE"], (p) => {
+      const m = p.new;
+      if (p.eventType === "INSERT") setMessages((l) => (l.some((x) => x.id === m.id) ? l : [...l, m]));
+      else setMessages((l) => l.map((x) => (x.id === m.id ? { ...x, ...m } : x)));
+    });
     const channel = supabase
       .channel(`match-${matchId}`)
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "messages", filter: `match_id=eq.${matchId}` },
-        (p) => {
-          const m = p.new as ChatMessage;
-          setMessages((l) => (l.some((x) => x.id === m.id) ? l : [...l, m]));
-        },
-      )
       // They changed the chat background: it changes here too
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "matches", filter: `id=eq.${matchId}` }, (p) => {
         const next = (p.new as { chat_bg?: string | null }).chat_bg ?? null;
@@ -165,16 +164,9 @@ export function MatchChat({
           return next;
         });
       })
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "messages", filter: `match_id=eq.${matchId}` },
-        (p) => {
-          const m = p.new as ChatMessage;
-          setMessages((l) => l.map((x) => (x.id === m.id ? { ...x, ...m } : x)));
-        },
-      )
       .subscribe();
     return () => {
+      stopMessages();
       supabase.removeChannel(channel);
     };
   }, [supabase, matchId]);

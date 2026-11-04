@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { HYPE_REACTIONS, type EventSettings, type RoomMessage } from "@/lib/events";
 import { eventError, nameColor } from "@/lib/eventSpace";
 import { tapFeedback } from "@/components/ui/Button";
+import { listenMessages } from "@/lib/liveMessages";
 
 type Burst = { id: number; emoji: string; dx: number; left: number };
 
@@ -54,10 +55,8 @@ export function Room({
 
   useEffect(() => {
     load();
-    const ch = supabase
-      .channel(`room-${eventId}-${Math.random().toString(36).slice(2)}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "event_room_messages", filter: `event_id=eq.${eventId}` }, (p) => {
-        const m = p.new as Omit<RoomMessage, "name">;
+    const stop = listenMessages<Omit<RoomMessage, "name">>(supabase, "event_room_messages", eventId, ["INSERT"], (p) => {
+        const m = p.new;
         if (m.kind === "hype") {
           if (m.user_id !== userId) burst(m.body);
           return;
@@ -75,10 +74,9 @@ export function Room({
           if (reloadTimer.current) clearTimeout(reloadTimer.current);
           reloadTimer.current = setTimeout(load, 1200);
         }
-      })
-      .subscribe();
+    });
     return () => {
-      supabase.removeChannel(ch);
+      stop();
       if (reloadTimer.current) clearTimeout(reloadTimer.current);
     };
   }, [supabase, eventId, userId, load, burst]);
