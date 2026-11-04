@@ -77,11 +77,12 @@ Goal: a place to meet your people. Dating stays as one mood, not the headline.
 
 ## Before ~20,000–50,000 daily users
 - [ ] Hourly pairing compares people one by one in the database. Fine for a few thousand per hour; past that, pair by city/mood in batches
-- [ ] Switch live chat updates from database-change events to Realtime "broadcast" (much lighter at scale)
+- [x] Chat messages (masked chats, chats with your people and their game panel, event chats, Spill chats, the event room) arrive through Realtime "broadcast" (update 121). Falls back to database-change events until 121 runs or if a channel can't be joined
+- [ ] Still on database-change events (less busy): chat lists, badges, calls, games, wallet, match pop-ups. Move them too if Realtime gets busy
 - [x] Masquerade matching no longer goes through one lock for the whole app: only the two people being paired are locked (update 120). Tested: 2,000 people checking in at once made 885 pairs (7 before), none doubled
 - [x] Blocks and reports are checked with an index instead of reading the whole reports table (update 120)
 - [ ] Add a database read replica for heavy reads (event walls, lists)
-- [ ] Turn off Supabase's spending cap so more than 500 people can be connected at once
+- [ ] Turn off Supabase's spend cap (Organization → Billing → Cost control) so more than 500 people can be connected at once
 - [ ] A Link-Up with more than about 145,000 answers can't be matched inside the 60-second job (the match needs about 0.3s per 1,000 people). Fine for 100,000. Past that, raise `maxDuration` on `/api/cron/pacts` (needs a Vercel plan that allows it)
 - [ ] Load test on a copy of the database before a big launch (not the live one)
 

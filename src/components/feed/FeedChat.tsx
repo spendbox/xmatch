@@ -17,6 +17,7 @@ import { MessageList } from "@/components/chat/MessageList";
 import { Composer } from "@/components/chat/Composer";
 import { refreshMenuBadges } from "@/components/app/useMenuBadges";
 import { MaskAvatar } from "./MaskAvatar";
+import { listenMessages } from "@/lib/liveMessages";
 
 const toMsg = (m: FeedChatMessage): ChatMessage => ({ id: m.id, sender_id: m.sender_id, body: m.body, created_at: m.created_at, kind: "text" });
 
@@ -64,17 +65,17 @@ export function FeedChat({ chat, myId }: { chat: FeedChatDetail; myId: string })
   }, []);
 
   useEffect(() => {
+    const stopMessages = listenMessages<FeedChatMessage>(supabase, "feed_chat_messages", chat.id, ["INSERT"], (p) => {
+      const m = toMsg(p.new);
+      setMessages((l) => {
+        if (l.some((x) => x.id === m.id)) return l;
+        const i = m.sender_id === myId ? l.findIndex((x) => x.pending && x.body === m.body) : -1;
+        if (i >= 0) return [...l.slice(0, i), m, ...l.slice(i + 1)];
+        return [...l, m];
+      });
+    });
     const ch = supabase
       .channel(`feed-chat-${chat.id}-${Math.random().toString(36).slice(2)}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "feed_chat_messages", filter: `chat_id=eq.${chat.id}` }, (p) => {
-        const m = toMsg(p.new as FeedChatMessage);
-        setMessages((l) => {
-          if (l.some((x) => x.id === m.id)) return l;
-          const i = m.sender_id === myId ? l.findIndex((x) => x.pending && x.body === m.body) : -1;
-          if (i >= 0) return [...l.slice(0, i), m, ...l.slice(i + 1)];
-          return [...l, m];
-        });
-      })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "feed_chats", filter: `id=eq.${chat.id}` }, (p) => {
         const row = p.new as { status: string; match_id: string | null };
         if (row.status === "matched") matched(row.match_id);
@@ -82,6 +83,7 @@ export function FeedChat({ chat, myId }: { chat: FeedChatDetail; myId: string })
       .on("postgres_changes", { event: "DELETE", schema: "public", table: "feed_chats", filter: `id=eq.${chat.id}` }, () => setGone(true))
       .subscribe();
     return () => {
+      stopMessages();
       supabase.removeChannel(ch);
     };
   }, [supabase, chat.id, myId, matched]);
