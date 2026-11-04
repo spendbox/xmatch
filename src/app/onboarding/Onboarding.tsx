@@ -239,11 +239,11 @@ export function Onboarding({ profile, demoStep, demoDone }: { profile: Profile; 
                     <span className="inline-flex items-center gap-1.5"><Shapes size={16} /> Interests</span>{" "}
                     <span className="font-normal text-muted">· {interests.length}/{MAX_INTERESTS}, pick at least 3</span>
                   </Label>
-                  <InterestPicker value={interests} onChange={setInterests} />
+                  <InterestPicker value={interests} onChange={(v) => { setInterests(v); setError(null); }} />
                 </div>
                 <div>
                   <Label htmlFor="bio">About me</Label>
-                  <Textarea id="bio" rows={5} maxLength={500} value={bio} onChange={(e) => setBio(e.target.value)}
+                  <Textarea id="bio" rows={5} autoGrow maxLength={500} value={bio} onChange={(e) => { setBio(e.target.value); setError(null); }}
                     placeholder="What makes you laugh? What are you into lately?" />
                   <div className="mt-2 flex items-start justify-between gap-3">
                     <div className="flex flex-wrap gap-1.5">
@@ -253,7 +253,8 @@ export function Onboarding({ profile, demoStep, demoDone }: { profile: Profile; 
                           type="button"
                           onClick={() => {
                             tapFeedback();
-                            setBio((b) => (b.trim() ? b.trimEnd() + "\n" : "") + p);
+                            setBio((b) => ((b.trim() ? b.trimEnd() + "\n" : "") + p).slice(0, 500));
+                            setError(null);
                           }}
                           className="inline-flex items-center gap-1 rounded-full border border-dashed border-brand/40 bg-brand-soft/50 px-2.5 py-1 text-[12px] font-medium text-brand-ink active:scale-95"
                         >

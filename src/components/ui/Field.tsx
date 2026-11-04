@@ -1,4 +1,7 @@
+"use client";
+
 import clsx from "clsx";
+import { useLayoutEffect, useRef } from "react";
 import type { ComponentProps, ReactNode } from "react";
 
 export function Label({ children, htmlFor }: { children: ReactNode; htmlFor?: string }) {
@@ -16,9 +19,18 @@ export function Input({ className, ...props }: ComponentProps<"input">) {
   return <input className={clsx(inputClass, className)} {...props} />;
 }
 
-export function Textarea({ className, ...props }: ComponentProps<"textarea">) {
+export function Textarea({ className, autoGrow, ...props }: ComponentProps<"textarea"> & { autoGrow?: boolean }) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  // Grow the box with the text so long answers stay fully visible
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!autoGrow || !el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight + 2}px`;
+  }, [autoGrow, props.value]);
   return (
     <textarea
+      ref={ref}
       className={clsx(
         "w-full resize-none rounded-2xl border border-line-strong bg-surface p-4 text-[16px] leading-relaxed text-ink placeholder:text-muted/70 outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/10",
         className,
