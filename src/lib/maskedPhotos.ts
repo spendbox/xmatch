@@ -7,6 +7,7 @@ import type { MaskSpot, PhotoMask } from "./types";
 import { maskUrl, MASKS } from "./masks";
 import { compress } from "./photos";
 import { finalSpot } from "./maskPlace";
+import { reportError } from "./reportError";
 
 // The mask drawing: a -26,-44 252×252 square; the face oval inside it is centred at (100,112), radii 48 × 54
 const VB = { x: -26, y: -44, w: 252, h: 252 };
@@ -19,7 +20,63 @@ export { PLACEHOLDER } from "./photoSet";
 // Some phones' graphics chips can't run the face finder ("Failed to link vertex and fragment shaders").
 // Then it switches to the phone's main processor: slower, but it works everywhere.
 const GPU_FAILED = /shader|webgl|WebGL|context lost|GL_|texture/i;
+const isGpuError = (e: unknown) => GPU_FAILED.test(e instanceof Error ? e.message : String(e));
+/** A graphics-chip failure must reach the fallback below; anything else just means "no face" */
+const unlessGpu = (e: unknown) => {
+  if (isGpuError(e)) throw e;
+};
 type Backends = { setBackend: (name: string) => Promise<boolean>; ready: () => Promise<void>; getBackend: () => string };
+
+/**
+ * Runs the face finder; if the graphics chip fails, switches to the main processor and runs it again.
+ * The chip's failure doesn't always come back to us (it can surface as a page error while the search
+ * just never finishes), so it also listens for that.
+ */
+async function withGpuFallback<T>(fa: FaceApi, run: () => Promise<T>): Promise<T> {
+  const tf = fa.tf as unknown as Backends;
+  if (tf.getBackend() === "cpu") return run();
+  let stop = () => {};
+  const failed = new Promise<never>((_, reject) => {
+    const onError = (e: ErrorEvent) => isGpuError(e.error ?? e.message) && reject(e.error ?? new Error(e.message));
+    const onReject = (e: PromiseRejectionEvent) => isGpuError(e.reason) && reject(e.reason);
+    window.addEventListener("error", onError);
+    window.addEventListener("unhandledrejection", onReject);
+    stop = () => {
+      window.removeEventListener("error", onError);
+      window.removeEventListener("unhandledrejection", onReject);
+    };
+  });
+  failed.catch(() => {});
+  try {
+    return await Promise.race([run(), failed]);
+  } catch (e) {
+    if (!isGpuError(e)) throw e;
+    await toCpu(fa);
+    try {
+      return await run();
+    } catch (err) {
+      // Even the main processor couldn't: worth knowing about
+      reportError(err, "face finder on main processor");
+      throw err;
+    }
+  } finally {
+    stop();
+  }
+}
+
+/** Moves the face finder to the main processor, reloading what it had already loaded (its data was on the chip) */
+async function toCpu(fa: FaceApi) {
+  const tf = fa.tf as unknown as Backends;
+  await tf.setBackend("cpu");
+  await tf.ready();
+  for (const net of [fa.nets.tinyFaceDetector, fa.nets.faceLandmark68TinyNet, fa.nets.ssdMobilenetv1]) {
+    if (!net.isLoaded) continue;
+    try {
+      net.dispose();
+    } catch {}
+    await net.loadFromUri("/models");
+  }
+}
 
 type FaceApi = typeof import("@vladmandic/face-api");
 let finder: Promise<FaceApi> | null = null;
@@ -31,17 +88,9 @@ function getFinder() {
     await fa.nets.tinyFaceDetector.loadFromUri("/models");
     await fa.nets.faceLandmark68TinyNet.loadFromUri("/models").catch(() => null);
     // A quick trial run: if this phone's graphics chip can't run it, use the main processor from the start
-    try {
-      const probe = document.createElement("canvas");
-      probe.width = probe.height = 64;
-      await fa.detectAllFaces(probe, new fa.TinyFaceDetectorOptions({ inputSize: 416 }));
-    } catch (e) {
-      const tf = fa.tf as unknown as Backends;
-      if (GPU_FAILED.test(e instanceof Error ? e.message : String(e)) && tf.getBackend() !== "cpu") {
-        await tf.setBackend("cpu");
-        await tf.ready();
-      }
-    }
+    const probe = document.createElement("canvas");
+    probe.width = probe.height = 64;
+    await withGpuFallback(fa, async () => fa.detectAllFaces(probe, new fa.TinyFaceDetectorOptions({ inputSize: 416 }))).catch(() => null);
     return fa;
   })();
   finder.catch(() => (finder = null));
@@ -52,16 +101,8 @@ type Found = { box: { x: number; y: number; w: number; h: number }; yaw: number;
 
 /** Faces in a picture: their outline (eyes, nose, jaw, brows plus the forehead), which way they look, and their tilt */
 async function findFaces(img: HTMLCanvasElement): Promise<Found[]> {
-  try {
-    return await findFacesNow(img);
-  } catch (e) {
-    const fa = await getFinder();
-    const tf = fa.tf as unknown as Backends;
-    if (!GPU_FAILED.test(e instanceof Error ? e.message : String(e)) || tf.getBackend() === "cpu") throw e;
-    await tf.setBackend("cpu");
-    await tf.ready();
-    return findFacesNow(img);
-  }
+  const fa = await getFinder();
+  return withGpuFallback(fa, () => findFacesNow(img));
 }
 
 async function findFacesNow(img: HTMLCanvasElement): Promise<Found[]> {
@@ -74,7 +115,8 @@ async function findFacesNow(img: HTMLCanvasElement): Promise<Found[]> {
     let found: { detection: { box: { x: number; y: number; width: number; height: number } }; landmarks: { positions: { x: number; y: number }[] } }[] = [];
     try {
       found = (await fa.detectAllFaces(img, opts).withFaceLandmarks(true)) as unknown as typeof found;
-    } catch {
+    } catch (e) {
+      unlessGpu(e);
       found = [];
     }
     if (found.length) return found.map((f) => outline(f.detection.box, f.landmarks.positions));
@@ -88,13 +130,15 @@ async function findFacesNow(img: HTMLCanvasElement): Promise<Found[]> {
     let found: { detection: { box: { x: number; y: number; width: number; height: number } }; landmarks: { positions: { x: number; y: number }[] } }[] = [];
     try {
       found = (await fa.detectAllFaces(img, opts).withFaceLandmarks(true)) as unknown as typeof found;
-    } catch {
+    } catch (e) {
+      unlessGpu(e);
       found = [];
     }
     if (found.length) return found.map((f) => outline(f.detection.box, f.landmarks.positions));
     const boxes = await fa.detectAllFaces(img, opts);
     return boxes.map((b) => ({ box: { x: b.box.x, y: b.box.y, w: b.box.width, h: b.box.height }, yaw: 0, roll: 0, region: null }));
-  } catch {
+  } catch (e) {
+    unlessGpu(e);
     return [];
   }
 }
